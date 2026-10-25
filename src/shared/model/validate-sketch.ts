@@ -190,7 +190,9 @@ export function parsePlaneRef(raw: unknown, path = 'plane'): SketchPlaneRef {
       yDir: unitVector(raw.frame.yDir, `${path}.frame.yDir`),
       normal: unitVector(raw.frame.normal, `${path}.frame.normal`),
     };
-    return { kind: 'face', face: raw.face, frame };
+    if (raw.name === undefined) return { kind: 'face', face: raw.face, frame };
+    if (typeof raw.name !== 'string' || raw.name.length > 256) throw new ValidationError('expected a face name', `${path}.name`);
+    return { kind: 'face', face: raw.face, frame, name: raw.name };
   }
   throw new ValidationError('unknown plane kind', `${path}.kind`);
 }

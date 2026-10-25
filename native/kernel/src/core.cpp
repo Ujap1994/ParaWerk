@@ -757,6 +757,16 @@ Naming naming(int id) {
   Naming result;
   result.faces.resize(static_cast<size_t>(faces.Extent()));
   for (size_t f = 0; f < result.faces.size() && f < entry.names.size(); ++f) result.faces[f] = entry.names[f];
+  result.facePlanes.reserve(static_cast<size_t>(faces.Extent()) * 6);
+  for (int f = 1; f <= faces.Extent(); ++f) {
+    const TopoDS_Face face = TopoDS::Face(faces(f));
+    if (const std::optional<gp_Dir> normal = planeNormal(face)) {
+      const gp_Pnt origin = BRepAdaptor_Surface(face, false).Plane().Location();
+      result.facePlanes.insert(result.facePlanes.end(), {origin.X(), origin.Y(), origin.Z(), normal->X(), normal->Y(), normal->Z()});
+    } else {
+      result.facePlanes.insert(result.facePlanes.end(), 6, kNaN);
+    }
+  }
   result.edgeFaces.reserve(static_cast<size_t>(edges.Extent()) * 2);
   result.edgeMidpoints.reserve(static_cast<size_t>(edges.Extent()) * 3);
   for (int e = 1; e <= edges.Extent(); ++e) {

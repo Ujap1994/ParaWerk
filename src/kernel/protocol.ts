@@ -1,5 +1,6 @@
 import type { EdgeRef, Feature, Vec3 } from '../shared/model/feature.ts';
 import type { BodyNaming } from '../shared/model/naming.ts';
+import type { SketchPlaneRef } from '../shared/model/sketch.ts';
 
 export type SurfaceKind = 'plane' | 'cylinder' | 'cone' | 'sphere' | 'torus' | 'bspline' | 'revolution' | 'extrusion' | 'other';
 export type CurveKind = 'line' | 'circle' | 'ellipse' | 'bspline' | 'other';
@@ -56,6 +57,7 @@ export type FeatureErrorCode =
   | 'no-body'
   | 'no-edges'
   | 'edge-missing'
+  | 'face-missing'
   | 'empty-result'
   | 'first-must-add'
   | 'sketch-missing'
@@ -78,6 +80,8 @@ export interface FeatureResult {
    * the up-to-date references, for the document to take over (docs/adr/0002-persistent-naming.md).
    */
   healedEdges?: EdgeRef[];
+  /** Sketches on faces: where the face is now (or the plane of an older file with its face's name), for the document to take over. */
+  healedPlane?: SketchPlaneRef;
 }
 
 export interface MassProperties {

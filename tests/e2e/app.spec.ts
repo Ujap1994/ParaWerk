@@ -343,6 +343,20 @@ test('extrudes a sketch into a plate and cuts a pocket from a sketch on its top 
   await page.click('[data-testid="panel-ok"]');
   await expect.poll(async () => (await features()).at(-1)).toMatchObject({ type: 'extrude', sketch: 'pocket', operation: 'cut', direction: 'reverse', depth: 10 });
   expect(await volume(page)).toBeCloseTo((2400 - 36 * Math.PI) * 15 - 64 * Math.PI * 10, 2);
+  // The sketch was placed without a face name (like in older files): the rebuild found its face and named it.
+  const pocketPlane = async () => ((await features()).find((f) => f.id === 'pocket') as unknown as { plane: { name?: string; frame: { origin: number[] } } }).plane;
+  await expect.poll(async () => (await pocketPlane()).name).toMatch(/:end$/);
+
+  // A thicker plate moves its top face up; the sketch on it follows, and the pocket is cut from the new top.
+  await page.locator('.tree-item[data-feature-id]').nth(1).dblclick();
+  await page.locator('[data-testid="extrude-depth"]').fill('25');
+  await page.locator('[data-testid="extrude-depth"]').press('Tab');
+  await page.click('[data-testid="panel-ok"]');
+  await expect.poll(async () => (await pocketPlane()).frame.origin[2]).toBeCloseTo(25, 6);
+  expect(await volume(page)).toBeCloseTo((2400 - 36 * Math.PI) * 25 - 64 * Math.PI * 10, 2);
+  expect((await state(page)).rebuild?.results.map((result) => result.status)).toEqual(['ok', 'ok', 'ok', 'ok']);
+  await page.click('[data-command="undo"]');
+  await expect.poll(async () => (await pocketPlane()).frame.origin[2]).toBeCloseTo(15, 6);
 
   // Undo takes the pocket back; through all turns the same circle into a hole through the plate.
   await page.click('[data-command="undo"]');

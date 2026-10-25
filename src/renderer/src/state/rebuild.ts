@@ -150,20 +150,32 @@ function applyResult(
 }
 
 /**
- * Takes over edge references that the kernel brought up to date: edge indices of older files and
- * edges found again only by position get their current names (docs/adr/0002-persistent-naming.md).
- * This is not an undo step, and a document that was saved stays saved: its geometry is the same.
+ * Takes over references that the kernel brought up to date (docs/adr/0002-persistent-naming.md): edge
+ * indices of older files and edges found again only by position get their current names, and sketches
+ * on faces get the plane where their face is now. This is not an undo step, and a document that was
+ * saved stays saved: its geometry is the same.
  */
 function takeOverHealedEdges(plan: RebuildPlan, results: FeatureResult[]): void {
-  const healed = new Map(results.flatMap((result) => (result.healedEdges ? [[result.id, result.healedEdges] as const] : [])));
+  const healed = new Map(results.flatMap((result) => (result.healedEdges || result.healedPlane ? [[result.id, result] as const] : [])));
   if (healed.size === 0) return;
   const state = getState();
   // Only the document as it is: while a feature or sketch is edited, the plan is not the whole part.
   if (state.activeEdit || state.sketch || state.history.features !== plan.features) return;
+  let changed = false;
   const features = state.history.features.map((feature) => {
-    const edges = healed.get(feature.id);
-    return edges && isEdgeFeature(feature) ? { ...feature, edges } : feature;
+    const result = healed.get(feature.id);
+    // Only real changes: taking over the same references again would rebuild forever.
+    if (result?.healedEdges && isEdgeFeature(feature) && JSON.stringify(result.healedEdges) !== JSON.stringify(feature.edges)) {
+      changed = true;
+      return { ...feature, edges: result.healedEdges };
+    }
+    if (result?.healedPlane && feature.type === 'sketch' && JSON.stringify(result.healedPlane) !== JSON.stringify(feature.plane)) {
+      changed = true;
+      return { ...feature, plane: result.healedPlane };
+    }
+    return feature;
   });
+  if (!changed) return;
   const saved = state.savedFeatures === state.history.features;
   setHistory({ ...state.history, features }, saved ? { savedFeatures: features } : {});
 }

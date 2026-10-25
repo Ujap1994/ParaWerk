@@ -1,7 +1,7 @@
 # 0002 – Persistent naming of faces and edges
 
-**Status:** accepted. Phase 0 used edge indices; Phase 2 implements face names and named edge references
-(see *Implementation*). Sketches on faces following their face and the repair dialog come next.
+**Status:** accepted. Phase 0 used edge indices; Phase 2 implements face names, named edge references and
+sketches that follow their face (see *Implementation*). The repair dialog comes next.
 
 ## Context
 
@@ -68,6 +68,16 @@ rebuild reports the up-to-date references (`FeatureResult.healedEdges`) and the 
 without an undo step, so they resolve by name from then on. Part files with named references are format
 version 5.
 
+**Sketches on faces.** A sketch on a planar face stores the face's name with its plane
+(`{ kind: 'face', name, face, frame }`). Every rebuild finds the face in the body before the sketch
+(`resolveFacePlane`: the face with the name turned most like the stored plane, else – in older files
+without a name – a face lying in the stored plane) and places the sketch on its plane with
+`frameOnPlane`, so the sketch moves and turns with it. The new plane is healed into the document like
+edge references. The frame is left out of the rebuild keys of the sketch and the features using it (the
+body before the sketch is in the keys already), so taking it over does not rebuild the part again. When
+the face is gone, the sketch reports `face-missing` and stays at its stored plane, so the features built
+from it keep working.
+
 **Cost.** Naming adds no measurable time to booleans and fillets (kernel benchmarks before and after are
 within noise); resolving the 104 upper hole edges of the 100-hole plate takes 0.24 ms
 (`plate.100holes.resolveEdges`).
@@ -79,8 +89,7 @@ keep their edges, or report the edge that is really gone. The end-to-end test *k
 edge when an earlier feature changes the topology* does the same through the UI.
 
 **Known limits.** An edge that an earlier change splits into pieces resolves to the piece nearest to
-where it was, not to all pieces. Sketches on faces still store their plane, so they do not yet follow
-their face.
+where it was, not to all pieces.
 
 ## Consequences
 

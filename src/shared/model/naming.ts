@@ -7,11 +7,14 @@
  */
 
 import type { EdgeNameRef, EdgeRef, Vec3 } from './feature.ts';
+import type { SketchFrame } from './sketch.ts';
 
 /** Face names of one body and where its edges lie; index i is topological face or edge index i. */
 export interface BodyNaming {
   /** One name per face; '' when unknown (imported bodies). */
   faces: string[];
+  /** Per face: a point on its plane and the outward unit normal (NaN for faces that are not planar). */
+  facePlanes: Float64Array;
   /** Per edge: the indices of the faces on both sides (the same face twice for a seam, -1 when none). */
   edgeFaces: Int32Array;
   /** Per edge: the point in the middle of its curve (NaN for degenerate edges). */
@@ -66,6 +69,21 @@ function distance(a: readonly number[], b: readonly number[]): number {
   return Math.hypot((a[0] ?? 0) - (b[0] ?? 0), (a[1] ?? 0) - (b[1] ?? 0), (a[2] ?? 0) - (b[2] ?? 0));
 }
 
+/** The diagonal of the box around the edge midpoints (at least 1 mm): the scale for position tolerances. */
+function bodySize(naming: BodyNaming): number {
+  const min = [Infinity, Infinity, Infinity];
+  const max = [-Infinity, -Infinity, -Infinity];
+  for (let edge = 0; edge < edgeCount(naming); edge++) {
+    const at = midpoint(naming, edge);
+    if (!at.every(Number.isFinite)) continue;
+    for (let k = 0; k < 3; k++) {
+      min[k] = Math.min(min[k] as number, at[k] as number);
+      max[k] = Math.max(max[k] as number, at[k] as number);
+    }
+  }
+  return Math.max(min.every(Number.isFinite) ? distance(min, max) : 0, 1);
+}
+
 function add(map: Map<string, number[]>, key: string, edge: number): void {
   const list = map.get(key);
   if (list) list.push(edge);
@@ -83,22 +101,14 @@ class EdgeIndex {
   constructor(naming: BodyNaming) {
     this.naming = naming;
     this.count = edgeCount(naming);
-    const min = [Infinity, Infinity, Infinity];
-    const max = [-Infinity, -Infinity, -Infinity];
     for (let edge = 0; edge < this.count; edge++) {
-      const at = midpoint(naming, edge);
-      if (!at.every(Number.isFinite)) continue;
-      for (let k = 0; k < 3; k++) {
-        min[k] = Math.min(min[k] as number, at[k] as number);
-        max[k] = Math.max(max[k] as number, at[k] as number);
-      }
+      if (!midpoint(naming, edge).every(Number.isFinite)) continue;
       const faces = edgeFaceNames(naming, edge);
       add(this.byFaces, pairKey(faces), edge);
       if (faces[0] !== '') add(this.byFace, faces[0], edge);
       if (faces[1] !== '' && faces[1] !== faces[0]) add(this.byFace, faces[1], edge);
     }
-    const diagonal = min.every(Number.isFinite) ? distance(min, max) : 0;
-    this.size = Math.max(diagonal, 1);
+    this.size = bodySize(naming);
   }
 
   /** The candidate whose middle is nearest to `at`, if it is within `limit`. */
@@ -140,5 +150,45 @@ export function resolveEdgeRefs(refs: readonly EdgeRef[], naming: BodyNaming): (
 
 /** Naming of a body whose kernel does not track names: its edges can only be referenced by index. */
 export function anonymousNaming(faces: number, edges: number): BodyNaming {
-  return { faces: Array.from({ length: faces }, () => ''), edgeFaces: new Int32Array(2 * edges).fill(-1), edgeMidpoints: new Float64Array(3 * edges).fill(NaN) };
+  return {
+    faces: Array.from({ length: faces }, () => ''),
+    facePlanes: new Float64Array(6 * faces).fill(NaN),
+    edgeFaces: new Int32Array(2 * edges).fill(-1),
+    edgeMidpoints: new Float64Array(3 * edges).fill(NaN),
+  };
+}
+
+/** A planar face of a body: its index and name, and a point on its plane with the outward normal. */
+export interface FacePlane {
+  index: number;
+  name: string;
+  point: Vec3;
+  normal: Vec3;
+  /** Found by name, or (when its name changed or was never stored) by lying in the same plane. */
+  kind: 'name' | 'position';
+}
+
+function facePlane(naming: BodyNaming, face: number): Omit<FacePlane, 'kind'> | null {
+  const values = Array.from(naming.facePlanes.subarray(6 * face, 6 * face + 6));
+  if (values.length !== 6 || !values.every(Number.isFinite)) return null;
+  return { index: face, name: naming.faces[face] ?? '', point: values.slice(0, 3) as Vec3, normal: values.slice(3, 6) as Vec3 };
+}
+
+const dot = (a: readonly number[], b: readonly number[]) => (a[0] ?? 0) * (b[0] ?? 0) + (a[1] ?? 0) * (b[1] ?? 0) + (a[2] ?? 0) * (b[2] ?? 0);
+
+/**
+ * The planar face a sketch lies on: the face with its name (the one turned most like the plane where the
+ * sketch was, then the nearest), else a face in the same plane as the sketch, facing the same way.
+ */
+export function resolveFacePlane(name: string | undefined, frame: SketchFrame, naming: BodyNaming): FacePlane | null {
+  const faces = Array.from({ length: naming.faces.length }, (_, face) => facePlane(naming, face)).filter((face) => face !== null);
+  const offset = (face: Omit<FacePlane, 'kind'>) => Math.abs(dot([face.point[0] - frame.origin[0], face.point[1] - frame.origin[1], face.point[2] - frame.origin[2]], face.normal));
+  if (name) {
+    const named = faces.filter((face) => face.name === name);
+    named.sort((a, b) => dot(b.normal, frame.normal) - dot(a.normal, frame.normal) || offset(a) - offset(b));
+    if (named[0]) return { ...named[0], kind: 'name' };
+  }
+  const size = bodySize(naming);
+  const same = faces.find((face) => dot(face.normal, frame.normal) > 1 - 1e-9 && offset(face) <= SAME_PLACE * size);
+  return same ? { ...same, kind: 'position' } : null;
 }

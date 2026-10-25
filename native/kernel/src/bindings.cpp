@@ -117,6 +117,7 @@ val naming(int id) {
     const parawerk::Naming naming = parawerk::naming(id);
     val result = okObject();
     result.set("faces", val::array(naming.faces));
+    result.set("facePlanes", typedArray("Float64Array", naming.facePlanes));
     result.set("edgeFaces", typedArray("Int32Array", naming.edgeFaces));
     result.set("edgeMidpoints", typedArray("Float64Array", naming.edgeMidpoints));
     return result;

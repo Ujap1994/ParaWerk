@@ -1,7 +1,7 @@
 import { isEdgeFeature, type EdgeFeature, type EdgeRef, type Feature, type SketchFeature, type SolidModelingFeature } from '../shared/model/feature.ts';
-import { edgeFaceNames, edgeRefOf, resolveEdgeRefs, type BodyNaming } from '../shared/model/naming.ts';
+import { edgeFaceNames, edgeRefOf, resolveEdgeRefs, resolveFacePlane, type BodyNaming } from '../shared/model/naming.ts';
 import { sketchProfile, type Profile } from '../shared/model/profile.ts';
-import { frameOf, ORIGIN_ID } from '../shared/model/sketch.ts';
+import { frameOf, frameOnPlane, ORIGIN_ID, type SketchFrame, type SketchPlaneRef } from '../shared/model/sketch.ts';
 import { hashString } from '../shared/hash.ts';
 import type { KernelFeature, ResolvedEdgeFeature } from './backend.ts';
 import { FeatureError } from './feature-error.ts';
@@ -74,13 +74,47 @@ function resolveEdges(feature: EdgeFeature, naming: BodyNaming): ResolvedEdgeFea
   return { ...feature, edgeIndices, edgeNames, ...(healed ? { healedEdges } : {}) };
 }
 
+function sameFrame(a: SketchFrame, b: SketchFrame): boolean {
+  const close = (u: readonly number[], v: readonly number[]) => u.every((value, k) => Math.abs(value - (v[k] ?? NaN)) <= 1e-7);
+  return close(a.origin, b.origin) && close(a.xDir, b.xDir) && close(a.yDir, b.yDir) && close(a.normal, b.normal);
+}
+
+/** Where a sketch lies now, and the plane reference the document should take over when it changed. */
+export interface SketchPlacement {
+  frame: SketchFrame;
+  healed?: SketchPlaneRef;
+  /** The face of a sketch on a face is gone; the sketch stays where the face was. */
+  missing?: boolean;
+}
+
+/**
+ * Places a sketch: a sketch on a face follows the face in `body` (the body before the sketch), found by
+ * its persistent name or, in older files, by its plane (docs/adr/0002-persistent-naming.md).
+ */
+export function placeSketch(sketch: SketchFeature, body: (() => BodyNaming) | null): SketchPlacement {
+  const plane = sketch.plane;
+  if (plane.kind !== 'face') return { frame: frameOf(plane) };
+  const face = body ? resolveFacePlane(plane.name, plane.frame, body()) : null;
+  if (!face) return { frame: plane.frame, missing: true };
+  const frame = frameOnPlane(face.point, face.normal);
+  const name = face.name || plane.name;
+  if (sameFrame(frame, plane.frame) && face.index === plane.face && name === plane.name) return { frame: plane.frame };
+  return { frame, healed: { kind: 'face', face: face.index, frame, ...(name ? { name } : {}) } };
+}
+
 /**
  * Gives a feature what it needs from earlier features: extrusions and revolutions get the closed
  * outlines and the plane of their sketch (a revolution also its axis), fillets and chamfers the edges
- * of `body` (the body they modify, null when there is none) that their references mean. Throws
- * FeatureError when the sketch is missing or has no usable outline, or when an edge is gone.
+ * of `body` (the body they modify, null when there is none) that their references mean. `frames` holds
+ * where sketches lie now (see placeSketch). Throws FeatureError when the sketch is missing or has no
+ * usable outline, or when an edge is gone.
  */
-export function resolveFeature(feature: SolidModelingFeature, before: readonly Feature[], body: (() => BodyNaming) | null): KernelFeature {
+export function resolveFeature(
+  feature: SolidModelingFeature,
+  before: readonly Feature[],
+  body: (() => BodyNaming) | null,
+  frames: ReadonlyMap<string, SketchFrame> = new Map(),
+): KernelFeature {
   if (isEdgeFeature(feature)) {
     if (!body) throw new FeatureError('no-body');
     return resolveEdges(feature, body());
@@ -89,7 +123,7 @@ export function resolveFeature(feature: SolidModelingFeature, before: readonly F
   const sketch = before.find((candidate): candidate is SketchFeature => candidate.type === 'sketch' && candidate.id === feature.sketch);
   if (!sketch || sketch.suppressed) throw new FeatureError('sketch-missing');
   const profile = profileOf(sketch);
-  const frame = frameOf(sketch.plane);
+  const frame = frames.get(sketch.id) ?? frameOf(sketch.plane);
   if (feature.type === 'extrude') return { ...feature, profile, frame };
   return { ...feature, profile, frame, line: axisOf(sketch, feature.axis, profile) };
 }

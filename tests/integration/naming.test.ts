@@ -7,7 +7,7 @@ import { createKernel } from '../../src/kernel/create.ts';
 import type { Kernel } from '../../src/kernel/kernel.ts';
 import type { BoxFeature, ChamferFeature, CylinderFeature, EdgeNameRef, ExtrudeFeature, Feature, FilletFeature, RevolveFeature, SketchFeature } from '../../src/shared/model/feature.ts';
 import { edgeFaceNames, edgeRefOf, resolveEdgeRefs, type BodyNaming } from '../../src/shared/model/naming.ts';
-import type { SketchEntity } from '../../src/shared/model/sketch.ts';
+import { frameOnPlane, type SketchEntity } from '../../src/shared/model/sketch.ts';
 
 let kernel: Kernel;
 
@@ -171,5 +171,58 @@ describe('edits of earlier features', () => {
     const larger = namingAfter([{ ...tube, radius: 25 }, bore, cross], 2);
     const moved = resolveEdgeRefs(refs, larger).map((match) => (match ? (larger.edgeMidpoints[3 * match.index] ?? 0) : 0));
     expect(moved.map(Math.sign)).toEqual(refs.map((ref) => Math.sign(ref.at[0])));
+  });
+});
+
+describe('sketches on faces', () => {
+  const base = sketch(rectangle(0, 0, 40, 20));
+  /** A sketch with a circle at (10, 10) on a face of the plate, and a pocket cut 4 mm deep from it. */
+  const onFace = (plane: SketchFeature['plane']): Feature[] => [
+    { id: 'top', type: 'sketch', plane, sketch: { entities: [P('c', 10, 10), { id: 'h', type: 'circle', center: 'c', radius: 3 }], constraints: [] } },
+    { id: 'pocket', type: 'extrude', operation: 'cut', sketch: 'top', depth: 4, direction: 'reverse', end: 'blind' },
+  ];
+  const topFace = (depth: number): SketchFeature['plane'] => {
+    const naming = namingAfter([base, { ...extrude, depth }], 1);
+    const face = naming.faces.indexOf('extrude:end');
+    return { kind: 'face', face, frame: frameOnPlane([0, 0, depth], [0, 0, 1]), name: 'extrude:end' };
+  };
+
+  it('follows its face when the feature below it changes', () => {
+    const features = [base, extrude, ...onFace(topFace(10))];
+    expect(build(features).captures[0]?.properties?.volume).toBeCloseTo(800 * 10 - 36 * Math.PI, 3);
+
+    const thicker = build([base, { ...extrude, depth: 25 }, ...onFace(topFace(10))]);
+    expect(thicker.features.map((feature) => feature.status)).toEqual(['ok', 'ok', 'ok', 'ok']);
+    // The pocket is cut from the new top face, 4 mm deep: the plate is still 25 mm high everywhere else.
+    expect(thicker.captures[0]?.properties?.volume).toBeCloseTo(800 * 25 - 36 * Math.PI, 3);
+    expect(thicker.captures[0]?.properties?.bboxMax[2]).toBeCloseTo(25, 6);
+    const healed = thicker.features[2]?.healedPlane;
+    expect(healed).toMatchObject({ kind: 'face', name: 'extrude:end', frame: { origin: [0, 0, 25].map((v) => expect.closeTo(v, 9)) } });
+    // With the plane taken over, nothing is reported any more.
+    const again = build([base, { ...extrude, depth: 25 }, ...onFace(healed ?? topFace(25))]);
+    expect(again.features[2]?.healedPlane).toBeUndefined();
+  });
+
+  it('finds the face of an older file by its plane and gives the sketch its name', () => {
+    const { name: _name, ...unnamed } = topFace(10) as Extract<SketchFeature['plane'], { kind: 'face' }>;
+    const result = build([base, extrude, ...onFace(unnamed)]);
+    expect(result.features[2]?.status).toBe('ok');
+    expect(result.features[2]?.healedPlane).toMatchObject({ kind: 'face', name: 'extrude:end' });
+  });
+
+  it('reports a sketch whose face is gone and keeps it where the face was', () => {
+    const features = [base, extrude, ...onFace(topFace(10))];
+    // The plate now comes from a sketch that is extruded by another feature: its faces have other names.
+    const other: ExtrudeFeature = { ...extrude, id: 'other' };
+    const result = build([features[0] as Feature, other, ...features.slice(2)]);
+    expect(result.features[2]?.status).toBe('ok');
+    expect(result.features[2]?.healedPlane).toMatchObject({ name: 'other:end' });
+
+    const moved = build([features[0] as Feature, { ...other, depth: 15 }, ...features.slice(2)]);
+    expect(moved.features[2]?.status).toBe('error');
+    expect(moved.features[2]?.error?.code).toBe('face-missing');
+    // The pocket still comes from where the face was, 4 mm below z = 10.
+    expect(moved.features[3]?.status).toBe('ok');
+    expect(moved.captures[0]?.properties?.volume).toBeCloseTo(800 * 15 - 36 * Math.PI, 3);
   });
 });

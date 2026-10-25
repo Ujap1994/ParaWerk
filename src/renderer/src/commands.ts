@@ -395,8 +395,12 @@ function sketchPlaneOf(pick: Pick): SketchPlaneRef | null {
     return plane ? { kind: 'standard', plane } : null;
   }
   if (pick.kind !== 'face') return null;
-  const face = getState().display.body?.faceInfo[pick.index]?.plane;
-  return face ? { kind: 'face', face: pick.index, frame: frameOnPlane(face.point, face.normal) } : null;
+  const body = getState().display.body;
+  const face = body?.faceInfo[pick.index]?.plane;
+  if (!face) return null;
+  // The face's persistent name lets the sketch follow it when earlier features change.
+  const name = body.naming.faces[pick.index];
+  return { kind: 'face', face: pick.index, frame: frameOnPlane(face.point, face.normal), ...(name ? { name } : {}) };
 }
 
 /** Sketch command: sketches on a selected plane or planar face right away, otherwise asks for one. */

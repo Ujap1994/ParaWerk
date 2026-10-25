@@ -1,9 +1,10 @@
 import { hashString } from '../shared/hash.ts';
-import { isSketchBased, type Feature, type SketchFeature } from '../shared/model/feature.ts';
+import { isEdgeFeature, isSketchBased, type Feature, type SketchFeature } from '../shared/model/feature.ts';
+import type { SketchFrame, SketchPlaneRef } from '../shared/model/sketch.ts';
 import type { GeometryBackend, ShapeHandle } from './backend.ts';
 import { FeatureError } from './feature-error.ts';
 import type { FeatureResult } from './protocol.ts';
-import { resolveFeature } from './resolve.ts';
+import { placeSketch, resolveFeature } from './resolve.ts';
 
 interface CacheEntry {
   /** Identifies this feature together with everything before it. */
@@ -12,6 +13,8 @@ interface CacheEntry {
   shapeKey: string;
   shape: ShapeHandle | null;
   ownsShape: boolean;
+  /** Sketches: where the sketch lies (a sketch on a face follows its face). */
+  frame?: SketchFrame;
   result: FeatureResult;
 }
 
@@ -29,18 +32,39 @@ function stableStringify(value: unknown): string {
   return JSON.stringify(value);
 }
 
+/**
+ * What decides where a sketch lies. A sketch on a named face follows the face in the body before it,
+ * which the keys cover already, so the frame the document keeps up to date is left out: taking it over
+ * after a rebuild must not rebuild everything again.
+ */
+function planeSignature(plane: SketchPlaneRef): unknown {
+  return plane.kind === 'face' && plane.name !== undefined ? { kind: 'face', name: plane.name } : plane;
+}
+
 /** Everything that influences the geometry of a feature (the display name does not). */
 function featureSignature(feature: Feature, sketches: ReadonlyMap<string, SketchFeature>): string {
   // Sketches and variables never change the body, so editing them must not invalidate the features
   // after them (variables reach the body through the values of the features that use them).
-  if (feature.type === 'sketch' || feature.type === 'variables') return `${feature.type}:${feature.id}`;
+  if (feature.type === 'variables') return `${feature.type}:${feature.id}`;
+  if (feature.type === 'sketch') return `${feature.type}:${feature.id}:${stableStringify(planeSignature(feature.plane))}`;
   const { name: _name, expressions: _expressions, ...geometry } = feature;
   if (isSketchBased(feature)) {
     // Extrusions and revolutions follow their sketch: its plane and geometry belong to their signature.
     const sketch = sketches.get(feature.sketch);
-    return stableStringify({ ...geometry, from: sketch && !sketch.suppressed ? { plane: sketch.plane, entities: sketch.sketch.entities } : null });
+    return stableStringify({ ...geometry, from: sketch && !sketch.suppressed ? { plane: planeSignature(sketch.plane), entities: sketch.sketch.entities } : null });
   }
   return stableStringify(geometry);
+}
+
+/**
+ * A result without the healed references the document has taken over already: a sketch's key leaves
+ * its frame out, so its cached result would otherwise report the same plane again and again.
+ */
+function withoutTakenOver(result: FeatureResult, feature: Feature | undefined): FeatureResult {
+  const { healedEdges, healedPlane, ...rest } = result;
+  const edgesNew = healedEdges && !(feature && isEdgeFeature(feature) && stableStringify(feature.edges) === stableStringify(healedEdges));
+  const planeNew = healedPlane && !(feature?.type === 'sketch' && stableStringify(feature.plane) === stableStringify(healedPlane));
+  return { ...rest, ...(edgesNew ? { healedEdges } : {}), ...(planeNew ? { healedPlane } : {}) };
 }
 
 export function featureKeys(features: readonly Feature[]): string[] {
@@ -82,6 +106,10 @@ export class Rebuilder implements Disposable {
       }
     }
     this.truncate(firstChanged);
+    const frames = new Map<string, SketchFrame>();
+    this.entries.forEach((entry, i) => {
+      if (entry.frame) frames.set(features[i]?.id ?? '', entry.frame);
+    });
 
     for (let i = firstChanged; i < features.length; i++) {
       const feature = features[i] as Feature;
@@ -91,7 +119,29 @@ export class Rebuilder implements Disposable {
       const inputKey = previous?.shapeKey ?? ROOT_KEY;
       const start = performance.now();
 
-      // Sketches and variables do not change the body (extrude features consume sketches).
+      // Sketches do not change the body (extrusions consume them); a sketch on a face follows its face.
+      if (feature.type === 'sketch' && !feature.suppressed) {
+        const placement = placeSketch(feature, input ? () => this.backend.naming(input) : null);
+        frames.set(feature.id, placement.frame);
+        this.entries.push({
+          key,
+          shapeKey: inputKey,
+          shape: input,
+          ownsShape: false,
+          frame: placement.frame,
+          result: {
+            id: feature.id,
+            status: placement.missing ? 'error' : 'ok',
+            timeMs: performance.now() - start,
+            cached: false,
+            ...(placement.missing ? { error: { code: 'face-missing' as const } } : {}),
+            ...(placement.healed ? { healedPlane: placement.healed } : {}),
+          },
+        });
+        continue;
+      }
+
+      // Variables do not change the body either.
       if (feature.suppressed || feature.type === 'sketch' || feature.type === 'variables') {
         this.entries.push({
           key,
@@ -104,7 +154,7 @@ export class Rebuilder implements Disposable {
       }
 
       try {
-        const resolved = resolveFeature(feature, features.slice(0, i), input ? () => this.backend.naming(input) : null);
+        const resolved = resolveFeature(feature, features.slice(0, i), input ? () => this.backend.naming(input) : null, frames);
         const shape = this.backend.applyFeature(input, resolved);
         const healed = 'healedEdges' in resolved ? resolved.healedEdges : undefined;
         this.entries.push({
@@ -129,9 +179,10 @@ export class Rebuilder implements Disposable {
       }
     }
 
-    const results = this.entries.map((entry, i) =>
-      i < firstChanged ? { ...entry.result, timeMs: 0, cached: true } : entry.result,
-    );
+    const results = this.entries.map((entry, i) => {
+      const result = i < firstChanged ? { ...entry.result, timeMs: 0, cached: true } : entry.result;
+      return withoutTakenOver(result, features[i]);
+    });
     return { results, rebuilt: features.length - firstChanged };
   }
 

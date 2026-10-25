@@ -139,10 +139,15 @@ export type StandardPlane = 'front' | 'top' | 'right';
 
 export const STANDARD_PLANES: readonly StandardPlane[] = ['front', 'top', 'right'];
 
-/** Where a sketch lies: a standard plane or a planar face of the body. */
+/**
+ * Where a sketch lies: a standard plane or a planar face of the body. A face is remembered by its
+ * persistent name (docs/adr/0002-persistent-naming.md), so the sketch follows it when earlier features
+ * move or turn it; `frame` and `face` (its index) are where it is now, updated by every rebuild.
+ * Files of ParaWerk 0.2 and earlier have no name: the face is found again by its plane.
+ */
 export type SketchPlaneRef =
   | { kind: 'standard'; plane: StandardPlane }
-  | { kind: 'face'; face: number; frame: SketchFrame };
+  | { kind: 'face'; face: number; frame: SketchFrame; name?: string };
 
 /** A plane in model space: origin plus orthonormal axes (sketch x, sketch y, normal). */
 export interface SketchFrame {

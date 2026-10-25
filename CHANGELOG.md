@@ -25,6 +25,9 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
   sketch, a new hole, a cut inserted or suppressed before the fillet – no longer moves fillets to other
   edges; an edge that is really gone is reported. Edge numbers in files of earlier versions are converted
   when the part is opened; part files with named edges are saved as format version 5.
+- Sketches on faces follow their face: when an earlier feature moves or turns the face (a thicker
+  plate), the sketch and the features built from it move along. A sketch whose face is gone is marked
+  and stays where the face was.
 
 ### Fixed
 - The labels of choice fields in the side panel had no space above them.

@@ -33,9 +33,11 @@ from the triangles of the display), and you look at it from outside the material
 - **Sketch axes on a face:** chosen like the standard views, so a face parallel to the front, top or right
   plane gets the same axes as that plane, and on all other faces the sketch's y axis points as close to
   upwards (+Z) as the face allows.
-- In this preview a sketch keeps the position of the face at the time it was created; it does not yet
-  move along when the face moves because earlier features change. Following the face is part of the
-  persistent naming work ([ADR 0002](../adr/0002-persistent-naming.md)).
+- **A sketch follows its face.** The sketch remembers the face by its name (for example "the end face of
+  Extrude1"), not by its position. When an earlier feature moves or turns the face – a thicker plate, a
+  changed angle – the sketch moves along, and so does everything built from it, such as a pocket cut from
+  the top face. If the face no longer exists, the sketch is marked in red in the tree and stays where the
+  face was, so the features built from it keep working.
 
 ## Starting a sketch
 

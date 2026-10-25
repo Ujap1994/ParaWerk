@@ -73,6 +73,7 @@ using FaceNames = std::vector<std::string>;
 /** Face names of a body and how its edges lie between faces (edge i follows TopExp::MapShapes order). */
 struct Naming {
   FaceNames faces;
+  std::vector<double> facePlanes;     // 6 per face: a point on the plane and the outward normal (NaN when not planar)
   std::vector<int32_t> edgeFaces;     // 2 per edge: face indices on both sides (the same twice for seams, -1 for none)
   std::vector<double> edgeMidpoints;  // 3 per edge: the point in the middle of the curve (NaN when degenerate)
 };

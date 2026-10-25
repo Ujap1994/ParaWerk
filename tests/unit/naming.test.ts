@@ -9,6 +9,7 @@ function body(edges: [string, string, [number, number, number]][]): BodyNaming {
   const faces = [...new Set(edges.flatMap(([a, b]) => [a, b]))];
   return {
     faces,
+    facePlanes: new Float64Array(6 * faces.length).fill(NaN),
     edgeFaces: Int32Array.from(edges.flatMap(([a, b]) => [faces.indexOf(a), faces.indexOf(b)])),
     edgeMidpoints: Float64Array.from(edges.flatMap(([, , at]) => at)),
   };

@@ -36,7 +36,7 @@ const SURFACE_KINDS: SurfaceKind[] = ['plane', 'cylinder', 'cone', 'sphere', 'to
 const CURVE_KINDS: CurveKind[] = ['line', 'circle', 'ellipse', 'bspline', 'other'];
 
 const FEATURE_ERROR_CODES = new Set<FeatureErrorCode>([
-  'no-body', 'no-edges', 'edge-missing', 'empty-result', 'first-must-add', 'sketch-missing', 'profile-empty', 'profile-crossing', 'axis-missing', 'profile-crosses-axis',
+  'no-body', 'no-edges', 'edge-missing', 'face-missing', 'empty-result', 'first-must-add', 'sketch-missing', 'profile-empty', 'profile-crossing', 'axis-missing', 'profile-crosses-axis',
   'operation-failed', 'unknown',
 ]);
 
@@ -174,7 +174,7 @@ export class ParaWerkBackend implements GeometryBackend {
 
   naming(handle: ShapeHandle): BodyNaming {
     const result = check(this.kernel.naming(this.id(handle)) as ({ ok: true } & BodyNaming) | Failure);
-    return { faces: result.faces, edgeFaces: result.edgeFaces, edgeMidpoints: result.edgeMidpoints };
+    return { faces: result.faces, facePlanes: result.facePlanes, edgeFaces: result.edgeFaces, edgeMidpoints: result.edgeMidpoints };
   }
 
   massProperties(handle: ShapeHandle): MassProperties {
