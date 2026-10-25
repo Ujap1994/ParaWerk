@@ -57,6 +57,22 @@ function pick(features: Feature[], index: number, a: string, b: string): EdgeNam
 const filletLoss = (r: number, l: number) => (1 - Math.PI / 4) * r * r * l;
 
 describe('face names', () => {
+  it('names the flat ends of a revolution after the profile edges that touch the axis', () => {
+    const pts: [number, number][] = [[0, 0], [12, 0], [12, 80], [0, 80]];
+    const section: SketchFeature = {
+      id: 'sec',
+      type: 'sketch',
+      plane: { kind: 'standard', plane: 'front' },
+      sketch: {
+        entities: [...pts.map(([x, y], i) => P(`h${i}p`, x, y)), ...pts.map((_, i) => L(`h${i}`, `h${i}p`, `h${(i + 1) % 4}p`)), P('x1', 0, -10), P('x2', 0, 90), { id: 'axis', type: 'line', p1: 'x1', p2: 'x2', construction: true }],
+        constraints: [],
+      },
+    };
+    const shaft: RevolveFeature = { id: 'shaft', type: 'revolve', operation: 'add', sketch: 'sec', axis: 'axis', angle: 360, direction: 'normal' };
+    const naming = namingAfter([section, shaft], 1);
+    expect([...naming.faces].sort()).toEqual(['shaft:side:h0', 'shaft:side:h1', 'shaft:side:h2']);
+  });
+
   it('names faces after the feature and the role that made them', () => {
     const naming = namingAfter([box, hole], 1);
     expect(new Set(naming.faces)).toEqual(new Set(['box:left', 'box:right', 'box:front', 'box:back', 'box:bottom', 'box:top', 'hole:side']));

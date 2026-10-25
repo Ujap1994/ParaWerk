@@ -22,6 +22,7 @@
 #include <BRepOffsetAPI_MakeOffsetShape.hxx>
 #include <BRepOffsetAPI_MakeThickSolid.hxx>
 #include <BRepExtrema_DistShapeShape.hxx>
+#include <BRepBuilderAPI_MakeVertex.hxx>
 #include <BRepGProp.hxx>
 #include <BRepOffsetAPI_DraftAngle.hxx>
 #include <BRep_Builder.hxx>
@@ -698,6 +699,34 @@ int draftSides(int toolId, const std::vector<double>& frame, double angle, const
 namespace {
 
 /** The solid of revolveProfile, with its face names, not yet stored. */
+/**
+ * Names the faces a sweep left unnamed after the profile edge whose middle lies on them. A revolution
+ * reports no generated face for an edge that touches the axis (it sweeps a flat disk), so the disks at
+ * the ends of a shaft would otherwise share the name "<name>:other".
+ */
+void nameByContact(const TopoDS_Shape& shape, FaceNames& names, const NamedEdges& named, const std::string& name) {
+  const std::string other = faceName(name, "other");
+  ShapeMap faces;
+  TopExp::MapShapes(shape, TopAbs_FACE, faces);
+  std::vector<std::pair<gp_Pnt, std::string>> middles;
+  for (const auto& [edge, edgeName] : named.edges) {
+    if (edgeName.empty() || BRep_Tool::Degenerated(edge)) continue;
+    BRepAdaptor_Curve curve(edge);
+    middles.emplace_back(curve.Value((curve.FirstParameter() + curve.LastParameter()) / 2), edgeName);
+  }
+  for (int f = 1; f <= faces.Extent() && f <= static_cast<int>(names.size()); ++f) {
+    std::string& faceName_ = names[static_cast<size_t>(f - 1)];
+    if (faceName_ != other) continue;
+    for (const auto& [middle, edgeName] : middles) {
+      BRepExtrema_DistShapeShape distance(BRepBuilderAPI_MakeVertex(middle).Vertex(), faces(f));
+      if (distance.IsDone() && distance.Value() < 1e-6) {
+        faceName_ = faceName(name, "side:" + edgeName);
+        break;
+      }
+    }
+  }
+}
+
 StoredShape revolveRegions(const std::vector<double>& profile, const std::vector<double>& frame, const std::vector<double>& axis, double from, double to,
                            const std::vector<std::string>& edgeNames, const std::string& name) {
   if (axis.size() != 4) throw KernelError("operation-failed", "an axis needs 4 values");
@@ -716,7 +745,9 @@ StoredShape revolveRegions(const std::vector<double>& profile, const std::vector
   for (const TopoDS_Face& face : readFaces(profile, plane, named)) {
     BRepPrimAPI_MakeRevol revolution(face, line, sweep);
     if (!revolution.IsDone()) throw KernelError("operation-failed", "the profile could not be revolved");
-    solids.push_back({revolution.Shape(), sweepNames(revolution, named, name)});
+    FaceNames names = sweepNames(revolution, named, name);
+    nameByContact(revolution.Shape(), names, named, name);
+    solids.push_back({revolution.Shape(), std::move(names)});
   }
   return joinRegions(solids, "revolved");
 }

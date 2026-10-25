@@ -89,6 +89,8 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
   marks where they were in the 3D view and removes them with one click.
 
 ### Fixed
+- The flat end faces of revolutions (swept by profile edges that touch the axis, such as the ends of a
+  shaft) get names of their own, so chamfers and fillets on their edges stay there when the part changes.
 - The command bar no longer grows by the height of a scroll bar when its commands only fit in a denser layout,
   so the 3D view keeps its size when switching command tabs.
 - Dimensions can refer to edges of the part: pick a circle (its center), a point or a line, then an edge of

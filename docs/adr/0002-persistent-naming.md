@@ -39,7 +39,9 @@ using OCCT's history to pass the names of the faces it modifies on:
 |---|---|---|
 | Box | `<id>:left/right/front/back/bottom/top` (by outward normal: −x, +x, −y, +y, −z, +z) | – |
 | Cylinder | `<id>:side/bottom/top` | – |
-| Extrude, revolve | `<id>:side:<sketch curve id>`, `<id>:start`, `<id>:end` | `Generated(edge)`, `FirstShape`, `LastShape` |
+| Extrude, revolve | `<id>:side:<sketch curve id>`, `<id>:start`, `<id>:end` | `Generated(edge)`, `FirstShape`, `LastShape`; faces still unnamed get the name of the profile edge whose middle lies on them (a revolution reports no generated face for an edge that touches the axis, such as the flat ends of a shaft) |
+| Draft while extruding | none: the tapered side faces keep their names | `Modified`, `ModifiedShape` (BRepOffsetAPI_DraftAngle reports the tapered faces only there) |
+| STEP import | `<id>:f<i>` in the order of the imported faces | – |
 | Boolean (add, cut) | none: every face keeps the name of the face it comes from | `Modified`, `IsDeleted`, merged by `SimplifyResult` |
 | Fillet, chamfer | `<id>:<hash of the edge's two face names>`; corners `<id>:corner` | `Generated(edge)`, `Modified` |
 
@@ -49,6 +51,11 @@ plane moved to the start of the extrusion instead of transforming a copy, so the
 side faces they sweep stay connected through the history. Fillet faces are named after the edge they
 replace, not after its position in the feature's list, so removing another edge from the fillet does not
 rename them.
+
+**Reference suite.** `tests/integration/reference-models.test.ts` models 30 parts the way a user would
+(sketches on faces, edges and faces picked in the body, holes, patterns, shells, drafts, imports) and
+edits each at early features; after every edit all features must build without lost references (the
+Gate 2 exit criterion).
 
 **Edge references.** A fillet or chamfer stores `{ kind: 'edge', faces: [a, b], at }`: the sorted names of
 the two faces the edge lies between (the same name twice for a seam) and the middle of the edge when it

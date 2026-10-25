@@ -168,6 +168,7 @@ Marked complete for now: open points from hands-on testing are handled alongside
 | 3MF export (with material and color), STEP import as a body | ✅ done |
 | Chamfer with two distances and with distance and angle | ✅ done |
 | Extrude in two directions, draft while extruding | ✅ done |
+| Reference suite for Gate 2: 30 parts edited at early features | ✅ done |
 | Extrude up to next, up to curved surfaces, thin feature | open |
 
 ## 2. Guiding principles
@@ -356,6 +357,7 @@ CAD system; over-defined sketches explain which relations conflict.
 **Exit criteria (Gate 2)**
 - The owner models a set of their own real-world parts without workarounds
 - Editing early features does not break later features in a reference suite of at least 30 models
+  (in place since 2026-10-25: `tests/integration/reference-models.test.ts`, 30 parts, 70 edits)
 
 **Performance focus:** parts with 10 → 100 → 300 features; incremental rebuilds; tessellation in workers;
 no main-thread block longer than 100 ms.
