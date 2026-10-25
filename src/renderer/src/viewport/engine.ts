@@ -38,6 +38,7 @@ import { CameraController } from './camera-controller.ts';
 import { AxisTriad } from './axis-triad.ts';
 import { palettes, type ViewportPalette } from './palette.ts';
 import { LostMarkers } from './lost-markers.ts';
+import { MeasureGraphics, type MeasureLine } from './measure-graphics.ts';
 import { CosmeticThreads } from './threads.ts';
 import { pointTexture, ReferenceGeometryLayer, type ReferenceItem } from './reference-geometry.ts';
 import { disposeOverlay, PartModel } from './part-model.ts';
@@ -163,6 +164,7 @@ export class ViewportEngine {
   private lastSketchPointer: SketchPointer | null = null;
   private readonly pivotMarker: Mesh<SphereGeometry, MeshBasicMaterial>;
   private readonly lostMarkers = new LostMarkers();
+  private readonly measureGraphics = new MeasureGraphics();
   private palette: ViewportPalette = palettes.light;
   /** The part's own color, over the theme's body color. */
   private bodyColor: string | null = null;
@@ -258,7 +260,7 @@ export class ViewportEngine {
     this.pivotMarker = new Mesh(new SphereGeometry(1, 16, 12), new MeshBasicMaterial({ depthTest: false }));
     this.pivotMarker.renderOrder = 10;
     this.pivotMarker.visible = false;
-    this.scene.add(this.pivotMarker, this.lostMarkers.group, this.referenceGeometry.group, this.threads.group);
+    this.scene.add(this.pivotMarker, this.lostMarkers.group, this.measureGraphics.group, this.referenceGeometry.group, this.threads.group);
     const texture = pointTexture();
     this.vertexMaterials.hover.map = texture;
     this.vertexMaterials.selected.map = texture;
@@ -361,6 +363,16 @@ export class ViewportEngine {
 
   get lostMarkerCount(): number {
     return this.lostMarkers.count;
+  }
+
+  /** Shows the lines of the measure tool (see MeasureGraphics). */
+  setMeasureLines(lines: readonly MeasureLine[]): void {
+    this.measureGraphics.set(lines);
+    this.requestRender();
+  }
+
+  get measureLineCount(): number {
+    return this.measureGraphics.count;
   }
 
   setSelection(picks: Pick[]): void {
@@ -544,6 +556,7 @@ export class ViewportEngine {
     this.materials.referenceEdge.color.setHex(p.referenceEdge);
     this.pivotMarker.material.color.setHex(p.pivot);
     this.lostMarkers.setColor(p.lost);
+    this.measureGraphics.setColor(p.measure);
     this.referenceGeometry.setPalette(p);
     this.threads.setColor(p.edge);
     this.vertexMaterials.hover.color.setHex(p.hover);
@@ -734,6 +747,7 @@ export class ViewportEngine {
     const mmPerPixel = this.mmPerPixel();
     this.sketchMaterials.setZoom(mmPerPixel);
     this.lostMarkers.setZoom(mmPerPixel);
+    this.measureGraphics.setZoom(mmPerPixel);
     this.referenceGeometry.setZoom(mmPerPixel);
     // Vertex highlights keep their size on screen.
     for (const overlay of [this.hoverOverlay, ...this.selectionOverlays]) {
@@ -750,9 +764,10 @@ export class ViewportEngine {
     this.renderer.setScissorTest(false);
     this.renderer.clear(true, true, true);
     this.renderer.render(this.scene, camera);
-    // Labels only exist in sketch mode; skipping the label pass keeps large scenes fast.
-    this.labelRenderer.domElement.hidden = !this.sketchLayer.active;
-    if (this.sketchLayer.active) this.labelRenderer.render(this.scene, camera);
+    // Labels only exist in sketch mode and for measurements; skipping the label pass keeps large scenes fast.
+    const labels = this.sketchLayer.active || this.measureGraphics.hasLabels;
+    this.labelRenderer.domElement.hidden = !labels;
+    if (labels) this.labelRenderer.render(this.scene, camera);
     this.viewCube.render(this.renderer, this.width, this.height, this.controller.state.quaternion);
     this.triad.render(this.renderer, this.height, this.controller.state.quaternion);
   }
@@ -1189,6 +1204,7 @@ export class ViewportEngine {
     this.vertexMaterials.hover.map?.dispose();
     for (const material of Object.values(this.vertexMaterials)) material.dispose();
     this.lostMarkers.dispose();
+    this.measureGraphics.dispose();
     this.sketchLayer.dispose();
     for (const graphics of this.inactiveSketches.values()) graphics.dispose();
     this.sketchMaterials.dispose();

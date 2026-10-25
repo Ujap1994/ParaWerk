@@ -2,6 +2,7 @@ import createParaWerkKernel from '../../../vendor/parawerk-kernel/parawerk-kerne
 import { extrudeRange, revolveRange, type BooleanOperation, type Vec3 } from '../../shared/model/feature.ts';
 import { holeProfile, throughDepth } from '../../shared/model/hole.ts';
 import { transformDirection, transformPoint } from '../../shared/model/pattern.ts';
+import type { MeasuredDistance, MeasureTarget } from '../measure.ts';
 import type { GeometryBackend, KernelFeature, ResolvedCopy, ResolvedHole, ShapeHandle } from '../backend.ts';
 import { FeatureError } from '../feature-error.ts';
 import { axisDirection } from '../feature-geometry.ts';
@@ -301,6 +302,12 @@ export class ParaWerkBackend implements GeometryBackend {
     if (axis) result.axis = axis;
     if (Number.isFinite(raw.radius)) result.radius = raw.radius;
     return result;
+  }
+
+  distance(handle: ShapeHandle, a: MeasureTarget, b: MeasureTarget): MeasuredDistance {
+    const code = { vertex: 0, edge: 1, face: 2 } as const;
+    const raw = check(this.kernel.distance(this.id(handle), code[a.kind], a.index, code[b.kind], b.index) as { ok: true; value: number; from: Vec3; to: Vec3 } | Failure);
+    return { value: raw.value, from: raw.from, to: raw.to };
   }
 
   massProperties(handle: ShapeHandle): MassProperties {

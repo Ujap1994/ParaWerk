@@ -107,7 +107,8 @@
       "mirror": "Mirror features through a plane",
       "shell": "Hollow the part out to thin walls, open at the faces you pick",
       "material": "Choose the material (density) and the color of the part",
-      "massProperties": "Show mass, center of mass and moments of inertia of the part"
+      "massProperties": "Show mass, center of mass and moments of inertia of the part",
+      "measure": "Measure distances, angles, lengths and areas of faces, edges and vertices"
     },
     "tabs": {
       "label": "Command tabs",
@@ -184,7 +185,8 @@
     "copyGeometry": "Patterns and mirror",
     "shell": "Shell",
     "material": "Material",
-    "massProperties": "Mass properties"
+    "massProperties": "Mass properties",
+    "measure": "Measure"
   },
   "features": {
     "plane": "Plane",
@@ -802,5 +804,26 @@
     "empty": "There is no body yet.",
     "rolledBack": "Rolled back: the values are for the part above the rollback bar.",
     "editing": "The values are updated when the edit is finished."
+  },
+  "measure": {
+    "title": "Measure",
+    "close": "Close",
+    "hint": "Click faces, edges or vertices in the 3D view. Two picks are measured against each other; a third click starts a new measurement.",
+    "face": "Face",
+    "edge": "Edge",
+    "vertex": "Vertex",
+    "area": "Area",
+    "length": "Length",
+    "diameter": "Diameter",
+    "center": "Center",
+    "position": "Position",
+    "distance": "Shortest distance",
+    "deltas": "dX {{x}} · dY {{y}} · dZ {{z}}",
+    "normalDistance": "Distance of the planes",
+    "centerDistance": "Center distance",
+    "angle": "Angle",
+    "unsupported": "Planes and reference geometry cannot be measured yet.",
+    "editing": "Finish the edit to measure.",
+    "busy": "Measuring…"
   }
 }

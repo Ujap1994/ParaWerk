@@ -107,7 +107,8 @@
       "mirror": "Features an einer Ebene spiegeln",
       "shell": "Das Teil zu dünnen Wänden aushöhlen, offen an den gewählten Flächen",
       "material": "Material (Dichte) und Farbe des Teils wählen",
-      "massProperties": "Masse, Schwerpunkt und Trägheitsmomente des Teils anzeigen"
+      "massProperties": "Masse, Schwerpunkt und Trägheitsmomente des Teils anzeigen",
+      "measure": "Abstände, Winkel, Längen und Flächen von Flächen, Kanten und Ecken messen"
     },
     "tabs": {
       "label": "Befehlsregister",
@@ -184,7 +185,8 @@
     "copyGeometry": "Muster und Spiegeln",
     "shell": "Schale",
     "material": "Material",
-    "massProperties": "Masseeigenschaften"
+    "massProperties": "Masseeigenschaften",
+    "measure": "Messen"
   },
   "features": {
     "plane": "Ebene",
@@ -802,5 +804,26 @@
     "empty": "Es gibt noch keinen Körper.",
     "rolledBack": "Zurückgesetzt: Die Werte gelten für das Teil über der Rollback-Leiste.",
     "editing": "Die Werte werden nach der Bearbeitung aktualisiert."
+  },
+  "measure": {
+    "title": "Messen",
+    "close": "Schließen",
+    "hint": "Flächen, Kanten oder Ecken im 3D-Fenster anklicken. Zwei Auswahlen werden gegeneinander gemessen; ein dritter Klick beginnt eine neue Messung.",
+    "face": "Fläche",
+    "edge": "Kante",
+    "vertex": "Ecke",
+    "area": "Fläche",
+    "length": "Länge",
+    "diameter": "Durchmesser",
+    "center": "Mittelpunkt",
+    "position": "Position",
+    "distance": "Kürzester Abstand",
+    "deltas": "dX {{x}} · dY {{y}} · dZ {{z}}",
+    "normalDistance": "Abstand der Ebenen",
+    "centerDistance": "Mittenabstand",
+    "angle": "Winkel",
+    "unsupported": "Ebenen und Referenzgeometrie können noch nicht gemessen werden.",
+    "editing": "Zum Messen die Bearbeitung beenden.",
+    "busy": "Messen…"
   }
 }

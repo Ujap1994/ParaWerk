@@ -1,7 +1,7 @@
 # Material and evaluation
 
 The **Evaluate** tab of the command bar holds what concerns the part as a whole: its material and color,
-and what it weighs.
+what it weighs, and the measure tool.
 
 ## Material and appearance
 
@@ -41,3 +41,24 @@ part as it was. Material and color are saved in the part file (format version 7)
 The values are for the part as it is built: while the part is rolled back, they are for the features
 above the rollback bar; while a feature or sketch is edited, the panel keeps the last values until the
 edit is finished. Without a material the panel shows volume, area and center of mass only.
+
+## Measure
+
+**Measure** turns on the measure tool; a panel opens at the top left of the 3D view. Click faces, edges
+or vertices of the part (no Ctrl needed): the first pick is described, two picks are measured against
+each other, and a third click starts a new measurement. Click a pick again to remove it. **Measure** or
+the ✕ of the panel turns the tool off.
+
+![The distance between two bores and of their axes](../images/screenshots/measure.png)
+
+| Picks | What is measured |
+|---|---|
+| One face | Kind of surface, diameter of cylinders and spheres, area |
+| One edge | Kind of curve, length, diameter and center of circles and arcs |
+| One vertex | Position |
+| Any two | The **shortest distance** between them (solid line in the view) with its components dX, dY, dZ |
+| Two planes or straight edges, or one of each | The **angle** between them (0° to 90°); for parallel planes also the **distance of the planes** along their normal |
+| Circles, arcs, cylinders, spheres (with each other or with a vertex) | The **center distance**: between centers, from a center to an axis, or between axes (dashed line in the view) |
+
+All values come from the exact B-Rep geometry, not from the display mesh. Standard planes and reference
+geometry cannot be measured yet.

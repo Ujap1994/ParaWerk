@@ -6,10 +6,12 @@ import type {
   CapturedState,
   ExportRequest,
   MassProperties,
+  MeasureRequest,
   MemoryStats,
   RebuildRequest,
   RebuildResult,
 } from './protocol.ts';
+import { relateEntities, type MeasuredEntity, type MeasureResult } from './measure.ts';
 import { Rebuilder } from './rebuild.ts';
 import { writeBinaryStl } from './stl.ts';
 
@@ -103,6 +105,25 @@ export class Kernel implements Disposable {
     if (request.format === 'step') return this.backend.exportStep(shape);
     const mesh = this.backend.exportMesh(shape, exportQuality(diagonalOf(this.backend.boundingBox(shape))));
     return writeBinaryStl(mesh.positions, mesh.indices);
+  }
+
+  /** Measures one or two faces, edges or vertices of the body after `request.features`. */
+  measure(request: MeasureRequest): MeasureResult {
+    this.rebuilder.rebuild(request.features);
+    const shape = this.rebuilder.shapeAfter(request.features.length - 1);
+    if (!shape) throw new NothingToExportError();
+    const vertices = request.targets.some((target) => target.kind === 'vertex') ? this.backend.naming(shape).vertexPositions : null;
+    const entities = request.targets.slice(0, 2).map((target): MeasuredEntity => {
+      if (target.kind === 'face') return { kind: 'face', geometry: this.backend.faceGeometry(shape, target.index) };
+      if (target.kind === 'edge') return { kind: 'edge', geometry: this.backend.edgeGeometry(shape, target.index) };
+      const at = 3 * target.index;
+      return { kind: 'vertex', position: [vertices?.[at] ?? NaN, vertices?.[at + 1] ?? NaN, vertices?.[at + 2] ?? NaN] };
+    });
+    const [a, b] = request.targets;
+    const [first, second] = entities;
+    if (!a || !b || !first || !second) return { entities };
+    const distance = this.backend.distance?.(shape, a, b);
+    return { entities, ...(distance ? { distance } : {}), ...relateEntities(first, second) };
   }
 
   /**

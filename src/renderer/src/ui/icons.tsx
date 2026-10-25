@@ -221,6 +221,14 @@ export const MassPropertiesIcon = (p: P) => (
   </Icon>
 );
 
+/** Measure: a ruler laid at an angle, with its ticks. */
+export const MeasureIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="M3.5 15.5 15.5 3.5l5 5-12 12z" />
+    <path d="M7 12l2 2M9.5 9.5l1.5 1.5M12 7l2 2M14.5 4.5l1.5 1.5" />
+  </Icon>
+);
+
 /** Rolls the part forward: an arrow down to the end of the tree. */
 export const RollForwardIcon = (p: P) => (
   <Icon {...p}>

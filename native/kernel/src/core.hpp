@@ -185,6 +185,15 @@ FaceGeometry faceGeometry(int id, int index);
 /** Exact geometry of edge `index` (TopExp::MapShapes order) of a body. */
 EdgeGeometry edgeGeometry(int id, int index);
 
+/** The shortest distance between two faces, edges or vertices of a body and where it is. */
+struct Distance {
+  double value = 0;
+  double from[3] = {0, 0, 0};
+  double to[3] = {0, 0, 0};
+};
+/** Kinds of sub-shapes for `distance`: 0 vertex, 1 edge, 2 face (index in TopExp::MapShapes order). */
+Distance distance(int id, int kindA, int indexA, int kindB, int indexB);
+
 Counts counts(int id);
 BoundingBox boundingBox(int id);
 MassProperties massProperties(int id);

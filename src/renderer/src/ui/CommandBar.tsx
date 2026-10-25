@@ -44,6 +44,7 @@ import {
   LineIcon,
   MassPropertiesIcon,
   MaterialIcon,
+  MeasureIcon,
   PointIcon,
   CircularPatternIcon,
   MirrorIcon,
@@ -440,12 +441,14 @@ function EvaluateTab() {
   const { t } = useTranslation();
   const showMass = useAppState((state) => state.showMassProperties);
   const materialOpen = useAppState((state) => state.dialogs.material);
+  const measuring = useAppState((state) => state.measuring);
   return (
     <>
       <Group label={t('commands.groups.part')}>
         <CommandButton id="material" icon={MaterialIcon} label={t('commands.material')} tooltip={t('commands.tooltips.material')} active={materialOpen} onClick={() => commands.openDialog('material')} />
       </Group>
       <Group label={t('commands.groups.evaluate')}>
+        <CommandButton id="measure" icon={MeasureIcon} label={t('commands.measure')} tooltip={t('commands.tooltips.measure')} active={measuring} onClick={() => commands.toggleMeasure()} />
         <CommandButton
           id="mass-properties"
           icon={MassPropertiesIcon}

@@ -3,11 +3,13 @@ import type {
   KernelRequest,
   KernelRequestMessage,
   KernelResponseMessage,
+  MeasureRequest,
   MemoryStats,
   MeshPayload,
   RebuildRequest,
   RebuildResult,
 } from '../../../kernel/protocol.ts';
+import type { MeasureResult } from '../../../kernel/measure.ts';
 
 export class KernelCrashedError extends Error {
   constructor(message: string) {
@@ -82,6 +84,10 @@ export class KernelClient {
 
   async exportModel(request: ExportRequest): Promise<Uint8Array> {
     return (await this.send({ type: 'export', payload: request })) as Uint8Array;
+  }
+
+  async measure(request: MeasureRequest): Promise<MeasureResult> {
+    return (await this.send({ type: 'measure', payload: request })) as MeasureResult;
   }
 
   async memory(): Promise<MemoryStats> {

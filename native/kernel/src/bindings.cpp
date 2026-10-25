@@ -188,6 +188,17 @@ val edgeGeometry(int id, int index) {
   });
 }
 
+val distance(int id, int kindA, int indexA, int kindB, int indexB) {
+  return guarded([&] {
+    const parawerk::Distance distance = parawerk::distance(id, kindA, indexA, kindB, indexB);
+    val result = okObject();
+    result.set("value", distance.value);
+    result.set("from", point(distance.from));
+    result.set("to", point(distance.to));
+    return result;
+  });
+}
+
 val counts(int id) {
   return guarded([&] {
     const parawerk::Counts counts = parawerk::counts(id);
@@ -247,7 +258,7 @@ val importStep(val bytes) {
   });
 }
 
-std::string version() { return "parawerk-kernel 0.6 / OCCT " PARAWERK_OCCT_VERSION; }
+std::string version() { return "parawerk-kernel 0.7 / OCCT " PARAWERK_OCCT_VERSION; }
 
 }  // namespace
 
@@ -269,6 +280,7 @@ EMSCRIPTEN_BINDINGS(parawerk_kernel) {
   emscripten::function("naming", &naming);
   emscripten::function("faceGeometry", &faceGeometry);
   emscripten::function("edgeGeometry", &edgeGeometry);
+  emscripten::function("distance", &distance);
   emscripten::function("counts", &counts);
   emscripten::function("boundingBox", &boundingBox);
   emscripten::function("massProperties", &massProperties);

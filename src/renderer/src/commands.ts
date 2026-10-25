@@ -729,6 +729,14 @@ export function setMaterial(material: PartMaterial | null): void {
   setHistory(commit(state.history, state.history.features, next));
 }
 
+/** Turns the measure tool on or off; what is selected is measured right away. */
+export function toggleMeasure(on = !getState().measuring): void {
+  const state = getState();
+  if (on && (state.sketch || state.choosingSketchPlane)) return;
+  if (on && state.activeEdit) commitEdit();
+  setState({ measuring: on, ...(on ? {} : { measurement: null }) });
+}
+
 /** Shows or hides the mass properties panel over the 3D view. */
 export function toggleMassProperties(show = !getState().showMassProperties): void {
   setState({ showMassProperties: show });
@@ -1274,6 +1282,13 @@ export function handlePick(pick: Pick | null, additive: boolean): void {
     return;
   }
   const exists = state.selection.some((s) => s.kind === pick.kind && s.index === pick.index);
+  if (state.measuring) {
+    // The measure tool collects two picks; a third one starts a new measurement.
+    const measurable = state.selection.filter((s) => s.kind === 'face' || s.kind === 'edge' || s.kind === 'vertex');
+    if (exists) setState({ selection: measurable.filter((s) => !(s.kind === pick.kind && s.index === pick.index)) });
+    else setState({ selection: measurable.length >= 2 || (pick.kind !== 'face' && pick.kind !== 'edge' && pick.kind !== 'vertex') ? [pick] : [...measurable, pick] });
+    return;
+  }
   if (additive) {
     setState({ selection: exists ? state.selection.filter((s) => !(s.kind === pick.kind && s.index === pick.index)) : [...state.selection, pick] });
   } else {

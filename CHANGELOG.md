@@ -8,6 +8,10 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### Added
+- Measure tool: pick faces, edges and vertices in the 3D view; one pick shows its kind and size (area,
+  length, diameter, center, position), two picks the shortest distance (with dX, dY, dZ), the angle
+  between planes and lines, the distance of parallel planes and the distance of centers and axes. The
+  distances are drawn in the 3D view; the kernel computes them on the exact B-Rep.
 - Material and appearance: a library of 27 metals, plastics and woods with typical densities, custom
   materials with an own density, and a color for the part (the material's or any other). Shown at the
   top of the feature tree, saved in the part file (format version 7), one undo step per change.

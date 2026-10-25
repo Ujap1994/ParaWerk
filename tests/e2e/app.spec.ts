@@ -319,6 +319,42 @@ test('gives the part a material and a color and shows its mass properties', asyn
   expect((await state(page)).dirty).toBe(false);
 });
 
+test('measures faces against each other with the measure tool', async () => {
+  launched = await launchApp({ width: 1440, height: 900 });
+  const { page } = launched;
+  // A step: a 100 × 60 × 40 block with a 40 mm wide riser of 20 mm on its left end.
+  await page.evaluate(() => {
+    const features = [
+      { id: 'base', type: 'box', operation: 'add', width: 100, depth: 60, height: 40, position: [0, 0, 0] },
+      { id: 'riser', type: 'box', operation: 'add', width: 40, depth: 60, height: 20, position: [-30, 0, 40] },
+    ];
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features, past: [], future: [] }, savedFeatures: features });
+  });
+  await idle(page);
+  await page.evaluate(() => (window as unknown as { __parawerk: { viewport: { zoomToFit(): void } } }).__parawerk.viewport.zoomToFit());
+  await page.click('[data-tab="evaluate"]');
+  await page.click('[data-command="measure"]');
+  await expect(page.locator('[data-testid="measure-panel"]')).toContainText('Click faces');
+
+  await clickWorldPoint(page, [20, 0, 40]);
+  await expect(page.locator('[data-testid="measure-entities"]')).toContainText('Plane');
+  await expect(page.locator('[data-testid="measure-entities"]')).toContainText('3,600 mm²');
+  await clickWorldPoint(page, [-30, 0, 60]);
+  await expect(page.locator('[data-testid="measure-distance"]')).toHaveText('20 mm');
+  await expect(page.locator('[data-testid="measure-normal-distance"]')).toHaveText('20 mm');
+  await expect(page.locator('[data-testid="measure-angle"]')).toHaveText('0°');
+  const lines = () => page.evaluate(() => (window as unknown as { __parawerk: { viewport: { measureLines(): number } } }).__parawerk.viewport.measureLines());
+  expect(await lines()).toBe(1);
+  await expect(page.locator('.measure-label')).toHaveText('20 mm');
+
+  // A third pick starts a new measurement; closing the tool removes the line.
+  await clickWorldPoint(page, [20, 0, 40]);
+  await expect(page.locator('[data-testid="measure-results"]')).toHaveCount(0);
+  await page.click('[data-command="measure"]');
+  await expect(page.locator('[data-testid="measure-panel"]')).toHaveCount(0);
+  expect(await lines()).toBe(0);
+});
+
 /** Drags a row of the feature tree (a feature or the rollback bar) just above or below another row. */
 async function dragInTree(page: Page, from: string, to: string, where: 'above' | 'below'): Promise<void> {
   const source = await page.locator(from).boundingBox();

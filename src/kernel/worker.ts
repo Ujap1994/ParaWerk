@@ -43,6 +43,9 @@ scope.addEventListener('message', (event) => {
           scope.postMessage({ kind: 'reply', id: message.id, ok: true, result: bytes }, [bytes.buffer as ArrayBuffer]);
           break;
         }
+        case 'measure':
+          scope.postMessage({ kind: 'reply', id: message.id, ok: true, result: kernel.measure(message.payload) });
+          break;
         case 'memory':
           scope.postMessage({ kind: 'reply', id: message.id, ok: true, result: kernel.memoryStats() });
           break;

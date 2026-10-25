@@ -25,6 +25,7 @@ interface EmbindModule {
   naming(_0: number): any;
   faceGeometry(_0: number, _1: number): any;
   edgeGeometry(_0: number, _1: number): any;
+  distance(_0: number, _1: number, _2: number, _3: number, _4: number): any;
   counts(_0: number): any;
   boundingBox(_0: number): any;
   massProperties(_0: number): any;

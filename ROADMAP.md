@@ -162,6 +162,7 @@ Marked complete for now: open points from hands-on testing are handled alongside
 | Extrude up to surface (planes, with offset) and up to vertex | ✅ done |
 | Feature tree: rollback bar (insert features in the middle), reorder by dragging with dependency checks | ✅ done |
 | Materials (library and custom density), part color, mass properties with moments of inertia | ✅ done |
+| Measure tool: distances, angles, center distances, lengths, areas | ✅ done |
 | Extrude up to next, up to curved surfaces, draft while extruding | open |
 
 ## 2. Guiding principles

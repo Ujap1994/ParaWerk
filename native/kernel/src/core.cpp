@@ -21,6 +21,7 @@
 #include <BRepPrimAPI_MakeHalfSpace.hxx>
 #include <BRepOffsetAPI_MakeOffsetShape.hxx>
 #include <BRepOffsetAPI_MakeThickSolid.hxx>
+#include <BRepExtrema_DistShapeShape.hxx>
 #include <BRepGProp.hxx>
 #include <BRepLib.hxx>
 #include <BRepLib_ToolTriangulatedShape.hxx>
@@ -1179,6 +1180,35 @@ EdgeGeometry edgeGeometry(int id, int index) {
 }
 
 // ------------------------------------------------------------------ queries
+
+namespace {
+
+TopAbs_ShapeEnum measuredKind(int kind) {
+  switch (kind) {
+    case 0:
+      return TopAbs_VERTEX;
+    case 1:
+      return TopAbs_EDGE;
+    case 2:
+      return TopAbs_FACE;
+    default:
+      throw KernelError("unknown", "unknown kind of shape to measure");
+  }
+}
+
+}  // namespace
+
+Distance distance(int id, int kindA, int indexA, int kindB, int indexB) {
+  const TopoDS_Shape a = subShape(id, measuredKind(kindA), indexA, "shape");
+  const TopoDS_Shape b = subShape(id, measuredKind(kindB), indexB, "shape");
+  BRepExtrema_DistShapeShape extrema(a, b, Extrema_ExtFlag_MIN);
+  if (!extrema.IsDone() || extrema.NbSolution() < 1) throw KernelError("operation-failed", "the distance could not be computed");
+  Distance result;
+  result.value = extrema.Value();
+  setPoint(result.from, 0, extrema.PointOnShape1(1).XYZ());
+  setPoint(result.to, 0, extrema.PointOnShape2(1).XYZ());
+  return result;
+}
 
 Counts counts(int id) {
   const TopoDS_Shape& shape = store().get(id);

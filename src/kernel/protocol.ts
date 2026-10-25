@@ -1,3 +1,4 @@
+import type { MeasureTarget } from './measure.ts';
 import type { EdgeRef, Feature, Vec3 } from '../shared/model/feature.ts';
 import type { CosmeticThread } from '../shared/model/hole.ts';
 import type { BodyNaming } from '../shared/model/naming.ts';
@@ -194,9 +195,16 @@ export interface MemoryStats {
   cachedShapes: number;
 }
 
+/** Measures faces, edges and vertices of the body after `features` (see src/kernel/measure.ts). */
+export interface MeasureRequest {
+  features: Feature[];
+  targets: MeasureTarget[];
+}
+
 export type KernelRequest =
   | { type: 'rebuild'; payload: RebuildRequest }
   | { type: 'export'; payload: ExportRequest }
+  | { type: 'measure'; payload: MeasureRequest }
   | { type: 'memory' };
 
 export type KernelRequestMessage = KernelRequest & { id: number };

@@ -881,3 +881,35 @@ test('material and mass properties screenshots', async () => {
   await page.screenshot({ path: out('mass-properties.png') });
   await app.close();
 });
+
+test('measure screenshots', async () => {
+  const { app, page } = await launchApp({ width: 1440, height: 900 });
+  // A bearing plate with two bores: the distance of the bore axes is measured.
+  await page.evaluate(() => {
+    const features = [
+      { id: 'plate', type: 'box', operation: 'add', width: 120, depth: 60, height: 20, position: [0, 0, 0] },
+      { id: 'left', type: 'cylinder', operation: 'cut', radius: 10, height: 40, axis: 'z', position: [-30, 0, -10] },
+      { id: 'right', type: 'cylinder', operation: 'cut', radius: 7, height: 40, axis: 'z', position: [35, 0, -10] },
+    ];
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features, past: [], future: [] }, savedFeatures: features, fileName: 'Bearing plate' });
+  });
+  await idle(page);
+  await page.evaluate(() => (window as unknown as { __parawerk: { viewport: { zoomToFit(): void } } }).__parawerk.viewport.zoomToFit());
+  await page.waitForTimeout(400);
+  await page.click('[data-tab="evaluate"]');
+  await page.click('[data-command="measure"]');
+  const canvas = await page.locator('.viewport-canvas').boundingBox();
+  // The far walls of both bores (visible from the isometric view), away from their seams.
+  for (const point of [[-30 - 7.07, 7.07, 14], [35 - 4.95, 4.95, 14]] as const) {
+    const screen = await page.evaluate(
+      ([x, y, z]) => (window as unknown as { __parawerk: { viewport: { project(x: number, y: number, z: number): { x: number; y: number } } } }).__parawerk.viewport.project(x, y, z),
+      point,
+    );
+    if (canvas) await page.mouse.click(canvas.x + screen.x, canvas.y + screen.y);
+    await idle(page);
+  }
+  if (canvas) await page.mouse.move(canvas.x + canvas.width - 30, canvas.y + canvas.height - 30);
+  await page.waitForTimeout(600);
+  await page.screenshot({ path: out('measure.png') });
+  await app.close();
+});
