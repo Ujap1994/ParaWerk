@@ -128,6 +128,9 @@ function applyResult(
     display = { body: meshes.get(last) ?? null, preview: null, pickable: true };
   } else if (isEdgeFeature(activeEdit.draft)) {
     display = { body: meshes.get(activeEdit.index - 1) ?? null, preview: meshes.get(activeEdit.index) ?? null, pickable: true };
+  } else if (isReferenceFeature(activeEdit.draft)) {
+    // Reference geometry is built on faces, edges and vertices of the body before it (which it does not change).
+    display = { body: meshes.get(activeEdit.index - 1) ?? null, preview: null, pickable: true };
   } else {
     display = { body: meshes.get(activeEdit.index) ?? null, preview: null, pickable: false };
   }

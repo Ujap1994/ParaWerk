@@ -100,6 +100,55 @@ rounded now, and click **Remove** to drop the lost ones. With **✓** the warnin
 
 ![Editing the fillet: the panel reports the lost edges, the 3D view marks where they were](../images/screenshots/fillet-missing-edges.png)
 
+## Reference geometry
+
+Planes, axes and points that are not faces of the part: a plane at an angle to sketch on, an axis through
+the middle of a bore, a point to build a plane through. They do not change the body. Create them with the
+**Plane** button in the *Features* tab; its arrow offers **Axis** and **Point** as well.
+
+![A plane at 30° to the front plane through the axis of the bore: the new plane is drawn in teal, what it is built on in orange](../images/screenshots/reference-plane.png)
+
+In the side panel, choose the **Type**, then fill its fields one after the other: click a field (the
+active one has a blue frame) and pick in the 3D view. A field only takes what fits – a *Plane* field a
+standard plane, a planar face or a reference plane; an *Axis* field a straight or circular edge, a
+cylindrical face or a reference axis; a *Point* field a vertex, a reference point or (with **Use origin**)
+the origin. Near the end of an edge a click picks the vertex there. While you edit, the standard planes
+are shown so you can pick them, the new geometry is previewed in teal and what it is built on is
+highlighted in orange; **✓** becomes available when all fields are filled.
+
+| Plane | Built from |
+|---|---|
+| Offset from a plane | a plane and a *Distance*; *Other side* puts it on the other side |
+| At an angle to a plane | a plane and an axis parallel to it; the new plane goes through the axis, turned by the *Angle* |
+| Through three points | three vertices or points |
+| Between two planes | two parallel planes or faces (the plane in the middle), or two at an angle (the plane halving the angle) |
+| Parallel through a point | a plane and a point |
+
+| Axis | Built from |
+|---|---|
+| Along an edge or face | a straight edge, the axis of a circular edge or of a cylindrical, conical or toroidal face, or another axis |
+| Where two planes meet | two planes that are not parallel |
+| Through two points | two vertices or points |
+| Normal to a plane through a point | a plane and a point |
+
+| Point | Built from |
+|---|---|
+| Coordinates | *X*, *Y* and *Z* (also as equations) |
+| Center of an edge or face | the center of a circle or arc, the middle of any other edge, or the center of a face's area |
+| Where an axis meets a plane | an axis and a plane that is not parallel to it |
+
+Selecting the references first and then clicking **Plane**, **Axis** or **Point** fills the fields right
+away and chooses the type that fits – a planar face gives an offset plane, two vertices an axis through
+them.
+
+Reference geometry follows the part: it remembers faces, edges and vertices by name (see
+[How features remember their edges](#how-features-remember-their-edges)), so a plane offset from the top
+face moves up when the part gets taller. If something it is built on is gone, it is marked in red in the
+tree. Planes, axes and points can be selected in the tree and in the 3D view; a reference plane has a
+**Sketch on this plane** button in the tree, and sketches on it follow it as well.
+
+![Reference geometry of a part: an axis through the bore, a plane through it and a point at the center of a hole](../images/screenshots/reference-geometry.png)
+
 ## Variables and equations
 
 **Variables** (in the *Features* tab) holds named values for the whole part – a width, a wall thickness,

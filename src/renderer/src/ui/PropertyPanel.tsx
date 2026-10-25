@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import type { Axis, BooleanOperation, EdgeFeature, ExtrudeDirection, ExtrudeEnd, Feature, Vec3 } from '../../../shared/model/feature.ts';
+import { isReferenceFeature, type Axis, type BooleanOperation, type EdgeFeature, type ExtrudeDirection, type ExtrudeEnd, type Feature, type Vec3 } from '../../../shared/model/feature.ts';
+import { referenceRoles } from '../references.ts';
 import { resolveEdgeRefs } from '../../../shared/model/naming.ts';
 import * as commands from '../commands.ts';
 import { hasBodyBefore } from '../state/document.ts';
@@ -7,6 +8,7 @@ import { useAppState } from '../state/store.ts';
 import { useFeatureName } from './FeatureTree.tsx';
 import { CheckIcon, CloseIcon, FEATURE_ICONS } from './icons.tsx';
 import { NumberField } from './NumberField.tsx';
+import { ReferenceFields } from './ReferencePanel.tsx';
 import { VariablesEditor, variablesValid } from './VariablesPanel.tsx';
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -234,6 +236,10 @@ function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
     case 'sketch':
       // Sketches are edited in sketch mode, not in the property panel.
       return null;
+    case 'plane':
+    case 'axis':
+    case 'point':
+      return <ReferenceFields draft={draft} />;
     case 'variables':
       return <VariablesEditor draft={draft} />;
     case 'fillet':
@@ -293,9 +299,12 @@ export function PropertyPanel() {
   const Icon = FEATURE_ICONS[edit.draft.type];
   const featureLabel = t(`features.${edit.draft.type}`);
   const title = edit.mode === 'create' ? t('panel.creating', { feature: featureLabel }) : t('panel.editing', { feature: featureLabel });
-  const error = result?.id === edit.draft.id && result.status === 'error' ? result.error : undefined;
+  // Reference geometry needs all its references; until they are chosen, the missing ones are no error yet.
+  const incomplete = isReferenceFeature(edit.draft) && edit.draft.references.length < referenceRoles(edit.draft).length;
+  const failure = result?.id === edit.draft.id && result.status === 'error' ? result.error : undefined;
+  const error = incomplete && failure?.code === 'reference-missing' ? undefined : failure;
   // Variables are applied only when every one has a valid name and a value.
-  const applicable = edit.draft.type !== 'variables' || variablesValid(edit.draft.variables);
+  const applicable = (edit.draft.type !== 'variables' || variablesValid(edit.draft.variables)) && !incomplete;
 
   return (
     <section

@@ -95,7 +95,10 @@
       "exportDxf": "Skizze als DXF speichern, z. B. zum Laserschneiden (ohne Konstruktionsgeometrie)",
       "variables": "Benannte Werte und Gleichungen: in Bemaßungen und Feature-Parametern verwenden",
       "extrude": "Die geschlossenen Konturen einer Skizze extrudieren oder aus dem Körper schneiden",
-      "revolve": "Die geschlossenen Konturen einer Skizze um eine Linie der Skizze rotieren oder aus dem Körper schneiden"
+      "revolve": "Die geschlossenen Konturen einer Skizze um eine Linie der Skizze rotieren oder aus dem Körper schneiden",
+      "plane": "Referenzebene erzeugen: mit Abstand, im Winkel, durch Punkte oder zwischen zwei Ebenen",
+      "axis": "Referenzachse erzeugen: entlang einer Kante oder eines Zylinders, im Schnitt zweier Ebenen oder durch zwei Punkte",
+      "point": "Referenzpunkt erzeugen: über Koordinaten, im Mittelpunkt oder wo eine Achse eine Ebene trifft"
     },
     "tabs": {
       "label": "Befehlsregister",
@@ -159,7 +162,11 @@
     "exportDxf": "Export",
     "variables": "Variablen",
     "extrude": "Extrudieren",
-    "revolve": "Rotieren"
+    "revolve": "Rotieren",
+    "plane": "Ebene",
+    "axis": "Achse",
+    "point": "Punkt",
+    "referenceGeometry": "Referenzgeometrie"
   },
   "features": {
     "plane": "Ebene",
@@ -257,7 +264,8 @@
     "construction": "Konstruktionsgeometrie",
     "selected_one": "{{count}} Element ausgewählt",
     "selected_other": "{{count}} Elemente ausgewählt",
-    "frameStats": "{{fps}} fps · {{ms}} ms"
+    "frameStats": "{{fps}} fps · {{ms}} ms",
+    "vertex": "Eckpunkt {{index}}"
   },
   "viewcube": {
     "front": "Vorne",
@@ -562,5 +570,52 @@
       "cycle": "Hängt (über andere Variablen) von sich selbst ab.",
       "dependency": "Verwendet eine Variable, die keinen Wert hat."
     }
+  },
+  "references": {
+    "title": "Referenzen",
+    "definition": "Definition",
+    "method": "Art",
+    "methods": {
+      "plane": {
+        "offset": "Mit Abstand zu einer Ebene",
+        "angle": "Im Winkel zu einer Ebene",
+        "threePoints": "Durch drei Punkte",
+        "midPlane": "Zwischen zwei Ebenen",
+        "throughPoint": "Parallel durch einen Punkt"
+      },
+      "axis": {
+        "reference": "Entlang einer Kante oder Fläche",
+        "twoPlanes": "Schnitt zweier Ebenen",
+        "twoPoints": "Durch zwei Punkte",
+        "normal": "Senkrecht zu einer Ebene durch einen Punkt"
+      },
+      "point": {
+        "coordinates": "Koordinaten",
+        "center": "Mittelpunkt einer Kante oder Fläche",
+        "intersection": "Schnitt einer Achse mit einer Ebene"
+      }
+    },
+    "roles": {
+      "plane": "Ebene",
+      "axis": "Achse",
+      "point": "Punkt",
+      "center": "Kante oder Fläche"
+    },
+    "empty": "Nicht gewählt",
+    "pick": "In der 3D-Ansicht wählen",
+    "lost": "Fehlt",
+    "clear": "Referenz entfernen",
+    "hint": "Feld anklicken, dann eine Ebene, Fläche, Kante, einen Eckpunkt oder Referenzgeometrie in der 3D-Ansicht.",
+    "distance": "Abstand",
+    "flipOffset": "Andere Seite",
+    "flipAngle": "Andere Drehrichtung",
+    "flipNormal": "Normale umkehren",
+    "unsuitable": {
+      "plane": "Hier eine Ebene wählen: eine Standardebene, eine ebene Fläche oder eine Referenzebene.",
+      "axis": "Hier eine Achse wählen: eine gerade oder kreisförmige Kante, eine Zylinderfläche oder eine Referenzachse.",
+      "point": "Hier einen Punkt wählen: einen Eckpunkt, den Ursprung oder einen Referenzpunkt.",
+      "center": "Hier eine Kante oder Fläche wählen."
+    },
+    "useOrigin": "Ursprung nehmen"
   }
 }

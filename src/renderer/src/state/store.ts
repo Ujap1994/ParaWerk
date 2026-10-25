@@ -2,7 +2,7 @@ import { useStore } from 'zustand';
 import { createStore } from 'zustand/vanilla';
 import type { Language } from '../../../shared/i18n.ts';
 import type { AppInfo } from '../../../shared/ipc.ts';
-import type { Feature } from '../../../shared/model/feature.ts';
+import type { Feature, Vec3 } from '../../../shared/model/feature.ts';
 import { DEFAULT_SETTINGS, type Settings } from '../../../shared/settings.ts';
 import type { FeatureResult, MassProperties, MeshPayload } from '../../../kernel/protocol.ts';
 import type { SketchSession } from '../sketch/session.ts';
@@ -11,9 +11,15 @@ import type { SketchToolName } from '../sketch/tools.ts';
 import { emptyHistory, type ActiveEdit, type History } from './document.ts';
 
 /** A picked body face or edge (topological index), or a standard plane (index into STANDARD_PLANES). */
+/**
+ * Something picked in the 3D view or the tree: a face, edge or vertex of the body (topological index), a
+ * standard plane (index into STANDARD_PLANES) or reference geometry (index into the feature list).
+ */
 export interface Pick {
-  kind: 'face' | 'edge' | 'plane';
+  kind: 'face' | 'edge' | 'vertex' | 'plane' | 'reference';
   index: number;
+  /** Where the pick hit, in model space (faces, edges and vertices picked in the 3D view). */
+  at?: Vec3;
 }
 
 export type CommandTab = 'features' | 'sketch';
@@ -60,6 +66,8 @@ export interface AppState {
   dirty: boolean;
 
   activeEdit: ActiveEdit | null;
+  /** The reference field of the edited reference plane, axis or point that the next pick fills. */
+  referenceSlot: number;
   /** The sketch command waits for a plane (or planar face) to sketch on. */
   choosingSketchPlane: boolean;
   /** Sketch mode. */
@@ -112,6 +120,7 @@ export const initialState: AppState = {
   fileName: null,
   dirty: false,
   activeEdit: null,
+  referenceSlot: 0,
   choosingSketchPlane: false,
   sketch: null,
   sketchSelection: [],

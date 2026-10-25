@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import type { Feature } from '../../../shared/model/feature.ts';
+import { isReferenceFeature, type Feature } from '../../../shared/model/feature.ts';
 import { STANDARD_PLANES } from '../../../shared/model/sketch.ts';
 import * as commands from '../commands.ts';
 import { featureOrdinal } from '../state/document.ts';
@@ -72,13 +72,26 @@ export function FeatureTree() {
   const activeEdit = useAppState((state) => state.activeEdit ?? state.sketch);
   const locked = useAppState((state) => state.sketch !== null || state.choosingSketchPlane);
   const sketchStatuses = useAppState((state) => state.sketchStatuses);
+  const selection = useAppState((state) => state.selection);
+  const hover = useAppState((state) => state.hover);
+  const sketching = useAppState((state) => state.sketch !== null);
+  const editingReference = useAppState((state) => state.activeEdit !== null && isReferenceFeature(state.activeEdit.draft));
   const nameOf = useFeatureName();
 
   return (
     <section className={`panel feature-tree${locked ? ' is-locked' : ''}`} aria-label={t('tree.title')}>
       <h2 className="panel-title">{t('tree.title')}</h2>
       <ul className="tree-list" role="tree">
-        <li className="tree-item is-static" role="treeitem" aria-selected={false}>
+        <li
+          className={`tree-item is-static${editingReference ? ' is-choice' : ''}`}
+          role="treeitem"
+          aria-selected={false}
+          data-origin
+          onClick={() => {
+            // The origin is a point that reference geometry can be built on.
+            if (editingReference) commands.assignReference('origin');
+          }}
+        >
           <OriginIcon className="tree-icon" />
           <span className="tree-name">{t('features.origin')}</span>
         </li>
@@ -90,7 +103,21 @@ export function FeatureTree() {
           const warning = result?.status === 'ok' ? result.warning : undefined;
           const rolledBack = activeEdit !== null && (index > activeEdit.index || (activeEdit.mode === 'create' && index >= activeEdit.index));
           const editing = activeEdit?.mode === 'edit' && activeEdit.index === index;
-          const classes = ['tree-item', feature.suppressed ? 'is-suppressed' : '', rolledBack ? 'is-rolled-back' : '', editing ? 'is-editing' : '', error ? 'has-error' : '', warning ? 'has-warning' : '']
+          // Reference geometry is picked in the tree like in the 3D view (to select it, or to build on it).
+          const reference = isReferenceFeature(feature) && !feature.suppressed && !rolledBack && !editing;
+          const selected = reference && selection.some((pick) => pick.kind === 'reference' && pick.index === index);
+          const hovered = reference && hover?.kind === 'reference' && hover.index === index;
+          const classes = [
+            'tree-item',
+            feature.suppressed ? 'is-suppressed' : '',
+            rolledBack ? 'is-rolled-back' : '',
+            editing ? 'is-editing' : '',
+            error ? 'has-error' : '',
+            warning ? 'has-warning' : '',
+            reference ? 'is-reference' : '',
+            selected ? 'is-selected' : '',
+            hovered ? 'is-hovered' : '',
+          ]
             .filter(Boolean)
             .join(' ');
           return (
@@ -110,6 +137,15 @@ export function FeatureTree() {
                       : undefined
               }
               onDoubleClick={() => commands.editFeature(feature.id)}
+              {...(reference
+                ? {
+                    onPointerEnter: () => commands.hoverReference(index),
+                    onPointerLeave: () => commands.hoverReference(null),
+                    onClick: (event: React.MouseEvent) => {
+                      if (!sketching) commands.handlePick({ kind: 'reference', index }, event.ctrlKey || event.metaKey || event.shiftKey);
+                    },
+                  }
+                : {})}
             >
               <Icon className="tree-icon" />
               <span className="tree-name">{nameOf(features, index)}</span>
@@ -122,6 +158,21 @@ export function FeatureTree() {
                 <AlertIcon className="tree-status is-error" aria-label={t('tree.sketchOver')} data-sketch-status="over" />
               ) : null}
               <span className="tree-actions" hidden={locked}>
+                {feature.type === 'plane' && reference && !error ? (
+                  <button
+                    type="button"
+                    className="icon-button"
+                    title={t('tree.sketchOnPlane')}
+                    aria-label={t('tree.sketchOnPlane')}
+                    data-testid="sketch-on-plane"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      commands.sketchOnReferencePlane(feature.id);
+                    }}
+                  >
+                    <SketchIcon />
+                  </button>
+                ) : null}
                 <button type="button" className="icon-button" title={t('tree.edit')} aria-label={t('tree.edit')} onClick={() => commands.editFeature(feature.id)}>
                   <EditIcon />
                 </button>

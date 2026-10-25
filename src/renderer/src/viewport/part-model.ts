@@ -1,4 +1,4 @@
-import { BufferAttribute, BufferGeometry, Group, Mesh, type Material } from 'three';
+import { BufferAttribute, BufferGeometry, Group, Mesh, Sprite, Vector3, type Material, type SpriteMaterial } from 'three';
 import type { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 import { LineSegments2 } from 'three/addons/lines/LineSegments2.js';
 import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js';
@@ -79,6 +79,41 @@ export class PartModel {
     return rangeIndexOf(this.payload.edgeRanges, segment * 2);
   }
 
+  get vertexCount(): number {
+    return this.payload.naming.vertexPositions.length / 3;
+  }
+
+  vertexPosition(vertex: number): Vector3 {
+    const p = this.payload.naming.vertexPositions;
+    return new Vector3(p[3 * vertex] ?? NaN, p[3 * vertex + 1] ?? NaN, p[3 * vertex + 2] ?? NaN);
+  }
+
+  /** The end vertex of `edge` within `tolerance` of `point`, if any (the nearer one). */
+  vertexNear(edge: number, point: Vector3, tolerance: number): number | null {
+    let best: number | null = null;
+    let bestDistance = tolerance;
+    for (const vertex of [this.payload.naming.edgeVertices[2 * edge], this.payload.naming.edgeVertices[2 * edge + 1]]) {
+      if (vertex === undefined || vertex < 0) continue;
+      const distance = this.vertexPosition(vertex).distanceTo(point);
+      if (distance <= bestDistance) {
+        best = vertex;
+        bestDistance = distance;
+      }
+    }
+    return best;
+  }
+
+  /** A point symbol at a vertex, `pixels` wide on screen at `mmPerPixel`. */
+  vertexOverlay(vertex: number, material: SpriteMaterial, mmPerPixel: number, pixels = 12): Sprite | null {
+    if (vertex < 0 || vertex >= this.vertexCount) return null;
+    const sprite = new Sprite(material);
+    sprite.position.copy(this.vertexPosition(vertex));
+    sprite.scale.setScalar(pixels * mmPerPixel);
+    sprite.renderOrder = 11;
+    sprite.raycast = () => undefined;
+    return sprite;
+  }
+
   /** A mesh that draws only one face (shares the vertex buffers). */
   faceOverlay(face: number, material: Material): Mesh | null {
     const start = this.payload.faceRanges[face * 2];
@@ -121,7 +156,9 @@ export class PartModel {
  * would also free those buffers on the GPU and force a re-upload of the whole
  * body on every hover change. Detach the shared attributes first.
  */
-export function disposeOverlay(object: Mesh | LineSegments2): void {
+export function disposeOverlay(object: Mesh | LineSegments2 | Sprite): void {
+  // Sprites share one geometry in three.js; there is nothing of their own to free.
+  if (object instanceof Sprite) return;
   if (!(object instanceof LineSegments2)) {
     object.geometry.deleteAttribute('position');
     object.geometry.deleteAttribute('normal');

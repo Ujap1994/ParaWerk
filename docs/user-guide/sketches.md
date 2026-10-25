@@ -33,6 +33,9 @@ from the triangles of the display), and you look at it from outside the material
 - **Sketch axes on a face:** chosen like the standard views, so a face parallel to the front, top or right
   plane gets the same axes as that plane, and on all other faces the sketch's y axis points as close to
   upwards (+Z) as the face allows.
+- **Reference planes** (see [Reference geometry](features.md#reference-geometry)) carry sketches in the same
+  way: pick one in the 3D view or use **Sketch on this plane** next to it in the tree. The sketch follows
+  the plane when it moves.
 - **A sketch follows its face.** The sketch remembers the face by its name (for example "the end face of
   Extrude1"), not by its position. When an earlier feature moves or turns the face – a thicker plate, a
   changed angle – the sketch moves along, and so does everything built from it, such as a pocket cut from

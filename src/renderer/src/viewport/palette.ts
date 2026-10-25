@@ -7,6 +7,8 @@ export interface ViewportPalette {
   pivot: number;
   /** Where lost references were (edges of a fillet that no longer exist). */
   lost: number;
+  /** Reference planes, axes and points. */
+  reference: number;
   /** Standard planes. */
   plane: number;
   /** Sketch grid lines. */
@@ -44,6 +46,7 @@ export const palettes: Record<'light' | 'dark', ViewportPalette> = {
     referenceEdge: 0x2a63c9,
     pivot: 0xff7a1a,
     lost: 0xd12d2d,
+    reference: 0x0f8b8d,
     plane: 0x2a63c9,
     grid: 0x2c3a4f,
     axisX: 0xe5484d,
@@ -72,6 +75,7 @@ export const palettes: Record<'light' | 'dark', ViewportPalette> = {
     referenceEdge: 0x6c9cf5,
     pivot: 0xff8a33,
     lost: 0xff6b6b,
+    reference: 0x3fc4c6,
     plane: 0x6c9cf5,
     grid: 0xb4c0d2,
     axisX: 0xf06368,

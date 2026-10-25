@@ -1,7 +1,9 @@
 import { resolveLanguage } from '../../shared/i18n.ts';
 import type { MenuCommand } from '../../shared/ipc.ts';
 import { PART_FILE_EXTENSION } from '../../shared/app-info.ts';
-import { defaultFeature, isEdgeFeature, isSketchBased, type EdgeRef, type Feature, type FeatureType, type SketchFeature } from '../../shared/model/feature.ts';
+import { defaultFeature, isEdgeFeature, isReferenceFeature, isSketchBased, type EdgeRef, type Feature, type FeatureType, type ReferenceFeature, type SketchFeature } from '../../shared/model/feature.ts';
+import { AXIS_METHODS, PLANE_METHODS, POINT_METHODS, REFERENCE_ROLES, type GeometryRef, type ReferenceRole } from '../../shared/model/reference.ts';
+import { referenceFits, referenceGeometry, referenceOfPick, referenceRoles } from './references.ts';
 import { edgeRefOf, resolveEdgeRefs } from '../../shared/model/naming.ts';
 import { decodePartFile, encodePartFile, PartFileError } from '../../shared/model/part-file.ts';
 import { frameOf, frameOnPlane, isDimension, ORIGIN_ID, STANDARD_PLANES, type SketchData, type SketchDimension, type SketchPlaneRef } from '../../shared/model/sketch.ts';
@@ -203,10 +205,14 @@ export function startFeature(type: FeatureType): void {
         })
       : [];
     draft = { ...draft, edges };
+  } else if (isReferenceFeature(draft)) {
+    // What was selected before starting becomes the references, and decides the method (select first, then act).
+    draft = withSelectedReferences(draft, getState().selection);
   } else if (!hasBodyBefore(features, index) && (draft.type === 'box' || draft.type === 'cylinder')) {
     draft = { ...draft, operation: 'add' };
   }
-  setState({ activeEdit: { mode: 'create', index, draft }, selection: [] });
+  const slot = isReferenceFeature(draft) ? firstEmptySlot(draft) : 0;
+  setState({ activeEdit: { mode: 'create', index, draft }, selection: [], referenceSlot: slot });
 }
 
 /** The sketch a new extrusion or revolution uses: the last one no such feature uses yet, else the last one. */
@@ -230,6 +236,98 @@ export function chooseFeatureSketch(id: string): void {
   updateDraft({ sketch: id, axis: sketch ? defaultAxis(sketch) : '' });
 }
 
+// ------------------------------------------------------------------ reference geometry
+
+const METHODS = { plane: PLANE_METHODS, axis: AXIS_METHODS, point: POINT_METHODS } as const;
+
+/** The first method of the feature's type whose references fit `refs` in this order. */
+function methodFor(type: ReferenceFeature['type'], refs: readonly { ref: GeometryRef; pick: Pick }[]): string | null {
+  const state = getState();
+  const roles = REFERENCE_ROLES[type] as Record<string, readonly ReferenceRole[]>;
+  return (
+    METHODS[type].find((method) => {
+      const wanted = roles[method] ?? [];
+      return wanted.length === refs.length && wanted.every((role, i) => refs[i] !== undefined && referenceFits(refs[i].ref, role, state, refs[i].pick));
+    }) ?? null
+  );
+}
+
+/** A new reference feature with the selection as its references, in an order and with a method they fit. */
+function withSelectedReferences(draft: ReferenceFeature, selection: readonly Pick[]): ReferenceFeature {
+  const state = getState();
+  const refs = selection.flatMap((pick) => {
+    const ref = referenceOfPick(pick, state);
+    return ref ? [{ ref, pick }] : [];
+  });
+  if (refs.length === 0) return draft;
+  // Try the selection as picked, then the other way round (an axis picked before its plane, for example).
+  for (const order of [refs, [...refs].reverse()]) {
+    const method = methodFor(draft.type, order);
+    if (method) return { ...draft, method, references: order.map((entry) => entry.ref) } as ReferenceFeature;
+  }
+  return draft;
+}
+
+function firstEmptySlot(feature: ReferenceFeature): number {
+  const roles = referenceRoles(feature);
+  const empty = roles.findIndex((_, slot) => feature.references[slot] === undefined);
+  return empty >= 0 ? empty : Math.max(0, roles.length - 1);
+}
+
+/** The reference field the next pick fills. */
+export function setReferenceSlot(slot: number): void {
+  setState({ referenceSlot: slot });
+}
+
+/** Fills the active reference field of the edited reference feature with a pick (or the origin). */
+export function assignReference(pick: Pick | 'origin'): void {
+  const state = getState();
+  const edit = state.activeEdit;
+  if (!edit || !isReferenceFeature(edit.draft)) return;
+  const roles = referenceRoles(edit.draft);
+  if (roles.length === 0) return;
+  // Fields are filled in order: a field after an empty one cannot be filled yet.
+  const slot = Math.min(state.referenceSlot, edit.draft.references.length, roles.length - 1);
+  const role = roles[slot] as ReferenceRole;
+  const ref: GeometryRef | null = pick === 'origin' ? { kind: 'origin' } : referenceOfPick(pick, state);
+  if (!ref) return;
+  if (!referenceFits(ref, role, state, pick === 'origin' ? undefined : pick)) {
+    showToast('info', t(`references.unsuitable.${role}`));
+    return;
+  }
+  const references = [...edit.draft.references];
+  references[slot] = ref;
+  const draft = { ...edit.draft, references } as ReferenceFeature;
+  updateDraft(draft);
+  setState({ referenceSlot: firstEmptySlot(draft) });
+}
+
+/** Empties a reference field; the next pick fills it. */
+export function clearReference(slot: number): void {
+  const edit = getState().activeEdit;
+  if (!edit || !isReferenceFeature(edit.draft)) return;
+  updateDraft({ references: edit.draft.references.slice(0, slot) } as Partial<ReferenceFeature>);
+  setState({ referenceSlot: slot });
+}
+
+/** Changes how the edited reference feature is defined; references that still fit their field stay. */
+export function setReferenceMethod(method: string): void {
+  const state = getState();
+  const edit = state.activeEdit;
+  if (!edit || !isReferenceFeature(edit.draft)) return;
+  const draft = { ...edit.draft, method } as ReferenceFeature;
+  const roles = referenceRoles(draft);
+  const kept: GeometryRef[] = [];
+  for (const [slot, role] of roles.entries()) {
+    const ref = edit.draft.references[slot];
+    if (!ref || !referenceFits(ref, role, state)) break;
+    kept.push(ref);
+  }
+  const next = { ...draft, references: kept } as ReferenceFeature;
+  updateDraft(next);
+  setState({ referenceSlot: firstEmptySlot(next) });
+}
+
 export function editFeature(id: string): void {
   if (getState().sketch) return;
   if (getState().activeEdit) cancelEdit();
@@ -241,7 +339,7 @@ export function editFeature(id: string): void {
     enterSketch(openSketchSession('edit', index, feature));
     return;
   }
-  setState({ activeEdit: { mode: 'edit', index, draft: feature }, selection: [], choosingSketchPlane: false });
+  setState({ activeEdit: { mode: 'edit', index, draft: feature }, selection: [], choosingSketchPlane: false, referenceSlot: isReferenceFeature(feature) ? firstEmptySlot(feature) : 0 });
 }
 
 /** Opens the part's variables in the property panel (a new, empty list at the top of the tree if there is none). */
@@ -403,6 +501,11 @@ function sketchPlaneOf(pick: Pick): SketchPlaneRef | null {
     const plane = STANDARD_PLANES[pick.index];
     return plane ? { kind: 'standard', plane } : null;
   }
+  if (pick.kind === 'reference') {
+    const feature = getState().history.features[pick.index];
+    const geometry = feature ? referenceGeometry(getState(), feature.id) : undefined;
+    return feature && geometry?.kind === 'plane' ? { kind: 'feature', feature: feature.id, frame: geometry.frame } : null;
+  }
   if (pick.kind !== 'face') return null;
   const body = getState().display.body;
   const face = body?.faceInfo[pick.index]?.plane;
@@ -421,6 +524,13 @@ export function startSketch(): void {
   const plane = selected.length === 1 && selected[0] ? sketchPlaneOf(selected[0]) : null;
   if (plane) chooseSketchPlane(plane);
   else setState({ choosingSketchPlane: true, selection: [], hover: null, commandTab: 'sketch' });
+}
+
+/** Opens a new sketch on reference plane `id`. */
+export function sketchOnReferencePlane(id: string): void {
+  const index = getState().history.features.findIndex((feature) => feature.id === id);
+  const plane = index >= 0 ? sketchPlaneOf({ kind: 'reference', index }) : null;
+  if (plane) chooseSketchPlane(plane);
 }
 
 /** Opens a new sketch on `plane`, behind the last feature. */
@@ -869,6 +979,10 @@ export function handlePick(pick: Pick | null, additive: boolean): void {
     if (pick?.kind === 'edge') toggleDraftEdge(pick.index);
     return;
   }
+  if (edit && isReferenceFeature(edit.draft)) {
+    if (pick) assignReference(pick);
+    return;
+  }
   if (edit) return;
   if (!pick) {
     if (!additive) setState({ selection: [] });
@@ -890,6 +1004,16 @@ export function escape(): void {
   }
   else if (state.activeEdit) cancelEdit();
   else setState({ selection: [] });
+}
+
+/** Hovering reference geometry in the feature tree shows it in the view. */
+export function hoverReference(index: number | null): void {
+  const hover = getState().hover;
+  if (index === null) {
+    if (hover?.kind === 'reference') setState({ hover: null });
+  } else if (hover?.kind !== 'reference' || hover.index !== index) {
+    setState({ hover: { kind: 'reference', index } });
+  }
 }
 
 /** Hovering a plane in the feature tree shows it in the view. */

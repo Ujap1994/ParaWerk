@@ -28,6 +28,13 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 - Sketches on faces follow their face: when an earlier feature moves or turns the face (a thicker
   plate), the sketch and the features built from it move along. A sketch whose face is gone is marked
   and stays where the face was.
+- Reference geometry ([ADR 0010](docs/adr/0010-reference-geometry.md)): reference planes (offset, at an
+  angle around an axis, through three points, between two planes, parallel through a point), axes (along
+  an edge or the axis of a cylinder, where two planes meet, through two points, normal to a plane) and
+  points (coordinates, centers of edges and faces, where an axis meets a plane). They are built on
+  standard planes, the origin, each other and faces, edges and vertices of the part, follow the part when
+  earlier features change, and carry sketches. Vertices can be picked in the 3D view. Part files with
+  reference geometry are saved as format version 6.
 - Lost edges: a fillet or chamfer whose edges are partly gone after an earlier change still rounds the
   others and shows a yellow warning in the tree instead of failing. Editing it lists the lost edges,
   marks where they were in the 3D view and removes them with one click.

@@ -1,9 +1,10 @@
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { isEdgeFeature, isSketchBased, type Vec3 } from '../../../shared/model/feature.ts';
+import { isEdgeFeature, isReferenceFeature, isSketchBased, type Vec3 } from '../../../shared/model/feature.ts';
 import { resolveEdgeRefs } from '../../../shared/model/naming.ts';
 import { frameOf, STANDARD_PLANES } from '../../../shared/model/sketch.ts';
 import * as commands from '../commands.ts';
+import { referenceItems, referencePicks } from '../references.ts';
 import { SketchController, sketchHighlight, statusColors } from '../sketch/controller.ts';
 import { sketchSolver } from '../sketch/solver.ts';
 import { setState, store, type AppState, type Pick } from '../state/store.ts';
@@ -24,9 +25,15 @@ function cubeLabels(t: (key: string) => string): Record<CubeFace, string> {
   };
 }
 
-/** Selection shown in the view: the draft's edges while editing a fillet/chamfer, otherwise the user selection. */
+/**
+ * Selection shown in the view: the draft's edges while editing a fillet/chamfer, the faces, edges and
+ * vertices the edited reference geometry is built on, otherwise the user selection.
+ */
 function visibleSelection(state: AppState): Pick[] {
   const edit = state.activeEdit;
+  if (edit && isReferenceFeature(edit.draft)) {
+    return referencePicks(edit.draft.references, state).filter((pick) => pick.kind === 'face' || pick.kind === 'edge' || pick.kind === 'vertex');
+  }
   if (edit && isEdgeFeature(edit.draft)) {
     const naming = state.display.body?.naming;
     if (!naming) return [];
@@ -48,7 +55,8 @@ function pickFilter(state: AppState): PickFilter {
   if (state.choosingSketchPlane) return 'planes';
   if (state.sketch) return 'none';
   const edit = state.activeEdit;
-  return edit ? (isEdgeFeature(edit.draft) ? 'edges' : 'none') : 'all';
+  if (!edit) return 'all';
+  return isEdgeFeature(edit.draft) ? 'edges' : isReferenceFeature(edit.draft) ? 'references' : 'none';
 }
 
 /** Sketches shown in the 3D view besides the open one: those before the current edit position, unless suppressed. */
@@ -71,10 +79,15 @@ function inactiveSketches(state: AppState): InactiveSketch[] {
 /** All planes while choosing a sketch plane; otherwise only hovered (also in the tree) and selected ones. */
 function planeDisplay(state: AppState): PlaneDisplay {
   if (state.sketch) return { visible: [], hovered: null, selected: [] };
+  const draft = state.activeEdit?.draft;
+  // The standard planes a reference feature is built on are shown while it is edited.
+  const referenced = draft && isReferenceFeature(draft) ? referencePicks(draft.references, state).filter((pick) => pick.kind === 'plane') : [];
+  // While reference geometry is edited, the standard planes are shown so they can be picked as references.
+  const showAll = state.choosingSketchPlane || (draft !== undefined && isReferenceFeature(draft));
   return {
-    visible: STANDARD_PLANES.map(() => state.choosingSketchPlane),
+    visible: STANDARD_PLANES.map(() => showAll),
     hovered: state.hover?.kind === 'plane' ? state.hover.index : null,
-    selected: state.selection.filter((pick) => pick.kind === 'plane').map((pick) => pick.index),
+    selected: [...state.selection, ...referenced].filter((pick) => pick.kind === 'plane').map((pick) => pick.index),
   };
 }
 
@@ -133,9 +146,22 @@ export function Viewport() {
         state.choosingSketchPlane !== previous.choosingSketchPlane ||
         state.selection !== previous.selection ||
         state.hover !== previous.hover ||
+        state.activeEdit !== previous.activeEdit ||
         (state.sketch === null) !== (previous.sketch === null)
       ) {
         engine.setReferencePlanes(planeDisplay(state));
+      }
+      if (
+        !previous ||
+        state.history.features !== previous.history.features ||
+        state.rebuild !== previous.rebuild ||
+        state.activeEdit !== previous.activeEdit ||
+        state.sketch?.index !== previous.sketch?.index ||
+        state.hover !== previous.hover ||
+        state.selection !== previous.selection ||
+        state.display !== previous.display
+      ) {
+        engine.setReferences(referenceItems(state));
       }
       const plane = state.sketch?.draft.plane;
       if (!previous || plane !== previous.sketch?.draft.plane) {

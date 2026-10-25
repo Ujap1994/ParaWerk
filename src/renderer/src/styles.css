@@ -553,6 +553,82 @@ input {
   cursor: default;
 }
 
+/* ------------------------------------------------------------ reference geometry fields */
+
+.reference-slots {
+  display: grid;
+  gap: 6px;
+  margin: 4px 0 8px;
+  padding: 0;
+  list-style: none;
+}
+
+.reference-slot {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+}
+
+.reference-slot.is-active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.reference-slot-button {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 1px;
+  padding: 5px 8px;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.reference-slot-button:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.reference-slot-role {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.reference-slot-value {
+  overflow: hidden;
+  font-size: 12.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reference-slot:not(.is-filled) .reference-slot-value {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+.reference-hint {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.reference-hint .text-button {
+  flex: none;
+}
+
+.reference-slot.is-active:not(.is-filled) .reference-slot-value {
+  color: var(--accent-strong);
+}
+
 /* ------------------------------------------------------------ sketch panel */
 
 .sketch-panel {

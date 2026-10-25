@@ -639,3 +639,58 @@ test('lost references screenshots', async () => {
   await page.screenshot({ path: out('fillet-missing-edges.png') });
   await app.close();
 });
+
+test('reference geometry screenshots', async () => {
+  const { app, page } = await launchApp({ width: 1440, height: 900 });
+  await buildDemoPart(page);
+  await page.evaluate(() => (window as unknown as { __parawerk: { viewport: { zoomToFit(): void } } }).__parawerk.viewport.zoomToFit());
+  await page.waitForTimeout(600);
+  const pick = (kind: string, index: number, at?: number[]) =>
+    page.evaluate(
+      ([k, i, a]) => (window as unknown as { __parawerk: { commands: { handlePick(p: object, additive: boolean): void } } }).__parawerk.commands.handlePick({ kind: k, index: i, ...(a ? { at: a } : {}) }, false),
+      [kind, index, at] as const,
+    );
+  const canvas = await page.locator('.viewport-canvas').boundingBox();
+  const click = async (point: readonly [number, number, number]) => {
+    const screen = await page.evaluate(
+      ([x, y, z]) => (window as unknown as { __parawerk: { viewport: { project(x: number, y: number, z: number): { x: number; y: number } } } }).__parawerk.viewport.project(x, y, z),
+      point,
+    );
+    if (canvas) await page.mouse.click(canvas.x + screen.x, canvas.y + screen.y);
+    await idle(page);
+  };
+
+  // The axis of the bore: select its face, then Axis.
+  await click([20, -12, 40]);
+  await page.click('[data-variants="reference-geometry"]');
+  await page.click('[data-reference="axis"]');
+  await idle(page);
+  await page.click('[data-testid="panel-ok"]');
+  await idle(page);
+
+  // A plane through that axis at 30° to the front plane, edited with its preview.
+  await page.click('[data-variants="reference-geometry"]');
+  await page.click('[data-reference="plane"]');
+  await page.selectOption('[data-testid="reference-method"]', 'angle');
+  await pick('plane', 0);
+  await pick('reference', 6);
+  await page.locator('[data-testid="plane-angle"]').fill('30');
+  await page.locator('[data-testid="plane-angle"]').press('Tab');
+  await idle(page);
+  await page.waitForTimeout(600);
+  if (canvas) await page.mouse.move(canvas.x + 20, canvas.y + canvas.height - 20);
+  await page.screenshot({ path: out('reference-plane.png') });
+  await page.click('[data-testid="panel-ok"]');
+  await idle(page);
+
+  // A point at the center of the back hole's top rim.
+  await page.click('[data-variants="reference-geometry"]');
+  await page.click('[data-reference="point"]');
+  await page.selectOption('[data-testid="reference-method"]', 'center');
+  await click([-45, 23.5, 20]);
+  await page.click('[data-testid="panel-ok"]');
+  await idle(page);
+  await page.waitForTimeout(600);
+  await page.screenshot({ path: out('reference-geometry.png') });
+  await app.close();
+});

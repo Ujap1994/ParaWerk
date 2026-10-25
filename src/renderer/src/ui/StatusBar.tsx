@@ -7,6 +7,7 @@ import { arcGeometry, ellipseOf, pointPositions, trimmedSplineOf } from '../sket
 import { splineLength } from '../../../shared/model/spline.ts';
 import { relationKindOf } from '../sketch/relations.ts';
 import { useAppState, type Pick } from '../state/store.ts';
+import { useFeatureName } from './FeatureTree.tsx';
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
@@ -45,9 +46,17 @@ function describeSketchEntity(sketch: SketchData, id: string, t: Translate, lang
   return text && entity.construction ? `${text} · ${t('status.construction')}` : text;
 }
 
-/** "Face 3 · Cylinder Ø 40 mm · 3,769.9 mm²" from the exact B-Rep data. */
-function describePick(pick: Pick, mesh: MeshPayload | null, t: Translate, language: Language): string {
+/** "Face 3 · Cylinder Ø 40 mm · 3,769.9 mm²" from the exact B-Rep data; `referenceName` names reference geometry. */
+function describePick(pick: Pick, mesh: MeshPayload | null, t: Translate, language: Language, referenceName: (index: number) => string): string {
   if (pick.kind === 'plane') return t(`planes.${STANDARD_PLANES[pick.index] ?? 'front'}`);
+  if (pick.kind === 'reference') return referenceName(pick.index);
+  if (pick.kind === 'vertex') {
+    const label = t('status.vertex', { index: pick.index + 1 });
+    const p = mesh?.naming.vertexPositions;
+    if (!p) return label;
+    const [x, y, z] = [p[3 * pick.index] ?? 0, p[3 * pick.index + 1] ?? 0, p[3 * pick.index + 2] ?? 0].map((value) => formatNumber(value, language));
+    return `${label} · ${x}, ${y}, ${z} mm`;
+  }
   const label = t(pick.kind === 'face' ? 'status.face' : 'status.edge', { index: pick.index + 1 });
   const info = pick.kind === 'face' ? mesh?.faceInfo[pick.index] : mesh?.edgeInfo[pick.index];
   if (!info) return label;
@@ -59,6 +68,9 @@ function describePick(pick: Pick, mesh: MeshPayload | null, t: Translate, langua
 
 export function StatusBar() {
   const { t } = useTranslation();
+  const features = useAppState((state) => state.history.features);
+  const nameOf = useFeatureName();
+  const referenceName = (index: number) => nameOf(features, index);
   const kernelStatus = useAppState((state) => state.kernelStatus);
   const rebuild = useAppState((state) => state.rebuild);
   const hover = useAppState((state) => state.hover);
@@ -107,9 +119,9 @@ export function StatusBar() {
                 ? t('status.selected', { count: sketchSelection.length })
                 : null
           : hover
-          ? describePick(hover, body, t, language)
+          ? describePick(hover, body, t, language, referenceName)
           : selection.length === 1 && selection[0]
-            ? describePick(selection[0], body, t, language)
+            ? describePick(selection[0], body, t, language, referenceName)
             : selection.length > 1
               ? t('status.selected', { count: selection.length })
               : null}

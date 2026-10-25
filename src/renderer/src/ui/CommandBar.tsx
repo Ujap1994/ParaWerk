@@ -43,6 +43,9 @@ import {
   SaveIcon,
   LineIcon,
   PointIcon,
+  ReferenceAxisIcon,
+  ReferencePlaneIcon,
+  ReferencePointIcon,
   SettingsIcon,
   SketchIcon,
   ThreePointArcIcon,
@@ -127,6 +130,66 @@ const FEATURE_BUTTONS: { type: FeatureType; icon: IconType }[] = [
 
 const TABS: CommandTab[] = ['features', 'sketch'];
 
+const REFERENCE_TYPES = ['plane', 'axis', 'point'] as const;
+type ReferenceType = (typeof REFERENCE_TYPES)[number];
+const REFERENCE_ICONS: Record<ReferenceType, IconType> = { plane: ReferencePlaneIcon, axis: ReferenceAxisIcon, point: ReferencePointIcon };
+
+/** Reference geometry: the button creates the last used kind, the arrow offers planes, axes and points. */
+function ReferenceGeometryButton({ disabled, activeType }: { disabled: boolean; activeType: FeatureType | null }) {
+  const { t } = useTranslation();
+  const [current, setCurrent] = useState<ReferenceType>('plane');
+  const { menuAt, open, anchor, menu, toggle, close } = useSplitMenu();
+  const start = (type: ReferenceType) => {
+    setCurrent(type);
+    close();
+    commands.startFeature(type);
+  };
+  return (
+    <div className="split-command popover-anchor" ref={anchor}>
+      <CommandButton
+        id={current}
+        icon={REFERENCE_ICONS[current]}
+        label={t(`commands.${current}`)}
+        tooltip={t(`commands.tooltips.${current}`)}
+        active={activeType === current}
+        disabled={disabled}
+        onClick={() => start(current)}
+      />
+      <button
+        type="button"
+        className={`split-toggle${activeType !== null && (REFERENCE_TYPES as readonly string[]).includes(activeType) ? ' is-active' : ''}`}
+        title={t('commands.referenceGeometry')}
+        aria-label={t('commands.referenceGeometry')}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        data-variants="reference-geometry"
+        disabled={disabled}
+        onClick={toggle}
+      >
+        <ChevronDownIcon />
+      </button>
+      {menuAt
+        ? createPortal(
+            <div className="popover-menu is-fixed" role="menu" ref={menu} style={{ left: menuAt.left, top: menuAt.top }}>
+              {REFERENCE_TYPES.map((type) => {
+                const Icon = REFERENCE_ICONS[type];
+                return (
+                  <button key={type} type="button" role="menuitem" className="menu-item" data-reference={type} title={t(`commands.tooltips.${type}`)} onClick={() => start(type)}>
+                    <span className="menu-item-label">
+                      <Icon className="menu-item-icon" />
+                      {t(`commands.${type}`)}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>,
+            document.body,
+          )
+        : null}
+    </div>
+  );
+}
+
 function FeaturesTab() {
   const { t } = useTranslation();
   const activeType = useAppState((state) =>
@@ -148,6 +211,7 @@ function FeaturesTab() {
           onClick={() => commands.startFeature(type)}
         />
       ))}
+      <ReferenceGeometryButton disabled={sketching} activeType={activeType} />
     </Group>
   );
 }
@@ -176,9 +240,7 @@ const MENU_WIDTH_PX = 220;
  * is placed on the document body: the command bar clips its content (it scrolls sideways as a last
  * resort on tiny windows), which would cut the menu off.
  */
-function SplitToolButton({ tools, current, disabled }: { tools: readonly SketchToolName[]; current: SketchToolName; disabled: boolean }) {
-  const { t } = useTranslation();
-  const activeTool = useAppState((state) => state.sketchTool);
+function useSplitMenu() {
   const [menuAt, setMenuAt] = useState<{ left: number; top: number } | null>(null);
   const anchor = useRef<HTMLDivElement>(null);
   const menu = useRef<HTMLDivElement>(null);
@@ -216,6 +278,13 @@ function SplitToolButton({ tools, current, disabled }: { tools: readonly SketchT
     }
     setMenuAt({ left: Math.max(4, Math.min(rect.left, window.innerWidth - MENU_WIDTH_PX - 4)), top: rect.bottom + 4 });
   };
+  return { menuAt, open, anchor, menu, toggle, close: () => setMenuAt(null) };
+}
+
+function SplitToolButton({ tools, current, disabled }: { tools: readonly SketchToolName[]; current: SketchToolName; disabled: boolean }) {
+  const { t } = useTranslation();
+  const activeTool = useAppState((state) => state.sketchTool);
+  const { menuAt, open, anchor, menu, toggle, close } = useSplitMenu();
   return (
     <div className="split-command popover-anchor" ref={anchor}>
       <ToolButton tool={current} disabled={disabled} />
@@ -247,7 +316,7 @@ function SplitToolButton({ tools, current, disabled }: { tools: readonly SketchT
                     data-tool={tool}
                     onClick={() => {
                       commands.setSketchTool(activeTool === tool ? null : tool);
-                      setMenuAt(null);
+                      close();
                     }}
                   >
                     <span className="menu-item-label">

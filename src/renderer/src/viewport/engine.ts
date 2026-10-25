@@ -17,6 +17,8 @@ import {
   Scene,
   Sphere,
   SphereGeometry,
+  Sprite,
+  SpriteMaterial,
   SRGBColorSpace,
   Vector2,
   Vector3,
@@ -35,6 +37,7 @@ import { CameraController } from './camera-controller.ts';
 import { AxisTriad } from './axis-triad.ts';
 import { palettes, type ViewportPalette } from './palette.ts';
 import { LostMarkers } from './lost-markers.ts';
+import { pointTexture, ReferenceGeometryLayer, type ReferenceItem } from './reference-geometry.ts';
 import { disposeOverlay, PartModel } from './part-model.ts';
 import { ReferencePlanes, type PlaneDisplay } from './reference-planes.ts';
 import {
@@ -52,7 +55,8 @@ import { ViewCube, type CubeFace } from './view-cube.ts';
 import { VIEW_DIRECTIONS, viewQuaternion, type StandardView } from './views.ts';
 
 /** What a click can pick: everything, only edges (fillet, chamfer), planes and planar faces (choosing a sketch plane) or nothing. */
-export type PickFilter = 'all' | 'edges' | 'planes' | 'none';
+/** What a click can pick: anything, only edges (fillets), only planes (sketch planes), references (reference geometry) or nothing. */
+export type PickFilter = 'all' | 'edges' | 'planes' | 'references' | 'none';
 
 /** Pointer position in sketch mode: CSS pixels on the canvas and sketch coordinates on the sketch plane. */
 export interface SketchPointer {
@@ -113,6 +117,8 @@ interface DragState {
 
 const CLICK_TOLERANCE_PX = 4;
 const EDGE_PICK_THRESHOLD_PX = 5;
+/** How close to the end of an edge (in CSS pixels) a click picks the vertex there. */
+const VERTEX_PICK_PX = 9;
 /** Smallest half side length of the standard planes, in mm. */
 const MIN_PLANE_HALF_SIZE = 40;
 
@@ -175,8 +181,10 @@ export class ViewportEngine {
   private pickFilter: PickFilter = 'all';
   private selection: Pick[] = [];
   private hover: Pick | null = null;
-  private selectionOverlays: (Mesh | LineSegments2)[] = [];
-  private hoverOverlay: Mesh | LineSegments2 | null = null;
+  private selectionOverlays: (Mesh | LineSegments2 | Sprite)[] = [];
+  private hoverOverlay: Mesh | LineSegments2 | Sprite | null = null;
+  private readonly referenceGeometry = new ReferenceGeometryLayer();
+  private readonly vertexMaterials = { hover: new SpriteMaterial({ depthTest: false, transparent: true }), selected: new SpriteMaterial({ depthTest: false, transparent: true }) };
   private bounds = new Sphere(new Vector3(0, 0, 20), 120);
   private fitOnNextBody = true;
 
@@ -245,7 +253,10 @@ export class ViewportEngine {
     this.pivotMarker = new Mesh(new SphereGeometry(1, 16, 12), new MeshBasicMaterial({ depthTest: false }));
     this.pivotMarker.renderOrder = 10;
     this.pivotMarker.visible = false;
-    this.scene.add(this.pivotMarker, this.lostMarkers.group);
+    this.scene.add(this.pivotMarker, this.lostMarkers.group, this.referenceGeometry.group);
+    const texture = pointTexture();
+    this.vertexMaterials.hover.map = texture;
+    this.vertexMaterials.selected.map = texture;
 
     this.viewCube = new ViewCube(this.palette, labels);
     this.setTheme('light');
@@ -313,6 +324,18 @@ export class ViewportEngine {
     this.body.mesh.visible = !previewing;
     this.body.edges.material = previewing ? this.materials.referenceEdge : this.materials.edge;
     this.body.edges.renderOrder = previewing ? 4 : 1;
+  }
+
+  /** The reference planes, axes and points to show (see ReferenceGeometryLayer). */
+  setReferences(items: readonly ReferenceItem[]): void {
+    const counted = this.referenceGeometry.count;
+    this.referenceGeometry.set(items);
+    if (counted !== this.referenceGeometry.count) this.updateBounds();
+    this.requestRender();
+  }
+
+  get referenceCount(): number {
+    return this.referenceGeometry.count;
   }
 
   /** Marks where lost references were (see LostMarkers). */
@@ -499,6 +522,9 @@ export class ViewportEngine {
     this.materials.referenceEdge.color.setHex(p.referenceEdge);
     this.pivotMarker.material.color.setHex(p.pivot);
     this.lostMarkers.setColor(p.lost);
+    this.referenceGeometry.setPalette(p);
+    this.vertexMaterials.hover.color.setHex(p.hover);
+    this.vertexMaterials.selected.color.setHex(p.selected);
     this.referencePlanes.setPalette(p);
     this.sketchLayer.setPalette(p);
     this.sketchMaterials.setPalette(p);
@@ -685,6 +711,11 @@ export class ViewportEngine {
     const mmPerPixel = this.mmPerPixel();
     this.sketchMaterials.setZoom(mmPerPixel);
     this.lostMarkers.setZoom(mmPerPixel);
+    this.referenceGeometry.setZoom(mmPerPixel);
+    // Vertex highlights keep their size on screen.
+    for (const overlay of [this.hoverOverlay, ...this.selectionOverlays]) {
+      if (overlay instanceof Sprite) overlay.scale.setScalar(12 * mmPerPixel);
+    }
     for (const graphics of this.inactiveSketches.values()) graphics.ensureResolution(mmPerPixel);
     if (this.sketchLayer.active) {
       const { target, height } = this.controller.state;
@@ -740,6 +771,7 @@ export class ViewportEngine {
       material.resolution.copy(resolution);
     }
     this.referencePlanes.setResolution(resolution);
+    this.referenceGeometry.setResolution(resolution);
     this.sketchLayer.setResolution(resolution);
     this.sketchMaterials.setResolution(resolution, this.renderer.getPixelRatio());
     this.requestRender();
@@ -770,8 +802,12 @@ export class ViewportEngine {
     // The standard planes reach a little beyond the body in every direction from the origin.
     const reach = box.isEmpty() ? 0 : Math.max(...box.min.toArray().map(Math.abs), ...box.max.toArray().map(Math.abs));
     this.referencePlanes.setHalfSize(Math.max(MIN_PLANE_HALF_SIZE, Math.ceil((reach * 1.15) / 10) * 10));
+    // Reference planes and axes are drawn as large as the part.
+    this.referenceGeometry.setExtent(box.isEmpty() ? null : box);
     const planes = this.referencePlanes.visibleBounds();
     if (planes) box.union(planes);
+    const references = this.referenceGeometry.bounds();
+    if (references) box.union(references);
     for (const sketch of [this.sketchLayer.worldBounds(), ...[...this.inactiveSketches.values()].map((graphics) => graphics.worldBounds())]) {
       if (sketch) box.union(sketch);
     }
@@ -806,17 +842,31 @@ export class ViewportEngine {
     const faceHit = body ? this.raycaster.intersectObject(body.mesh, false)[0] : undefined;
     const edgeHit = body && this.pickFilter !== 'planes' ? this.raycaster.intersectObject(body.edges, false)[0] : undefined;
     const planeHit = this.pickFilter === 'edges' ? null : this.referencePlanes.intersect(this.raycaster);
+    // Choosing a sketch plane takes reference planes, not axes or points.
+    const referenceHit = this.pickFilter === 'edges' ? null : this.referenceGeometry.intersect(this.raycaster, this.pickFilter === 'planes' ? 'plane' : undefined);
     const worldPerPixel = this.controller.state.height / this.height;
     const tolerance = worldPerPixel * 8;
+    const at = (point: Vector3): Vec3 => [point.x, point.y, point.z];
 
     if (body && edgeHit && edgeHit.faceIndex !== undefined && edgeHit.faceIndex !== null && (!faceHit || edgeHit.distance <= faceHit.distance + tolerance)) {
-      return { kind: 'edge', index: body.edgeOfSegment(edgeHit.faceIndex) };
+      const edge = body.edgeOfSegment(edgeHit.faceIndex);
+      // Near the end of an edge the vertex there is picked (not for fillets, which take edges only).
+      const vertex = this.pickFilter === 'edges' ? null : body.vertexNear(edge, edgeHit.point, worldPerPixel * VERTEX_PICK_PX);
+      if (vertex !== null) return { kind: 'vertex', index: vertex, at: at(body.vertexPosition(vertex)) };
+      return { kind: 'edge', index: edge, at: at(edgeHit.point) };
+    }
+    // Reference points are drawn on top of everything, so they win where they are.
+    if (referenceHit && (!faceHit || referenceHit.distance < faceHit.distance + tolerance)) {
+      const feature = referenceHit.index;
+      if (this.pickFilter === 'all' || this.pickFilter === 'references' || this.pickFilter === 'planes') return { kind: 'reference', index: feature };
     }
     // A pickable face wins over a translucent plane in front of it: the face is what one sees and aims at,
     // and planes stay pickable where they extend beyond the part (and in the feature tree).
     if (body && faceHit && faceHit.faceIndex !== undefined && faceHit.faceIndex !== null) {
       const face = body.faceOfTriangle(faceHit.faceIndex);
-      if (this.pickFilter === 'all' || (this.pickFilter === 'planes' && body.isPlanarFace(face))) return { kind: 'face', index: face };
+      if (this.pickFilter === 'all' || this.pickFilter === 'references' || (this.pickFilter === 'planes' && body.isPlanarFace(face))) {
+        return { kind: 'face', index: face, at: at(faceHit.point) };
+      }
     }
     if (planeHit && (!faceHit || planeHit.distance < faceHit.distance)) return { kind: 'plane', index: planeHit.index };
     return null;
@@ -886,17 +936,28 @@ export class ViewportEngine {
       this.hoverOverlay = null;
     }
     const alreadySelected = pick !== null && this.selection.some((s) => samePick(s, pick));
-    // Planes show their hover state through setReferencePlanes.
-    if (pick && pick.kind !== 'plane' && this.body && !alreadySelected) {
-      this.hoverOverlay =
-        pick.kind === 'face'
-          ? this.body.faceOverlay(pick.index, this.materials.hoverFace)
-          : this.body.edgeOverlay(pick.index, this.materials.hoverEdge);
+    // Planes and reference geometry show their hover state through setReferencePlanes and setReferences.
+    if (pick && pick.kind !== 'plane' && pick.kind !== 'reference' && this.body && !alreadySelected) {
+      this.hoverOverlay = this.pickOverlay(this.body, pick, 'hover');
       if (this.hoverOverlay) this.overlays.add(this.hoverOverlay);
     }
     this.canvas.style.cursor = pick ? 'pointer' : '';
     this.callbacks.onHover(pick);
     this.requestRender();
+  }
+
+  /** The highlight of a face, edge or vertex. */
+  private pickOverlay(body: PartModel, pick: Pick, style: 'hover' | 'selected'): Mesh | LineSegments2 | Sprite | null {
+    switch (pick.kind) {
+      case 'face':
+        return body.faceOverlay(pick.index, style === 'hover' ? this.materials.hoverFace : this.materials.selectedFace);
+      case 'edge':
+        return body.edgeOverlay(pick.index, style === 'hover' ? this.materials.hoverEdge : this.materials.selectedEdge);
+      case 'vertex':
+        return body.vertexOverlay(pick.index, this.vertexMaterials[style], this.mmPerPixel());
+      default:
+        return null;
+    }
   }
 
   private clearHover(): void {
@@ -916,13 +977,10 @@ export class ViewportEngine {
     const body = this.body;
     if (!body) return;
     for (const pick of this.selection) {
-      if (pick.kind === 'plane') continue;
+      if (pick.kind === 'plane' || pick.kind === 'reference') continue;
       if (pick.kind === 'face' && pick.index >= body.faceCount) continue;
       if (pick.kind === 'edge' && pick.index >= body.edgeCount) continue;
-      const overlay =
-        pick.kind === 'face'
-          ? body.faceOverlay(pick.index, this.materials.selectedFace)
-          : body.edgeOverlay(pick.index, this.materials.selectedEdge);
+      const overlay = this.pickOverlay(body, pick, 'selected');
       if (overlay) {
         this.selectionOverlays.push(overlay);
         this.overlays.add(overlay);
@@ -1102,6 +1160,9 @@ export class ViewportEngine {
     this.viewCube.dispose();
     this.triad.dispose();
     this.referencePlanes.dispose();
+    this.referenceGeometry.dispose();
+    this.vertexMaterials.hover.map?.dispose();
+    for (const material of Object.values(this.vertexMaterials)) material.dispose();
     this.lostMarkers.dispose();
     this.sketchLayer.dispose();
     for (const graphics of this.inactiveSketches.values()) graphics.dispose();

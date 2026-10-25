@@ -95,7 +95,10 @@
       "exportDxf": "Save the sketch as DXF, e.g. for laser cutting (without construction geometry)",
       "variables": "Named values and equations: use them in dimensions and feature parameters",
       "extrude": "Extrude the closed outlines of a sketch, or cut them out of the body",
-      "revolve": "Revolve the closed outlines of a sketch around a line of the sketch, or cut them out of the body"
+      "revolve": "Revolve the closed outlines of a sketch around a line of the sketch, or cut them out of the body",
+      "plane": "Create a reference plane: offset, at an angle, through points or between two planes",
+      "axis": "Create a reference axis: along an edge or a cylinder, where two planes meet or through two points",
+      "point": "Create a reference point: by coordinates, at a center or where an axis meets a plane"
     },
     "tabs": {
       "label": "Command tabs",
@@ -159,7 +162,11 @@
     "exportDxf": "Export",
     "variables": "Variables",
     "extrude": "Extrude",
-    "revolve": "Revolve"
+    "revolve": "Revolve",
+    "plane": "Plane",
+    "axis": "Axis",
+    "point": "Point",
+    "referenceGeometry": "Reference geometry"
   },
   "features": {
     "plane": "Plane",
@@ -257,7 +264,8 @@
     "construction": "construction geometry",
     "selected_one": "{{count}} item selected",
     "selected_other": "{{count}} items selected",
-    "frameStats": "{{fps}} fps · {{ms}} ms"
+    "frameStats": "{{fps}} fps · {{ms}} ms",
+    "vertex": "Vertex {{index}}"
   },
   "viewcube": {
     "front": "Front",
@@ -562,5 +570,52 @@
       "cycle": "Depends on itself (through other variables).",
       "dependency": "Uses a variable that has no value."
     }
+  },
+  "references": {
+    "title": "References",
+    "definition": "Definition",
+    "method": "Type",
+    "methods": {
+      "plane": {
+        "offset": "Offset from a plane",
+        "angle": "At an angle to a plane",
+        "threePoints": "Through three points",
+        "midPlane": "Between two planes",
+        "throughPoint": "Parallel through a point"
+      },
+      "axis": {
+        "reference": "Along an edge or face",
+        "twoPlanes": "Where two planes meet",
+        "twoPoints": "Through two points",
+        "normal": "Normal to a plane through a point"
+      },
+      "point": {
+        "coordinates": "Coordinates",
+        "center": "Center of an edge or face",
+        "intersection": "Where an axis meets a plane"
+      }
+    },
+    "roles": {
+      "plane": "Plane",
+      "axis": "Axis",
+      "point": "Point",
+      "center": "Edge or face"
+    },
+    "empty": "Not chosen",
+    "pick": "Select in the 3D view",
+    "lost": "Missing",
+    "clear": "Remove reference",
+    "hint": "Click a field, then a plane, face, edge, vertex or reference geometry in the 3D view.",
+    "distance": "Distance",
+    "flipOffset": "Other side",
+    "flipAngle": "Other way round",
+    "flipNormal": "Reverse normal",
+    "unsuitable": {
+      "plane": "Choose a plane here: a standard plane, a planar face or a reference plane.",
+      "axis": "Choose an axis here: a straight or circular edge, a cylindrical face or a reference axis.",
+      "point": "Choose a point here: a vertex, the origin or a reference point.",
+      "center": "Choose an edge or a face here."
+    },
+    "useOrigin": "Use origin"
   }
 }

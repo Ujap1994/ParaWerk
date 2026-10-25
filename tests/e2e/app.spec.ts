@@ -458,3 +458,87 @@ test('revolves a half section around its centerline into a shaft and edits the a
   await expect.poll(async () => (await features()).at(-1)?.angle).toBe(180);
   expect(await volume(page)).toBeCloseTo(full / 2, 2);
 });
+
+test('builds reference planes, axes and points that follow the part, and sketches on a reference plane', async () => {
+  launched = await launchApp({ width: 1440, height: 900 });
+  const { page } = launched;
+  type Feature = { id: string; type: string; method?: string; references?: { kind: string; name?: string }[] };
+  type Result = { id: string; status: string; reference?: { kind: string; frame?: { origin: number[] }; point?: number[]; direction?: number[] } };
+  const hooks = async () =>
+    page.evaluate(() => {
+      const s = (window as unknown as { __parawerk: { getState(): { history: { features: unknown[] }; rebuild: { results: unknown[] } | null } } }).__parawerk.getState();
+      return { features: s.history.features as Feature[], results: (s.rebuild?.results ?? []) as Result[] };
+    });
+  const geometry = async (index: number) => (await hooks()).results[index]?.reference;
+  const pick = (kind: string, index: number) =>
+    page.evaluate(([k, i]) => (window as unknown as { __parawerk: { commands: { handlePick(p: object, additive: boolean): void } } }).__parawerk.commands.handlePick({ kind: k, index: i }, false), [kind, index] as const);
+  await createBox(page);
+
+  // Select the top face, then Plane: an offset plane from that face.
+  await clickWorldPoint(page, [10, 10, 40]);
+  await page.click('[data-command="plane"]');
+  await expect(page.locator('[data-testid="reference-method"]')).toHaveValue('offset');
+  await expect(page.locator('[data-testid="reference-slot-0"]')).toContainText('Face');
+  await page.locator('[data-testid="plane-distance"]').fill('25');
+  await page.locator('[data-testid="plane-distance"]').press('Tab');
+  await page.click('[data-testid="panel-ok"]');
+  await expect.poll(async () => (await geometry(1))?.frame?.origin[2]).toBeCloseTo(65, 6);
+  expect((await hooks()).features[1]).toMatchObject({ type: 'plane', method: 'offset', references: [{ kind: 'face', name: expect.stringMatching(/:top$/) }] });
+
+  // An axis where the front and right plane meet: the Z axis.
+  await page.click('[data-variants="reference-geometry"]');
+  await page.click('[data-reference="axis"]');
+  await page.selectOption('[data-testid="reference-method"]', 'twoPlanes');
+  await pick('plane', 0);
+  await pick('plane', 2);
+  await expect(page.locator('[data-testid="reference-slot-1"]')).toContainText('Right plane');
+  await page.click('[data-testid="panel-ok"]');
+  await expect.poll(async () => (await geometry(2))?.direction?.map((v) => Math.round(v) + 0)).toEqual([0, 0, 1]);
+
+  // A point where the axis meets the plane; an axis does not fit a plane field.
+  await page.click('[data-variants="reference-geometry"]');
+  await page.click('[data-reference="point"]');
+  await page.selectOption('[data-testid="reference-method"]', 'intersection');
+  await pick('reference', 1);
+  await expect(page.locator('[data-testid="toast-info"]')).toContainText('axis');
+  await pick('reference', 2);
+  await pick('reference', 1);
+  await page.click('[data-testid="panel-ok"]');
+  await expect.poll(async () => (await geometry(3))?.point?.map((v) => Math.round(v) + 0)).toEqual([0, 0, 65]);
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __parawerk: { viewport: { references(): number } } }).__parawerk.viewport.references())).toBe(3);
+
+  // A taller box moves the face, and with it the plane and the point.
+  await page.locator('.tree-item[data-feature-id]').first().dblclick();
+  await page.locator('[data-testid="box-height"]').fill('60');
+  await page.locator('[data-testid="box-height"]').press('Tab');
+  await page.click('[data-testid="panel-ok"]');
+  await expect.poll(async () => (await geometry(1))?.frame?.origin[2]).toBeCloseTo(85, 6);
+  await expect.poll(async () => (await geometry(3))?.point?.[2]).toBeCloseTo(85, 6);
+
+  // Sketch on the plane from the tree.
+  const plane = page.locator('.tree-item[data-feature-id]').nth(1);
+  await plane.hover();
+  await plane.locator('[data-testid="sketch-on-plane"]').click();
+  await expect(page.locator('.sketch-panel')).toContainText('Plane1');
+  await page.click('[data-testid="sketch-cancel"]');
+  await idle(page);
+  expect((await hooks()).features).toHaveLength(4);
+});
+
+test('picks vertices in the 3D view for a plane through three points', async () => {
+  launched = await launchApp({ width: 1440, height: 900 });
+  const { page } = launched;
+  await createBox(page);
+  await page.click('[data-command="plane"]');
+  await page.selectOption('[data-testid="reference-method"]', 'threePoints');
+  for (const corner of [[-50, -30, 40], [50, -30, 40], [50, 30, 0]] as const) await clickWorldPoint(page, [...corner]);
+  const features = (await state(page)).history.features;
+  expect(features).toHaveLength(1);
+  await expect(page.locator('[data-testid="reference-slot-2"]')).toContainText('Vertex');
+  await page.click('[data-testid="panel-ok"]');
+  await idle(page);
+  const plane = (await state(page)).history.features[1] as unknown as { references: { kind: string; at: number[] }[] };
+  expect(plane.references.map((ref) => ref.kind)).toEqual(['vertex', 'vertex', 'vertex']);
+  expect(plane.references.map((ref) => ref.at.map((v) => Math.round(v) + 0))).toEqual([[-50, -30, 40], [50, -30, 40], [50, 30, 0]]);
+  expect((await state(page)).rebuild?.results.map((result) => result.status)).toEqual(['ok', 'ok']);
+});
