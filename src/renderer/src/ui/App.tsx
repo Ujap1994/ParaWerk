@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import { hasReferenceSlots } from '../../../shared/model/feature.ts';
 import * as commands from '../commands.ts';
+import { picksReferences } from '../references.ts';
 import type { SketchToolName } from '../sketch/tools.ts';
 import { getState, useAppState } from '../state/store.ts';
 import { CommandBar } from './CommandBar.tsx';
@@ -43,7 +43,7 @@ function isTyping(target: EventTarget | null): boolean {
 function Sidebar() {
   const editing = useAppState((state) => state.activeEdit !== null);
   // Reference geometry, patterns and mirror pick planes, the origin and features in the tree too.
-  const picking = useAppState((state) => state.activeEdit !== null && hasReferenceSlots(state.activeEdit.draft));
+  const picking = useAppState((state) => picksReferences(state.activeEdit?.draft));
   const sketching = useAppState((state) => state.sketch !== null || state.choosingSketchPlane);
   if (sketching) {
     return (

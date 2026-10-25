@@ -19,6 +19,7 @@ interface EmbindModule {
   cutHoles(_0: number, _1: any, _2: any, _3: any, _4: EmbindString): any;
   combineCopies(_0: number, _1: number, _2: any, _3: number, _4: EmbindString): any;
   shell(_0: number, _1: any, _2: number, _3: boolean, _4: EmbindString): any;
+  trimByPlane(_0: number, _1: any, _2: EmbindString): any;
   fillet(_0: number, _1: any, _2: number, _3: any, _4: EmbindString): any;
   chamfer(_0: number, _1: any, _2: number, _3: any, _4: EmbindString): any;
   naming(_0: number): any;

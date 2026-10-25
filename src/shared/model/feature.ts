@@ -62,7 +62,7 @@ export const EXPRESSION_FIELDS: Readonly<Record<FeatureType, readonly string[]>>
   plane: ['distance', 'angle'],
   axis: [],
   point: ['x', 'y', 'z'],
-  extrude: ['depth'],
+  extrude: ['depth', 'endOffset'],
   revolve: ['angle'],
   hole: ['diameter', 'depth', 'counterboreDiameter', 'counterboreDepth', 'countersinkDiameter', 'countersinkAngle', 'threadDepth'],
   pattern: ['spacing', 'angle'],
@@ -177,10 +177,18 @@ export type ExtrudeDirection = 'normal' | 'reverse' | 'both';
 
 export const EXTRUDE_DIRECTIONS: readonly ExtrudeDirection[] = ['normal', 'reverse', 'both'];
 
-/** How far an extrusion goes: a given depth, or through the whole body in its direction. */
-export type ExtrudeEnd = 'blind' | 'throughAll';
+/** How deep a hole goes: a given depth, or through the whole body. */
+export type HoleEnd = 'blind' | 'throughAll';
 
-export const EXTRUDE_ENDS: readonly ExtrudeEnd[] = ['blind', 'throughAll'];
+export const HOLE_ENDS: readonly HoleEnd[] = ['blind', 'throughAll'];
+
+/**
+ * How far an extrusion goes: a given depth, through the whole body in its direction, up to a plane
+ * (a planar face, a reference or standard plane; at an angle too) or up to a point (a vertex).
+ */
+export type ExtrudeEnd = HoleEnd | 'upToSurface' | 'upToVertex';
+
+export const EXTRUDE_ENDS: readonly ExtrudeEnd[] = ['blind', 'throughAll', 'upToSurface', 'upToVertex'];
 
 /** Extrudes the closed outlines of a sketch (adding material) or cuts them out of the body. */
 export interface ExtrudeFeature extends FeatureBase {
@@ -192,6 +200,11 @@ export interface ExtrudeFeature extends FeatureBase {
   depth: number;
   direction: ExtrudeDirection;
   end: ExtrudeEnd;
+  /** Up to surface: the plane; up to vertex: the point. */
+  endRef?: GeometryRef;
+  /** Up to surface: how far before the plane the extrusion stops (after it, with `endBeyond`). */
+  endOffset?: number;
+  endBeyond?: boolean;
 }
 
 /**
@@ -261,7 +274,7 @@ export interface HoleFeature extends FeatureBase {
   fit: HoleFit;
   /** Id of the sketch whose free points are the hole centers. */
   sketch: string;
-  end: ExtrudeEnd;
+  end: HoleEnd;
   reverse: boolean;
   /** Clearance hole, or the tap drill of a tapped hole. */
   diameter: number;

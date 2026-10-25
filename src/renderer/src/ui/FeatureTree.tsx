@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { COPYABLE_TYPES, hasReferenceSlots, isCopyFeature, isReferenceFeature, type Feature } from '../../../shared/model/feature.ts';
 import { STANDARD_PLANES } from '../../../shared/model/sketch.ts';
 import * as commands from '../commands.ts';
+import { picksReferences } from '../references.ts';
 import { featureOrdinal } from '../state/document.ts';
 import { useAppState } from '../state/store.ts';
 import { AlertIcon, EditIcon, EyeIcon, EyeOffIcon, FEATURE_ICONS, OriginIcon, PlaneIcon, SketchIcon, TrashIcon } from './icons.tsx';
@@ -25,7 +26,7 @@ function PlaneItems() {
   const choosing = useAppState((state) => state.choosingSketchPlane);
   const sketching = useAppState((state) => state.sketch !== null);
   // While reference fields are filled, the planes are only picked.
-  const picking = useAppState((state) => state.activeEdit !== null && hasReferenceSlots(state.activeEdit.draft));
+  const picking = useAppState((state) => picksReferences(state.activeEdit?.draft));
 
   return STANDARD_PLANES.map((plane, index) => {
     const selected = selection.some((pick) => pick.kind === 'plane' && pick.index === index);
@@ -73,7 +74,7 @@ export function FeatureTree() {
   const results = useAppState((state) => state.rebuild?.results);
   const activeEdit = useAppState((state) => state.activeEdit ?? state.sketch);
   // The tree only picks while a sketch or a feature with reference fields is edited; its actions are hidden.
-  const locked = useAppState((state) => state.sketch !== null || state.choosingSketchPlane || (state.activeEdit !== null && hasReferenceSlots(state.activeEdit.draft)));
+  const locked = useAppState((state) => state.sketch !== null || state.choosingSketchPlane || picksReferences(state.activeEdit?.draft));
   const sketchStatuses = useAppState((state) => state.sketchStatuses);
   const selection = useAppState((state) => state.selection);
   const hover = useAppState((state) => state.hover);

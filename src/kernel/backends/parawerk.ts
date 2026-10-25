@@ -38,7 +38,7 @@ const SURFACE_KINDS: SurfaceKind[] = ['plane', 'cylinder', 'cone', 'sphere', 'to
 const CURVE_KINDS: CurveKind[] = ['line', 'circle', 'ellipse', 'bspline', 'other'];
 
 const FEATURE_ERROR_CODES = new Set<FeatureErrorCode>([
-  'no-body', 'no-edges', 'edge-missing', 'face-missing', 'plane-missing', 'reference-missing', 'reference-kind', 'reference-parallel', 'reference-not-parallel', 'reference-collinear', 'empty-result', 'first-must-add', 'sketch-missing', 'profile-empty', 'profile-crossing', 'axis-missing', 'axis-not-in-plane', 'hole-no-points', 'hole-invalid', 'pattern-empty', 'pattern-seed-missing', 'pattern-unsupported', 'shell-face-missing', 'profile-crosses-axis',
+  'no-body', 'no-edges', 'edge-missing', 'face-missing', 'plane-missing', 'reference-missing', 'reference-kind', 'reference-parallel', 'reference-not-parallel', 'reference-collinear', 'empty-result', 'first-must-add', 'sketch-missing', 'profile-empty', 'profile-crossing', 'axis-missing', 'axis-not-in-plane', 'hole-no-points', 'hole-invalid', 'pattern-empty', 'pattern-seed-missing', 'pattern-unsupported', 'shell-face-missing', 'end-behind', 'end-parallel', 'profile-crosses-axis',
   'operation-failed', 'unknown',
 ]);
 
@@ -140,8 +140,15 @@ export class ParaWerkBackend implements GeometryBackend {
           });
           extent = [Math.min(...along), Math.max(...along)];
         }
-        const [from, to] = extrudeRange(feature, extent);
-        return this.handle(k.extrudeProfile(encodeProfile(feature.profile), [...origin, ...xDir, ...normal], from, to, profileEdgeNames(feature.profile), feature.id));
+        const [from, to] = feature.range ?? extrudeRange(feature, extent);
+        const tool = this.handle(k.extrudeProfile(encodeProfile(feature.profile), [...origin, ...xDir, ...normal], from, to, profileEdgeNames(feature.profile), feature.id));
+        if (!feature.trim) return tool;
+        // Up to a plane at an angle: cut the extrusion off at the plane.
+        try {
+          return this.handle(k.trimByPlane(this.id(tool), feature.trim, feature.id));
+        } finally {
+          this.release(tool);
+        }
       }
       case 'revolve': {
         const [from, to] = revolveRange(feature);

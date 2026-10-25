@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { hasReferenceSlots, isCopyFeature, type Axis, type BooleanOperation, type EdgeFeature, type ExtrudeDirection, type ExtrudeEnd, type Feature, type Vec3 } from '../../../shared/model/feature.ts';
+import { EXTRUDE_ENDS, hasReferenceSlots, isCopyFeature, type Axis, type BooleanOperation, type EdgeFeature, type ExtrudeDirection, type ExtrudeEnd, type ExtrudeFeature, type Feature, type Vec3 } from '../../../shared/model/feature.ts';
 import type { GeometryRef } from '../../../shared/model/reference.ts';
 import { referenceRoles } from '../references.ts';
 import { resolveEdgeRefs } from '../../../shared/model/naming.ts';
@@ -9,7 +9,7 @@ import { useAppState } from '../state/store.ts';
 import { useFeatureName } from './FeatureTree.tsx';
 import { CheckIcon, CloseIcon, FEATURE_ICONS } from './icons.tsx';
 import { NumberField } from './NumberField.tsx';
-import { ReferenceFields } from './ReferencePanel.tsx';
+import { ReferenceFields, useReferenceName } from './ReferencePanel.tsx';
 import { HoleFields } from './HolePanel.tsx';
 import { CopyFields } from './CopyPanel.tsx';
 import { Segmented } from './Segmented.tsx';
@@ -139,26 +139,29 @@ function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
         <Section title={t('panel.parameters')}>
           <SketchField value={draft.sketch} index={index} />
           <OperationField value={draft.operation} firstFeature={firstFeature} />
-          <Segmented<ExtrudeEnd>
-            label={t('panel.end')}
-            value={draft.end ?? 'blind'}
-            disabled={firstFeature}
-            options={[
-              { value: 'blind', label: t('panel.endBlind') },
-              { value: 'throughAll', label: t('panel.endThroughAll') },
-            ]}
-            onChange={(end) => commands.updateDraft({ end })}
-          />
-          {draft.end === 'throughAll' ? null : (
+          <label className="field">
+            <span className="field-label">{t('panel.end')}</span>
+            <select className="field-select" value={draft.end ?? 'blind'} data-testid="extrude-end" onChange={(event) => commands.setExtrudeEnd(event.target.value as ExtrudeEnd)}>
+              {EXTRUDE_ENDS.map((end) => (
+                // Through all needs a body to go through.
+                <option key={end} value={end} disabled={end === 'throughAll' && firstFeature}>
+                  {t(`panel.ends.${end}`)}
+                </option>
+              ))}
+            </select>
+          </label>
+          {draft.end === 'blind' || draft.end === undefined ? (
             <NumberField label={t('panel.extrudeDepth')} value={draft.depth} testId="extrude-depth" {...equation(draft, 'depth')} onChange={(depth) => commands.updateDraft({ depth })} />
-          )}
+          ) : null}
+          {draft.end === 'upToSurface' || draft.end === 'upToVertex' ? <ExtrudeEndFields draft={draft} /> : null}
           <Segmented<ExtrudeDirection>
             label={t('panel.direction')}
             value={draft.direction}
             options={[
               { value: 'normal', label: t('panel.directionNormal') },
               { value: 'reverse', label: t('panel.directionReverse') },
-              { value: 'both', label: t('panel.directionBoth') },
+              // Up to a surface or vertex goes one way.
+              ...(draft.end === 'upToSurface' || draft.end === 'upToVertex' ? [] : [{ value: 'both' as const, label: t('panel.directionBoth') }]),
             ]}
             onChange={(direction) => commands.updateDraft({ direction })}
           />
@@ -292,6 +295,40 @@ function MissingEdges({ draft }: { draft: EdgeFeature }) {
         {t('panel.removeMissingEdges')}
       </button>
     </div>
+  );
+}
+
+/** What an extrusion goes up to (picked in the 3D view or the tree), and the offset from a surface. */
+function ExtrudeEndFields({ draft }: { draft: ExtrudeFeature }) {
+  const { t } = useTranslation();
+  const nameOf = useReferenceName();
+  const surface = draft.end === 'upToSurface';
+  return (
+    <>
+      <div className={`reference-slot is-active${draft.endRef ? ' is-filled' : ''}`} data-testid="extrude-end-ref">
+        <div className="reference-slot-button">
+          <span className="reference-slot-role">{surface ? t('panel.endSurface') : t('panel.endVertex')}</span>
+          <span className="reference-slot-value">{draft.endRef ? nameOf(draft.endRef) : t('references.pick')}</span>
+        </div>
+      </div>
+      {surface ? (
+        <>
+          <NumberField
+            label={t('panel.endOffset')}
+            signed
+            value={draft.endOffset ?? 0}
+            step={0.5}
+            testId="extrude-end-offset"
+            {...equation(draft, 'endOffset')}
+            onChange={(endOffset) => commands.updateDraft({ endOffset: Math.max(0, endOffset) })}
+          />
+          <label className="checkbox-field">
+            <input type="checkbox" checked={draft.endBeyond ?? false} data-testid="extrude-end-beyond" onChange={(event) => commands.updateDraft({ endBeyond: event.target.checked })} />
+            {t('panel.endBeyond')}
+          </label>
+        </>
+      ) : null}
+    </>
   );
 }
 

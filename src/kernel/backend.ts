@@ -10,6 +10,10 @@ import type { MeshQuality } from './mesh-quality.ts';
 export interface ResolvedExtrude extends ExtrudeFeature {
   profile: Profile;
   frame: SketchFrame;
+  /** Up to a surface or vertex: where the extrusion starts and ends along the sketch normal. */
+  range?: [number, number];
+  /** Up to a plane at an angle: the plane the extrusion is cut off at (point and normal; the side the normal points to goes). */
+  trim?: [number, number, number, number, number, number];
 }
 
 /** A revolution with the outlines and plane of its sketch and its axis in sketch coordinates. */

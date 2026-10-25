@@ -257,7 +257,17 @@
     "endBlind": "Depth",
     "endThroughAll": "Through all",
     "axisSketchLines": "Lines of the sketch",
-    "axisReferences": "Reference axes"
+    "axisReferences": "Reference axes",
+    "ends": {
+      "blind": "Depth",
+      "throughAll": "Through all",
+      "upToSurface": "Up to surface",
+      "upToVertex": "Up to vertex"
+    },
+    "endSurface": "Up to (plane or planar face)",
+    "endVertex": "Up to (vertex or point)",
+    "endOffset": "Offset",
+    "endBeyond": "Past the surface"
   },
   "status": {
     "kernelLoading": "Starting geometry kernel…",
@@ -380,6 +390,8 @@
     "pattern-seed-missing": "A feature to copy is missing or suppressed. Edit the feature and choose the features again.",
     "pattern-unsupported": "Only features that add or cut material can be copied: extrusions, revolutions, holes, boxes and cylinders.",
     "shell-face-missing": "The faces to open no longer exist: an earlier change removed them. Edit the shell and pick the faces again.",
+    "end-behind": "The end lies behind the sketch in this direction. Choose the other direction or another end.",
+    "end-parallel": "The extrusion runs along this plane and never reaches it. Choose a plane at an angle to the extrusion.",
     "profile-crosses-axis": "Outlines of the sketch lie on both sides of the axis. Keep them on one side; they may touch it.",
     "plane-missing": "The reference plane this sketch was drawn on no longer exists. The sketch stays where the plane was.",
     "reference-missing": "Reference {{detail}} of this feature is missing: it was not chosen yet, or an earlier change removed it. Edit the feature and choose it.",

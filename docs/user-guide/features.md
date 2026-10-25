@@ -14,6 +14,12 @@ chooses another one.
   or a [variable](#variables-and-equations). **Through all** goes past the whole body in the chosen
   direction – the usual choice for holes and cut-outs through a plate – and still does when the body
   grows later. It needs a body to go through.
+- **Up to surface** extrudes until a plane: a planar face of the part, a [reference plane](#reference-geometry)
+  or a standard plane, picked in the 3D view or the tree. The plane may lie at an angle – the extrusion then
+  ends in a sloped face along it. *Offset* stops that far before the plane, or past it with **Past the
+  surface**. When the face moves later, the extrusion follows it.
+- **Up to vertex** extrudes until the height of a vertex of the part or a reference point, measured along
+  the extrusion. Both up-to ends go one way (**Normal** or **Reversed**).
 - *Direction*: **Normal** extrudes along the normal of the sketch plane (out of the face for a sketch on a
   face), **Reversed** the other way (into the body, as a pocket usually needs), **Mid-plane** half the
   depth to each side.

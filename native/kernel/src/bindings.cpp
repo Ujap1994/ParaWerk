@@ -112,6 +112,10 @@ val cutHoles(int bodyId, val profile, val placements, val edgeNames, std::string
   });
 }
 
+val trimByPlane(int shapeId, val plane, std::string name) {
+  return guarded([&] { return idResult(parawerk::trimByPlane(shapeId, emscripten::convertJSArrayToNumberVector<double>(plane), name)); });
+}
+
 val shell(int bodyId, val openFaces, double thickness, bool outward, std::string name) {
   return guarded([&] { return idResult(parawerk::shell(bodyId, toIntVector(openFaces), thickness, outward, name)); });
 }
@@ -252,6 +256,7 @@ EMSCRIPTEN_BINDINGS(parawerk_kernel) {
   emscripten::function("cutHoles", &cutHoles);
   emscripten::function("combineCopies", &combineCopies);
   emscripten::function("shell", &shell);
+  emscripten::function("trimByPlane", &trimByPlane);
   emscripten::function("fillet", &fillet);
   emscripten::function("chamfer", &chamfer);
   emscripten::function("release", &parawerk::release);

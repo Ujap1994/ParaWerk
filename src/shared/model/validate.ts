@@ -1,4 +1,4 @@
-import { EXPRESSION_FIELDS, EXTRUDE_DIRECTIONS, EXTRUDE_ENDS, type Axis, type BooleanOperation, type EdgeRef, type ExtrudeDirection, type ExtrudeEnd, type Feature, type FeatureType, type Variable, type Vec3 } from './feature.ts';
+import { EXPRESSION_FIELDS, EXTRUDE_DIRECTIONS, EXTRUDE_ENDS, HOLE_ENDS, type Axis, type BooleanOperation, type EdgeRef, type ExtrudeDirection, type ExtrudeEnd, type Feature, type FeatureType, type HoleEnd, type Variable, type Vec3 } from './feature.ts';
 import { HOLE_FITS, HOLE_KINDS } from './hole.ts';
 import { MAX_PATTERN_COUNT } from './pattern.ts';
 import { AXIS_METHODS, PLANE_METHODS, POINT_METHODS, type GeometryRef } from './reference.ts';
@@ -114,6 +114,16 @@ function geometryRefs(value: unknown, path: string): GeometryRef[] {
   return value.map((ref, i) => geometryRef(ref, `${path}[${i}]`));
 }
 
+function nonNegative(value: unknown, path: string): number {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > MAX_LENGTH) throw new ValidationError('expected a length of 0 or more', path);
+  return value;
+}
+
+function flag(value: unknown, path: string): boolean {
+  if (typeof value !== 'boolean') throw new ValidationError('expected true or false', path);
+  return value;
+}
+
 /** Ids of the features a pattern or mirror copies; unknown ids are kept and reported by the rebuild. */
 function featureIds(value: unknown, path: string): string[] {
   if (!Array.isArray(value) || value.length > 200) throw new ValidationError('expected a list of feature ids', path);
@@ -184,11 +194,11 @@ function expressions(value: unknown, type: FeatureType, path: string): Record<st
   return result;
 }
 
-/** The end condition of an extrusion; absent means blind (a given depth). */
-function extrudeEnd(value: unknown, path: string): ExtrudeEnd {
-  if (value === undefined) return 'blind';
-  if (!(EXTRUDE_ENDS as readonly unknown[]).includes(value)) throw new ValidationError('expected blind or throughAll', path);
-  return value as ExtrudeEnd;
+/** The end condition of an extrusion (or, with `ends`, of a hole); absent means blind (a given depth). */
+function extrudeEnd<T extends string>(value: unknown, path: string, ends: readonly T[] = EXTRUDE_ENDS as readonly string[] as readonly T[]): T {
+  if (value === undefined) return 'blind' as T;
+  if (!(ends as readonly unknown[]).includes(value)) throw new ValidationError(`expected ${ends.join(', ')}`, path);
+  return value as T;
 }
 
 export function parseFeature(raw: unknown, path = 'feature'): Feature {
@@ -244,7 +254,10 @@ function parseFeatureFields(raw: Json, path: string): Feature {
         sketch: raw.sketch,
         depth: positiveLength(raw.depth, `${path}.depth`),
         direction: raw.direction as ExtrudeDirection,
-        end: extrudeEnd(raw.end, `${path}.end`),
+        end: extrudeEnd<ExtrudeEnd>(raw.end, `${path}.end`),
+        ...(raw.endRef === undefined ? {} : { endRef: geometryRef(raw.endRef, `${path}.endRef`) }),
+        ...(raw.endOffset === undefined ? {} : { endOffset: nonNegative(raw.endOffset, `${path}.endOffset`) }),
+        ...(raw.endBeyond === undefined ? {} : { endBeyond: flag(raw.endBeyond, `${path}.endBeyond`) }),
       };
     }
     case 'revolve': {
@@ -278,7 +291,7 @@ function parseFeatureFields(raw: Json, path: string): Feature {
         size: raw.size,
         fit: method(raw.fit, HOLE_FITS, `${path}.fit`),
         sketch: raw.sketch,
-        end: extrudeEnd(raw.end, `${path}.end`),
+        end: extrudeEnd<HoleEnd>(raw.end, `${path}.end`, HOLE_ENDS),
         reverse: raw.reverse,
         diameter: positiveLength(raw.diameter, `${path}.diameter`),
         depth: positiveLength(raw.depth, `${path}.depth`),

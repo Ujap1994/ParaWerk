@@ -159,6 +159,8 @@ Marked complete for now: open points from hands-on testing are handled alongside
 | Hole feature: ISO metric clearance, counterbore, countersink and tapped holes with cosmetic threads | ✅ done |
 | Linear and circular patterns, mirror (of features that add or cut material) | ✅ done |
 | Shell (open faces, closed cavity, walls inside or outside) | ✅ done |
+| Extrude up to surface (planes, with offset) and up to vertex | ✅ done |
+| Extrude up to next, up to curved surfaces, draft while extruding | open |
 
 ## 2. Guiding principles
 

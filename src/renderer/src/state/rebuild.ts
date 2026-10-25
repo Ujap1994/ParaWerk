@@ -2,6 +2,7 @@ import { isCopyFeature, isEdgeFeature, isReferenceFeature } from '../../../share
 import type { FeatureResult, MassProperties, MeshPayload } from '../../../kernel/protocol.ts';
 import { t } from '../i18n.ts';
 import { KernelClient, KernelCrashedError } from '../kernel/kernel-client.ts';
+import { extrudesUpTo } from '../references.ts';
 import { rebuildPlan, type RebuildPlan } from './document.ts';
 import { getState, setHistory, setState, showToast, store, type DisplayMeshes } from './store.ts';
 
@@ -126,7 +127,7 @@ function applyResult(
     display = { body: meshes.get(last) ?? null, preview: null, pickable: false };
   } else if (!activeEdit) {
     display = { body: meshes.get(last) ?? null, preview: null, pickable: true };
-  } else if (isEdgeFeature(activeEdit.draft) || activeEdit.draft.type === 'shell') {
+  } else if (isEdgeFeature(activeEdit.draft) || activeEdit.draft.type === 'shell' || extrudesUpTo(activeEdit.draft)) {
     // Edges and faces are picked on the body before the feature; its result is shown as a preview.
     display = { body: meshes.get(activeEdit.index - 1) ?? null, preview: meshes.get(activeEdit.index) ?? null, pickable: true };
   } else if (isReferenceFeature(activeEdit.draft)) {

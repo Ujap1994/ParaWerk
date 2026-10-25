@@ -4,7 +4,7 @@ import { hasReferenceSlots, isCopyFeature, isEdgeFeature, isSketchBased, type Ve
 import { resolveEdgeRefs } from '../../../shared/model/naming.ts';
 import { frameOf, STANDARD_PLANES } from '../../../shared/model/sketch.ts';
 import * as commands from '../commands.ts';
-import { referenceItems, referencePicks, visibleThreads } from '../references.ts';
+import { builtOn, extrudesUpTo, picksReferences, referenceItems, referencePicks, visibleThreads } from '../references.ts';
 import { SketchController, sketchHighlight, statusColors } from '../sketch/controller.ts';
 import { sketchSolver } from '../sketch/solver.ts';
 import { setState, store, type AppState, type Pick } from '../state/store.ts';
@@ -31,6 +31,7 @@ function cubeLabels(t: (key: string) => string): Record<CubeFace, string> {
  */
 function visibleSelection(state: AppState): Pick[] {
   const edit = state.activeEdit;
+  if (edit && extrudesUpTo(edit.draft)) return referencePicks(builtOn(edit.draft), state).filter((pick) => pick.kind === 'face' || pick.kind === 'edge' || pick.kind === 'vertex');
   // The preview of a shell shows its openings; highlighting the open faces would cover them.
   if (edit?.draft.type === 'shell') return state.display.preview ? [] : referencePicks(edit.draft.faces, state);
   if (edit && hasReferenceSlots(edit.draft)) {
@@ -68,7 +69,7 @@ function pickFilter(state: AppState): PickFilter {
   const edit = state.activeEdit;
   if (!edit) return 'all';
   if (edit.draft.type === 'shell') return 'faces';
-  return isEdgeFeature(edit.draft) ? 'edges' : hasReferenceSlots(edit.draft) ? 'references' : 'none';
+  return isEdgeFeature(edit.draft) ? 'edges' : picksReferences(edit.draft) ? 'references' : 'none';
 }
 
 /** Sketches shown in the 3D view besides the open one: those before the current edit position, unless suppressed. */
@@ -93,9 +94,9 @@ function planeDisplay(state: AppState): PlaneDisplay {
   if (state.sketch) return { visible: [], hovered: null, selected: [] };
   const draft = state.activeEdit?.draft;
   // The standard planes a reference feature is built on are shown while it is edited.
-  const referenced = draft && hasReferenceSlots(draft) ? referencePicks(draft.references, state).filter((pick) => pick.kind === 'plane') : [];
+  const referenced = draft ? referencePicks(builtOn(draft), state).filter((pick) => pick.kind === 'plane') : [];
   // While reference geometry is edited, the standard planes are shown so they can be picked as references.
-  const showAll = state.choosingSketchPlane || (draft !== undefined && hasReferenceSlots(draft));
+  const showAll = state.choosingSketchPlane || (draft !== undefined && (hasReferenceSlots(draft) || (draft.type === 'extrude' && draft.end === 'upToSurface')));
   return {
     visible: STANDARD_PLANES.map(() => showAll),
     hovered: state.hover?.kind === 'plane' ? state.hover.index : null,

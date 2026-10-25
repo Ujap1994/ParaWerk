@@ -257,7 +257,17 @@
     "endBlind": "Tiefe",
     "endThroughAll": "Durch alles",
     "axisSketchLines": "Linien der Skizze",
-    "axisReferences": "Referenzachsen"
+    "axisReferences": "Referenzachsen",
+    "ends": {
+      "blind": "Tiefe",
+      "throughAll": "Durch alles",
+      "upToSurface": "Bis Fläche",
+      "upToVertex": "Bis Eckpunkt"
+    },
+    "endSurface": "Bis (Ebene oder ebene Fläche)",
+    "endVertex": "Bis (Eckpunkt oder Punkt)",
+    "endOffset": "Abstand",
+    "endBeyond": "Über die Fläche hinaus"
   },
   "status": {
     "kernelLoading": "Geometriekern wird gestartet…",
@@ -380,6 +390,8 @@
     "pattern-seed-missing": "Ein zu kopierendes Feature fehlt oder ist unterdrückt. Bearbeite das Feature und wähle die Features neu.",
     "pattern-unsupported": "Nur Features, die Material hinzufügen oder wegnehmen, lassen sich kopieren: Extrusionen, Rotationen, Bohrungen, Quader und Zylinder.",
     "shell-face-missing": "Die zu öffnenden Flächen existieren nicht mehr, eine frühere Änderung hat sie entfernt. Bearbeite die Schale und wähle die Flächen neu.",
+    "end-behind": "Das Ende liegt in dieser Richtung hinter der Skizze. Wähle die andere Richtung oder ein anderes Ende.",
+    "end-parallel": "Die Extrusion läuft entlang dieser Ebene und erreicht sie nie. Wähle eine Ebene, die schräg zur Extrusion liegt.",
     "profile-crosses-axis": "Konturen der Skizze liegen auf beiden Seiten der Achse. Halte sie auf einer Seite; berühren dürfen sie die Achse.",
     "plane-missing": "Die Referenzebene, auf der diese Skizze gezeichnet wurde, existiert nicht mehr. Die Skizze bleibt, wo die Ebene war.",
     "reference-missing": "Referenz {{detail}} dieses Features fehlt: Sie wurde noch nicht gewählt, oder eine frühere Änderung hat sie entfernt. Bearbeite das Feature und wähle sie.",

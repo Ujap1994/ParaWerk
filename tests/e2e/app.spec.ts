@@ -409,7 +409,7 @@ test('extrudes a sketch into a plate and cuts a pocket from a sketch on its top 
   await expect(page.locator('[data-testid="feature-sketch"]')).toHaveValue('pocket');
   await page.getByRole('radio', { name: 'Remove material' }).click();
   await page.getByRole('radio', { name: 'Reversed' }).click();
-  await page.getByRole('radio', { name: 'Through all' }).click();
+  await page.selectOption('[data-testid="extrude-end"]', 'throughAll');
   await expect(page.locator('[data-testid="extrude-depth"]')).toHaveCount(0);
   await page.click('[data-testid="panel-ok"]');
   await expect.poll(async () => (await features()).at(-1)).toMatchObject({ type: 'extrude', sketch: 'pocket', end: 'throughAll' });
@@ -666,4 +666,38 @@ test('hollows a box out to a shell open at a picked face', async () => {
   await page.click('[data-testid="panel-ok"]');
   expect(await volume(page)).toBeCloseTo(240_000 - 94 * 54 * 37, 2);
   expect((await state(page)).history.features[1]).toMatchObject({ type: 'shell', thickness: 3, faces: [{ kind: 'face', name: expect.stringMatching(/:top$/) }] });
+});
+
+test('extrudes up to a reference plane picked in the tree, with an offset', async () => {
+  launched = await launchApp({ width: 1440, height: 900 });
+  const { page } = launched;
+  // A plane 30 mm above the top plane and a 10 × 10 square on the top plane.
+  await page.evaluate(() => {
+    const P = (id: string, x: number, y: number) => ({ id, type: 'point', x, y });
+    const L = (id: string, p1: string, p2: string) => ({ id, type: 'line', p1, p2 });
+    const features = [
+      { id: 'plane', type: 'plane', method: 'offset', references: [{ kind: 'standard-plane', plane: 'top' }], distance: 30, angle: 45, flip: false },
+      {
+        id: 'square', type: 'sketch', plane: { kind: 'standard', plane: 'top' },
+        sketch: { entities: [P('a', 0, 0), P('b', 10, 0), P('c', 10, 10), P('d', 0, 10), L('ab', 'a', 'b'), L('bc', 'b', 'c'), L('cd', 'c', 'd'), L('da', 'd', 'a')], constraints: [] },
+      },
+    ];
+    const history = { features, past: [], future: [] };
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history, savedFeatures: features, dirty: false });
+  });
+  await idle(page);
+  await page.click('[data-command="extrude"]');
+  await page.selectOption('[data-testid="extrude-end"]', 'upToSurface');
+  await page.click('.feature-tree .tree-item[data-feature-id="plane"]');
+  await expect(page.locator('[data-testid="extrude-end-ref"]')).toContainText('Plane1');
+  await page.click('[data-testid="panel-ok"]');
+  expect(await volume(page)).toBeCloseTo(3000, 3);
+
+  // 5 mm short of the plane.
+  await page.locator('.feature-tree .tree-item[data-feature-id]').nth(2).dblclick();
+  await page.locator('[data-testid="extrude-end-offset"]').fill('5');
+  await page.locator('[data-testid="extrude-end-offset"]').press('Tab');
+  await page.click('[data-testid="panel-ok"]');
+  expect(await volume(page)).toBeCloseTo(2500, 3);
+  expect((await state(page)).history.features[2]).toMatchObject({ type: 'extrude', end: 'upToSurface', endRef: { kind: 'feature', feature: 'plane' }, endOffset: 5 });
 });

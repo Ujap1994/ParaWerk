@@ -2,13 +2,31 @@
  * Reference geometry in the UI: turning picks into references, checking that they fit a field, showing
  * the reference planes, axes and points and highlighting what the edited feature refers to.
  */
-import { hasReferenceSlots, isReferenceFeature, type Feature, type SlotFeature } from '../../shared/model/feature.ts';
+import { hasReferenceSlots, isReferenceFeature, type ExtrudeFeature, type Feature, type SlotFeature } from '../../shared/model/feature.ts';
 import { edgeRefOf, faceRefOf, resolveEdgeRefs, resolveFaceRef, resolveVertexRef, vertexRefOf } from '../../shared/model/naming.ts';
 import { REFERENCE_ROLES, type GeometryRef, type ReferenceGeometry, type ReferenceRole } from '../../shared/model/reference.ts';
 import { STANDARD_PLANES } from '../../shared/model/sketch.ts';
 import type { CosmeticThread } from '../../shared/model/hole.ts';
 import type { AppState, Pick } from './state/store.ts';
 import type { ReferenceItem } from './viewport/reference-geometry.ts';
+
+/** An extrusion that ends up to a surface or vertex. */
+export function extrudesUpTo(feature: Feature): feature is ExtrudeFeature {
+  return feature.type === 'extrude' && (feature.end === 'upToSurface' || feature.end === 'upToVertex');
+}
+
+/** Whether picks in the 3D view and the tree go to references of the edited feature (and the tree shows below the panel). */
+export function picksReferences(feature: Feature | undefined): boolean {
+  return feature !== undefined && (hasReferenceSlots(feature) || extrudesUpTo(feature));
+}
+
+/** The references of a feature to highlight while it is edited. */
+export function builtOn(feature: Feature): GeometryRef[] {
+  if (hasReferenceSlots(feature)) return feature.references;
+  if (feature.type === 'revolve' && feature.axisRef) return [feature.axisRef];
+  if (extrudesUpTo(feature) && feature.endRef) return [feature.endRef];
+  return [];
+}
 
 /** The roles of the references the feature's method takes, in order. */
 export function referenceRoles(feature: SlotFeature): readonly ReferenceRole[] {
@@ -127,7 +145,7 @@ export function referenceItems(state: AppState): ReferenceItem[] {
   const end = state.sketch?.index ?? edit?.index ?? features.length;
   const results = new Map(state.rebuild?.results.map((result) => [result.id, result]));
   // What the edited feature is built on is highlighted: the references of reference geometry, the axis of a revolution.
-  const built = edit && hasReferenceSlots(edit.draft) ? edit.draft.references : edit?.draft.type === 'revolve' && edit.draft.axisRef ? [edit.draft.axisRef] : [];
+  const built = edit ? builtOn(edit.draft) : [];
   const referenced = new Set(referencePicks(built, state).filter((pick) => pick.kind === 'reference').map((pick) => pick.index));
   const selected = new Set(state.selection.filter((pick) => pick.kind === 'reference').map((pick) => pick.index));
   const hovered = state.hover?.kind === 'reference' ? state.hover.index : null;

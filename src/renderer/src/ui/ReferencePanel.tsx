@@ -11,7 +11,7 @@ import { NumberField } from './NumberField.tsx';
 const METHODS = { plane: PLANE_METHODS, axis: AXIS_METHODS, point: POINT_METHODS, pattern: ['linear', 'circular'], mirror: ['plane'] } as const;
 
 /** "Top plane", "Plane1", "Face 4", "Edge 7", "Vertex 2" – what a reference field holds. */
-function useReferenceName() {
+export function useReferenceName() {
   const { t } = useTranslation();
   const nameOf = useFeatureName();
   const history = useAppState((state) => state.history);

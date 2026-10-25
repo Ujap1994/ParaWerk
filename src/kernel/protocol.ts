@@ -107,6 +107,8 @@ export type FeatureErrorCode =
   | 'pattern-seed-missing'
   | 'pattern-unsupported'
   | 'shell-face-missing'
+  | 'end-behind'
+  | 'end-parallel'
   | 'profile-crosses-axis'
   | 'operation-failed'
   | 'unknown';

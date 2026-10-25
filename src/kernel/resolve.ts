@@ -1,4 +1,4 @@
-import { COPYABLE_TYPES, isCopyFeature, isEdgeFeature, type CopyFeature, type EdgeFeature, type EdgeRef, type Feature, type HoleFeature, type ShellFeature, type SketchFeature, type SolidModelingFeature, type Vec3 } from '../shared/model/feature.ts';
+import { COPYABLE_TYPES, isCopyFeature, isEdgeFeature, type CopyFeature, type EdgeFeature, type EdgeRef, type ExtrudeFeature, type Feature, type HoleFeature, type ShellFeature, type SketchFeature, type SolidModelingFeature, type Vec3 } from '../shared/model/feature.ts';
 import { circularTransforms, linearTransforms, mirrorTransform, type Transform } from '../shared/model/pattern.ts';
 import { holePositions, holeProblem } from '../shared/model/hole.ts';
 import { edgeFaceNames, edgeRefOf, faceRefOf, resolveEdgeRefs, resolveFaceRef, resolveFacePlane, type BodyNaming } from '../shared/model/naming.ts';
@@ -132,6 +132,42 @@ export function placeSketch(sketch: SketchFeature, body: (() => BodyNaming) | nu
   return { frame, healed: { kind: 'face', face: face.index, frame, ...(name ? { name } : {}) } };
 }
 
+const dot3 = (a: Vec3, b: Vec3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const minus = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+
+/**
+ * Where an extrusion up to a surface or vertex ends: a range along the sketch normal, and for a plane at
+ * an angle to the sketch also the plane to cut it off at. Blind and through-all extrusions need neither.
+ */
+function extrudeEnd(feature: ExtrudeFeature, profile: Profile, frame: SketchFrame, context: ResolveContext): { range?: [number, number]; trim?: [number, number, number, number, number, number] } {
+  if (feature.end !== 'upToSurface' && feature.end !== 'upToVertex') return {};
+  // Up to something goes one way: along the normal, or against it when reversed.
+  const sign = feature.direction === 'reverse' ? -1 : 1;
+  const d: Vec3 = [sign * frame.normal[0], sign * frame.normal[1], sign * frame.normal[2]];
+  const range = (depth: number): [number, number] => {
+    if (!(depth > 1e-9)) throw new FeatureError('end-behind');
+    return sign > 0 ? [0, depth] : [-depth, 0];
+  };
+  if (feature.end === 'upToVertex') {
+    const point = referenceValue(feature.endRef, 'point', 0, context);
+    return { range: range(dot3(minus(point, frame.origin), d)) };
+  }
+  const plane = referenceValue(feature.endRef, 'plane', 0, context);
+  const along = dot3(d, plane.normal);
+  if (Math.abs(along) < 1e-9) throw new FeatureError('end-parallel');
+  // The plane's normal turned away from the sketch; the offset moves the plane towards the sketch (or past it).
+  const away: Vec3 = along > 0 ? plane.normal : [-plane.normal[0], -plane.normal[1], -plane.normal[2]];
+  const offset = (feature.endBeyond ? 1 : -1) * (feature.endOffset ?? 0);
+  const point: Vec3 = [plane.point[0] + away[0] * offset, plane.point[1] + away[1] * offset, plane.point[2] + away[2] * offset];
+  // How far each point of the outlines travels to reach the plane.
+  const reach = profile.regions.flatMap((region) => region.outer.polygon).map(([x, y]) => dot3(minus(point, toModel(frame, x, y)), away) / Math.abs(along));
+  const [near, far] = [Math.min(...reach), Math.max(...reach)];
+  if (!(near > 1e-9)) throw new FeatureError('end-behind');
+  // A parallel plane is a depth; at an angle the extrusion goes past it and is cut off there.
+  if (far - near < 1e-9) return { range: range(near) };
+  return { range: range(far + 1 + 0.01 * far), trim: [...point, ...away] };
+}
+
 /** Holes go into the material from the sketch plane: against its normal (which points out of a face), or along it. */
 function resolveHole(feature: HoleFeature, sketch: SketchFeature, frame: SketchFrame): ResolvedHole {
   const positions = holePositions(sketch.sketch);
@@ -227,7 +263,7 @@ export function resolveFeature(feature: SolidModelingFeature, before: readonly F
   if (feature.type === 'hole') return resolveHole(feature, sketch, context.frames.get(sketch.id) ?? frameOf(sketch.plane));
   const profile = profileOf(sketch);
   const frame = context.frames.get(sketch.id) ?? frameOf(sketch.plane);
-  if (feature.type === 'extrude') return { ...feature, profile, frame };
+  if (feature.type === 'extrude') return { ...feature, profile, frame, ...extrudeEnd(feature, profile, frame, context) };
   const axis = feature.axisRef ? referenceAxis(feature.axisRef, frame, context) : sketchAxis(sketch, feature.axis);
   return { ...feature, profile, frame, line: checkedAxis(axis, profile) };
 }

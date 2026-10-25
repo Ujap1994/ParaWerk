@@ -147,6 +147,12 @@ int cutHoles(int bodyId, const std::vector<double>& profile, const std::vector<d
              const std::string& name = "");
 
 /**
+ * The part of a solid behind a plane (`plane`: a point and the normal, 6 values; the part on the normal's
+ * side is cut off). The new face along the plane is named "<name>:end".
+ */
+int trimByPlane(int shapeId, const std::vector<double>& plane, const std::string& name = "");
+
+/**
  * Hollows a body out to walls of `thickness`, inside the body or (`outward`) around it. The faces in
  * `openFaces` are removed so the shell is open there; without any, the body gets a closed cavity. The
  * wall faces made from face f are named "<name>:<name of f>", faces along the openings "<name>:rim".

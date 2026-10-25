@@ -17,6 +17,8 @@
 #include <BRepFilletAPI_MakeChamfer.hxx>
 #include <BRepFilletAPI_MakeFillet.hxx>
 #include <BRepBuilderAPI_MakeSolid.hxx>
+#include <BRepAlgoAPI_Common.hxx>
+#include <BRepPrimAPI_MakeHalfSpace.hxx>
 #include <BRepOffsetAPI_MakeOffsetShape.hxx>
 #include <BRepOffsetAPI_MakeThickSolid.hxx>
 #include <BRepGProp.hxx>
@@ -764,6 +766,26 @@ int shell(int bodyId, const std::vector<int>& openFaces, double thickness, bool 
   FaceNamer namer(result);
   namer.inherit(cut, body.shape, body.names);
   namer.inherit(cut, offsetSolid, offsetNames);
+  return store().add(result, namer.take());
+}
+
+int trimByPlane(int shapeId, const std::vector<double>& plane, const std::string& name) {
+  if (plane.size() != 6) throw KernelError("operation-failed", "a plane needs a point and a normal");
+  const StoredShape& shape = store().entry(shapeId);
+  const gp_Pnt point(plane[0], plane[1], plane[2]);
+  const gp_Dir normal(plane[3], plane[4], plane[5]);
+  // The half space behind the plane (against its normal), marked by a point on that side.
+  const TopoDS_Face face = BRepBuilderAPI_MakeFace(gp_Pln(point, normal)).Face();
+  const TopoDS_Shape behind = BRepPrimAPI_MakeHalfSpace(face, point.Translated(-gp_Vec(normal))).Solid();
+  BRepAlgoAPI_Common common;
+  configure(common, shape.shape, behind);
+  if (common.HasErrors()) throw KernelError("operation-failed", "the solid could not be cut off at the plane");
+  common.SimplifyResult(true, true, 1e-6);
+  const TopoDS_Shape result = common.Shape();
+  if (countSolids(result) == 0) throw KernelError("empty-result", "nothing is left in front of the plane");
+  FaceNamer namer(result);
+  namer.inherit(common, shape.shape, shape.names);
+  namer.rest(faceName(name, "end"));
   return store().add(result, namer.take());
 }
 

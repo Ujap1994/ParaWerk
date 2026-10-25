@@ -47,6 +47,8 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
   holes, boxes and cylinders. The features to copy are picked in the tree (shown below the side panel
   while picking) or by a face in the 3D view; all copies of a feature are combined with the body in one
   operation.
+- Extrude up to a surface (a planar face, a reference or standard plane, also at an angle; with an offset
+  before or past it) and up to a vertex; the extrusion follows the face or vertex when it moves.
 - Shell: hollows the part out to walls of a thickness, open at faces picked in the 3D view, or with a
   closed cavity; the walls can also go outside the part. Walls that are too thick are reported instead of
   silently giving back the unchanged part.
