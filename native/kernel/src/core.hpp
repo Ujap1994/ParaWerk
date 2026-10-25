@@ -202,7 +202,11 @@ MeshData mesh(int id, double linear, double angular);
 /** Fine faces-only mesh of a copy (for STL), so the display triangulation is not replaced. */
 MeshData exportMesh(int id, double linear, double angular);
 std::string exportStep(int id);
-int importStep(const std::string& data);
+/**
+ * Reads the solids of a STEP file into one body (a compound when there are several). Faces are named
+ * "<name>:f<i>" in TopExp::MapShapes order; a file without solids fails with "import-no-solid".
+ */
+int importStep(const std::string& data, const std::string& name = "");
 
 /** Whether the last cut left the body as it was (its tool missed the body); reading it clears it. */
 bool takeCutMissed();

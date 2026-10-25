@@ -100,6 +100,7 @@ export function applyFeature(oc: OC, body: TopoDS_Shape | null, feature: KernelF
       case 'pattern':
       case 'mirror':
       case 'shell':
+      case 'import':
         throw new FeatureError('operation-failed', 'this feature needs the ParaWerk kernel');
     }
     return arena.keep(result);

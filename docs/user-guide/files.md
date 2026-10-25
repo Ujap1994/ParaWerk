@@ -29,12 +29,33 @@ If the 3D window itself crashes, ParaWerk reloads it right away and offers the c
 kept in the `recovery` folder of the application data folder (see [settings](settings.md)). They can be
 turned off in the settings (*Keep recovery copies of unsaved work*).
 
+## Import STEP
+
+**Import** in the *Exchange* group of the command bar (or *File → Import STEP…*) reads the solids of a STEP
+file (`.step`, `.stp`) as a feature of the part, at the rollback bar:
+
+![An imported STEP file in the side panel](../images/screenshots/import-step.png)
+
+- **Add material** makes the solids a body of their own (or joins them with the part); **Remove
+  material** cuts them out of the part, for example a purchased part's envelope.
+- The file is kept **in the part** (as its own entry of the `.pwpart` package), so the part opens
+  without it and later changes of the file do not reach the part. *Replace with another STEP file…*
+  in the side panel exchanges it.
+- Faces of imported solids get names of their own, so fillets, chamfers, sketches on faces and
+  reference geometry built on them stay where they are when earlier features change.
+- Surfaces and wireframes in the file are left out; a file without solids is reported. Files up to 64 MB
+  are imported.
+
 ## Export
+
+The export button in the *Exchange* group exports in the format used last; its arrow offers all formats
+(also in *File → Export*).
 
 | Format | Use | Details |
 |---|---|---|
 | **STEP** (`.step`) | Exchange with other CAD systems | AP214, millimeters, exact B-Rep geometry |
 | **STL** (`.stl`) | 3D printing | Binary STL in millimeters; tessellation is finer than in the 3D view and adapts to the part size |
+| **3MF** (`.3mf`) | 3D printing | 3MF core specification in millimeters with the part's name, its material and its color (see [material](evaluate.md)); the mesh is closed and oriented, which slicers check, and finer than in the 3D view |
 
 ## Sketches as DXF
 

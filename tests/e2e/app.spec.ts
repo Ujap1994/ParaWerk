@@ -118,8 +118,54 @@ test('creates a box, rounds edges picked in the 3D view and exports STEP and STL
   const step = await readFile(path.join(outputDir, `${await page.evaluate(() => document.title.split(' – ')[0]?.replace(' •', ''))}.step`));
   expect(step.subarray(0, 13).toString()).toBe('ISO-10303-21;');
 
-  await page.click('[data-command="export-stl"]');
-  await expect(page.locator('[data-testid="toast-success"]').last()).toBeVisible();
+  // The other formats are in the menu of the export button, which then exports in the last used one.
+  await page.click('[data-variants="export"]');
+  await page.click('[data-entry="export-stl"]');
+  await expect(page.locator('[data-testid="toast-success"]').last()).toContainText('.stl');
+  await expect(page.locator('[data-command="export-stl"]')).toBeVisible();
+  await page.click('[data-variants="export"]');
+  await page.click('[data-entry="export-3mf"]');
+  await expect(page.locator('[data-testid="toast-success"]').last()).toContainText('.3mf');
+  const threeMf = await readFile(path.join(outputDir, `${await page.evaluate(() => document.title.split(' – ')[0]?.replace(' •', ''))}.3mf`));
+  expect(threeMf.subarray(0, 2).toString()).toBe('PK');
+});
+
+test('imports a STEP file as a body, keeps it in the part and cuts into it', async () => {
+  // A STEP file of the 100 × 60 × 40 box, exported by ParaWerk itself.
+  launched = await launchApp();
+  await createBox(launched.page);
+  await launched.page.click('[data-command="export-step"]');
+  await expect(launched.page.locator('[data-testid="toast-success"]').last()).toBeVisible();
+  const name = await launched.page.evaluate(() => document.title.split(' – ')[0]?.replace(' •', ''));
+  const step = path.join(launched.outputDir, `${name}.step`);
+  await launched.app.close();
+
+  launched = await launchApp({ env: { PARAWERK_E2E_OPEN_FILE: step } });
+  const { page, outputDir } = launched;
+  await page.click('[data-command="import-step"]');
+  await expect(page.locator('[data-testid="import-file"]')).toContainText('.step');
+  await page.click('[data-testid="panel-ok"]');
+  expect(await volume(page)).toBeCloseTo(240_000, 3);
+  expect((await state(page)).history.features.map((feature) => feature.type)).toEqual(['import']);
+
+  // A bore through the imported body.
+  await page.click('[data-command="cylinder"]');
+  await page.getByRole('radio', { name: /Remove material/ }).click();
+  await page.locator('[data-testid="cylinder-height"]').fill('60');
+  await page.locator('[data-testid="position-z"]').fill('-10');
+  await page.click('[data-testid="panel-ok"]');
+  const cut = 240_000 - Math.PI * 400 * 40;
+  expect(await volume(page)).toBeCloseTo(cut, 0);
+
+  // The file goes into the part file: the part opens again without it.
+  await page.click('[data-command="save"]');
+  await expect.poll(async () => (await state(page)).dirty).toBe(false);
+  const part = path.join(outputDir, `${(await state(page)).fileName}.pwpart`);
+  await page.click('[data-command="new"]');
+  await page.evaluate(async (bytes) => {
+    (window as unknown as { __parawerk: { commands: { loadDocument(path: string, data: Uint8Array): void } } }).__parawerk.commands.loadDocument('reopened.pwpart', new Uint8Array(bytes));
+  }, [...(await readFile(part))]);
+  expect(await volume(page)).toBeCloseTo(cut, 0);
 });
 
 test('keeps a fillet on its edge when an earlier feature changes the topology', async () => {

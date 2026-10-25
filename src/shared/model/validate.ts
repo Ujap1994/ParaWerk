@@ -17,6 +17,11 @@ export class ValidationError extends Error {
 
 type Json = Record<string, unknown>;
 
+/** Longest file name of an imported file. */
+const MAX_FILE_NAME = 260;
+/** Largest imported STEP file kept in a part (characters; STEP is ASCII). */
+export const MAX_IMPORT_CHARS = 64 * 1024 * 1024;
+
 /** Largest model dimension accepted, in millimeters (100 m). */
 export const MAX_LENGTH = 100_000;
 
@@ -339,6 +344,12 @@ function parseFeatureFields(raw: Json, path: string): Feature {
         height: positiveLength(raw.height, `${path}.height`),
         position: vec3(raw.position, `${path}.position`),
       };
+    case 'import': {
+      if (typeof raw.file !== 'string' || raw.file.length > MAX_FILE_NAME) throw new ValidationError('expected a file name', `${path}.file`);
+      if (typeof raw.hash !== 'string' || raw.hash.length > 64) throw new ValidationError('expected a content hash', `${path}.hash`);
+      if (typeof raw.data !== 'string' || raw.data.length === 0 || raw.data.length > MAX_IMPORT_CHARS) throw new ValidationError('expected the imported STEP file', `${path}.data`);
+      return { ...common, type: 'import', operation: operation(raw.operation, `${path}.operation`), file: raw.file, hash: raw.hash, data: raw.data };
+    }
     case 'cylinder':
       return {
         ...common,

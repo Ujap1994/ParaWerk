@@ -6,7 +6,11 @@ import { strToU8, unzipSync, zipSync } from 'fflate';
 
 describe('feature validation', () => {
   it('accepts every default feature', () => {
-    for (const type of FEATURE_TYPES) expect(parseFeature(defaultFeature(type, 'id'))).toEqual(defaultFeature(type, 'id'));
+    // An import always comes with its file; without one it is not a valid feature.
+    for (const type of FEATURE_TYPES.filter((type) => type !== 'import')) expect(parseFeature(defaultFeature(type, 'id'))).toEqual(defaultFeature(type, 'id'));
+    expect(() => parseFeature(defaultFeature('import', 'id'))).toThrow(/data/);
+    const imported = { ...defaultFeature('import', 'id'), file: 'part.step', hash: 'abc', data: 'ISO-10303-21;' };
+    expect(parseFeature(imported)).toEqual(imported);
   });
 
   it.each([

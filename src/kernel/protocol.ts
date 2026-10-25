@@ -110,6 +110,7 @@ export type FeatureErrorCode =
   | 'shell-face-missing'
   | 'end-behind'
   | 'end-parallel'
+  | 'import-no-solid'
   | 'cut-nothing'
   | 'profile-crosses-axis'
   | 'operation-failed'
@@ -183,11 +184,15 @@ export interface RebuildResult {
   timings: { totalMs: number; rebuiltFeatures: number; meshMs: number };
 }
 
-export type ExportFormat = 'step' | 'stl';
+export type ExportFormat = 'step' | 'stl' | '3mf';
 
 export interface ExportRequest {
   features: Feature[];
   format: ExportFormat;
+  /** 3MF: the part's name, the application, and its material and color. */
+  title?: string;
+  application?: string;
+  material?: { name: string; color: string };
 }
 
 export interface MemoryStats {

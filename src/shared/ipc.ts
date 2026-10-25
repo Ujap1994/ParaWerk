@@ -27,6 +27,8 @@ export type MenuCommand =
   | 'file.saveAs'
   | 'file.exportStep'
   | 'file.exportStl'
+  | 'file.export3mf'
+  | 'file.importStep'
   | 'edit.undo'
   | 'edit.redo'
   | 'view.zoomToFit'

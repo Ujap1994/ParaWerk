@@ -107,6 +107,24 @@ export const ExportStlIcon = (p: P) => (
   </Icon>
 );
 
+/** Import a STEP file: an arrow going into a block. */
+export const ImportStepIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="M9 9.5 15 6.5l6 3v7l-6 3-6-3" />
+    <path d="M9 9.5l6 3 6-3M15 12.5v7" />
+    <path d="M2.5 13.5h8m-2.5-2.5 2.5 2.5-2.5 2.5" />
+  </Icon>
+);
+
+/** 3MF export: a printed part on its build plate, with the export arrow. */
+export const ExportThreeMfIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="M3 16.5h12M5 16.5v-5.5l3-3h3l2 2v6.5" />
+    <path d="M8 13.5h3" />
+    <path d="M15 19h6m-2.5-2.5L21 19l-2.5 2.5" />
+  </Icon>
+);
+
 export const UndoIcon = (p: P) => (
   <Icon {...p}>
     <path d="M9 14 4 9l5-5" />
@@ -612,6 +630,7 @@ export const FEATURE_ICONS = {
   mirror: MirrorIcon,
   box: BoxIcon,
   cylinder: CylinderIcon,
+  import: ImportStepIcon,
   fillet: FilletIcon,
   chamfer: ChamferIcon,
   shell: ShellIcon,

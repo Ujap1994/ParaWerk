@@ -54,6 +54,8 @@ function featureSignature(feature: Feature, sketches: ReadonlyMap<string, Sketch
   // after them (variables reach the body through the values of the features that use them).
   if (feature.type === 'variables') return `${feature.type}:${feature.id}`;
   if (feature.type === 'sketch') return `${feature.type}:${feature.id}:${stableStringify(planeSignature(feature.plane))}`;
+  // An imported file is known by its content hash: hashing the whole file at every rebuild would be slow.
+  if (feature.type === 'import') return stableStringify({ type: feature.type, id: feature.id, operation: feature.operation, hash: feature.hash, suppressed: feature.suppressed });
   const { name: _name, expressions: _expressions, ...geometry } = feature;
   if (isSketchBased(feature)) {
     // Extrusions and revolutions follow their sketch: its plane and geometry belong to their signature.

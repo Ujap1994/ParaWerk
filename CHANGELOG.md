@@ -8,6 +8,11 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### Added
+- STEP import as a feature: the solids of a STEP file become a body of their own or are cut out of the
+  part; the file is kept in the part file (its own entry), and its faces are named, so later features
+  stay on them. *Replace with another STEP file* exchanges it.
+- 3MF export for 3D printing: a closed, oriented mesh in millimeters with the part's name, material and
+  color. The *Export* group became *Exchange*: Import and one export button with the formats in its menu.
 - Crash recovery: while a part has unsaved changes, a recovery copy (with an open sketch) is written
   15 seconds after a change; saving or a normal close removes it. After a crash, power cut or killed
   process the next start offers to restore or discard it, and a crashed 3D window is reloaded right away.

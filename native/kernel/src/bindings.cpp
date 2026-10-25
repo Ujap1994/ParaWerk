@@ -258,7 +258,12 @@ val importStep(val bytes) {
   });
 }
 
-std::string version() { return "parawerk-kernel 0.7 / OCCT " PARAWERK_OCCT_VERSION; }
+/** A STEP file as text (ISO 10303-21 is ASCII), with the name its faces are named after. */
+val importStepText(const std::string& text, const std::string& name) {
+  return guarded([&] { return idResult(parawerk::importStep(text, name)); });
+}
+
+std::string version() { return "parawerk-kernel 0.8 / OCCT " PARAWERK_OCCT_VERSION; }
 
 }  // namespace
 
@@ -288,4 +293,5 @@ EMSCRIPTEN_BINDINGS(parawerk_kernel) {
   emscripten::function("exportMesh", &exportMesh);
   emscripten::function("exportStep", &exportStep);
   emscripten::function("importStep", &importStep);
+  emscripten::function("importStepText", &importStepText);
 }

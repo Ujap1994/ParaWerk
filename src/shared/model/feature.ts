@@ -10,7 +10,7 @@ import type { SketchData, SketchPlaneRef } from './sketch.ts';
 
 export type Vec3 = [number, number, number];
 
-export type FeatureType = 'variables' | 'sketch' | 'plane' | 'axis' | 'point' | 'extrude' | 'revolve' | 'hole' | 'pattern' | 'mirror' | 'box' | 'cylinder' | 'fillet' | 'chamfer' | 'shell';
+export type FeatureType = 'variables' | 'sketch' | 'plane' | 'axis' | 'point' | 'extrude' | 'revolve' | 'hole' | 'pattern' | 'mirror' | 'box' | 'cylinder' | 'import' | 'fillet' | 'chamfer' | 'shell';
 
 /** How a solid-creating feature combines with the existing body. */
 export type BooleanOperation = 'add' | 'cut';
@@ -69,6 +69,7 @@ export const EXPRESSION_FIELDS: Readonly<Record<FeatureType, readonly string[]>>
   mirror: [],
   box: ['width', 'depth', 'height'],
   cylinder: ['radius', 'height'],
+  import: [],
   fillet: ['radius'],
   chamfer: ['distance'],
   shell: ['thickness'],
@@ -104,6 +105,22 @@ export interface CylinderFeature extends FeatureBase {
   axis: Axis;
   /** Center of the base circle. */
   position: Vec3;
+}
+
+/**
+ * The solids of a STEP file as a body of their own (operation add) or cut out of the body. The file is
+ * kept in the part (in part files as its own entry, imports/<id>.step), so the part does not depend on
+ * it any more.
+ */
+export interface ImportFeature extends FeatureBase {
+  type: 'import';
+  operation: BooleanOperation;
+  /** The name of the imported file. */
+  file: string;
+  /** Content hash of `data`: rebuilds compare it instead of the whole file. */
+  hash: string;
+  /** The STEP file (ISO 10303-21 text). */
+  data: string;
 }
 
 export interface FilletFeature extends FeatureBase {
@@ -354,6 +371,7 @@ export type Feature =
   | MirrorFeature
   | BoxFeature
   | CylinderFeature
+  | ImportFeature
   | FilletFeature
   | ChamferFeature
   | ShellFeature;
@@ -371,7 +389,10 @@ export function isSolidFeature(feature: Feature): feature is BoxFeature | Cylind
   return feature.type === 'box' || feature.type === 'cylinder';
 }
 
-export const FEATURE_TYPES: readonly FeatureType[] = ['variables', 'sketch', 'plane', 'axis', 'point', 'extrude', 'revolve', 'hole', 'pattern', 'mirror', 'box', 'cylinder', 'fillet', 'chamfer', 'shell'];
+export const FEATURE_TYPES: readonly FeatureType[] = ['variables', 'sketch', 'plane', 'axis', 'point', 'extrude', 'revolve', 'hole', 'pattern', 'mirror', 'box', 'cylinder', 'import', 'fillet', 'chamfer', 'shell'];
+
+/** Features that make a body from nothing (the first feature with material must be one of them, adding). */
+export const BODY_TYPES: ReadonlySet<FeatureType> = new Set(['box', 'cylinder', 'extrude', 'revolve', 'import']);
 
 let idCounter = 0;
 
@@ -424,6 +445,8 @@ export function defaultFeature(type: FeatureType, id: string = createFeatureId()
       return { id, type, operation: 'add', width: 100, depth: 60, height: 40, position: [0, 0, 0] };
     case 'cylinder':
       return { id, type, operation: 'add', radius: 20, height: 50, axis: 'z', position: [0, 0, 0] };
+    case 'import':
+      return { id, type, operation: 'add', file: '', hash: '', data: '' };
     case 'fillet':
       return { id, type, radius: 5, edges: [] };
     case 'chamfer':

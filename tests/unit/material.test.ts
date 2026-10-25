@@ -1,4 +1,5 @@
 /** Material library, mass, principal moments, and material and color in part files and the undo history. */
+import { strFromU8, unzipSync, zipSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
 import { commit, emptyHistory, redo, undo } from '../../src/renderer/src/state/document.ts';
 import { defaultFeature } from '../../src/shared/model/feature.ts';
@@ -89,5 +90,26 @@ describe('material in the undo history', () => {
     // A feature change keeps the material.
     history = commit(history, [box, defaultFeature('cylinder', 'cyl')]);
     expect(history.properties).toEqual({ material: { id: 'pla', density: 1240 } });
+  });
+});
+
+describe('imported files in part files', () => {
+  it('keeps the STEP file as its own entry and brings it back', () => {
+    const data = 'ISO-10303-21;\nHEADER;\nENDSEC;\nDATA;\nENDSEC;\nEND-ISO-10303-21;\n';
+    const feature = { id: 'imp', type: 'import' as const, operation: 'add' as const, file: 'bracket.step', hash: 'abc', data };
+    const bytes = encodePartFile({ units: 'mm', features: [feature] }, meta);
+    const files = unzipSync(bytes);
+    expect(strFromU8(files['imports/imp.step'] ?? new Uint8Array())).toBe(data);
+    // The document itself stays small: the file is not in it.
+    expect(strFromU8(files['document.json'] ?? new Uint8Array())).not.toContain('ISO-10303-21');
+    expect(formatVersionOf([feature])).toBe(7);
+    expect(decodePartFile(bytes).document.features).toEqual([feature]);
+  });
+
+  it('rejects an import whose file entry is missing', () => {
+    const feature = { id: 'imp', type: 'import' as const, operation: 'add' as const, file: 'bracket.step', hash: 'abc', data: 'ISO-10303-21;' };
+    const files = unzipSync(encodePartFile({ units: 'mm', features: [feature] }, meta));
+    delete files['imports/imp.step'];
+    expect(() => decodePartFile(zipSync(files))).toThrow(PartFileError);
   });
 });

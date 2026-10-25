@@ -1981,3 +1981,29 @@ kbd {
   display: flex;
   justify-content: flex-end;
 }
+
+/* ------------------------------------------------------------ STEP import */
+
+.import-file {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.import-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.import-size {
+  flex: none;
+  color: var(--text-faint);
+  font-size: 12px;
+}
+
+.import-replace {
+  justify-self: start;
+  margin-bottom: 10px;
+}

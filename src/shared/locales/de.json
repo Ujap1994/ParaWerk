@@ -46,7 +46,9 @@
     "services": "Dienste",
     "hide": "ParaWerk ausblenden",
     "hideOthers": "Andere ausblenden",
-    "unhide": "Alle einblenden"
+    "unhide": "Alle einblenden",
+    "exportThreeMf": "3MF (.3mf)…",
+    "importStep": "STEP importieren…"
   },
   "commands": {
     "groups": {
@@ -58,7 +60,7 @@
       "define": "Bestimmen",
       "draw": "Zeichnen",
       "modify": "Ändern",
-      "exchange": "DXF",
+      "exchange": "Austausch",
       "part": "Teil",
       "evaluate": "Auswerten"
     },
@@ -108,7 +110,9 @@
       "shell": "Das Teil zu dünnen Wänden aushöhlen, offen an den gewählten Flächen",
       "material": "Material (Dichte) und Farbe des Teils wählen",
       "massProperties": "Masse, Schwerpunkt und Trägheitsmomente des Teils anzeigen",
-      "measure": "Abstände, Winkel, Längen und Flächen von Flächen, Kanten und Ecken messen"
+      "measure": "Abstände, Winkel, Längen und Flächen von Flächen, Kanten und Ecken messen",
+      "exportThreeMf": "Als 3MF für den 3D-Druck exportieren, mit Material und Farbe",
+      "importStep": "Eine STEP-Datei als Körper importieren"
     },
     "tabs": {
       "label": "Befehlsregister",
@@ -186,7 +190,10 @@
     "shell": "Schale",
     "material": "Material",
     "massProperties": "Masseeigenschaften",
-    "measure": "Messen"
+    "measure": "Messen",
+    "exportThreeMf": "3MF",
+    "importStep": "Import",
+    "exportFormats": "Exportformate"
   },
   "features": {
     "plane": "Ebene",
@@ -204,7 +211,8 @@
     "hole": "Bohrung",
     "pattern": "Muster",
     "mirror": "Spiegelung",
-    "shell": "Schale"
+    "shell": "Schale",
+    "import": "Import"
   },
   "tree": {
     "title": "Featurebaum",
@@ -375,7 +383,9 @@
     "saveTitle": "Teil speichern",
     "exportTitle": "Exportieren",
     "importDxfTitle": "DXF importieren",
-    "dxfFiles": "DXF-Zeichnungen"
+    "dxfFiles": "DXF-Zeichnungen",
+    "threeMfFiles": "3MF-Dateien",
+    "importTitle": "STEP importieren"
   },
   "toasts": {
     "saved": "„{{name}}“ gespeichert.",
@@ -389,7 +399,8 @@
     "dxfImported": "{{count}} Elemente importiert.",
     "dxfImportedSkipped": "{{count}} Elemente importiert; nicht unterstützt und ausgelassen: {{skipped}}.",
     "noSketchToExtrude": "Zeichne zuerst eine Skizze mit einer geschlossenen Kontur.",
-    "noHoleSketch": "Setze zuerst Punkte für die Bohrungen in einer Skizze auf der Fläche."
+    "noHoleSketch": "Setze zuerst Punkte für die Bohrungen in einer Skizze auf der Fläche.",
+    "importFailed": "Import fehlgeschlagen: {{message}}"
   },
   "errors": {
     "no-body": "Es gibt noch keinen Körper, der verändert werden kann.",
@@ -419,7 +430,8 @@
     "reference-kind": "Referenz {{detail}} passt nicht: Wähle eine Ebene, eine Achse oder einen Punkt, wie es ihr Feld verlangt.",
     "reference-parallel": "Die Referenzen sind parallel und treffen sich deshalb nicht. Wähle Referenzen, die sich schneiden.",
     "reference-not-parallel": "Die Achse muss parallel zur Ebene liegen: Die neue Ebene dreht sich um sie.",
-    "reference-collinear": "Die Punkte liegen auf einer Linie oder aufeinander und legen deshalb keine Ebene oder Achse fest."
+    "reference-collinear": "Die Punkte liegen auf einer Linie oder aufeinander und legen deshalb keine Ebene oder Achse fest.",
+    "import-no-solid": "Die STEP-Datei enthält keinen Volumenkörper (nur Flächen oder Drahtmodelle)."
   },
   "warnings": {
     "edge-missing_one": "{{count}} ausgewählte Kante existiert nicht mehr und wird ausgelassen. Bearbeite das Feature, um sie zu entfernen oder eine andere Kante zu wählen.",
@@ -853,5 +865,12 @@
     "failed": "Die Kopie konnte nicht wiederhergestellt werden: {{message}}",
     "missing": "die Kopie ist nicht mehr vorhanden",
     "hint": "Kopien, die Sie jetzt weder wiederherstellen noch verwerfen, werden beim nächsten Start erneut angeboten."
+  },
+  "import": {
+    "file": "Datei",
+    "replace": "Durch andere STEP-Datei ersetzen…",
+    "hint": "Die Volumenkörper der STEP-Datei werden ein eigener Körper (oder aus dem Teil herausgeschnitten). Die Datei wird im Teil gespeichert: spätere Änderungen an ihr erreichen das Teil nicht; ersetzen Sie sie hier.",
+    "tooLarge": "die Datei ist größer als 64 MB",
+    "notStep": "das ist keine STEP-Datei (ISO 10303-21)"
   }
 }

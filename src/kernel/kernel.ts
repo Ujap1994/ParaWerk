@@ -14,6 +14,7 @@ import type {
 import { relateEntities, type MeasuredEntity, type MeasureResult } from './measure.ts';
 import { Rebuilder } from './rebuild.ts';
 import { writeBinaryStl } from './stl.ts';
+import { writeThreeMf } from './threemf.ts';
 
 interface ShapeInfo {
   diagonal: number;
@@ -104,6 +105,13 @@ export class Kernel implements Disposable {
     if (!shape) throw new NothingToExportError();
     if (request.format === 'step') return this.backend.exportStep(shape);
     const mesh = this.backend.exportMesh(shape, exportQuality(diagonalOf(this.backend.boundingBox(shape))));
+    if (request.format === '3mf') {
+      return writeThreeMf(mesh.positions, mesh.indices, {
+        title: request.title ?? 'Part',
+        application: request.application ?? 'ParaWerk',
+        ...(request.material ? { material: request.material } : {}),
+      });
+    }
     return writeBinaryStl(mesh.positions, mesh.indices);
   }
 

@@ -18,7 +18,7 @@
    chamfer, shell, reference geometry, variables, editing and undo
 6. [Material and evaluation](evaluate.md): material and density, color, mass, center of mass,
    moments of inertia, and the measure tool
-7. [Files, import and export](files.md): `.pwpart` files, recovery after a crash, STEP and STL, sketches as DXF
+7. [Files, import and export](files.md): `.pwpart` files, recovery after a crash, STEP import, STEP, STL and 3MF export, sketches as DXF
 8. [Settings](settings.md): language, theme, navigation and projection
 9. [Troubleshooting](troubleshooting.md): self-test, logs and known limitations
 
@@ -32,7 +32,7 @@
 | Feature tree | Edit, suppress and delete features; rollback bar to insert features in the middle of the history; reorder by dragging, with dependency checks; undo and redo |
 | Variables | Named values and equations for the whole part, used by name in parameters and sketch dimensions; calculations in every number field |
 | Evaluation | Materials (27 metals, plastics and woods, or your own density) and part colors; exact mass, volume, surface area, center of mass and moments of inertia; measuring distances, angles, center distances, lengths and areas; face and edge information under the cursor |
-| Files | Save and open `.pwpart` with recovery copies of unsaved work after a crash, export STEP (AP214) and binary STL |
+| Files | Save and open `.pwpart` with recovery copies of unsaved work after a crash, import STEP as a body, export STEP (AP214), binary STL and 3MF with material and color |
 | Interface | English and German, light and dark theme, mouse and trackpad navigation |
 
 More sketch-based features (sweep, loft, holes) and patterns follow in Phase 2. See the [roadmap](../../ROADMAP.md).

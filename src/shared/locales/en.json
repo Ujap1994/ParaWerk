@@ -46,7 +46,9 @@
     "services": "Services",
     "hide": "Hide ParaWerk",
     "hideOthers": "Hide others",
-    "unhide": "Show all"
+    "unhide": "Show all",
+    "exportThreeMf": "3MF (.3mf)…",
+    "importStep": "Import STEP…"
   },
   "commands": {
     "groups": {
@@ -58,7 +60,7 @@
       "define": "Define",
       "draw": "Draw",
       "modify": "Modify",
-      "exchange": "DXF",
+      "exchange": "Exchange",
       "part": "Part",
       "evaluate": "Evaluate"
     },
@@ -108,7 +110,9 @@
       "shell": "Hollow the part out to thin walls, open at the faces you pick",
       "material": "Choose the material (density) and the color of the part",
       "massProperties": "Show mass, center of mass and moments of inertia of the part",
-      "measure": "Measure distances, angles, lengths and areas of faces, edges and vertices"
+      "measure": "Measure distances, angles, lengths and areas of faces, edges and vertices",
+      "exportThreeMf": "Export as 3MF for 3D printing, with material and color",
+      "importStep": "Import a STEP file as a body"
     },
     "tabs": {
       "label": "Command tabs",
@@ -186,7 +190,10 @@
     "shell": "Shell",
     "material": "Material",
     "massProperties": "Mass properties",
-    "measure": "Measure"
+    "measure": "Measure",
+    "exportThreeMf": "3MF",
+    "importStep": "Import",
+    "exportFormats": "Export formats"
   },
   "features": {
     "plane": "Plane",
@@ -204,7 +211,8 @@
     "hole": "Hole",
     "pattern": "Pattern",
     "mirror": "Mirror",
-    "shell": "Shell"
+    "shell": "Shell",
+    "import": "Import"
   },
   "tree": {
     "title": "Feature tree",
@@ -375,7 +383,9 @@
     "saveTitle": "Save part",
     "exportTitle": "Export",
     "importDxfTitle": "Import DXF",
-    "dxfFiles": "DXF drawings"
+    "dxfFiles": "DXF drawings",
+    "threeMfFiles": "3MF files",
+    "importTitle": "Import STEP"
   },
   "toasts": {
     "saved": "Saved “{{name}}”.",
@@ -389,7 +399,8 @@
     "dxfImported": "Imported {{count}} entities.",
     "dxfImportedSkipped": "Imported {{count}} entities; not supported and left out: {{skipped}}.",
     "noSketchToExtrude": "Draw a sketch with a closed outline first.",
-    "noHoleSketch": "Place points for the holes in a sketch on the face first."
+    "noHoleSketch": "Place points for the holes in a sketch on the face first.",
+    "importFailed": "Import failed: {{message}}"
   },
   "errors": {
     "no-body": "There is no body to modify yet.",
@@ -419,7 +430,8 @@
     "reference-kind": "Reference {{detail}} does not fit: choose a plane, an axis or a point, as its field asks for.",
     "reference-parallel": "The references are parallel, so they do not meet. Choose references that cross each other.",
     "reference-not-parallel": "The axis must lie parallel to the plane: the new plane turns around it.",
-    "reference-collinear": "The points lie on one line or on each other, so they do not define the plane or axis."
+    "reference-collinear": "The points lie on one line or on each other, so they do not define the plane or axis.",
+    "import-no-solid": "The STEP file contains no solid body (only surfaces or wireframes)."
   },
   "warnings": {
     "edge-missing_one": "{{count}} selected edge no longer exists and is left out. Edit the feature to remove it or pick another edge.",
@@ -853,5 +865,12 @@
     "failed": "The copy could not be restored: {{message}}",
     "missing": "the copy is gone",
     "hint": "Copies you do not restore or discard now are offered again at the next start."
+  },
+  "import": {
+    "file": "File",
+    "replace": "Replace with another STEP file…",
+    "hint": "The solids of the STEP file become a body of their own (or are cut out of the part). The file is kept in the part: changes to it later do not reach the part; replace it here.",
+    "tooLarge": "the file is larger than 64 MB",
+    "notStep": "this is not a STEP file (ISO 10303-21)"
   }
 }

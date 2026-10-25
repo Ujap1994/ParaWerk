@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { formatQuantity } from '../format.ts';
 import { EXTRUDE_ENDS, hasReferenceSlots, isCopyFeature, type Axis, type BooleanOperation, type EdgeFeature, type ExtrudeDirection, type ExtrudeEnd, type ExtrudeFeature, type Feature, type Vec3 } from '../../../shared/model/feature.ts';
 import type { GeometryRef } from '../../../shared/model/reference.ts';
 import { referenceRoles } from '../references.ts';
@@ -130,6 +131,7 @@ function AxisField({ sketch, value, axisRef, index }: { sketch: string; value: s
 
 function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
   const { t } = useTranslation();
+  const language = useAppState((state) => state.language);
   const features = useAppState((state) => state.history.features);
   const firstFeature = !hasBodyBefore(features, index);
 
@@ -224,6 +226,23 @@ function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
             <PositionFields value={draft.position} onChange={(position) => commands.updateDraft({ position })} />
           </Section>
         </>
+      );
+    case 'import':
+      return (
+        <Section title={t('panel.parameters')}>
+          <div className="field">
+            <span className="field-label">{t('import.file')}</span>
+            <span className="import-file" data-testid="import-file">
+              <span className="import-name">{draft.file}</span>
+              <span className="import-size">{formatQuantity(draft.data.length / 1024, language, 'KB', 0)}</span>
+            </span>
+          </div>
+          <button type="button" className="text-button import-replace" data-testid="import-replace" onClick={() => void commands.replaceImportedFile()}>
+            {t('import.replace')}
+          </button>
+          <OperationField value={draft.operation} firstFeature={firstFeature} />
+          <p className="panel-hint">{t('import.hint')}</p>
+        </Section>
       );
     case 'sketch':
       // Sketches are edited in sketch mode, not in the property panel.

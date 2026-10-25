@@ -73,6 +73,9 @@ export interface PartProperties {
 
 export const NO_PROPERTIES: PartProperties = {};
 
+/** The color of a part without its own or its material's color (in 3MF files). */
+export const DEFAULT_PART_COLOR = '#b7c4d6';
+
 /** Densities ParaWerk accepts (kg/m³): from aerogels to osmium, with room on both sides. */
 export const MIN_DENSITY = 0.1;
 export const MAX_DENSITY = 30_000;

@@ -955,3 +955,22 @@ test('recovery screenshots', async () => {
   await page.screenshot({ path: out('recovery.png') });
   await app.close();
 });
+
+test('STEP import screenshots', async () => {
+  // A STEP file from another part: the bearing block, exported as STEP.
+  const source = await launchApp({ width: 1440, height: 900 });
+  await buildDemoPart(source.page);
+  await source.page.click('[data-command="export-step"]');
+  await source.page.locator('[data-testid="toast-success"]').last().waitFor();
+  const step = path.join(source.outputDir, 'Bearing block.step');
+  await source.app.close();
+
+  const { app, page } = await launchApp({ width: 1440, height: 900, env: { PARAWERK_E2E_OPEN_FILE: step } });
+  await page.click('[data-command="import-step"]');
+  await idle(page);
+  await page.evaluate(() => (window as unknown as { __parawerk: { viewport: { zoomToFit(): void } } }).__parawerk.viewport.zoomToFit());
+  await page.waitForTimeout(600);
+  await page.screenshot({ path: out('import-step.png') });
+  await page.click('[data-testid="panel-ok"]');
+  await app.close();
+});

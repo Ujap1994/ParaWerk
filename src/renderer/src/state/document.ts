@@ -1,4 +1,4 @@
-import type { Feature, FeatureType } from '../../../shared/model/feature.ts';
+import { BODY_TYPES, type Feature, type FeatureType } from '../../../shared/model/feature.ts';
 import { NO_PROPERTIES, type PartProperties } from '../../../shared/model/material.ts';
 
 /** Undo steps kept per document. */
@@ -114,5 +114,5 @@ export function featureOrdinal(features: readonly Feature[], index: number): num
 }
 
 export function hasBodyBefore(features: readonly Feature[], index: number): boolean {
-  return features.slice(0, index).some((feature) => !feature.suppressed && (feature.type === 'box' || feature.type === 'cylinder' || feature.type === 'extrude' || feature.type === 'revolve'));
+  return features.slice(0, index).some((feature) => !feature.suppressed && BODY_TYPES.has(feature.type));
 }

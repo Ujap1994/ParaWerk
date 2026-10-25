@@ -24,7 +24,7 @@ export const PART_FORMAT_VERSION = 7;
 
 /** The oldest format version that can hold the document, so older ParaWerk versions can still open it. */
 export function formatVersionOf(features: readonly Feature[], properties: PartProperties = NO_PROPERTIES): number {
-  if (properties.material !== undefined || properties.color !== undefined) return 7;
+  if (properties.material !== undefined || properties.color !== undefined || features.some((feature) => feature.type === 'import')) return 7;
   const reference = (feature: Feature) =>
     isReferenceFeature(feature) ||
     isCopyFeature(feature) ||
@@ -78,19 +78,31 @@ export class PartFileError extends Error {
   }
 }
 
+/** Where the STEP file of an import feature is kept in the package. */
+const importEntry = (id: string) => `imports/${id}.step`;
+
 export function encodePartFile(document: PartDocument, meta: PartFileMeta): Uint8Array {
+  // Imported files are entries of their own: the document stays small and readable, and STEP compresses well.
+  const imports: Record<string, Uint8Array> = {};
+  const features = document.features.map((feature) => {
+    if (feature.type !== 'import') return feature;
+    imports[importEntry(feature.id)] = strToU8(feature.data);
+    const { data: _data, ...rest } = feature;
+    return rest;
+  });
   const documentJson = {
     format: PART_FORMAT,
     // Files without new content stay readable by older ParaWerk versions.
     version: formatVersionOf(document.features, document.properties),
     units: document.units,
-    features: document.features,
+    features,
     ...(document.properties && (document.properties.material || document.properties.color) ? { properties: document.properties } : {}),
   };
   return zipSync(
     {
       'document.json': strToU8(JSON.stringify(documentJson, null, 2)),
       'meta.json': strToU8(JSON.stringify(meta, null, 2)),
+      ...imports,
     },
     { level: 6 },
   );
@@ -104,7 +116,7 @@ export function decodePartFile(bytes: Uint8Array): { document: PartDocument; met
         if (file.originalSize > MAX_ENTRY_BYTES) {
           throw new PartFileError('invalid-content', `entry ${file.name} is too large`);
         }
-        return file.name === 'document.json' || file.name === 'meta.json';
+        return file.name === 'document.json' || file.name === 'meta.json' || /^imports\/[\w-]+\.step$/.test(file.name);
       },
     });
   } catch (error) {
@@ -132,7 +144,15 @@ export function decodePartFile(bytes: Uint8Array): { document: PartDocument; met
   let features: Feature[];
   let properties: PartProperties;
   try {
-    features = parseFeatures(json.features);
+    // Imported files come back from their entries.
+    const rawFeatures = Array.isArray(json.features)
+      ? json.features.map((raw: unknown) => {
+          if (typeof raw !== 'object' || raw === null || (raw as Record<string, unknown>).type !== 'import') return raw;
+          const entry = entries[importEntry(String((raw as Record<string, unknown>).id))];
+          return entry ? { ...raw, data: strFromU8(entry) } : raw;
+        })
+      : json.features;
+    features = parseFeatures(rawFeatures);
     properties = parsePartProperties(json.properties);
   } catch (error) {
     if (error instanceof ValidationError) throw new PartFileError('invalid-content', error.message);

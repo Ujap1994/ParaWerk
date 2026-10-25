@@ -39,7 +39,7 @@ const SURFACE_KINDS: SurfaceKind[] = ['plane', 'cylinder', 'cone', 'sphere', 'to
 const CURVE_KINDS: CurveKind[] = ['line', 'circle', 'ellipse', 'bspline', 'other'];
 
 const FEATURE_ERROR_CODES = new Set<FeatureErrorCode>([
-  'no-body', 'no-edges', 'edge-missing', 'face-missing', 'plane-missing', 'reference-missing', 'reference-kind', 'reference-parallel', 'reference-not-parallel', 'reference-collinear', 'empty-result', 'first-must-add', 'sketch-missing', 'profile-empty', 'profile-crossing', 'axis-missing', 'axis-not-in-plane', 'hole-no-points', 'hole-invalid', 'pattern-empty', 'pattern-seed-missing', 'pattern-unsupported', 'shell-face-missing', 'end-behind', 'end-parallel', 'profile-crosses-axis',
+  'no-body', 'no-edges', 'edge-missing', 'face-missing', 'plane-missing', 'reference-missing', 'reference-kind', 'reference-parallel', 'reference-not-parallel', 'reference-collinear', 'empty-result', 'first-must-add', 'sketch-missing', 'profile-empty', 'profile-crossing', 'axis-missing', 'axis-not-in-plane', 'hole-no-points', 'hole-invalid', 'pattern-empty', 'pattern-seed-missing', 'pattern-unsupported', 'shell-face-missing', 'end-behind', 'end-parallel', 'import-no-solid', 'profile-crosses-axis',
   'operation-failed', 'unknown',
 ]);
 
@@ -223,6 +223,8 @@ export class ParaWerkBackend implements GeometryBackend {
       case 'extrude':
       case 'revolve':
         return this.combine(body, this.tool(body, feature), feature.operation);
+      case 'import':
+        return this.combine(body, this.handle(k.importStepText(feature.data, feature.id)), feature.operation);
       case 'hole':
         if (body === null) throw new FeatureError('no-body');
         return this.holes(body, feature, feature.placements, feature.id);

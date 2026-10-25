@@ -35,6 +35,8 @@ import {
   ExportStepIcon,
   ImportDxfIcon,
   ExportStlIcon,
+  ExportThreeMfIcon,
+  ImportStepIcon,
   FilletIcon,
   InfoIcon,
   NewIcon,
@@ -156,6 +158,15 @@ const REFERENCE_ENTRIES: readonly SplitEntry[] = (['plane', 'axis', 'point'] as 
   start: () => commands.startFeature(type),
   active: (state: AppState) => state.activeEdit?.mode === 'create' && state.activeEdit.draft.type === type,
 }));
+
+/** Export formats: the button exports in the last used one. */
+const EXPORT_ENTRIES: readonly SplitEntry[] = (
+  [
+    { id: 'export-step', icon: ExportStepIcon, label: 'exportStep', format: 'step' },
+    { id: 'export-stl', icon: ExportStlIcon, label: 'exportStl', format: 'stl' },
+    { id: 'export-3mf', icon: ExportThreeMfIcon, label: 'exportThreeMf', format: '3mf' },
+  ] as const
+).map(({ format, ...entry }) => ({ ...entry, start: () => void commands.exportModel(format), active: () => false }));
 
 const COPY_ENTRIES: readonly SplitEntry[] = [
   {
@@ -504,6 +515,7 @@ export function CommandBar() {
     state.sketch ? state.sketch.future.length > 0 : state.history.future.length > 0 && state.activeEdit === null && !state.choosingSketchPlane,
   );
   const hasFeatures = useAppState((state) => state.history.features.length > 0);
+  const sketching = useAppState((state) => state.sketch !== null || state.choosingSketchPlane);
 
   return (
     <header ref={barRef} className="command-bar" role="toolbar" aria-label="ParaWerk">
@@ -540,9 +552,9 @@ export function CommandBar() {
         {tab === 'features' ? <FeaturesTab /> : tab === 'sketch' ? <SketchTab /> : <EvaluateTab />}
       </div>
       <div className="command-bar-spacer" />
-      <Group label={t('commands.groups.export')}>
-        <CommandButton id="export-step" icon={ExportStepIcon} label={t('commands.exportStep')} tooltip={t('commands.tooltips.exportStep')} disabled={!hasFeatures} onClick={() => void commands.exportModel('step')} />
-        <CommandButton id="export-stl" icon={ExportStlIcon} label={t('commands.exportStl')} tooltip={t('commands.tooltips.exportStl')} disabled={!hasFeatures} onClick={() => void commands.exportModel('stl')} />
+      <Group label={t('commands.groups.exchange')}>
+        <CommandButton id="import-step" icon={ImportStepIcon} label={t('commands.importStep')} tooltip={t('commands.tooltips.importStep')} disabled={sketching} onClick={() => void commands.importStepFile()} />
+        <SplitFeatureButton entries={EXPORT_ENTRIES} menuLabel={t('commands.exportFormats')} variants="export" disabled={!hasFeatures} />
       </Group>
       <div className="command-bar-end">
         <CommandButton id="settings" icon={SettingsIcon} label={t('commands.settings')} tooltip={t('commands.tooltips.settings')} onClick={() => commands.openDialog('settings')} />

@@ -23,6 +23,8 @@
 #include <BRepOffsetAPI_MakeThickSolid.hxx>
 #include <BRepExtrema_DistShapeShape.hxx>
 #include <BRepGProp.hxx>
+#include <BRep_Builder.hxx>
+#include <TopoDS_Compound.hxx>
 #include <BRepLib.hxx>
 #include <BRepLib_ToolTriangulatedShape.hxx>
 #include <BRepMesh_IncrementalMesh.hxx>
@@ -1330,12 +1332,30 @@ std::string exportStep(int id) {
   return stream.str();
 }
 
-int importStep(const std::string& data) {
+int importStep(const std::string& data, const std::string& name) {
   std::istringstream stream(data);
   STEPControl_Reader reader;
   if (reader.ReadStream("import.step", stream) != IFSelect_RetDone) throw KernelError("operation-failed", "the STEP file could not be read");
   if (reader.TransferRoots() == 0) throw KernelError("operation-failed", "the STEP file contains no shapes");
-  return store().add(reader.OneShape());
+  const TopoDS_Shape shape = reader.OneShape();
+  // Only solids make a body (surfaces and wireframes of the file are left out).
+  ShapeMap solids;
+  TopExp::MapShapes(shape, TopAbs_SOLID, solids);
+  if (solids.Extent() == 0) throw KernelError("import-no-solid", "the STEP file contains no solid");
+  TopoDS_Shape body = solids(1);
+  if (solids.Extent() > 1) {
+    TopoDS_Compound compound;
+    BRep_Builder builder;
+    builder.MakeCompound(compound);
+    for (int s = 1; s <= solids.Extent(); ++s) builder.Add(compound, solids(s));
+    body = compound;
+  }
+  ShapeMap faces;
+  TopExp::MapShapes(body, TopAbs_FACE, faces);
+  FaceNames names;
+  names.reserve(static_cast<size_t>(faces.Extent()));
+  for (int f = 1; f <= faces.Extent(); ++f) names.push_back(faceName(name, "f" + std::to_string(f - 1)));
+  return store().add(body, std::move(names));
 }
 
 // ------------------------------------------------------------------ errors

@@ -1,14 +1,15 @@
 import { resolveLanguage } from '../../shared/i18n.ts';
 import type { MenuCommand } from '../../shared/ipc.ts';
 import { PART_FILE_EXTENSION } from '../../shared/app-info.ts';
-import { COPYABLE_TYPES, defaultFeature, type BooleanOperation, hasReferenceSlots, isCopyFeature, isEdgeFeature, isReferenceFeature, isSketchBased, type EdgeRef, type ExtrudeEnd, type Feature, type FeatureType, type HoleFeature, type ReferenceFeature, type SketchFeature, type SlotFeature } from '../../shared/model/feature.ts';
+import { hashString } from '../../shared/hash.ts';
+import { COPYABLE_TYPES, type ImportFeature, defaultFeature, type BooleanOperation, hasReferenceSlots, isCopyFeature, isEdgeFeature, isReferenceFeature, isSketchBased, type EdgeRef, type ExtrudeEnd, type Feature, type FeatureType, type HoleFeature, type ReferenceFeature, type SketchFeature, type SlotFeature } from '../../shared/model/feature.ts';
 import { holePositions, metricSize, sizesFor, standardHoleDimensions } from '../../shared/model/hole.ts';
 import { AXIS_METHODS, PLANE_METHODS, POINT_METHODS, REFERENCE_ROLES, type GeometryRef, type ReferenceRole } from '../../shared/model/reference.ts';
 import { extrudesUpTo, referenceFits, referenceGeometry, referenceOfPick, referencePicks, referenceRoles } from './references.ts';
 import { edgeRefOf, faceRefOf, resolveEdgeRefs } from '../../shared/model/naming.ts';
 import { decodePartFile, encodePartFile, PartFileError } from '../../shared/model/part-file.ts';
 import { frameOf, frameOnPlane, isDimension, ORIGIN_ID, STANDARD_PLANES, type SketchData, type SketchDimension, type SketchPlaneRef } from '../../shared/model/sketch.ts';
-import type { PartMaterial, PartProperties } from '../../shared/model/material.ts';
+import { CUSTOM_MATERIAL, DEFAULT_PART_COLOR, partColor, type PartMaterial, type PartProperties } from '../../shared/model/material.ts';
 import type { Settings } from '../../shared/settings.ts';
 import { changeLanguage, t } from './i18n.ts';
 import { SketchBuilder } from './sketch/builder.ts';
@@ -154,26 +155,91 @@ export async function saveDocument(saveAs = false): Promise<boolean> {
   return false;
 }
 
-export async function exportModel(format: 'step' | 'stl'): Promise<void> {
-  const features = getState().history.features;
+/** The part's material for a 3MF file: its name and the color the part is shown in. */
+function exportMaterial(): { name: string; color: string } | undefined {
+  const properties = partProperties(getState().history);
+  const color = partColor(properties);
+  const material = properties.material;
+  if (!material && !color) return undefined;
+  const name = !material ? documentName() : material.id === CUSTOM_MATERIAL ? (material.name ?? t('material.custom')) : t(`material.names.${material.id}`);
+  return { name, color: color ?? DEFAULT_PART_COLOR };
+}
+
+/** The file type of each export format: extensions (the first is the default) and the filter name. */
+const EXPORT_FILES = {
+  step: { extensions: ['step', 'stp'], filter: 'dialogs.stepFiles' },
+  stl: { extensions: ['stl'], filter: 'dialogs.stlFiles' },
+  '3mf': { extensions: ['3mf'], filter: 'dialogs.threeMfFiles' },
+} as const;
+
+export async function exportModel(format: 'step' | 'stl' | '3mf'): Promise<void> {
+  const state = getState();
+  const features = state.history.features;
   let data: Uint8Array;
   try {
     await whenIdle();
-    data = await kernel().exportModel({ features, format });
+    const material = format === '3mf' ? exportMaterial() : undefined;
+    data = await kernel().exportModel({
+      features,
+      format,
+      ...(format === '3mf' ? { title: documentName(), application: `ParaWerk ${state.appInfo?.version ?? ''}`.trim(), ...(material ? { material } : {}) } : {}),
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     showToast('error', message === 'nothing-to-export' ? t('toasts.nothingToExport') : t('toasts.exportFailed', { message }));
     return;
   }
-  const extension = format === 'step' ? 'step' : 'stl';
+  const file = EXPORT_FILES[format];
   const result = await api().saveFile({
     title: t('dialogs.exportTitle'),
-    defaultName: `${documentName()}.${extension}`,
-    filters: [{ name: t(format === 'step' ? 'dialogs.stepFiles' : 'dialogs.stlFiles'), extensions: format === 'step' ? ['step', 'stp'] : ['stl'] }],
+    defaultName: `${documentName()}.${file.extensions[0]}`,
+    filters: [{ name: t(file.filter), extensions: [...file.extensions] }],
     data,
   });
   if (result.status === 'saved') showToast('success', t('toasts.exported', { name: result.path.split(/[\\/]/).pop() ?? result.path }));
   else if (result.status === 'error') showToast('error', t('toasts.exportFailed', { message: result.message }));
+}
+
+// ------------------------------------------------------------------ STEP import
+
+/** Largest STEP file imported (characters). */
+const MAX_IMPORT_BYTES = 64 * 1024 * 1024;
+
+/** Asks for a STEP file; its name and contents (text), or null. */
+async function chooseStepFile(): Promise<{ file: string; data: string; hash: string } | null> {
+  const result = await api().openFile({ title: t('dialogs.importTitle'), filters: [{ name: t('dialogs.stepFiles'), extensions: ['step', 'stp'] }] });
+  if (result.status === 'error') showToast('error', t('toasts.importFailed', { message: result.message }));
+  if (result.status !== 'opened') return null;
+  if (result.data.byteLength > MAX_IMPORT_BYTES) {
+    showToast('error', t('toasts.importFailed', { message: t('import.tooLarge') }));
+    return null;
+  }
+  // STEP files are ASCII (ISO 10303-21); the decoder keeps any other bytes readable.
+  const data = new TextDecoder('latin1').decode(result.data);
+  if (!data.trimStart().startsWith('ISO-10303-21')) {
+    showToast('error', t('toasts.importFailed', { message: t('import.notStep') }));
+    return null;
+  }
+  return { file: result.path.split(/[\\/]/).pop() ?? result.path, data, hash: hashString(data) };
+}
+
+/** Imports the solids of a STEP file as a feature at the rollback bar (a body of its own, or cut out). */
+export async function importStepFile(): Promise<void> {
+  const state = getState();
+  if (state.sketch || state.choosingSketchPlane) return;
+  const chosen = await chooseStepFile();
+  if (!chosen) return;
+  if (getState().activeEdit) commitEdit();
+  const index = modelEnd(getState());
+  const draft: Feature = { ...(defaultFeature('import') as ImportFeature), ...chosen, operation: 'add' };
+  setState({ activeEdit: { mode: 'create', index, draft }, selection: [] });
+}
+
+/** Replaces the file of the import feature being edited (the faces get new names). */
+export async function replaceImportedFile(): Promise<void> {
+  if (getState().activeEdit?.draft.type !== 'import') return;
+  const chosen = await chooseStepFile();
+  if (chosen && getState().activeEdit?.draft.type === 'import') updateDraft(chosen);
 }
 
 // ------------------------------------------------------------------ features
@@ -1424,6 +1490,12 @@ export function runMenuCommand(command: MenuCommand): void {
       break;
     case 'file.exportStl':
       void exportModel('stl');
+      break;
+    case 'file.export3mf':
+      void exportModel('3mf');
+      break;
+    case 'file.importStep':
+      void importStepFile();
       break;
     case 'edit.undo':
       undo();

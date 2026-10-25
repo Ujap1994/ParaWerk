@@ -33,6 +33,7 @@ interface EmbindModule {
   exportMesh(_0: number, _1: number, _2: number): any;
   exportStep(_0: number): any;
   importStep(_0: any): any;
+  importStepText(_0: EmbindString, _1: EmbindString): any;
 }
 
 export type MainModule = WasmModule & typeof RuntimeExports & EmbindModule;

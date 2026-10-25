@@ -47,9 +47,10 @@ export function buildMenu({ language, settings, developerTools, send }: MenuCont
       command(t('save'), 'file.save', 'CmdOrCtrl+S'),
       command(t('saveAs'), 'file.saveAs', 'Shift+CmdOrCtrl+S'),
       { type: 'separator' },
+      command(t('importStep'), 'file.importStep'),
       {
         label: t('export'),
-        submenu: [command(t('exportStep'), 'file.exportStep'), command(t('exportStl'), 'file.exportStl')],
+        submenu: [command(t('exportStep'), 'file.exportStep'), command(t('exportStl'), 'file.exportStl'), command(t('exportThreeMf'), 'file.export3mf')],
       },
       ...(isMac
         ? []

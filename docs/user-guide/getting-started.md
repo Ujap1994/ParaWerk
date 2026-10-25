@@ -42,7 +42,7 @@ This walk-through builds a plate with a hole and rounded corners and exports it 
 4. **Check the result.** The status bar shows the exact volume and surface area. Hover over a face or
    edge to see its number.
 5. **Save.** Click **Save** (Ctrl+S / ⌘S) and choose a name. Parts are stored as `.pwpart` files.
-6. **Export.** Click **STL** to export for a slicer, or **STEP** to exchange the part with other CAD
-   systems.
+6. **Export.** The export button in the *Exchange* group exports as **STEP** to exchange the part with
+   other CAD systems; its arrow offers **STL** and **3MF** for a slicer.
 
 ![Finished part](../images/screenshots/filleted-part.png)
