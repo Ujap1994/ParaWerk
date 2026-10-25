@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { evaluate, isVariableName, variableNames } from '../../src/renderer/src/expression.ts';
 import { evaluateVariables, regenerate, withEvaluatedDimensions, withEvaluatedParameters } from '../../src/renderer/src/variables.ts';
-import { defaultFeature, type BoxFeature, type Feature, type SketchFeature } from '../../src/shared/model/feature.ts';
+import { defaultFeature, type BoxFeature, type ExtrudeFeature, type Feature, type SketchFeature } from '../../src/shared/model/feature.ts';
 import { decodePartFile, encodePartFile, formatVersionOf } from '../../src/shared/model/part-file.ts';
 import { ORIGIN_ID, type SketchData } from '../../src/shared/model/sketch.ts';
 import { parseFeature, ValidationError } from '../../src/shared/model/validate.ts';
@@ -129,7 +129,7 @@ describe('file format', () => {
     expect(formatVersionOf([box])).toBe(1);
     expect(formatVersionOf([defaultFeature('sketch', 's'), box])).toBe(2);
     expect(formatVersionOf([{ ...box, expressions: { width: 'a' } }])).toBe(3);
-    expect(formatVersionOf([defaultFeature('sketch', 's'), { ...defaultFeature('extrude', 'e'), sketch: 's' }])).toBe(4);
+    expect(formatVersionOf([defaultFeature('sketch', 's'), { ...(defaultFeature('extrude', 'e') as ExtrudeFeature), sketch: 's' }])).toBe(4);
     const features: Feature[] = [{ id: 'v', type: 'variables', variables: [{ name: 'a', expression: '12' }] }, { ...box, expressions: { width: 'a * 2' } } as Feature];
     const bytes = encodePartFile({ units: 'mm', features }, { appVersion: '1', savedAt: '' });
     expect(decodePartFile(bytes).document.features).toEqual(features);
