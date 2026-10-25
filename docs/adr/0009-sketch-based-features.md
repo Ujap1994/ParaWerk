@@ -51,3 +51,15 @@ existed when the feature was created.
 - Users need to pick individual regions of a sketch (SolidWorks-style contour selection): the profile
   already knows every bounded face of the planar graph and can offer them.
 - Open profiles are needed (thin features, surfaces).
+
+## Addendum: holes (Phase 2)
+
+Holes are a sketch-based feature too, but they use the sketch's *points*: every point that is not an end
+or center of a curve and not construction geometry is a hole center (`holePositions` in
+`src/shared/model/hole.ts`), so construction lines can position them. A hole is the half section of its
+type (counterbore, countersink, drill point …) revolved around its axis; the kernel (`cutHoles` in
+`native/kernel/src/core.cpp`) builds that solid once, moves copies of it to every center (they share the
+geometry) and cuts all of them from the body in one boolean operation. The dimensions are stored in the
+feature – the standard tables only fill them in when the type, size or fit changes – so a changed table
+never changes existing parts. Faces of hole *k* are named `<feature id>:<k>:side:<role>` (wall, counterbore,
+tip, …) for persistent references.

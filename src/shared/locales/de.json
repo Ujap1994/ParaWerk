@@ -98,7 +98,8 @@
       "revolve": "Die geschlossenen Konturen einer Skizze um eine Linie der Skizze rotieren oder aus dem Körper schneiden",
       "plane": "Referenzebene erzeugen: mit Abstand, im Winkel, durch Punkte oder zwischen zwei Ebenen",
       "axis": "Referenzachse erzeugen: entlang einer Kante oder eines Zylinders, im Schnitt zweier Ebenen oder durch zwei Punkte",
-      "point": "Referenzpunkt erzeugen: über Koordinaten, im Mittelpunkt oder wo eine Achse eine Ebene trifft"
+      "point": "Referenzpunkt erzeugen: über Koordinaten, im Mittelpunkt oder wo eine Achse eine Ebene trifft",
+      "hole": "Bohrungen für metrische Schrauben an den Punkten einer Skizze: Durchgangsloch, Senkung zylindrisch oder kegelig, Gewinde"
     },
     "tabs": {
       "label": "Befehlsregister",
@@ -166,7 +167,8 @@
     "plane": "Ebene",
     "axis": "Achse",
     "point": "Punkt",
-    "referenceGeometry": "Referenzgeometrie"
+    "referenceGeometry": "Referenzgeometrie",
+    "hole": "Bohrung"
   },
   "features": {
     "plane": "Ebene",
@@ -180,7 +182,8 @@
     "origin": "Ursprung",
     "variables": "Variablen",
     "extrude": "Extrusion",
-    "revolve": "Rotation"
+    "revolve": "Rotation",
+    "hole": "Bohrung"
   },
   "tree": {
     "title": "Featurebaum",
@@ -342,7 +345,8 @@
     "kernelRestarted": "Der Geometriekern wurde nach einem Fehler neu gestartet. Dein Dokument ist unverändert.",
     "dxfImported": "{{count}} Elemente importiert.",
     "dxfImportedSkipped": "{{count}} Elemente importiert; nicht unterstützt und ausgelassen: {{skipped}}.",
-    "noSketchToExtrude": "Zeichne zuerst eine Skizze mit einer geschlossenen Kontur."
+    "noSketchToExtrude": "Zeichne zuerst eine Skizze mit einer geschlossenen Kontur.",
+    "noHoleSketch": "Setze zuerst Punkte für die Bohrungen in einer Skizze auf der Fläche."
   },
   "errors": {
     "no-body": "Es gibt noch keinen Körper, der verändert werden kann.",
@@ -358,6 +362,8 @@
     "unknown": "Unerwarteter Fehler: {{detail}}",
     "axis-missing": "Die Achse dieser Rotation fehlt. Bearbeite das Feature und wähle eine Linie der Skizze als Achse.",
     "axis-not-in-plane": "Die Achse muss in der Ebene der Skizze liegen. Wähle eine Achse in dieser Ebene oder eine Linie der Skizze.",
+    "hole-no-points": "Die Skizze hat keine Punkte für Bohrungen. Füge Punkte hinzu, die keine End- oder Mittelpunkte von Kurven sind.",
+    "hole-invalid": "Die Maße der Bohrung passen nicht zusammen: Eine Senkung muss breiter als die Bohrung und weniger tief sein, ein Gewinde nicht tiefer als die Bohrung.",
     "profile-crosses-axis": "Konturen der Skizze liegen auf beiden Seiten der Achse. Halte sie auf einer Seite; berühren dürfen sie die Achse.",
     "plane-missing": "Die Referenzebene, auf der diese Skizze gezeichnet wurde, existiert nicht mehr. Die Skizze bleibt, wo die Ebene war.",
     "reference-missing": "Referenz {{detail}} dieses Features fehlt: Sie wurde noch nicht gewählt, oder eine frühere Änderung hat sie entfernt. Bearbeite das Feature und wähle sie.",
@@ -620,5 +626,37 @@
       "center": "Hier eine Kante oder Fläche wählen."
     },
     "useOrigin": "Ursprung nehmen"
+  },
+  "hole": {
+    "type": "Bohrung",
+    "kind": "Art",
+    "size": "Größe",
+    "fit": "Reihe (ISO 273)",
+    "positions": "Positionen",
+    "count_one": "Eine Bohrung am Punkt dieser Skizze.",
+    "count_other": "{{count}} Bohrungen an den Punkten dieser Skizze.",
+    "reverse": "In die andere Richtung bohren",
+    "dimensions": "Maße",
+    "diameter": "Bohrungsdurchmesser",
+    "tapDrill": "Kernlochbohrer",
+    "depth": "Tiefe",
+    "counterboreDiameter": "Senkung Ø",
+    "counterboreDepth": "Senktiefe",
+    "countersinkDiameter": "Senkung Ø",
+    "countersinkAngle": "Winkel",
+    "threadDepth": "Gewindetiefe",
+    "threadInfo": "Gewinde {{size}} × {{pitch}}, Nenn-Ø {{diameter}} mm, als gestrichelte Kreise dargestellt.",
+    "hint": "Ein Wechsel von Art, Größe oder Reihe setzt die Maße wieder nach Norm. Prüfe sie vor der Fertigung.",
+    "kinds": {
+      "simple": "Durchgangsloch",
+      "counterbore": "Zylindrische Senkung",
+      "countersink": "Kegelsenkung",
+      "tapped": "Gewindebohrung"
+    },
+    "fits": {
+      "close": "Fein",
+      "normal": "Mittel",
+      "loose": "Grob"
+    }
   }
 }

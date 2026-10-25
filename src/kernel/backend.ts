@@ -1,4 +1,4 @@
-import type { EdgeFeature, EdgeRef, ExtrudeFeature, RevolveFeature, SolidModelingFeature, Vec3 } from '../shared/model/feature.ts';
+import type { EdgeFeature, EdgeRef, ExtrudeFeature, HoleFeature, RevolveFeature, SolidModelingFeature, Vec3 } from '../shared/model/feature.ts';
 import type { BodyNaming } from '../shared/model/naming.ts';
 import type { Profile } from '../shared/model/profile.ts';
 import type { SketchFrame } from '../shared/model/sketch.ts';
@@ -19,6 +19,11 @@ export interface ResolvedRevolve extends RevolveFeature {
   line: [number, number, number, number];
 }
 
+/** Holes with their centers and directions in model space (6 values per hole). */
+export interface ResolvedHole extends HoleFeature {
+  placements: number[];
+}
+
 /** A fillet or chamfer with its edge references resolved in the body it modifies. */
 export type ResolvedEdgeFeature = EdgeFeature & {
   /** Topological indices of the edges, without duplicates. */
@@ -33,9 +38,10 @@ export type ResolvedEdgeFeature = EdgeFeature & {
 
 /** A feature as a backend builds it, with its references to earlier features resolved. */
 export type KernelFeature =
-  | Exclude<SolidModelingFeature, ExtrudeFeature | RevolveFeature | EdgeFeature>
+  | Exclude<SolidModelingFeature, ExtrudeFeature | RevolveFeature | EdgeFeature | HoleFeature>
   | ResolvedExtrude
   | ResolvedRevolve
+  | ResolvedHole
   | ResolvedEdgeFeature;
 
 /** Opaque reference to a shape owned by a backend. */

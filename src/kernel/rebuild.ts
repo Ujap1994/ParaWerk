@@ -1,9 +1,10 @@
 import { hashString } from '../shared/hash.ts';
-import { isEdgeFeature, isReferenceFeature, isSketchBased, type Feature, type SketchFeature } from '../shared/model/feature.ts';
+import { isEdgeFeature, isReferenceFeature, isSketchBased, type Feature, type SketchFeature, type Vec3 } from '../shared/model/feature.ts';
 import type { BodyNaming } from '../shared/model/naming.ts';
 import type { ReferenceGeometry } from '../shared/model/reference.ts';
 import type { SketchFrame, SketchPlaneRef } from '../shared/model/sketch.ts';
-import type { GeometryBackend, ShapeHandle } from './backend.ts';
+import type { GeometryBackend, ResolvedHole, ShapeHandle } from './backend.ts';
+import { holeThreads, throughDepth, type CosmeticThread } from '../shared/model/hole.ts';
 import { FeatureError } from './feature-error.ts';
 import type { FeatureResult } from './protocol.ts';
 import { computeReference, type BodyQuery } from './reference.ts';
@@ -60,6 +61,12 @@ function featureSignature(feature: Feature, sketches: ReadonlyMap<string, Sketch
     return stableStringify({ ...geometry, from: sketch && !sketch.suppressed ? { plane: planeSignature(sketch.plane), entities: sketch.sketch.entities } : null });
   }
   return stableStringify(geometry);
+}
+
+/** The cosmetic threads of tapped holes (through holes are threaded all the way through the body). */
+function threadsOf(hole: ResolvedHole, box: { min: Vec3; max: Vec3 }): CosmeticThread[] {
+  const depth = hole.end === 'throughAll' ? throughDepth(box.min, box.max, hole.placements) : hole.threadDepth;
+  return holeThreads(hole, hole.placements, depth);
 }
 
 /**
@@ -203,6 +210,7 @@ export class Rebuilder implements Disposable {
         const shape = this.backend.applyFeature(input, resolved);
         const healed = 'healedEdges' in resolved ? resolved.healedEdges : undefined;
         const missing = 'missingEdges' in resolved ? resolved.missingEdges : undefined;
+        const threads = resolved.type === 'hole' && input ? threadsOf(resolved, this.backend.boundingBox(input)) : [];
         this.entries.push({
           key,
           shapeKey: key,
@@ -215,6 +223,7 @@ export class Rebuilder implements Disposable {
             cached: false,
             ...(healed ? { healedEdges: healed } : {}),
             ...(missing ? { warning: { code: 'edge-missing' as const, detail: String(missing) } } : {}),
+            ...(threads.length > 0 ? { threads } : {}),
           },
         });
       } catch (error) {

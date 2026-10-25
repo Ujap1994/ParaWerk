@@ -54,6 +54,37 @@ it.
 
 ![A flanged bush revolved three quarters of a turn around the orange centerline](../images/screenshots/revolve-bush.png)
 
+## Hole
+
+**Hole** drills holes for ISO metric screws – M1.6 to M30 – at the points of a sketch. Sketch on the face
+you want to drill into, place a **Point** for every hole (dimension them like any other geometry), close
+the sketch and click **Hole**. Points that are ends or centers of lines, arcs and circles, and construction
+points, get no hole, so construction lines can position the points.
+
+- *Type*: **Clearance hole**, **Counterbore** (for cap screws ISO 4762), **Countersink** (90°, for
+  countersunk screws ISO 10642) or **Tapped hole** (coarse thread, tap drill).
+- *Size* and, for clearance holes, the *Fit*: **Fine**, **Medium** or **Coarse** series of ISO 273.
+- *End*: **Through all**, or a **Depth**; blind holes end in a 118° drill point. A tapped hole is drilled
+  four turns deeper than its *Thread depth*.
+- *Positions*: the sketch whose points are the hole centers; the panel says how many holes it makes.
+  Holes go into the material, against the normal of the sketch plane; **Drill the other way** turns them
+  round (for a sketch on a plane below the part, for example).
+- *Dimensions*: hole diameter (the tap drill of a tapped hole), counterbore or countersink diameter and
+  depth or angle, thread depth. Changing the type, size or fit sets them from the standards again; you
+  can change each of them afterwards, also as an equation.
+
+![Counterbores for M6 cap screws in the base plate, edited in the side panel; tapped holes in the boss behind](../images/screenshots/hole-counterbore.png)
+
+Threads are not modeled: a tapped hole is cut with its tap drill, and the thread is shown as dashed
+circles of its nominal diameter where it starts and where it ends (dimmed where the part hides them).
+
+![Three tapped M4 holes in the boss with their threads drawn as dashed circles](../images/screenshots/hole-threads.png)
+
+> [!NOTE]
+> The standard values come from ISO 273 (clearance holes), ISO 2306 (tap drills), DIN 974-1
+> (counterbores for ISO 4762) and the head diameters of ISO 10642 (countersinks). Check them against
+> your screws and your manufacturing before you make parts.
+
 ## Box
 
 Adds or removes a box. *Width* (X), *Depth* (Y) and *Height* (Z) are in millimeters; *Position* is the

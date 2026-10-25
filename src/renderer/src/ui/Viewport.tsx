@@ -4,7 +4,7 @@ import { isEdgeFeature, isReferenceFeature, isSketchBased, type Vec3 } from '../
 import { resolveEdgeRefs } from '../../../shared/model/naming.ts';
 import { frameOf, STANDARD_PLANES } from '../../../shared/model/sketch.ts';
 import * as commands from '../commands.ts';
-import { referenceItems, referencePicks } from '../references.ts';
+import { referenceItems, referencePicks, visibleThreads } from '../references.ts';
 import { SketchController, sketchHighlight, statusColors } from '../sketch/controller.ts';
 import { sketchSolver } from '../sketch/solver.ts';
 import { setState, store, type AppState, type Pick } from '../state/store.ts';
@@ -162,6 +162,7 @@ export function Viewport() {
         state.display !== previous.display
       ) {
         engine.setReferences(referenceItems(state));
+        engine.setThreads(visibleThreads(state));
       }
       const plane = state.sketch?.draft.plane;
       if (!previous || plane !== previous.sketch?.draft.plane) {

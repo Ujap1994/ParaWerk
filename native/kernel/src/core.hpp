@@ -138,6 +138,15 @@ int extrudeProfile(const std::vector<double>& profile, const std::vector<double>
 int revolveProfile(const std::vector<double>& profile, const std::vector<double>& frame, const std::vector<double>& axis, double from, double to,
                    const std::vector<std::string>& edgeNames = {}, const std::string& name = "");
 /**
+ * Cuts holes: the same `profile` revolved a full turn at every placement. The profile (encoded as for
+ * extrudeProfile) lies in a plane through the hole axis: x is the distance from the axis, y the depth
+ * into the material; the axis is x = 0. `placements` holds per hole its center and the direction into
+ * the material (6 values). The faces of hole k are named "<name>:<k>:<edge name>".
+ */
+int cutHoles(int bodyId, const std::vector<double>& profile, const std::vector<double>& placements, const std::vector<std::string>& edgeNames,
+             const std::string& name = "");
+
+/**
  * Rounds the given edges. The faces made for edge k are named `edgeNames[k]`, other new faces (corners
  * where rounds meet) "<name>:corner".
  */

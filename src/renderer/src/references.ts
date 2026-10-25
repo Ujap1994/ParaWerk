@@ -6,6 +6,7 @@ import { isReferenceFeature, type Feature, type ReferenceFeature } from '../../s
 import { edgeRefOf, faceRefOf, resolveEdgeRefs, resolveFaceRef, resolveVertexRef, vertexRefOf } from '../../shared/model/naming.ts';
 import { REFERENCE_ROLES, type GeometryRef, type ReferenceGeometry, type ReferenceRole } from '../../shared/model/reference.ts';
 import { STANDARD_PLANES } from '../../shared/model/sketch.ts';
+import type { CosmeticThread } from '../../shared/model/hole.ts';
 import type { AppState, Pick } from './state/store.ts';
 import type { ReferenceItem } from './viewport/reference-geometry.ts';
 
@@ -103,6 +104,16 @@ export function referencePicks(refs: readonly GeometryRef[], state: ReferenceSta
       }
     }
   });
+}
+
+/** The cosmetic threads shown: those of tapped holes before the feature or sketch being edited, and of the edited hole. */
+export function visibleThreads(state: AppState): CosmeticThread[] {
+  const features = state.history.features;
+  const edit = state.activeEdit;
+  const end = state.sketch?.index ?? edit?.index ?? features.length;
+  const shown = new Set(features.slice(0, end).filter((feature) => feature.type === 'hole' && !feature.suppressed).map((feature) => feature.id));
+  if (edit?.draft.type === 'hole' && !state.sketch) shown.add(edit.draft.id);
+  return (state.rebuild?.results ?? []).flatMap((result) => (shown.has(result.id) ? (result.threads ?? []) : []));
 }
 
 /**

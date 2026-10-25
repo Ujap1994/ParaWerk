@@ -10,6 +10,8 @@ import { useFeatureName } from './FeatureTree.tsx';
 import { CheckIcon, CloseIcon, FEATURE_ICONS } from './icons.tsx';
 import { NumberField } from './NumberField.tsx';
 import { ReferenceFields } from './ReferencePanel.tsx';
+import { HoleFields } from './HolePanel.tsx';
+import { Segmented } from './Segmented.tsx';
 import { VariablesEditor, variablesValid } from './VariablesPanel.tsx';
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -21,40 +23,6 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function Segmented<T extends string>({
-  label,
-  value,
-  options,
-  onChange,
-  disabled = false,
-}: {
-  label: string;
-  value: T;
-  options: { value: T; label: string }[];
-  onChange(value: T): void;
-  disabled?: boolean;
-}) {
-  return (
-    <div className="field">
-      <span className="field-label">{label}</span>
-      <div className="segmented" role="radiogroup" aria-label={label}>
-        {options.map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            role="radio"
-            aria-checked={value === option.value}
-            className={`segmented-option${value === option.value ? ' is-selected' : ''}`}
-            disabled={disabled && value !== option.value}
-            onClick={() => onChange(option.value)}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 function PositionFields({ value, onChange }: { value: Vec3; onChange(value: Vec3): void }) {
   return (
@@ -260,6 +228,8 @@ function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
     case 'axis':
     case 'point':
       return <ReferenceFields draft={draft} />;
+    case 'hole':
+      return <HoleFields draft={draft} index={index} />;
     case 'variables':
       return <VariablesEditor draft={draft} />;
     case 'fillet':

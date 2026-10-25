@@ -6,7 +6,7 @@ import * as commands from '../commands.ts';
 import type { SketchToolName } from '../sketch/tools.ts';
 import { useAppState, type CommandTab } from '../state/store.ts';
 import {
-  BoxIcon, ExtrudeIcon, RevolveIcon,
+  BoxIcon, ExtrudeIcon, HoleIcon, RevolveIcon,
   CenterArcIcon,
   CenterlineIcon,
   CenterRectangleIcon,
@@ -121,6 +121,7 @@ const FEATURE_BUTTONS: { type: FeatureType; icon: IconType }[] = [
   { type: 'sketch', icon: SketchIcon },
   { type: 'extrude', icon: ExtrudeIcon },
   { type: 'revolve', icon: RevolveIcon },
+  { type: 'hole', icon: HoleIcon },
   { type: 'box', icon: BoxIcon },
   { type: 'cylinder', icon: CylinderIcon },
   { type: 'fillet', icon: FilletIcon },
@@ -207,7 +208,7 @@ function FeaturesTab() {
           label={t(`commands.${type}`)}
           tooltip={t(`commands.tooltips.${type}`)}
           active={activeType === type}
-          disabled={(sketching && type !== 'sketch') || ((type === 'fillet' || type === 'chamfer') && !hasFeatures)}
+          disabled={(sketching && type !== 'sketch') || ((type === 'fillet' || type === 'chamfer' || type === 'hole') && !hasFeatures)}
           onClick={() => commands.startFeature(type)}
         />
       ))}

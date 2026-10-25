@@ -8,7 +8,7 @@ import { createKernel } from '../../src/kernel/create.ts';
 import type { BackendName } from '../../src/kernel/kernel.ts';
 import { displayQuality } from '../../src/kernel/mesh-quality.ts';
 import type { RebuildRequest } from '../../src/kernel/protocol.ts';
-import type { Feature } from '../../src/shared/model/feature.ts';
+import { defaultFeature, type Feature, type Vec3 } from '../../src/shared/model/feature.ts';
 import { edgeFaceNames, edgeRefOf, resolveEdgeRefs } from '../../src/shared/model/naming.ts';
 import { calibration, measure, meta, printReport, summarize, writeReport, type BenchReport, type CaseResult } from '../lib.ts';
 
@@ -117,6 +117,20 @@ if (backendName === 'parawerk') {
     ];
   };
   cases['extrude.plate100holes.rebuild'] = measure((i) => kernel.rebuild(request(sketchPlate(100, 400 + (i + 1) * 0.01))), { iterations: 5, warmup: 1 });
+  // The same 100 holes as one hole feature (M8 clearance holes at the points of a sketch on the top face).
+  const holePlate = (holes: number, width: number): Feature[] => {
+    const side = Math.ceil(Math.sqrt(holes));
+    const pitch = 360 / side;
+    const points: Extract<Feature, { type: 'sketch' }>['sketch']['entities'] = [];
+    for (let i = 0; i < holes; i++) points.push({ id: `m${i}`, type: 'point', x: -180 + pitch / 2 + (i % side) * pitch, y: -180 + pitch / 2 + Math.floor(i / side) * pitch });
+    const top = { origin: [0, 0, 12] as Vec3, xDir: [1, 0, 0] as Vec3, yDir: [0, 1, 0] as Vec3, normal: [0, 0, 1] as Vec3 };
+    return [
+      { id: 'plate', type: 'box', operation: 'add', width, depth: 400, height: 12, position: [0, 0, 0] },
+      { id: 'points', type: 'sketch', plane: { kind: 'face', face: 5, name: 'plate:top', frame: top }, sketch: { entities: points, constraints: [] } },
+      { ...(defaultFeature('hole', 'holes') as Extract<Feature, { type: 'hole' }>), sketch: 'points', size: 'M8', diameter: 9 },
+    ];
+  };
+  cases['hole.plate100holes.rebuild'] = measure((i) => kernel.rebuild(request(holePlate(100, 400 + (i + 1) * 0.01))), { iterations: 5, warmup: 1 });
   const wave = (points: number): Feature[] => {
     const entities: Extract<Feature, { type: 'sketch' }>['sketch']['entities'] = [];
     for (let i = 0; i < points; i++) entities.push({ id: `f${i}`, type: 'point', x: i * 10, y: 20 + 8 * Math.sin(i * 0.7) });

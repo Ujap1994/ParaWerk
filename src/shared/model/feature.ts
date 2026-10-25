@@ -10,7 +10,7 @@ import type { SketchData, SketchPlaneRef } from './sketch.ts';
 
 export type Vec3 = [number, number, number];
 
-export type FeatureType = 'variables' | 'sketch' | 'plane' | 'axis' | 'point' | 'extrude' | 'revolve' | 'box' | 'cylinder' | 'fillet' | 'chamfer';
+export type FeatureType = 'variables' | 'sketch' | 'plane' | 'axis' | 'point' | 'extrude' | 'revolve' | 'hole' | 'box' | 'cylinder' | 'fillet' | 'chamfer';
 
 /** How a solid-creating feature combines with the existing body. */
 export type BooleanOperation = 'add' | 'cut';
@@ -64,6 +64,7 @@ export const EXPRESSION_FIELDS: Readonly<Record<FeatureType, readonly string[]>>
   point: ['x', 'y', 'z'],
   extrude: ['depth'],
   revolve: ['angle'],
+  hole: ['diameter', 'depth', 'counterboreDiameter', 'counterboreDepth', 'countersinkDiameter', 'countersinkAngle', 'threadDepth'],
   box: ['width', 'depth', 'height'],
   cylinder: ['radius', 'height'],
   fillet: ['radius'],
@@ -228,11 +229,44 @@ export function revolveRange(feature: Pick<RevolveFeature, 'angle' | 'direction'
   }
 }
 
-/** Features that turn the outlines of a sketch into a solid. */
-export type SketchBasedFeature = ExtrudeFeature | RevolveFeature;
+export type HoleKind = 'simple' | 'counterbore' | 'countersink' | 'tapped';
+
+/** Clearance hole series of ISO 273: fine, medium, coarse. */
+export type HoleFit = 'close' | 'normal' | 'loose';
+
+/**
+ * Holes for ISO metric screws at the free points of a sketch (see src/shared/model/hole.ts): drilled
+ * into the material from the sketch plane, against its normal (or along it when `reverse`). The
+ * dimensions come from the standard tables when the kind, size or fit changes, and can be changed.
+ */
+export interface HoleFeature extends FeatureBase {
+  type: 'hole';
+  kind: HoleKind;
+  /** ISO metric size, e.g. "M6". */
+  size: string;
+  fit: HoleFit;
+  /** Id of the sketch whose free points are the hole centers. */
+  sketch: string;
+  end: ExtrudeEnd;
+  reverse: boolean;
+  /** Clearance hole, or the tap drill of a tapped hole. */
+  diameter: number;
+  /** Blind holes: depth of the full diameter (the drill point comes on top). */
+  depth: number;
+  counterboreDiameter: number;
+  counterboreDepth: number;
+  countersinkDiameter: number;
+  /** Degrees. */
+  countersinkAngle: number;
+  /** Tapped holes: how deep the thread goes (through holes: all the way). */
+  threadDepth: number;
+}
+
+/** Features built from a sketch: its outlines (extrude, revolve) or its points (hole). */
+export type SketchBasedFeature = ExtrudeFeature | RevolveFeature | HoleFeature;
 
 export function isSketchBased(feature: Feature): feature is SketchBasedFeature {
-  return feature.type === 'extrude' || feature.type === 'revolve';
+  return feature.type === 'extrude' || feature.type === 'revolve' || feature.type === 'hole';
 }
 
 export type Feature =
@@ -243,6 +277,7 @@ export type Feature =
   | PointFeature
   | ExtrudeFeature
   | RevolveFeature
+  | HoleFeature
   | BoxFeature
   | CylinderFeature
   | FilletFeature
@@ -261,7 +296,7 @@ export function isSolidFeature(feature: Feature): feature is BoxFeature | Cylind
   return feature.type === 'box' || feature.type === 'cylinder';
 }
 
-export const FEATURE_TYPES: readonly FeatureType[] = ['variables', 'sketch', 'plane', 'axis', 'point', 'extrude', 'revolve', 'box', 'cylinder', 'fillet', 'chamfer'];
+export const FEATURE_TYPES: readonly FeatureType[] = ['variables', 'sketch', 'plane', 'axis', 'point', 'extrude', 'revolve', 'hole', 'box', 'cylinder', 'fillet', 'chamfer'];
 
 let idCounter = 0;
 
@@ -288,6 +323,24 @@ export function defaultFeature(type: FeatureType, id: string = createFeatureId()
       return { id, type, operation: 'add', sketch: '', depth: 20, direction: 'normal', end: 'blind' };
     case 'revolve':
       return { id, type, operation: 'add', sketch: '', axis: '', angle: 360, direction: 'normal' };
+    case 'hole':
+      return {
+        id,
+        type,
+        kind: 'simple',
+        size: 'M6',
+        fit: 'normal',
+        sketch: '',
+        end: 'throughAll',
+        reverse: false,
+        diameter: 6.6,
+        depth: 12,
+        counterboreDiameter: 11,
+        counterboreDepth: 6.4,
+        countersinkDiameter: 13.7,
+        countersinkAngle: 90,
+        threadDepth: 12,
+      };
     case 'box':
       return { id, type, operation: 'add', width: 100, depth: 60, height: 40, position: [0, 0, 0] };
     case 'cylinder':

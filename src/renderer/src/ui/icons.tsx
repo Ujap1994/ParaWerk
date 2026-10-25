@@ -509,6 +509,14 @@ export const ReferencePointIcon = (p: P) => (
   </Icon>
 );
 
+/** Hole: a plate in section with a counterbored hole and its dashed axis. */
+export const HoleIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="M2.5 8.5h5.5v3.5h2v7.5h-7.5zM21.5 8.5H16v3.5h-2v7.5h7.5z" />
+    <path d="M12 4.5v17" strokeDasharray="2.2 2" opacity="0.55" />
+  </Icon>
+);
+
 export const FEATURE_ICONS = {
   variables: VariablesIcon,
   sketch: SketchIcon,
@@ -517,6 +525,7 @@ export const FEATURE_ICONS = {
   point: ReferencePointIcon,
   extrude: ExtrudeIcon,
   revolve: RevolveIcon,
+  hole: HoleIcon,
   box: BoxIcon,
   cylinder: CylinderIcon,
   fillet: FilletIcon,

@@ -1,7 +1,8 @@
 import { resolveLanguage } from '../../shared/i18n.ts';
 import type { MenuCommand } from '../../shared/ipc.ts';
 import { PART_FILE_EXTENSION } from '../../shared/app-info.ts';
-import { defaultFeature, isEdgeFeature, isReferenceFeature, isSketchBased, type EdgeRef, type Feature, type FeatureType, type ReferenceFeature, type SketchFeature } from '../../shared/model/feature.ts';
+import { defaultFeature, isEdgeFeature, isReferenceFeature, isSketchBased, type EdgeRef, type Feature, type FeatureType, type HoleFeature, type ReferenceFeature, type SketchFeature } from '../../shared/model/feature.ts';
+import { holePositions, metricSize, sizesFor, standardHoleDimensions } from '../../shared/model/hole.ts';
 import { AXIS_METHODS, PLANE_METHODS, POINT_METHODS, REFERENCE_ROLES, type GeometryRef, type ReferenceRole } from '../../shared/model/reference.ts';
 import { referenceFits, referenceGeometry, referenceOfPick, referenceRoles } from './references.ts';
 import { edgeRefOf, resolveEdgeRefs } from '../../shared/model/naming.ts';
@@ -202,6 +203,13 @@ export function startFeature(type: FeatureType): void {
       const reference = features.findLast((feature) => feature.type === 'axis' && !feature.suppressed);
       draft = axis || !reference ? { ...draft, sketch: sketch.id, axis, operation } : { ...draft, sketch: sketch.id, axis: '', axisRef: { kind: 'feature', feature: reference.id }, operation };
     }
+  } else if (draft.type === 'hole') {
+    const sketch = holeSketchToUse(features);
+    if (!sketch) {
+      showToast('info', t('toasts.noHoleSketch'));
+      return;
+    }
+    draft = { ...draft, sketch: sketch.id };
   } else if (isEdgeFeature(draft)) {
     // Edges selected before starting the command are taken over (select first, then act).
     const naming = getState().display.body?.naming;
@@ -229,6 +237,32 @@ function sketchToUse(features: readonly Feature[]): SketchFeature | null {
   return sketches.findLast((sketch) => !used.has(sketch.id)) ?? sketches.at(-1) ?? null;
 }
 
+/** The sketch a new hole uses: the newest one with points for holes that no feature uses yet, else the newest with such points. */
+function holeSketchToUse(features: readonly Feature[]): SketchFeature | null {
+  const used = new Set(features.flatMap((feature) => (isSketchBased(feature) ? [feature.sketch] : [])));
+  const sketches = features.filter((feature): feature is SketchFeature => feature.type === 'sketch' && !feature.suppressed && holePositions(feature.sketch).length > 0);
+  return sketches.findLast((sketch) => !used.has(sketch.id)) ?? sketches.at(-1) ?? null;
+}
+
+/**
+ * Changes the kind, size or fit of the edited hole; its dimensions follow the standard tables again
+ * (sizes a kind does not come in fall back to the nearest one it does).
+ */
+export function setHoleType(patch: { kind?: HoleFeature['kind']; size?: string; fit?: HoleFeature['fit'] }): void {
+  const edit = getState().activeEdit;
+  if (edit?.draft.type !== 'hole') return;
+  const kind = patch.kind ?? edit.draft.kind;
+  const sizes = sizesFor(kind);
+  const wanted = metricSize(patch.size ?? edit.draft.size);
+  const size = sizes.some((entry) => entry.size === wanted?.size) ? (wanted?.size ?? 'M6') : (sizes.reduce((a, b) => (Math.abs(b.d - (wanted?.d ?? 6)) < Math.abs(a.d - (wanted?.d ?? 6)) ? b : a)).size);
+  const fit = patch.fit ?? edit.draft.fit;
+  const dimensions = standardHoleDimensions(kind, size, fit);
+  if (!dimensions) return;
+  // Equations of the dimensions are replaced by the standard values.
+  const { expressions: _expressions, ...draft } = edit.draft;
+  setState({ activeEdit: { ...edit, draft: { ...draft, kind, size, fit, ...dimensions } } });
+}
+
 /** The axis a revolution of a sketch starts with: its first centerline (none if it has no centerline). */
 function defaultAxis(sketch: SketchFeature): string {
   return sketch.sketch.entities.find((entity) => entity.type === 'line' && entity.construction)?.id ?? '';
@@ -247,7 +281,7 @@ export function chooseRevolveAxis(value: string): void {
 /** Chooses the sketch of the extrusion or revolution being edited (a revolution also takes its centerline). */
 export function chooseFeatureSketch(id: string): void {
   const draft = getState().activeEdit?.draft;
-  if (draft?.type === 'extrude') updateDraft({ sketch: id });
+  if (draft?.type === 'extrude' || draft?.type === 'hole') updateDraft({ sketch: id });
   if (draft?.type !== 'revolve') return;
   const sketch = getState().history.features.find((feature): feature is SketchFeature => feature.type === 'sketch' && feature.id === id);
   updateDraft({ sketch: id, axis: sketch ? defaultAxis(sketch) : '' });

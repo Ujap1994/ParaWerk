@@ -16,6 +16,7 @@ interface EmbindModule {
   booleanOperation(_0: number, _1: number, _2: number): any;
   extrudeProfile(_0: any, _1: any, _2: number, _3: number, _4: any, _5: EmbindString): any;
   revolveProfile(_0: any, _1: any, _2: any, _3: number, _4: number, _5: any, _6: EmbindString): any;
+  cutHoles(_0: number, _1: any, _2: any, _3: any, _4: EmbindString): any;
   fillet(_0: number, _1: any, _2: number, _3: any, _4: EmbindString): any;
   chamfer(_0: number, _1: any, _2: number, _3: any, _4: EmbindString): any;
   naming(_0: number): any;

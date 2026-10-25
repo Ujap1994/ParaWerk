@@ -156,6 +156,7 @@ Marked complete for now: open points from hands-on testing are handled alongside
 | Sketches on faces follow their face | ✅ done |
 | Lost references: build with the rest and warn, mark where they were, remove them | ✅ done |
 | Reference geometry: planes, axes, points; sketches on reference planes; revolve around a reference axis | ✅ done ([ADR 0010](docs/adr/0010-reference-geometry.md)) |
+| Hole feature: ISO metric clearance, counterbore, countersink and tapped holes with cosmetic threads | ✅ done |
 
 ## 2. Guiding principles
 

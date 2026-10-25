@@ -568,3 +568,41 @@ test('revolves a sketch around a reference axis', async () => {
   expect(await volume(page)).toBeCloseTo(100 * 2 * Math.PI * 15, 2);
   expect((await state(page)).history.features[2]).toMatchObject({ type: 'revolve', axis: '', axisRef: { kind: 'feature', feature: 'z' } });
 });
+
+test('drills holes for metric screws at the points of a sketch', async () => {
+  launched = await launchApp({ width: 1440, height: 900 });
+  const { page } = launched;
+  // A 100 × 60 × 40 box and a sketch with two points on its top face.
+  await page.evaluate(() => {
+    const features = [
+      { id: 'box', type: 'box', operation: 'add', width: 100, depth: 60, height: 40, position: [0, 0, 0] },
+      {
+        id: 'positions', type: 'sketch',
+        plane: { kind: 'face', face: 5, name: 'box:top', frame: { origin: [0, 0, 40], xDir: [1, 0, 0], yDir: [0, 1, 0], normal: [0, 0, 1] } },
+        sketch: { entities: [{ id: 'a', type: 'point', x: -30, y: 0 }, { id: 'b', type: 'point', x: 30, y: 0 }], constraints: [] },
+      },
+    ];
+    const history = { features, past: [], future: [] };
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history, savedFeatures: features, dirty: false });
+  });
+  await idle(page);
+  const threads = () => page.evaluate(() => (window as unknown as { __parawerk: { viewport: { threads(): number } } }).__parawerk.viewport.threads());
+
+  // Hole takes the sketch with points; M6 clearance holes, medium series, through all.
+  await page.click('[data-command="hole"]');
+  await expect(page.locator('[data-testid="hole-sketch"]')).toHaveValue('positions');
+  await expect(page.locator('[data-testid="hole-count"]')).toContainText('2 holes');
+  await expect(page.locator('[data-testid="hole-diameter"]')).toHaveValue('6.6');
+  await idle(page);
+
+  // A tapped M8 hole: the tap drill comes from the table, and the threads are shown.
+  await page.selectOption('[data-testid="hole-kind"]', 'tapped');
+  await page.selectOption('[data-testid="hole-size"]', 'M8');
+  await expect(page.locator('[data-testid="hole-diameter"]')).toHaveValue('6.8');
+  await idle(page);
+  await expect.poll(threads).toBe(2);
+  await page.click('[data-testid="panel-ok"]');
+  expect(await volume(page)).toBeCloseTo(240_000 - 2 * Math.PI * 3.4 * 3.4 * 40, 2);
+  expect((await state(page)).history.features[2]).toMatchObject({ type: 'hole', kind: 'tapped', size: 'M8', diameter: 6.8, sketch: 'positions' });
+  await expect.poll(threads).toBe(2);
+});

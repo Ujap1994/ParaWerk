@@ -1,11 +1,12 @@
-import { isEdgeFeature, type EdgeFeature, type EdgeRef, type Feature, type SketchFeature, type SolidModelingFeature, type Vec3 } from '../shared/model/feature.ts';
+import { isEdgeFeature, type EdgeFeature, type EdgeRef, type Feature, type HoleFeature, type SketchFeature, type SolidModelingFeature, type Vec3 } from '../shared/model/feature.ts';
+import { holePositions, holeProblem } from '../shared/model/hole.ts';
 import { edgeFaceNames, edgeRefOf, resolveEdgeRefs, resolveFacePlane, type BodyNaming } from '../shared/model/naming.ts';
 import { sketchProfile, type Profile } from '../shared/model/profile.ts';
 import type { GeometryRef, ReferenceGeometry } from '../shared/model/reference.ts';
-import { frameOf, frameOnPlane, ORIGIN_ID, toSketch, type SketchFrame, type SketchPlaneRef } from '../shared/model/sketch.ts';
+import { frameOf, frameOnPlane, ORIGIN_ID, toModel, toSketch, type SketchFrame, type SketchPlaneRef } from '../shared/model/sketch.ts';
 import type { Point2 } from '../shared/model/spline.ts';
 import { hashString } from '../shared/hash.ts';
-import type { KernelFeature, ResolvedEdgeFeature } from './backend.ts';
+import type { KernelFeature, ResolvedEdgeFeature, ResolvedHole } from './backend.ts';
 import { FeatureError } from './feature-error.ts';
 import { axisOfReference, type ReferenceContext } from './reference.ts';
 
@@ -130,6 +131,17 @@ export function placeSketch(sketch: SketchFeature, body: (() => BodyNaming) | nu
   return { frame, healed: { kind: 'face', face: face.index, frame, ...(name ? { name } : {}) } };
 }
 
+/** Holes go into the material from the sketch plane: against its normal (which points out of a face), or along it. */
+function resolveHole(feature: HoleFeature, sketch: SketchFeature, frame: SketchFrame): ResolvedHole {
+  const positions = holePositions(sketch.sketch);
+  if (positions.length === 0) throw new FeatureError('hole-no-points');
+  const problem = holeProblem(feature);
+  if (problem) throw new FeatureError('hole-invalid', problem);
+  const direction = feature.reverse ? frame.normal : ([-frame.normal[0], -frame.normal[1], -frame.normal[2]] as Vec3);
+  const placements = positions.flatMap(([x, y]) => [...toModel(frame, x, y), ...direction]);
+  return { ...feature, placements };
+}
+
 /** What features are resolved against: the body before them, where sketches lie and where reference features lie. */
 export interface ResolveContext extends ReferenceContext {
   frames: ReadonlyMap<string, SketchFrame>;
@@ -146,9 +158,10 @@ export function resolveFeature(feature: SolidModelingFeature, before: readonly F
     if (!context.body) throw new FeatureError('no-body');
     return resolveEdges(feature, context.body.naming());
   }
-  if (feature.type !== 'extrude' && feature.type !== 'revolve') return feature;
+  if (feature.type !== 'extrude' && feature.type !== 'revolve' && feature.type !== 'hole') return feature;
   const sketch = before.find((candidate): candidate is SketchFeature => candidate.type === 'sketch' && candidate.id === feature.sketch);
   if (!sketch || sketch.suppressed) throw new FeatureError('sketch-missing');
+  if (feature.type === 'hole') return resolveHole(feature, sketch, context.frames.get(sketch.id) ?? frameOf(sketch.plane));
   const profile = profileOf(sketch);
   const frame = context.frames.get(sketch.id) ?? frameOf(sketch.plane);
   if (feature.type === 'extrude') return { ...feature, profile, frame };

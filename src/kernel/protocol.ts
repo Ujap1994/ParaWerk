@@ -1,4 +1,5 @@
 import type { EdgeRef, Feature, Vec3 } from '../shared/model/feature.ts';
+import type { CosmeticThread } from '../shared/model/hole.ts';
 import type { BodyNaming } from '../shared/model/naming.ts';
 import type { GeometryRef, ReferenceGeometry } from '../shared/model/reference.ts';
 import type { SketchPlaneRef } from '../shared/model/sketch.ts';
@@ -100,6 +101,8 @@ export type FeatureErrorCode =
   | 'profile-crossing'
   | 'axis-missing'
   | 'axis-not-in-plane'
+  | 'hole-no-points'
+  | 'hole-invalid'
   | 'profile-crosses-axis'
   | 'operation-failed'
   | 'unknown';
@@ -120,6 +123,8 @@ export interface FeatureResult {
   healedEdges?: EdgeRef[];
   /** Sketches on faces: where the face is now (or the plane of an older file with its face's name), for the document to take over. */
   healedPlane?: SketchPlaneRef;
+  /** Tapped holes: their threads, shown as circles. */
+  threads?: CosmeticThread[];
   /** Reference planes, axes and points: where they lie now. */
   reference?: ReferenceGeometry;
   /** Reference geometry whose references were found only by position: the up-to-date references, for the document to take over. */

@@ -694,3 +694,65 @@ test('reference geometry screenshots', async () => {
   await page.screenshot({ path: out('reference-geometry.png') });
   await app.close();
 });
+
+test('hole screenshots', async () => {
+  const { app, page } = await launchApp({ width: 1440, height: 900 });
+  await buildDemoPart(page);
+  // Two points on the base plate's top face, and three on the boss around the bore.
+  await page.evaluate(() => {
+    const hooks = (window as unknown as { __parawerk: { setState(s: unknown): void; getState(): { history: { features: unknown[] } } } }).__parawerk;
+    const P = (id: string, x: number, y: number) => ({ id, type: 'point', x, y });
+    const frame = (z: number) => ({ origin: [0, 0, z], xDir: [1, 0, 0], yDir: [0, 1, 0], normal: [0, 0, 1] });
+    const angle = (k: number) => (2 * Math.PI * k) / 3;
+    const features = [
+      ...hooks.getState().history.features,
+      { id: 'plate-points', type: 'sketch', plane: { kind: 'face', face: 0, name: 'base:top', frame: frame(20) }, sketch: { entities: [P('a', 48, 28), P('b', 48, -28)], constraints: [] } },
+      {
+        id: 'boss-points', type: 'sketch', plane: { kind: 'face', face: 0, name: 'boss:top', frame: frame(55) },
+        sketch: { entities: [0, 1, 2].map((k) => P(`p${k}`, 20 + 17 * Math.cos(angle(k)), 17 * Math.sin(angle(k)))), constraints: [] },
+      },
+    ];
+    hooks.setState({ history: { features, past: [], future: [] } });
+  });
+  await idle(page);
+  await page.evaluate(() => (window as unknown as { __parawerk: { viewport: { zoomToFit(): void } } }).__parawerk.viewport.zoomToFit());
+  await page.waitForTimeout(600);
+  const canvas = await page.locator('.viewport-canvas').boundingBox();
+
+  // Tapped M4 holes in the boss, 10 mm deep.
+  await page.click('[data-command="hole"]');
+  await page.selectOption('[data-testid="hole-sketch"]', 'boss-points');
+  await page.selectOption('[data-testid="hole-kind"]', 'tapped');
+  await page.selectOption('[data-testid="hole-size"]', 'M4');
+  await page.getByRole('radio', { name: 'Depth' }).click();
+  await page.click('[data-testid="panel-ok"]');
+  await idle(page);
+
+  // Counterbores for M6 cap screws in the base plate, shown while they are edited.
+  await page.click('[data-command="hole"]');
+  await page.selectOption('[data-testid="hole-sketch"]', 'plate-points');
+  await page.selectOption('[data-testid="hole-kind"]', 'counterbore');
+  await idle(page);
+  await page.waitForTimeout(600);
+  if (canvas) await page.mouse.move(canvas.x + 20, canvas.y + canvas.height - 20);
+  await page.screenshot({ path: out('hole-counterbore.png') });
+  await page.click('[data-testid="panel-ok"]');
+  await idle(page);
+
+  // Close up on the boss: the threads are drawn as dashed circles of the nominal diameter.
+  await page.evaluate(() => (window as unknown as { __parawerk: { commands: { setView(v: string): void } } }).__parawerk.commands.setView('isometric'));
+  await page.waitForTimeout(500);
+  for (let i = 0; i < 3; i++) {
+    const at = await page.evaluate(() => (window as unknown as { __parawerk: { viewport: { project(x: number, y: number, z: number): { x: number; y: number } } } }).__parawerk.viewport.project(20, 0, 55));
+    if (canvas) {
+      await page.mouse.move(canvas.x + at.x, canvas.y + at.y);
+      await page.mouse.wheel(0, -300);
+    }
+    await page.waitForTimeout(150);
+  }
+  // The pointer rests in the empty part of the feature tree, so nothing in the view is highlighted.
+  if (canvas) await page.mouse.move(canvas.x - 150, canvas.y + canvas.height - 40);
+  await page.waitForTimeout(500);
+  await page.screenshot({ path: out('hole-threads.png') });
+  await app.close();
+});

@@ -618,8 +618,11 @@ int extrudeProfile(const std::vector<double>& profile, const std::vector<double>
   return store().add(result.shape, std::move(result.names));
 }
 
-int revolveProfile(const std::vector<double>& profile, const std::vector<double>& frame, const std::vector<double>& axis, double from, double to,
-                   const std::vector<std::string>& edgeNames, const std::string& name) {
+namespace {
+
+/** The solid of revolveProfile, with its face names, not yet stored. */
+StoredShape revolveRegions(const std::vector<double>& profile, const std::vector<double>& frame, const std::vector<double>& axis, double from, double to,
+                           const std::vector<std::string>& edgeNames, const std::string& name) {
   if (axis.size() != 4) throw KernelError("operation-failed", "an axis needs 4 values");
   if (!(to - from > 1e-9 && to - from <= 2 * M_PI + 1e-9)) throw KernelError("operation-failed", "the angle must be above 0 and up to 360 degrees");
   const occ::handle<Geom_Plane> plane = framePlane(frame);
@@ -638,8 +641,55 @@ int revolveProfile(const std::vector<double>& profile, const std::vector<double>
     if (!revolution.IsDone()) throw KernelError("operation-failed", "the profile could not be revolved");
     solids.push_back({revolution.Shape(), sweepNames(revolution, named, name)});
   }
-  StoredShape result = joinRegions(solids, "revolved");
+  return joinRegions(solids, "revolved");
+}
+
+}  // namespace
+
+int revolveProfile(const std::vector<double>& profile, const std::vector<double>& frame, const std::vector<double>& axis, double from, double to,
+                   const std::vector<std::string>& edgeNames, const std::string& name) {
+  StoredShape result = revolveRegions(profile, frame, axis, from, to, edgeNames, name);
   return store().add(result.shape, std::move(result.names));
+}
+
+int cutHoles(int bodyId, const std::vector<double>& profile, const std::vector<double>& placements, const std::vector<std::string>& edgeNames,
+             const std::string& name) {
+  if (placements.empty() || placements.size() % 6 != 0) throw KernelError("operation-failed", "every hole needs a center and a direction");
+  // One hole around the -Z axis through the origin: profile x is the radius, y the depth (plane v = -Z).
+  const std::vector<double> frame = {0, 0, 0, 1, 0, 0, 0, 1, 0};
+  const StoredShape hole = revolveRegions(profile, frame, {0, 0, 0, 1}, 0, 2 * M_PI, edgeNames, "#");
+  const gp_Ax3 canonical(gp_Pnt(0, 0, 0), gp_Dir(0, 0, -1), gp_Dir(1, 0, 0));
+
+  // Every hole is the same solid moved into place (sharing its geometry), and all are cut in one operation.
+  const StoredShape& body = store().entry(bodyId);
+  NCollection_List<TopoDS_Shape> tools;
+  std::vector<StoredShape> placed;
+  for (size_t k = 0; k < placements.size(); k += 6) {
+    const gp_Pnt center(placements[k], placements[k + 1], placements[k + 2]);
+    const gp_Dir direction(placements[k + 3], placements[k + 4], placements[k + 5]);
+    gp_Trsf move;
+    move.SetDisplacement(canonical, gp_Ax3(center, direction));
+    StoredShape copy{hole.shape.Moved(TopLoc_Location(move)), hole.names};
+    // Faces of hole k are "<name>:<k>:<role>" (the template was named "#:<role>").
+    for (std::string& face : copy.names) face = name.empty() ? std::string() : name + ":" + std::to_string(k / 6) + face.substr(1);
+    tools.Append(copy.shape);
+    placed.push_back(std::move(copy));
+  }
+  BRepAlgoAPI_Cut algorithm;
+  NCollection_List<TopoDS_Shape> arguments;
+  arguments.Append(body.shape);
+  algorithm.SetArguments(arguments);
+  algorithm.SetTools(tools);
+  algorithm.SetRunParallel(parallel);
+  algorithm.Build();
+  if (algorithm.HasErrors()) throw KernelError("operation-failed", "the holes could not be cut");
+  algorithm.SimplifyResult(true, true, 1e-6);
+  const TopoDS_Shape result = algorithm.Shape();
+  if (countSolids(result) == 0) throw KernelError("empty-result", "the holes removed the whole body");
+  FaceNamer namer(result);
+  namer.inherit(algorithm, body.shape, body.names);
+  for (const StoredShape& copy : placed) namer.inherit(algorithm, copy.shape, copy.names);
+  return store().add(result, namer.take());
 }
 
 void setParallel(bool enabled) { parallel = enabled; }

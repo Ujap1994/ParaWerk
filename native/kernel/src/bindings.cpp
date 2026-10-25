@@ -104,6 +104,14 @@ val revolveProfile(val profile, val frame, val axis, double from, double to, val
   });
 }
 
+val cutHoles(int bodyId, val profile, val placements, val edgeNames, std::string name) {
+  return guarded([&] {
+    const std::vector<double> data = emscripten::convertJSArrayToNumberVector<double>(profile);
+    const std::vector<double> places = emscripten::convertJSArrayToNumberVector<double>(placements);
+    return idResult(parawerk::cutHoles(bodyId, data, places, toStringVector(edgeNames), name));
+  });
+}
+
 val fillet(int bodyId, val edgeIndices, double radius, val edgeNames, std::string name) {
   return guarded([&] { return idResult(parawerk::fillet(bodyId, toIntVector(edgeIndices), radius, toStringVector(edgeNames), name)); });
 }
@@ -230,6 +238,7 @@ EMSCRIPTEN_BINDINGS(parawerk_kernel) {
   emscripten::function("booleanOperation", &booleanOperation);
   emscripten::function("extrudeProfile", &extrudeProfile);
   emscripten::function("revolveProfile", &revolveProfile);
+  emscripten::function("cutHoles", &cutHoles);
   emscripten::function("fillet", &fillet);
   emscripten::function("chamfer", &chamfer);
   emscripten::function("release", &parawerk::release);

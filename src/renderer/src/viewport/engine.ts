@@ -30,6 +30,7 @@ import type { LineSegments2 } from 'three/addons/lines/LineSegments2.js';
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
 import type { MeshPayload } from '../../../kernel/protocol.ts';
 import type { Vec3 } from '../../../shared/model/feature.ts';
+import type { CosmeticThread } from '../../../shared/model/hole.ts';
 import { toSketch, type SketchData, type SketchFrame } from '../../../shared/model/sketch.ts';
 import type { NavigationPreset, Projection } from '../../../shared/settings.ts';
 import type { FrameStats, Pick } from '../state/store.ts';
@@ -37,6 +38,7 @@ import { CameraController } from './camera-controller.ts';
 import { AxisTriad } from './axis-triad.ts';
 import { palettes, type ViewportPalette } from './palette.ts';
 import { LostMarkers } from './lost-markers.ts';
+import { CosmeticThreads } from './threads.ts';
 import { pointTexture, ReferenceGeometryLayer, type ReferenceItem } from './reference-geometry.ts';
 import { disposeOverlay, PartModel } from './part-model.ts';
 import { ReferencePlanes, type PlaneDisplay } from './reference-planes.ts';
@@ -184,6 +186,7 @@ export class ViewportEngine {
   private selectionOverlays: (Mesh | LineSegments2 | Sprite)[] = [];
   private hoverOverlay: Mesh | LineSegments2 | Sprite | null = null;
   private readonly referenceGeometry = new ReferenceGeometryLayer();
+  private readonly threads = new CosmeticThreads();
   private readonly vertexMaterials = { hover: new SpriteMaterial({ depthTest: false, transparent: true }), selected: new SpriteMaterial({ depthTest: false, transparent: true }) };
   private bounds = new Sphere(new Vector3(0, 0, 20), 120);
   private fitOnNextBody = true;
@@ -253,7 +256,7 @@ export class ViewportEngine {
     this.pivotMarker = new Mesh(new SphereGeometry(1, 16, 12), new MeshBasicMaterial({ depthTest: false }));
     this.pivotMarker.renderOrder = 10;
     this.pivotMarker.visible = false;
-    this.scene.add(this.pivotMarker, this.lostMarkers.group, this.referenceGeometry.group);
+    this.scene.add(this.pivotMarker, this.lostMarkers.group, this.referenceGeometry.group, this.threads.group);
     const texture = pointTexture();
     this.vertexMaterials.hover.map = texture;
     this.vertexMaterials.selected.map = texture;
@@ -336,6 +339,16 @@ export class ViewportEngine {
 
   get referenceCount(): number {
     return this.referenceGeometry.count;
+  }
+
+  /** The cosmetic threads of tapped holes (see CosmeticThreads). */
+  setThreads(threads: readonly CosmeticThread[]): void {
+    this.threads.set(threads);
+    this.requestRender();
+  }
+
+  get threadCount(): number {
+    return this.threads.count;
   }
 
   /** Marks where lost references were (see LostMarkers). */
@@ -523,6 +536,7 @@ export class ViewportEngine {
     this.pivotMarker.material.color.setHex(p.pivot);
     this.lostMarkers.setColor(p.lost);
     this.referenceGeometry.setPalette(p);
+    this.threads.setColor(p.edge);
     this.vertexMaterials.hover.color.setHex(p.hover);
     this.vertexMaterials.selected.color.setHex(p.selected);
     this.referencePlanes.setPalette(p);
@@ -772,6 +786,7 @@ export class ViewportEngine {
     }
     this.referencePlanes.setResolution(resolution);
     this.referenceGeometry.setResolution(resolution);
+    this.threads.setResolution(resolution);
     this.sketchLayer.setResolution(resolution);
     this.sketchMaterials.setResolution(resolution, this.renderer.getPixelRatio());
     this.requestRender();
@@ -1161,6 +1176,7 @@ export class ViewportEngine {
     this.triad.dispose();
     this.referencePlanes.dispose();
     this.referenceGeometry.dispose();
+    this.threads.dispose();
     this.vertexMaterials.hover.map?.dispose();
     for (const material of Object.values(this.vertexMaterials)) material.dispose();
     this.lostMarkers.dispose();

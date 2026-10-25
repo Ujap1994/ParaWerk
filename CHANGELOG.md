@@ -37,6 +37,11 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
   reference geometry are saved as format version 6.
 - Revolve around a reference axis: *Axis* also lists the part's reference axes; the axis must lie in the
   sketch plane.
+- Hole: holes for ISO metric screws M1.6–M30 at the free points of a sketch – clearance holes (ISO 273
+  fine, medium, coarse), counterbores for ISO 4762, 90° countersinks for ISO 10642 and tapped holes with
+  their tap drill; through all or to a depth with a 118° drill point; dimensions from the standards and
+  changeable. Threads are shown as dashed circles of their nominal diameter. All holes of a feature are cut
+  in one operation (100 holes: 0.3 s instead of 1.2 s as single cuts).
 - Lost edges: a fillet or chamfer whose edges are partly gone after an earlier change still rounds the
   others and shows a yellow warning in the tree instead of failing. Editing it lists the lost edges,
   marks where they were in the 3D view and removes them with one click.

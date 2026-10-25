@@ -1,4 +1,5 @@
 import { EXPRESSION_FIELDS, EXTRUDE_DIRECTIONS, EXTRUDE_ENDS, type Axis, type BooleanOperation, type EdgeRef, type ExtrudeDirection, type ExtrudeEnd, type Feature, type FeatureType, type Variable, type Vec3 } from './feature.ts';
+import { HOLE_FITS, HOLE_KINDS } from './hole.ts';
 import { AXIS_METHODS, PLANE_METHODS, POINT_METHODS, type GeometryRef } from './reference.ts';
 import { parseSketchData, parsePlaneRef } from './validate-sketch.ts';
 
@@ -251,6 +252,31 @@ function parseFeatureFields(raw: Json, path: string): Feature {
         ...(raw.axisRef === undefined ? {} : { axisRef: geometryRef(raw.axisRef, `${path}.axisRef`) }),
         angle: raw.angle,
         direction: raw.direction as ExtrudeDirection,
+      };
+    }
+    case 'hole': {
+      if (typeof raw.sketch !== 'string' || raw.sketch.length > 200) throw new ValidationError('expected a sketch id', `${path}.sketch`);
+      if (typeof raw.size !== 'string' || raw.size.length > 20) throw new ValidationError('expected a size', `${path}.size`);
+      if (typeof raw.reverse !== 'boolean') throw new ValidationError('expected true or false', `${path}.reverse`);
+      if (typeof raw.countersinkAngle !== 'number' || !(raw.countersinkAngle > 0 && raw.countersinkAngle < 180)) {
+        throw new ValidationError('expected an angle between 0 and 180 degrees', `${path}.countersinkAngle`);
+      }
+      return {
+        ...common,
+        type: 'hole',
+        kind: method(raw.kind, HOLE_KINDS, `${path}.kind`),
+        size: raw.size,
+        fit: method(raw.fit, HOLE_FITS, `${path}.fit`),
+        sketch: raw.sketch,
+        end: extrudeEnd(raw.end, `${path}.end`),
+        reverse: raw.reverse,
+        diameter: positiveLength(raw.diameter, `${path}.diameter`),
+        depth: positiveLength(raw.depth, `${path}.depth`),
+        counterboreDiameter: positiveLength(raw.counterboreDiameter, `${path}.counterboreDiameter`),
+        counterboreDepth: positiveLength(raw.counterboreDepth, `${path}.counterboreDepth`),
+        countersinkDiameter: positiveLength(raw.countersinkDiameter, `${path}.countersinkDiameter`),
+        countersinkAngle: raw.countersinkAngle,
+        threadDepth: positiveLength(raw.threadDepth, `${path}.threadDepth`),
       };
     }
     case 'box':

@@ -96,6 +96,7 @@ export function applyFeature(oc: OC, body: TopoDS_Shape | null, feature: KernelF
         break;
       case 'extrude':
       case 'revolve':
+      case 'hole':
         throw new FeatureError('operation-failed', 'sketch-based features need the ParaWerk kernel');
     }
     return arena.keep(result);
