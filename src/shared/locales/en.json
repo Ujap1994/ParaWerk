@@ -325,7 +325,8 @@
     "views": "Standard views",
     "projection": "Toggle perspective",
     "relations": "Show relation symbols",
-    "isometric": "Isometric"
+    "isometric": "Isometric",
+    "section": "Section view"
   },
   "settings": {
     "title": "Settings",
@@ -825,5 +826,18 @@
     "unsupported": "Planes and reference geometry cannot be measured yet.",
     "editing": "Finish the edit to measure.",
     "busy": "Measuring…"
+  },
+  "section": {
+    "title": "Section view",
+    "close": "Close",
+    "plane": "Cut along",
+    "front": "Front",
+    "top": "Top",
+    "right": "Right",
+    "custom": "Selection",
+    "useSelection": "Cut along the selected face or plane",
+    "offset": "Offset",
+    "flip": "Show the other side",
+    "hint": "A view only: the part, its mass and its exports do not change."
   }
 }

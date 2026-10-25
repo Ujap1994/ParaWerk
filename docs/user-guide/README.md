@@ -11,7 +11,7 @@
 
 1. [Getting started](getting-started.md): install ParaWerk and build your first part
 2. [The interface](interface.md): command bar, feature tree, property panel, 3D view, status bar
-3. [Navigating the 3D view](navigation.md): rotate, pan, zoom, view cube and standard views
+3. [Navigating the 3D view](navigation.md): rotate, pan, zoom, view cube, standard views and section view
 4. [Sketches](sketches.md): planes, sketch mode, drawing and editing tools, snapping, relations,
    dimensions, definition status, DXF, and a step-by-step example
 5. [Modeling features](features.md): extrude, revolve, holes, patterns and mirror, box, cylinder, fillet,

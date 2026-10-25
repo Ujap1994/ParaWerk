@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import * as commands from '../commands.ts';
 import { useAppState } from '../state/store.ts';
 import { STANDARD_VIEWS } from '../viewport/views.ts';
-import { ProjectionIcon, RelationsIcon, ViewsIcon, ZoomFitIcon } from './icons.tsx';
+import { ProjectionIcon, RelationsIcon, SectionIcon, ViewsIcon, ZoomFitIcon } from './icons.tsx';
 
 const SHORTCUTS: Record<string, string> = {
   front: '1',
@@ -20,6 +20,7 @@ export function ViewToolbar() {
   const projection = useAppState((state) => state.settings.projection);
   const showRelations = useAppState((state) => state.settings.showSketchRelations);
   const sketching = useAppState((state) => state.sketch !== null);
+  const section = useAppState((state) => state.section !== null);
   const platform = useAppState((state) => state.appInfo?.platform);
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -80,6 +81,17 @@ export function ViewToolbar() {
         onClick={() => commands.runMenuCommand('view.toggleProjection')}
       >
         <ProjectionIcon />
+      </button>
+      <button
+        type="button"
+        className={`icon-button${section ? ' is-active' : ''}`}
+        title={t('viewbar.section')}
+        aria-label={t('viewbar.section')}
+        aria-pressed={section}
+        data-testid="toggle-section"
+        onClick={() => commands.toggleSection()}
+      >
+        <SectionIcon />
       </button>
       {sketching ? (
         <button

@@ -24,6 +24,8 @@ import {
   Vector3,
   WebGLRenderer,
   type Camera,
+  type Intersection,
+  type Object3D,
 } from 'three';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 import type { LineSegments2 } from 'three/addons/lines/LineSegments2.js';
@@ -39,6 +41,7 @@ import { AxisTriad } from './axis-triad.ts';
 import { palettes, type ViewportPalette } from './palette.ts';
 import { LostMarkers } from './lost-markers.ts';
 import { MeasureGraphics, type MeasureLine } from './measure-graphics.ts';
+import { SectionView, type SectionCut } from './section-view.ts';
 import { CosmeticThreads } from './threads.ts';
 import { pointTexture, ReferenceGeometryLayer, type ReferenceItem } from './reference-geometry.ts';
 import { disposeOverlay, PartModel } from './part-model.ts';
@@ -165,6 +168,8 @@ export class ViewportEngine {
   private readonly pivotMarker: Mesh<SphereGeometry, MeshBasicMaterial>;
   private readonly lostMarkers = new LostMarkers();
   private readonly measureGraphics = new MeasureGraphics();
+  private readonly sectionView = new SectionView();
+  private sectionCut: SectionCut | null = null;
   private palette: ViewportPalette = palettes.light;
   /** The part's own color, over the theme's body color. */
   private bodyColor: string | null = null;
@@ -229,7 +234,10 @@ export class ViewportEngine {
       alpha: true,
       powerPreference: 'high-performance',
       preserveDrawingBuffer: false,
+      // The section view finds its caps with the stencil buffer.
+      stencil: true,
     });
+    this.renderer.localClippingEnabled = true;
     this.renderer.setClearColor(0x000000, 0);
     this.renderer.outputColorSpace = SRGBColorSpace;
     this.renderer.toneMapping = NoToneMapping;
@@ -245,6 +253,7 @@ export class ViewportEngine {
       selectedEdge: new LineMaterial({ linewidth: 3.5, worldUnits: false }),
       referenceEdge: new LineMaterial({ linewidth: 1.6, worldUnits: false }),
     };
+    this.sectionView.setClippedMaterials(Object.values(this.materials));
 
     this.hemisphere = new HemisphereLight(0xffffff, 0x888888, 1.9);
     this.scene.add(
@@ -260,7 +269,7 @@ export class ViewportEngine {
     this.pivotMarker = new Mesh(new SphereGeometry(1, 16, 12), new MeshBasicMaterial({ depthTest: false }));
     this.pivotMarker.renderOrder = 10;
     this.pivotMarker.visible = false;
-    this.scene.add(this.pivotMarker, this.lostMarkers.group, this.measureGraphics.group, this.referenceGeometry.group, this.threads.group);
+    this.scene.add(this.pivotMarker, this.lostMarkers.group, this.measureGraphics.group, this.sectionView.group, this.referenceGeometry.group, this.threads.group);
     const texture = pointTexture();
     this.vertexMaterials.hover.map = texture;
     this.vertexMaterials.selected.map = texture;
@@ -325,6 +334,9 @@ export class ViewportEngine {
   }
 
   private applyPreviewMode(): void {
+    // The section caps the body that is shown: the preview while a feature is edited.
+    this.sectionView.attach(this.preview ?? this.body);
+    this.sectionView.set(this.sectionCut, this.bounds);
     if (!this.body) return;
     const previewing = this.preview !== null;
     // Raycasting ignores visibility, so the hidden faces still occlude and pick.
@@ -363,6 +375,17 @@ export class ViewportEngine {
 
   get lostMarkerCount(): number {
     return this.lostMarkers.count;
+  }
+
+  /** Cuts the part open in the view (null: whole part); see SectionView. */
+  setSection(cut: SectionCut | null): void {
+    this.sectionCut = cut;
+    this.sectionView.set(cut, this.bounds);
+    this.requestRender();
+  }
+
+  get sectionActive(): boolean {
+    return this.sectionView.active;
   }
 
   /** Shows the lines of the measure tool (see MeasureGraphics). */
@@ -557,6 +580,7 @@ export class ViewportEngine {
     this.pivotMarker.material.color.setHex(p.pivot);
     this.lostMarkers.setColor(p.lost);
     this.measureGraphics.setColor(p.measure);
+    this.sectionView.setCapColor(p.sectionCap);
     this.referenceGeometry.setPalette(p);
     this.threads.setColor(p.edge);
     this.vertexMaterials.hover.color.setHex(p.hover);
@@ -878,8 +902,8 @@ export class ViewportEngine {
 
     body?.ensureBvh();
     // Faces always occlude what lies behind them, even when they cannot be picked themselves.
-    const faceHit = body ? this.raycaster.intersectObject(body.mesh, false)[0] : undefined;
-    const edgeHit = body && this.pickFilter !== 'planes' && this.pickFilter !== 'faces' ? this.raycaster.intersectObject(body.edges, false)[0] : undefined;
+    const faceHit = body ? this.firstShownHit(body.mesh) : undefined;
+    const edgeHit = body && this.pickFilter !== 'planes' && this.pickFilter !== 'faces' ? this.firstShownHit(body.edges) : undefined;
     const planeHit = this.pickFilter === 'edges' || this.pickFilter === 'faces' ? null : this.referencePlanes.intersect(this.raycaster);
     // Choosing a sketch plane takes reference planes, not axes or points.
     const referenceHit = this.pickFilter === 'edges' || this.pickFilter === 'faces' ? null : this.referenceGeometry.intersect(this.raycaster, this.pickFilter === 'planes' ? 'plane' : undefined);
@@ -922,8 +946,8 @@ export class ViewportEngine {
     this.raycaster.params.Line2 = { threshold: EDGE_PICK_THRESHOLD_PX };
     (this.raycaster as Raycaster & { firstHitOnly?: boolean }).firstHitOnly = true;
     body.ensureBvh();
-    const faceHit = this.raycaster.intersectObject(body.mesh, false)[0];
-    const edgeHit = this.raycaster.intersectObject(body.edges, false)[0];
+    const faceHit = this.firstShownHit(body.mesh);
+    const edgeHit = this.firstShownHit(body.edges);
     const tolerance = (this.controller.state.height / this.height) * 8;
     if (!edgeHit || edgeHit.faceIndex === undefined || edgeHit.faceIndex === null) return null;
     if (faceHit && edgeHit.distance > faceHit.distance + tolerance) return null;
@@ -952,6 +976,17 @@ export class ViewportEngine {
     return this.lastSketchPointer;
   }
 
+  /** The nearest hit of the raycaster on `object` that the section view does not cut away. */
+  private firstShownHit(object: Object3D): Intersection | undefined {
+    if (!this.sectionView.active) return this.raycaster.intersectObject(object, false)[0];
+    const raycaster = this.raycaster as Raycaster & { firstHitOnly?: boolean };
+    const first = raycaster.firstHitOnly;
+    raycaster.firstHitOnly = false;
+    const hit = this.raycaster.intersectObject(object, false).find((candidate) => this.sectionView.keeps(candidate.point));
+    raycaster.firstHitOnly = first;
+    return hit;
+  }
+
   /** Surface point under the cursor, used as rotation pivot. */
   private surfacePointAt(x: number, y: number): Vector3 | null {
     const targets = [this.body?.mesh, this.bench?.group].filter((object) => object !== undefined);
@@ -961,8 +996,8 @@ export class ViewportEngine {
     this.controller.apply(this.ortho, this.perspective, this.aspect(), this.bounds);
     camera.updateMatrixWorld();
     this.raycaster.setFromCamera(this.ndc(x, y), camera);
-    (this.raycaster as Raycaster & { firstHitOnly?: boolean }).firstHitOnly = true;
-    const hit = this.raycaster.intersectObjects(targets, true)[0];
+    (this.raycaster as Raycaster & { firstHitOnly?: boolean }).firstHitOnly = !this.sectionView.active;
+    const hit = this.raycaster.intersectObjects(targets, true).find((candidate) => this.sectionView.keeps(candidate.point));
     return hit ? hit.point.clone() : null;
   }
 
@@ -1205,6 +1240,7 @@ export class ViewportEngine {
     for (const material of Object.values(this.vertexMaterials)) material.dispose();
     this.lostMarkers.dispose();
     this.measureGraphics.dispose();
+    this.sectionView.dispose();
     this.sketchLayer.dispose();
     for (const graphics of this.inactiveSketches.values()) graphics.dispose();
     this.sketchMaterials.dispose();

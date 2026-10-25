@@ -471,7 +471,9 @@ const DENSITIES = ['normal', 'tight', 'icons', 'dense'] as const;
 function fitDensity(bar: HTMLElement): void {
   bar.style.minHeight = '';
   bar.dataset.density = DENSITIES[0];
-  const height = bar.offsetHeight;
+  // Without the horizontal scroll bar that overflowing commands show in the normal density.
+  const style = getComputedStyle(bar);
+  const height = bar.clientHeight + parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth);
   if (bar.scrollWidth <= bar.clientWidth + 1) return;
   bar.style.minHeight = `${height}px`;
   for (const density of DENSITIES.slice(1)) {

@@ -355,6 +355,37 @@ test('measures faces against each other with the measure tool', async () => {
   expect(await lines()).toBe(0);
 });
 
+test('cuts the part open in a section view that picks only what is shown', async () => {
+  launched = await launchApp({ width: 1440, height: 900 });
+  const { page } = launched;
+  await createBox(page);
+  const sectionState = () => page.evaluate(() => (window as unknown as { __parawerk: { getState(): { section: unknown; selection: { kind: string }[] } } }).__parawerk.getState());
+  const sectionShown = () => page.evaluate(() => (window as unknown as { __parawerk: { viewport: { section(): boolean } } }).__parawerk.viewport.section());
+
+  // Along the front plane: the front half (y < 0) is cut away, so the front face can no longer be picked.
+  await page.click('[data-testid="toggle-section"]');
+  await expect(page.locator('[data-testid="section-panel"]')).toBeVisible();
+  expect(await sectionShown()).toBe(true);
+  expect((await sectionState()).section).toEqual({ plane: { kind: 'standard', plane: 'front' }, offset: 0, flip: false });
+  await clickWorldPoint(page, [0, -30, 20]);
+  expect((await sectionState()).selection).toEqual([]);
+  await clickWorldPoint(page, [0, 15, 40]);
+  expect((await sectionState()).selection).toMatchObject([{ kind: 'face' }]);
+
+  // Along the selected top face: the cut starts in the middle of the part.
+  await page.click('[data-testid="section-use-selection"]');
+  expect((await sectionState()).section).toEqual({ plane: { kind: 'custom', point: [0, 0, 40], normal: [0, 0, 1] }, offset: -20, flip: false });
+  await page.locator('[data-testid="section-offset"]').fill('-10');
+  await page.locator('[data-testid="section-flip"]').check();
+  expect((await sectionState()).section).toMatchObject({ offset: -10, flip: true });
+
+  await page.click('[data-testid="toggle-section"]');
+  await expect(page.locator('[data-testid="section-panel"]')).toHaveCount(0);
+  expect(await sectionShown()).toBe(false);
+  await clickWorldPoint(page, [0, -30, 20]);
+  expect((await sectionState()).selection).toMatchObject([{ kind: 'face' }]);
+});
+
 /** Drags a row of the feature tree (a feature or the rollback bar) just above or below another row. */
 async function dragInTree(page: Page, from: string, to: string, where: 'above' | 'below'): Promise<void> {
   const source = await page.locator(from).boundingBox();

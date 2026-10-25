@@ -21,3 +21,22 @@ the interface language.
 
 **Projection.** Orthographic projection is the default for engineering work. Toggle perspective with the
 projection icon in the view toolbar or in the *View* menu.
+
+## Section view
+
+The section icon in the view toolbar cuts the part open, so you can look inside: at wall thicknesses,
+bores and pockets. Where the plane cuts through material, the cut face is filled in a sand color.
+
+![A hub cut open along the front plane](../images/screenshots/section-view.png)
+
+- **Cut along:** the front, top or right plane, or **Selection**: a planar face or a (reference) plane
+  selected in the 3D view or the tree. If one is selected when you turn the section on, the section uses
+  it right away (*Cut along the selected face or plane* switches to it later).
+- **Offset:** moves the cut along the plane's normal; type a value or drag the slider, which covers the
+  whole part. A new section starts through the origin if the part extends there, else through the middle
+  of the part.
+- **Show the other side:** keeps the other half instead.
+
+The section is a view only: the part, its mass properties and its exports do not change. Faces and edges
+that are cut away cannot be picked, so you can select and measure what lies behind the cut. Click the
+section icon again or the ✕ of the panel to see the whole part.

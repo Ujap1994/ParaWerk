@@ -11,6 +11,8 @@ export interface ViewportPalette {
   reference: number;
   /** Lines and points of the measure tool. */
   measure: number;
+  /** Where the section view cuts through material. */
+  sectionCap: number;
   /** Standard planes. */
   plane: number;
   /** Sketch grid lines. */
@@ -50,6 +52,7 @@ export const palettes: Record<'light' | 'dark', ViewportPalette> = {
     lost: 0xd12d2d,
     reference: 0x0f8b8d,
     measure: 0x7c3aed,
+    sectionCap: 0xd6a35c,
     plane: 0x2a63c9,
     grid: 0x2c3a4f,
     axisX: 0xe5484d,
@@ -80,6 +83,7 @@ export const palettes: Record<'light' | 'dark', ViewportPalette> = {
     lost: 0xff6b6b,
     reference: 0x3fc4c6,
     measure: 0xb197fc,
+    sectionCap: 0xb98a4b,
     plane: 0x6c9cf5,
     grid: 0xb4c0d2,
     axisX: 0xf06368,

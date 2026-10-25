@@ -8,6 +8,9 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### Added
+- Section view: cuts the part open along the front, top or right plane or a selected planar face or
+  plane, with an offset and either side shown; cut faces are filled (stencil caps), and cut-away faces and
+  edges cannot be picked. A view only: part, mass and exports do not change.
 - Measure tool: pick faces, edges and vertices in the 3D view; one pick shows its kind and size (area,
   length, diameter, center, position), two picks the shortest distance (with dX, dY, dZ), the angle
   between planes and lines, the distance of parallel planes and the distance of centers and axes. The
@@ -73,6 +76,8 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
   marks where they were in the 3D view and removes them with one click.
 
 ### Fixed
+- The command bar no longer grows by the height of a scroll bar when its commands only fit in a denser layout,
+  so the 3D view keeps its size when switching command tabs.
 - Dimensions can refer to edges of the part: pick a circle (its center), a point or a line, then an edge of
   the part, for example to place a hole relative to the edge of a face. The edge becomes fixed construction
   geometry of the sketch. After the first pick, moving over a second entity previews the dimension

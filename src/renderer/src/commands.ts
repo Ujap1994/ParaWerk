@@ -37,6 +37,7 @@ import { regenerate, variablesFeature } from './variables.ts';
 import { kernel, whenIdle } from './state/rebuild.ts';
 import { getState, modelEnd, partProperties, setHistory, setState, showToast, type AppState, type CommandTab, type Pick } from './state/store.ts';
 import type { SketchToolName } from './sketch/tools.ts';
+import { offsetRange, type SectionPlane, type SectionSettings } from './section.ts';
 import { sketchToolControl, viewport } from './viewport/registry.ts';
 import type { StandardView } from './viewport/views.ts';
 
@@ -727,6 +728,58 @@ export function setMaterial(material: PartMaterial | null): void {
   const next: PartProperties = material ? { ...rest, material } : rest;
   if (JSON.stringify(next) === JSON.stringify(properties)) return;
   setHistory(commit(state.history, state.history.features, next));
+}
+
+/** The plane of a selected planar face or reference plane, for a section view. */
+function sectionPlaneOfSelection(): SectionPlane | null {
+  const state = getState();
+  const pick = state.selection.length === 1 ? state.selection[0] : undefined;
+  if (pick?.kind === 'plane') {
+    const plane = STANDARD_PLANES[pick.index];
+    return plane ? { kind: 'standard', plane } : null;
+  }
+  const plane = pick ? sketchPlaneOf(pick) : null;
+  if (!plane) return null;
+  const frame = frameOf(plane);
+  return { kind: 'custom', point: frame.origin, normal: frame.normal };
+}
+
+/** Where a new section cuts: through the origin if the part is there, else through its middle. */
+function sectionOffset(plane: SectionPlane): number {
+  const properties = getState().rebuild?.properties;
+  if (!properties) return 0;
+  const [low, high] = offsetRange(plane, properties.bboxMin, properties.bboxMax);
+  // The bounding box is a little larger than the part (by the tolerance of its faces).
+  const margin = 1e-3;
+  return low < -margin && high > margin ? 0 : Math.round(((low + high) / 2) * 1000) / 1000;
+}
+
+/**
+ * Turns the section view on or off. It cuts along the selected planar face or plane, if there is one,
+ * else along the front plane.
+ */
+export function toggleSection(on = getState().section === null): void {
+  if (!on) {
+    setState({ section: null });
+    return;
+  }
+  const plane = sectionPlaneOfSelection() ?? { kind: 'standard', plane: 'front' };
+  setState({ section: { plane, offset: sectionOffset(plane), flip: false } });
+}
+
+/** Changes the section view; another plane starts at its own middle offset. */
+export function updateSection(patch: Partial<SectionSettings>): void {
+  const section = getState().section;
+  if (!section) return;
+  const plane = patch.plane ?? section.plane;
+  const offset = patch.offset ?? (patch.plane ? sectionOffset(plane) : section.offset);
+  setState({ section: { ...section, ...patch, plane, offset } });
+}
+
+/** Cuts the section view along the selected planar face or plane. */
+export function sectionAlongSelection(): void {
+  const plane = sectionPlaneOfSelection();
+  if (plane) updateSection({ plane });
 }
 
 /** Turns the measure tool on or off; what is selected is measured right away. */

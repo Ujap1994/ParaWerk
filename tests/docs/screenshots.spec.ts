@@ -913,3 +913,25 @@ test('measure screenshots', async () => {
   await page.screenshot({ path: out('measure.png') });
   await app.close();
 });
+
+test('section view screenshots', async () => {
+  const { app, page } = await launchApp({ width: 1440, height: 900 });
+  // A hollow hub: a flange with a boss, a stepped bore and a pocket from below.
+  await page.evaluate(() => {
+    const features = [
+      { id: 'plate', type: 'box', operation: 'add', width: 100, depth: 70, height: 15, position: [0, 0, 0] },
+      { id: 'boss', type: 'cylinder', operation: 'add', radius: 22, height: 30, axis: 'z', position: [0, 0, 15] },
+      { id: 'bore', type: 'cylinder', operation: 'cut', radius: 9, height: 60, axis: 'z', position: [0, 0, -5] },
+      { id: 'counterbore', type: 'cylinder', operation: 'cut', radius: 15, height: 12, axis: 'z', position: [0, 0, 33] },
+      { id: 'pocket', type: 'box', operation: 'cut', width: 70, depth: 50, height: 8, position: [0, 0, -1] },
+    ];
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features, past: [], future: [] }, savedFeatures: features, fileName: 'Hub' });
+  });
+  await idle(page);
+  await page.evaluate(() => (window as unknown as { __parawerk: { viewport: { zoomToFit(): void } } }).__parawerk.viewport.zoomToFit());
+  await page.click('[data-testid="toggle-section"]');
+  await idle(page);
+  await page.waitForTimeout(600);
+  await page.screenshot({ path: out('section-view.png') });
+  await app.close();
+});

@@ -7,6 +7,7 @@ import { NO_PROPERTIES, type PartProperties } from '../../../shared/model/materi
 import { DEFAULT_SETTINGS, type Settings } from '../../../shared/settings.ts';
 import type { FeatureResult, MassProperties, MeshPayload } from '../../../kernel/protocol.ts';
 import type { MeasureResult } from '../../../kernel/measure.ts';
+import type { SectionSettings } from '../section.ts';
 import type { SketchSession } from '../sketch/session.ts';
 import type { SketchAnalysis } from './sketch-status.ts';
 import type { SketchToolName } from '../sketch/tools.ts';
@@ -113,6 +114,8 @@ export interface AppState {
   dialogs: { settings: boolean; about: boolean; material: boolean };
   /** The mass properties panel over the 3D view. */
   showMassProperties: boolean;
+  /** The section view (null: the whole part is shown). */
+  section: SectionSettings | null;
   /** The measure tool: clicks pick up to two faces, edges or vertices, which are measured. */
   measuring: boolean;
   /** What the measure tool found for the picks in `targets` (null while it measures, or without picks). */
@@ -154,6 +157,7 @@ export const initialState: AppState = {
   commandTab: 'features',
   dialogs: { settings: false, about: false, material: false },
   showMassProperties: false,
+  section: null,
   measuring: false,
   measurement: null,
   toasts: [],

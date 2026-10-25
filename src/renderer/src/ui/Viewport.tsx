@@ -16,6 +16,8 @@ import type { CubeFace } from '../viewport/view-cube.ts';
 import { ViewToolbar } from './ViewToolbar.tsx';
 import { MassPropertiesPanel } from './MassPropertiesPanel.tsx';
 import { measureLines, MeasurePanel } from './MeasurePanel.tsx';
+import { SectionPanel } from './SectionPanel.tsx';
+import { sectionCut } from '../section.ts';
 
 function cubeLabels(t: (key: string) => string): Record<CubeFace, string> {
   return {
@@ -209,6 +211,7 @@ export function Viewport() {
       ) {
         engine.setMeasureLines(measureLines(state));
       }
+      if (!previous || state.section !== previous.section) engine.setSection(state.section ? sectionCut(state.section) : null);
       if (!previous || state.effectiveTheme !== previous.effectiveTheme) engine.setTheme(state.effectiveTheme);
       if (!previous || state.history.properties !== previous.history.properties) engine.setBodyColor(partColor(partProperties(state.history)));
       if (!previous || state.language !== previous.language) engine.setDimensionLanguage(state.language);
@@ -243,8 +246,11 @@ export function Viewport() {
       <div ref={containerRef} className="viewport-surface" />
       <div ref={cursorInfoRef} className="sketch-cursor-info" data-testid="sketch-cursor-info" hidden />
       <ViewToolbar />
-      <MassPropertiesPanel />
-      <MeasurePanel />
+      <div className="viewport-panels">
+        <SectionPanel />
+        <MeasurePanel />
+        <MassPropertiesPanel />
+      </div>
     </div>
   );
 }

@@ -27,6 +27,7 @@ export function installTestHooks(): void {
       zoomToFit: () => viewport()?.zoomToFit(false),
       lostMarkers: () => viewport()?.lostMarkerCount ?? 0,
       measureLines: () => viewport()?.measureLineCount ?? 0,
+      section: () => viewport()?.sectionActive ?? false,
       references: () => viewport()?.referenceCount ?? 0,
       threads: () => viewport()?.threadCount ?? 0,
     },

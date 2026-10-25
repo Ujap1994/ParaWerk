@@ -221,6 +221,16 @@ export const MassPropertiesIcon = (p: P) => (
   </Icon>
 );
 
+/** Section view: a block cut open, its cut face hatched. */
+export const SectionIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="M4 9.5 12 5.5l8 4v6l-8 4-8-4z" />
+    <path d="M4 9.5l8 4 8-4M12 13.5v6" />
+    <path d="M6.5 13.6l2.5-1.3M6.5 16.6l4-2M9.5 17.9l1.5-.8" />
+    <path d="M2.5 4.5h19" strokeDasharray="2 2.2" />
+  </Icon>
+);
+
 /** Measure: a ruler laid at an angle, with its ticks. */
 export const MeasureIcon = (p: P) => (
   <Icon {...p}>

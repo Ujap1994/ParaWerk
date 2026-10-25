@@ -325,7 +325,8 @@
     "views": "Standardansichten",
     "projection": "Perspektive umschalten",
     "relations": "Beziehungssymbole anzeigen",
-    "isometric": "Isometrisch"
+    "isometric": "Isometrisch",
+    "section": "Schnittansicht"
   },
   "settings": {
     "title": "Einstellungen",
@@ -825,5 +826,18 @@
     "unsupported": "Ebenen und Referenzgeometrie können noch nicht gemessen werden.",
     "editing": "Zum Messen die Bearbeitung beenden.",
     "busy": "Messen…"
+  },
+  "section": {
+    "title": "Schnittansicht",
+    "close": "Schließen",
+    "plane": "Schnitt entlang",
+    "front": "Vorne",
+    "top": "Oben",
+    "right": "Rechts",
+    "custom": "Auswahl",
+    "useSelection": "Entlang der gewählten Fläche oder Ebene schneiden",
+    "offset": "Abstand",
+    "flip": "Andere Seite zeigen",
+    "hint": "Nur eine Ansicht: Teil, Masse und Exporte ändern sich nicht."
   }
 }
