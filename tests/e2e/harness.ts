@@ -65,3 +65,31 @@ export async function idle(page: Page): Promise<void> {
     await hooks.whenIdle();
   });
 }
+
+/**
+ * Ends the app the hard way, as a crash would (no close handlers run), and waits until it is gone.
+ * Windows ends the helper processes (GPU, renderer) a moment after the main process; until then they keep
+ * the profile in use and a new instance with the same profile cannot start.
+ */
+export async function crashApp(app: ElectronApplication): Promise<void> {
+  const child = app.process();
+  const exited = new Promise<void>((resolve) => {
+    if (child.exitCode !== null || child.signalCode !== null) resolve();
+    else child.once('exit', () => resolve());
+  });
+  child.kill('SIGKILL');
+  await exited;
+  if (process.platform === 'win32') await new Promise((resolve) => setTimeout(resolve, 3000));
+}
+
+/** Starts the app again after crashApp; retries while the old instance still holds the profile. */
+export async function relaunchApp(options: LaunchOptions, attempts = 5): Promise<LaunchedApp> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await launchApp(options);
+    } catch (error) {
+      if (attempt >= attempts) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+  }
+}

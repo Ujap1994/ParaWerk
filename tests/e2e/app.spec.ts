@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { spawn } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { idle, launchApp, repoRoot, type LaunchedApp } from './harness.ts';
+import { crashApp, idle, launchApp, relaunchApp, repoRoot, type LaunchedApp } from './harness.ts';
 
 interface HookState {
   history: { features: { type: string; id: string; suppressed?: boolean }[] };
@@ -444,8 +444,8 @@ test('offers unsaved work after a crash, but not after a clean close', async () 
   await flush(page);
 
   // The process is killed: the recovery copy stays and is offered at the next start.
-  launched.app.process().kill('SIGKILL');
-  launched = await launchApp({ userData });
+  await crashApp(launched.app);
+  launched = await relaunchApp({ userData });
   page = launched.page;
   await expect(page.locator('[data-testid="recovery-dialog"]')).toBeVisible();
   await expect(page.locator('.recovery-entry')).toHaveCount(1);
