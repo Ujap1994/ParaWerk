@@ -111,6 +111,10 @@ function parseConstraint(raw: unknown, path: string): SketchConstraint {
     if (type === 'angle' && Math.abs(value) > 2 * Math.PI) throw new ValidationError('expected an angle in radians', `${path}.value`);
     result.value = value;
     result.driving = flag(raw.driving, `${path}.driving`) ?? true;
+    if (raw.expression !== undefined) {
+      if (typeof raw.expression !== 'string' || raw.expression.trim().length === 0 || raw.expression.length > 500) throw new ValidationError('expected an expression', `${path}.expression`);
+      result.expression = raw.expression;
+    }
     if (raw.offset !== undefined) {
       if (!Array.isArray(raw.offset) || raw.offset.length !== 2) throw new ValidationError('expected [x, y]', `${path}.offset`);
       result.offset = [coordinate(raw.offset[0], `${path}.offset[0]`), coordinate(raw.offset[1], `${path}.offset[1]`)];

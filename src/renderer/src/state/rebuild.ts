@@ -121,6 +121,9 @@ function applyResult(
   let display: DisplayMeshes;
   if (sketch) {
     display = { body: meshes.get(last) ?? null, preview: null, pickable: false };
+  } else if (activeEdit?.draft.type === 'variables') {
+    // While the variables are edited, the whole part stays as it is (see rebuildPlan).
+    display = { body: meshes.get(last) ?? null, preview: null, pickable: false };
   } else if (!activeEdit) {
     display = { body: meshes.get(last) ?? null, preview: null, pickable: true };
   } else if (isEdgeFeature(activeEdit.draft)) {

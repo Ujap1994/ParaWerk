@@ -97,18 +97,26 @@ export type SketchRelation =
   | (ConstraintBase & { type: 'symmetric'; a: string; b: string; line: string })
   | (ConstraintBase & { type: 'fix'; point: string });
 
+interface DimensionBase {
+  value: number;
+  driving: boolean;
+  offset?: [number, number];
+  /** The value as an expression over the part's variables; `value` holds its current result. */
+  expression?: string;
+}
+
 /**
  * Dimensions. A driving dimension controls the geometry; a driven (reference) dimension
  * only displays the current value. `offset` positions the label in sketch coordinates,
  * relative to the dimension's anchor.
  */
 export type SketchDimension =
-  | (ConstraintBase & { type: 'distance'; a: string; b: string; value: number; driving: boolean; offset?: [number, number] })
-  | (ConstraintBase & { type: 'horizontalDistance'; a: string; b: string; value: number; driving: boolean; offset?: [number, number] })
-  | (ConstraintBase & { type: 'verticalDistance'; a: string; b: string; value: number; driving: boolean; offset?: [number, number] })
-  | (ConstraintBase & { type: 'radius'; circle: string; value: number; driving: boolean; offset?: [number, number] })
-  | (ConstraintBase & { type: 'diameter'; circle: string; value: number; driving: boolean; offset?: [number, number] })
-  | (ConstraintBase & { type: 'angle'; a: string; b: string; value: number; driving: boolean; offset?: [number, number] });
+  | (ConstraintBase & DimensionBase & { type: 'distance'; a: string; b: string })
+  | (ConstraintBase & DimensionBase & { type: 'horizontalDistance'; a: string; b: string })
+  | (ConstraintBase & DimensionBase & { type: 'verticalDistance'; a: string; b: string })
+  | (ConstraintBase & DimensionBase & { type: 'radius'; circle: string })
+  | (ConstraintBase & DimensionBase & { type: 'diameter'; circle: string })
+  | (ConstraintBase & DimensionBase & { type: 'angle'; a: string; b: string });
 
 export type SketchConstraint = SketchRelation | SketchDimension;
 

@@ -2,7 +2,8 @@
  * Arithmetic typed into number fields and dimension values: + − × ÷ (also * and /), powers (^),
  * parentheses, π (pi), sqrt, abs and the trigonometric functions in degrees; a number or a bracket
  * may carry a length unit (mm, cm, m, in, "), which converts it to millimeters. Both "." and "," are
- * decimal separators, because German users naturally type a comma. Nothing is ever evaluated as code.
+ * decimal separators, because German users naturally type a comma. Names that are not one of these
+ * refer to the part's variables. Nothing is ever evaluated as code.
  */
 
 const UNITS: Record<string, number> = { mm: 1, cm: 10, m: 1000, in: 25.4, '"': 25.4 };
@@ -15,6 +16,14 @@ const FUNCTIONS: Record<string, (x: number) => number> = {
   tan: (x) => Math.tan(x * DEGREES),
 };
 const OPERATORS: Record<string, string> = { '×': '*', '·': '*', '÷': '/', '−': '-' };
+
+/** Names an expression cannot use for variables (case does not matter). */
+const RESERVED = new Set([...Object.keys(UNITS), ...Object.keys(FUNCTIONS), 'pi', 'π']);
+
+/** Whether `name` can name a variable: a letter or underscore, then letters, digits and underscores. */
+export function isVariableName(name: string): boolean {
+  return /^[A-Za-z_][A-Za-z0-9_]*$/.test(name) && !RESERVED.has(name.toLowerCase()) && name.length <= 64;
+}
 
 type Token = { kind: 'number'; value: number } | { kind: 'name'; value: string } | { kind: 'symbol'; value: string };
 
@@ -33,7 +42,7 @@ function tokenize(text: string): Token[] | null {
       i += number[0].length;
       continue;
     }
-    const name = /^[a-zA-Zπ]+/.exec(text.slice(i));
+    const name = /^([a-zA-Z_][a-zA-Z0-9_]*|π)/.exec(text.slice(i));
     if (name) {
       tokens.push({ kind: 'name', value: name[0].toLowerCase() });
       i += name[0].length;
@@ -47,8 +56,21 @@ function tokenize(text: string): Token[] | null {
   return tokens;
 }
 
-/** The value of an expression, or null if it is not one (or not a finite number). */
-export function evaluate(text: string): number | null {
+/** The variable names an expression uses (lower case), or null if it is not an expression. */
+export function variableNames(text: string): string[] | null {
+  const tokens = tokenize(text);
+  if (!tokens) return null;
+  const names = new Set<string>();
+  // Units, functions and π are reserved, so every other name is a variable.
+  for (const token of tokens) if (token.kind === 'name' && !RESERVED.has(token.value)) names.add(token.value);
+  return [...names];
+}
+
+/**
+ * The value of an expression, or null if it is not one (or not a finite number). Variables are looked
+ * up by lower-case name.
+ */
+export function evaluate(text: string, variables: ReadonlyMap<string, number> = new Map()): number | null {
   const tokens = tokenize(text);
   if (!tokens || tokens.length === 0) return null;
   let position = 0;
@@ -87,6 +109,8 @@ export function evaluate(text: string): number | null {
     }
     if (token.kind === 'name') {
       if (token.value === 'pi' || token.value === 'π') return Math.PI;
+      const variable = variables.get(token.value);
+      if (variable !== undefined && !isSymbol('(')) return unit(variable);
       const fn = FUNCTIONS[token.value];
       if (fn && isSymbol('(')) {
         position++;

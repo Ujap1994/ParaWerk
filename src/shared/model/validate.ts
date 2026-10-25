@@ -1,4 +1,4 @@
-import type { Axis, BooleanOperation, EdgeRef, Feature, Vec3 } from './feature.ts';
+import { EXPRESSION_FIELDS, type Axis, type BooleanOperation, type EdgeRef, type Feature, type FeatureType, type Variable, type Vec3 } from './feature.ts';
 import { parseSketchData, parsePlaneRef } from './validate-sketch.ts';
 
 export class ValidationError extends Error {
@@ -79,10 +79,52 @@ function base(raw: Json, path: string): { id: string; name?: string; suppressed?
 }
 
 /** Parses untrusted data (e.g. from a file) into a feature, or throws a ValidationError. */
+/** Longest expression text; longer ones are damaged or hostile data. */
+const MAX_EXPRESSION_LENGTH = 500;
+const MAX_VARIABLES = 1000;
+
+export function expressionText(value: unknown, path: string): string {
+  if (typeof value !== 'string' || value.trim().length === 0 || value.length > MAX_EXPRESSION_LENGTH) throw new ValidationError('expected an expression', path);
+  return value;
+}
+
+function variables(value: unknown, path: string): Variable[] {
+  if (!Array.isArray(value) || value.length > MAX_VARIABLES) throw new ValidationError('expected a list of variables', path);
+  const names = new Set<string>();
+  return value.map((item, i) => {
+    const p = `${path}[${i}]`;
+    if (!isObject(item) || typeof item.name !== 'string' || !/^[A-Za-z_][A-Za-z0-9_]{0,63}$/.test(item.name)) throw new ValidationError('expected a variable name', `${p}.name`);
+    if (names.has(item.name.toLowerCase())) throw new ValidationError(`duplicate variable ${item.name}`, `${p}.name`);
+    names.add(item.name.toLowerCase());
+    return { name: item.name, expression: expressionText(item.expression, `${p}.expression`) };
+  });
+}
+
+/** Expressions of a feature's parameters: only the fields of its type that take them. */
+function expressions(value: unknown, type: FeatureType, path: string): Record<string, string> | undefined {
+  if (value === undefined) return undefined;
+  if (!isObject(value)) throw new ValidationError('expected expressions', path);
+  const allowed = EXPRESSION_FIELDS[type];
+  const result: Record<string, string> = {};
+  for (const [field, text] of Object.entries(value)) {
+    if (!allowed.includes(field)) throw new ValidationError(`no expression allowed for ${field}`, `${path}.${field}`);
+    result[field] = expressionText(text, `${path}.${field}`);
+  }
+  return result;
+}
+
 export function parseFeature(raw: unknown, path = 'feature'): Feature {
   if (!isObject(raw)) throw new ValidationError('expected an object', path);
+  const feature = parseFeatureFields(raw, path);
+  const parsed = expressions(raw.expressions, feature.type, `${path}.expressions`);
+  return parsed && Object.keys(parsed).length > 0 ? { ...feature, expressions: parsed } : feature;
+}
+
+function parseFeatureFields(raw: Json, path: string): Feature {
   const common = base(raw, path);
   switch (raw.type) {
+    case 'variables':
+      return { ...common, type: 'variables', variables: variables(raw.variables, `${path}.variables`) };
     case 'sketch':
       return {
         ...common,

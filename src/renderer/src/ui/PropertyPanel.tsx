@@ -5,6 +5,7 @@ import { hasBodyBefore } from '../state/document.ts';
 import { useAppState } from '../state/store.ts';
 import { CheckIcon, CloseIcon, FEATURE_ICONS } from './icons.tsx';
 import { NumberField } from './NumberField.tsx';
+import { VariablesEditor, variablesValid } from './VariablesPanel.tsx';
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -98,9 +99,9 @@ function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
         <>
           <Section title={t('panel.parameters')}>
             <OperationField value={draft.operation} firstFeature={firstFeature} />
-            <NumberField label={t('panel.width')} value={draft.width} testId="box-width" onChange={(width) => commands.updateDraft({ width })} />
-            <NumberField label={t('panel.depth')} value={draft.depth} testId="box-depth" onChange={(depth) => commands.updateDraft({ depth })} />
-            <NumberField label={t('panel.height')} value={draft.height} testId="box-height" onChange={(height) => commands.updateDraft({ height })} />
+            <NumberField label={t('panel.width')} value={draft.width} testId="box-width" {...equation(draft, 'width')} onChange={(width) => commands.updateDraft({ width })} />
+            <NumberField label={t('panel.depth')} value={draft.depth} testId="box-depth" {...equation(draft, 'depth')} onChange={(depth) => commands.updateDraft({ depth })} />
+            <NumberField label={t('panel.height')} value={draft.height} testId="box-height" {...equation(draft, 'height')} onChange={(height) => commands.updateDraft({ height })} />
           </Section>
           <Section title={t('panel.position')}>
             <PositionFields value={draft.position} onChange={(position) => commands.updateDraft({ position })} />
@@ -112,8 +113,8 @@ function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
         <>
           <Section title={t('panel.parameters')}>
             <OperationField value={draft.operation} firstFeature={firstFeature} />
-            <NumberField label={t('panel.radius')} value={draft.radius} testId="cylinder-radius" onChange={(radius) => commands.updateDraft({ radius })} />
-            <NumberField label={t('panel.height')} value={draft.height} testId="cylinder-height" onChange={(height) => commands.updateDraft({ height })} />
+            <NumberField label={t('panel.radius')} value={draft.radius} testId="cylinder-radius" {...equation(draft, 'radius')} onChange={(radius) => commands.updateDraft({ radius })} />
+            <NumberField label={t('panel.height')} value={draft.height} testId="cylinder-height" {...equation(draft, 'height')} onChange={(height) => commands.updateDraft({ height })} />
             <Segmented<Axis>
               label={t('panel.axis')}
               value={draft.axis}
@@ -133,15 +134,17 @@ function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
     case 'sketch':
       // Sketches are edited in sketch mode, not in the property panel.
       return null;
+    case 'variables':
+      return <VariablesEditor draft={draft} />;
     case 'fillet':
     case 'chamfer':
       return (
         <>
           <Section title={t('panel.parameters')}>
             {draft.type === 'fillet' ? (
-              <NumberField label={t('panel.radius')} value={draft.radius} testId="fillet-radius" step={0.5} onChange={(radius) => commands.updateDraft({ radius })} />
+              <NumberField label={t('panel.radius')} value={draft.radius} testId="fillet-radius" {...equation(draft, 'radius')} step={0.5} onChange={(radius) => commands.updateDraft({ radius })} />
             ) : (
-              <NumberField label={t('panel.distance')} value={draft.distance} testId="chamfer-distance" step={0.5} onChange={(distance) => commands.updateDraft({ distance })} />
+              <NumberField label={t('panel.distance')} value={draft.distance} testId="chamfer-distance" {...equation(draft, 'distance')} step={0.5} onChange={(distance) => commands.updateDraft({ distance })} />
             )}
           </Section>
           <Section title={t('panel.edges')}>
@@ -158,6 +161,12 @@ function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
   }
 }
 
+/** Props that let a parameter field take an equation over the part's variables. */
+function equation(draft: Feature, field: string): { expression?: string; onExpression(text: string | undefined): void } {
+  const expression = draft.expressions?.[field];
+  return { ...(expression !== undefined ? { expression } : {}), onExpression: (text) => commands.setDraftExpression(field, text) };
+}
+
 export function PropertyPanel() {
   const { t } = useTranslation();
   const edit = useAppState((state) => state.activeEdit);
@@ -168,6 +177,8 @@ export function PropertyPanel() {
   const featureLabel = t(`features.${edit.draft.type}`);
   const title = edit.mode === 'create' ? t('panel.creating', { feature: featureLabel }) : t('panel.editing', { feature: featureLabel });
   const error = result?.id === edit.draft.id && result.status === 'error' ? result.error : undefined;
+  // Variables are applied only when every one has a valid name and a value.
+  const applicable = edit.draft.type !== 'variables' || variablesValid(edit.draft.variables);
 
   return (
     <section
@@ -176,7 +187,7 @@ export function PropertyPanel() {
       onKeyDown={(event) => {
         if (event.key === 'Enter') {
           event.preventDefault();
-          commands.commitEdit();
+          if (applicable) commands.commitEdit();
         } else if (event.key === 'Escape') {
           event.preventDefault();
           commands.cancelEdit();
@@ -187,7 +198,7 @@ export function PropertyPanel() {
         <Icon className="property-icon" />
         <h2 className="panel-title">{title}</h2>
         <div className="confirm-buttons">
-          <button type="button" className="confirm-button is-ok" title={`${t('panel.ok')} (Enter)`} aria-label={t('panel.ok')} data-testid="panel-ok" onClick={commands.commitEdit}>
+          <button type="button" className="confirm-button is-ok" title={`${t('panel.ok')} (Enter)`} aria-label={t('panel.ok')} data-testid="panel-ok" disabled={!applicable} onClick={commands.commitEdit}>
             <CheckIcon />
           </button>
           <button type="button" className="confirm-button is-cancel" title={`${t('panel.cancel')} (Esc)`} aria-label={t('panel.cancel')} data-testid="panel-cancel" onClick={commands.cancelEdit}>

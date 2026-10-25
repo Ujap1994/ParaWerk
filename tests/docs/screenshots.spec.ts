@@ -441,6 +441,25 @@ test('README and user guide screenshots', async () => {
   }, model);
   await idle(page);
 
+  // Variables: a list of named values, and a box whose sizes follow them.
+  await page.evaluate(() => {
+    const features = [
+      { id: 'vars', type: 'variables', variables: [{ name: 'width', expression: '120' }, { name: 'depth', expression: 'width / 2' }, { name: 'thickness', expression: '15' }, { name: 'hole', expression: 'thickness * 1.2' }] },
+      { id: 'plate', type: 'box', operation: 'add', width: 120, depth: 60, height: 15, position: [0, 0, 0], expressions: { width: 'width', depth: 'depth', height: 'thickness' } },
+      { id: 'bore', type: 'cylinder', operation: 'cut', radius: 18, height: 40, axis: 'z', position: [0, 0, -10], expressions: { radius: 'hole' } },
+    ];
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features, past: [], future: [] } });
+  });
+  await idle(page);
+  await page.click('[data-command="variables"]');
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: out('variables.png') });
+  await page.click('[data-testid="panel-cancel"]');
+  await page.dblclick('.tree-item[data-feature-id="plate"]');
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: out('variables-parameters.png') });
+  await page.click('[data-testid="panel-cancel"]');
+
   await page.click('[data-command="settings"]');
   await page.waitForTimeout(300);
   await page.screenshot({ path: out('settings-dialog.png') });

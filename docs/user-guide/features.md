@@ -26,6 +26,27 @@ so you can keep picking.
 
 Bevels edges with an equal *Distance* on both faces. Edge selection works like for fillets.
 
+## Variables and equations
+
+**Variables** (in the *Features* tab) holds named values for the whole part – a width, a wall thickness,
+a hole diameter. Each one has a *Value or equation*: a number such as `120`, or a calculation that uses
+other variables, such as `width / 2` or `thickness * 1.2`. The *Result* column shows what it comes to;
+a name that is not allowed, a name used twice, an unknown name or a variable that depends on itself is
+explained right in the row, and **✓** stays disabled until everything is valid.
+
+![The variables of a part: values and equations with their results](../images/screenshots/variables.png)
+
+To use a variable, type its name – or an equation with it – into a parameter field instead of a number:
+`width`, `depth - 2*thickness`. The field keeps the equation and shows its result below. When you change
+a variable later, every parameter and every sketch dimension that uses it follows, and the part is
+rebuilt – all in one step that **Undo** reverts. Typing a plain number turns the parameter back into a
+fixed value.
+
+![A box whose width, depth and height follow variables](../images/screenshots/variables-parameters.png)
+
+Names start with a letter or `_` and may contain letters, digits and `_`; upper and lower case do not
+matter. Units and functions (`mm`, `in`, `sin`, `sqrt`, `pi`, …) cannot be used as names.
+
 ## Editing features
 
 - **Edit:** double-click a feature in the tree or use the pencil icon. Features below it are rolled back

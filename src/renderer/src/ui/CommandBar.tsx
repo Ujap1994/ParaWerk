@@ -48,6 +48,7 @@ import {
   ThreePointArcIcon,
   TrashIcon,
   UndoIcon,
+  VariablesIcon,
 } from './icons.tsx';
 
 type IconType = ComponentType<SVGProps<SVGSVGElement>>;
@@ -119,6 +120,7 @@ const FEATURE_BUTTONS: { type: FeatureType; icon: IconType }[] = [
   { type: 'cylinder', icon: CylinderIcon },
   { type: 'fillet', icon: FilletIcon },
   { type: 'chamfer', icon: ChamferIcon },
+  { type: 'variables', icon: VariablesIcon },
 ];
 
 const TABS: CommandTab[] = ['features', 'sketch'];

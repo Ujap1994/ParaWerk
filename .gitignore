@@ -19,6 +19,9 @@ bench/results/
 .env
 .env.*
 
+# Local handoff notes between sessions
+HANDOFF.md
+
 # OS and editor files
 .DS_Store
 Thumbs.db

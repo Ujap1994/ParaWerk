@@ -92,7 +92,8 @@
       "settings": "Sprache, Design, Navigation",
       "about": "Version und Lizenz",
       "importDxf": "Linien, Kreise und Bögen einer DXF-Datei zur Skizze hinzufügen",
-      "exportDxf": "Skizze als DXF speichern, z. B. zum Laserschneiden (ohne Konstruktionsgeometrie)"
+      "exportDxf": "Skizze als DXF speichern, z. B. zum Laserschneiden (ohne Konstruktionsgeometrie)",
+      "variables": "Benannte Werte und Gleichungen: in Bemaßungen und Feature-Parametern verwenden"
     },
     "tabs": {
       "label": "Befehlsregister",
@@ -153,7 +154,8 @@
       "convert": "Kanten des Modells als Skizzengeometrie auf die Skizzenebene übernehmen"
     },
     "importDxf": "Import",
-    "exportDxf": "Export"
+    "exportDxf": "Export",
+    "variables": "Variablen"
   },
   "features": {
     "sketch": "Skizze",
@@ -161,7 +163,8 @@
     "cylinder": "Zylinder",
     "fillet": "Verrundung",
     "chamfer": "Fase",
-    "origin": "Ursprung"
+    "origin": "Ursprung",
+    "variables": "Variablen"
   },
   "tree": {
     "title": "Featurebaum",
@@ -489,6 +492,28 @@
       "scaleAction": "Skalieren",
       "scaledCopyAction": "Skalierte Kopie",
       "scaleHint": "Bemaßungen innerhalb der Auswahl werden mitskaliert."
+    }
+  },
+  "variables": {
+    "title": "Variablen",
+    "hint": "Benannte Werte für das ganze Teil. Tippe einen Namen in eine Bemaßung oder einen Parameter (zum Beispiel „breite / 2“), dann folgt der Wert der Variablen; ein Ausdruck darf andere Variablen verwenden.",
+    "name": "Name",
+    "expression": "Wert oder Gleichung",
+    "value": "Ergebnis",
+    "add": "Variable hinzufügen",
+    "remove": "Variable entfernen",
+    "empty": "Noch keine Variablen.",
+    "sketchFailed_one": "{{count}} Skizze konnte den neuen Werten nicht folgen und behält ihren bisherigen Stand.",
+    "sketchFailed_other": "{{count}} Skizzen konnten den neuen Werten nicht folgen und behalten ihren bisherigen Stand.",
+    "problems": {
+      "name": "Namen beginnen mit einem Buchstaben und bestehen aus Buchstaben, Ziffern und _ (keine Einheiten oder Funktionen wie mm oder sin).",
+      "duplicate": "Eine andere Variable hat diesen Namen."
+    },
+    "errors": {
+      "syntax": "Das ist kein gültiger Wert und keine gültige Gleichung.",
+      "unknown": "Verwendet einen Namen, der keine Variable ist.",
+      "cycle": "Hängt (über andere Variablen) von sich selbst ab.",
+      "dependency": "Verwendet eine Variable, die keinen Wert hat."
     }
   }
 }

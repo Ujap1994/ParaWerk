@@ -11,17 +11,19 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 - Splines (key S): smooth curves through fit points (natural cubic splines), drawn point by point with
   snapping; the fit points are ordinary sketch points that can be dragged, dimensioned and related;
   move, copy, mirror and patterns; DXF export as polylines and import of fit-point splines.
-
 - Scale the selection by a factor around the origin or a selected point, in place (dimensions within the
   selection scale along) or as a scaled copy.
-
 - Convert entities: edges of the part become fixed sketch geometry on the sketch plane (lines, circles
   and arcs; tilted circles become ellipses, other curves splines); touching edges stay connected. The
   geometry kernel now reports the exact end points, centers and axes of edges.
-
 - Calculations in number fields and dimension values: + − × ÷, powers, brackets, π, sqrt, abs and
   sin/cos/tan in degrees, and lengths with units (mm, cm, m, in); evaluated by an own parser, never as
   code.
+- Global variables and equations: a list of named values (also as equations over each other, with
+  cycles and unknown names explained), used by name in feature parameters and sketch dimensions; when a
+  variable changes, every parameter and dimension that uses it follows and changed sketches are solved
+  again, in one undo step. Part files that use variables, equations or splines are saved as format
+  version 3.
 
 ### Changed
 - *Line* and *Centerline* share one button with a variant menu (**L** starts the last one used), which

@@ -286,7 +286,9 @@ group of the *Sketch* tab); what it measures follows from what you pick and from
 
 Values can be typed as calculations, here and in every number field: `60/3 + 2`, `2*(15+4,5)`,
 `40*cos(30)` (angles in degrees), `pi*10`, or with a unit: `1in`, `2,5cm`, `0.1m` (converted to
-millimeters). Both `.` and `,` work as decimal separator.
+millimeters). Both `.` and `,` work as decimal separator. A value that uses the part's
+[variables](features.md#variables-and-equations), such as `width / 2`, is kept as an equation: the
+dimension follows when the variable changes, and the sketch is solved again.
 
 ![Placing a dimension: the value is typed right at the dimension](../images/screenshots/sketch-dimension-value.png)
 

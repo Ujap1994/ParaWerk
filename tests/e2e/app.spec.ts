@@ -209,3 +209,42 @@ test('switches the language at runtime and remembers it', async () => {
   await expect(launched.page.locator('[data-command="box"] .command-label')).toHaveText('Quader');
   expect((await state(launched.page)).language).toBe('de');
 });
+
+test('variables drive feature parameters: a box follows the variable it is sized by', async () => {
+  launched = await launchApp();
+  const { page } = launched;
+  const features = async () => (await state(page)).history.features as unknown as { type: string; width?: number; variables?: { name: string; expression: string }[]; expressions?: Record<string, string> }[];
+
+  // A variable d1 = 40.
+  await page.click('[data-command="variables"]');
+  await page.click('[data-testid="variable-add"]');
+  await page.locator('[data-testid="variable-expression"]').fill('40');
+  await expect(page.locator('[data-testid="variable-value"]')).toHaveText('40');
+  // Invalid names block applying.
+  await page.locator('[data-testid="variable-name"]').fill('2x');
+  await expect(page.locator('[data-testid="panel-ok"]')).toBeDisabled();
+  await page.locator('[data-testid="variable-name"]').fill('d1');
+  await page.click('[data-testid="panel-ok"]');
+  await expect.poll(async () => (await features())[0]?.variables).toEqual([{ name: 'd1', expression: '40' }]);
+
+  // A box twice as wide.
+  await page.click('[data-command="box"]');
+  await page.locator('[data-testid="box-width"]').fill('d1*2');
+  await page.locator('[data-testid="box-depth"]').click();
+  await expect(page.locator('[data-testid="box-width-value"]')).toHaveText('= 80 mm');
+  await page.click('[data-testid="panel-ok"]');
+  await idle(page);
+  await expect.poll(async () => (await features()).find((f) => f.type === 'box')).toMatchObject({ width: 80, expressions: { width: 'd1*2' } });
+
+  // Changing d1 resizes the box in one undo step; the part stays visible while the variables are edited.
+  await page.click('[data-command="variables"]');
+  await idle(page);
+  expect(await page.evaluate(() => (window as unknown as { __parawerk: { getState(): { display: { body: unknown } } } }).__parawerk.getState().display.body !== null)).toBe(true);
+  await page.locator('[data-testid="variable-expression"]').fill('50');
+  await page.click('[data-testid="panel-ok"]');
+  await expect.poll(async () => (await features()).find((f) => f.type === 'box')?.width).toBe(100);
+  await idle(page);
+  expect(await volume(page)).toBeCloseTo(100 * 60 * 40, 0);
+  await page.click('[data-command="undo"]');
+  await expect.poll(async () => (await features()).find((f) => f.type === 'box')?.width).toBe(80);
+});

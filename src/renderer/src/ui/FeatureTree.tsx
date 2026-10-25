@@ -11,6 +11,8 @@ export function useFeatureName() {
   return (features: readonly Feature[], index: number): string => {
     const feature = features[index];
     if (!feature) return '';
+    // A part has one list of variables, so it needs no number.
+    if (feature.type === 'variables') return feature.name ?? t('features.variables');
     return feature.name ?? `${t(`features.${feature.type}`)}${featureOrdinal(features, index)}`;
   };
 }

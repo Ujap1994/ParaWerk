@@ -51,6 +51,8 @@ export interface RebuildPlan {
  * the model is rolled back to the sketch (`sketchIndex`).
  */
 export function rebuildPlan(features: Feature[], edit: ActiveEdit | null, sketchIndex: number | null = null): RebuildPlan {
+  // Editing the variables changes nothing until they are applied: the whole part stays visible.
+  if (edit?.draft.type === 'variables') return { features, captures: [features.length - 1] };
   if (sketchIndex !== null) {
     const before = features.slice(0, sketchIndex);
     return { features: before, captures: [before.length - 1] };

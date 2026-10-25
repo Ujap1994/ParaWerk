@@ -9,7 +9,7 @@ import type { SketchData, SketchPlaneRef } from './sketch.ts';
 
 export type Vec3 = [number, number, number];
 
-export type FeatureType = 'sketch' | 'box' | 'cylinder' | 'fillet' | 'chamfer';
+export type FeatureType = 'variables' | 'sketch' | 'box' | 'cylinder' | 'fillet' | 'chamfer';
 
 /** How a solid-creating feature combines with the existing body. */
 export type BooleanOperation = 'add' | 'cut';
@@ -35,6 +35,33 @@ interface FeatureBase {
   /** User-defined name; when absent the UI shows a localized default name. */
   name?: string;
   suppressed?: boolean;
+  /**
+   * Parameters given as expressions over the part's variables (field name → text, e.g.
+   * `{ width: "length * 2" }`); the numeric field holds the current value.
+   */
+  expressions?: Record<string, string>;
+}
+
+/** Numeric parameters that can be given as expressions, per feature type. */
+export const EXPRESSION_FIELDS: Readonly<Record<FeatureType, readonly string[]>> = {
+  variables: [],
+  sketch: [],
+  box: ['width', 'depth', 'height'],
+  cylinder: ['radius', 'height'],
+  fillet: ['radius'],
+  chamfer: ['distance'],
+};
+
+/** A named value of the part; its expression may use other variables. */
+export interface Variable {
+  name: string;
+  expression: string;
+}
+
+/** The part's global variables (at most one per part, at the top of the feature list). */
+export interface VariablesFeature extends FeatureBase {
+  type: 'variables';
+  variables: Variable[];
 }
 
 export interface BoxFeature extends FeatureBase {
@@ -76,10 +103,10 @@ export interface SketchFeature extends FeatureBase {
   sketch: SketchData;
 }
 
-export type Feature = SketchFeature | BoxFeature | CylinderFeature | FilletFeature | ChamferFeature;
+export type Feature = VariablesFeature | SketchFeature | BoxFeature | CylinderFeature | FilletFeature | ChamferFeature;
 
-/** Features that build or modify the solid body (everything except sketches). */
-export type SolidModelingFeature = Exclude<Feature, SketchFeature>;
+/** Features that build or modify the solid body (everything except variables and sketches). */
+export type SolidModelingFeature = Exclude<Feature, SketchFeature | VariablesFeature>;
 
 export type EdgeFeature = FilletFeature | ChamferFeature;
 
@@ -91,7 +118,7 @@ export function isSolidFeature(feature: Feature): feature is BoxFeature | Cylind
   return feature.type === 'box' || feature.type === 'cylinder';
 }
 
-export const FEATURE_TYPES: readonly FeatureType[] = ['sketch', 'box', 'cylinder', 'fillet', 'chamfer'];
+export const FEATURE_TYPES: readonly FeatureType[] = ['variables', 'sketch', 'box', 'cylinder', 'fillet', 'chamfer'];
 
 let idCounter = 0;
 
@@ -104,6 +131,8 @@ export function createFeatureId(): string {
 
 export function defaultFeature(type: FeatureType, id: string = createFeatureId()): Feature {
   switch (type) {
+    case 'variables':
+      return { id, type, variables: [] };
     case 'sketch':
       return { id, type, plane: { kind: 'standard', plane: 'top' }, sketch: { entities: [], constraints: [] } };
     case 'box':

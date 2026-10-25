@@ -92,7 +92,8 @@
       "settings": "Language, theme, navigation",
       "about": "Version and license",
       "importDxf": "Add the lines, circles and arcs of a DXF file to the sketch",
-      "exportDxf": "Save the sketch as DXF, e.g. for laser cutting (without construction geometry)"
+      "exportDxf": "Save the sketch as DXF, e.g. for laser cutting (without construction geometry)",
+      "variables": "Named values and equations: use them in dimensions and feature parameters"
     },
     "tabs": {
       "label": "Command tabs",
@@ -153,7 +154,8 @@
       "convert": "Convert edges of the model into sketch geometry on the sketch plane"
     },
     "importDxf": "Import",
-    "exportDxf": "Export"
+    "exportDxf": "Export",
+    "variables": "Variables"
   },
   "features": {
     "sketch": "Sketch",
@@ -161,7 +163,8 @@
     "cylinder": "Cylinder",
     "fillet": "Fillet",
     "chamfer": "Chamfer",
-    "origin": "Origin"
+    "origin": "Origin",
+    "variables": "Variables"
   },
   "tree": {
     "title": "Feature tree",
@@ -489,6 +492,28 @@
       "scaleAction": "Scale",
       "scaledCopyAction": "Scaled copy",
       "scaleHint": "Dimensions within the selection scale along."
+    }
+  },
+  "variables": {
+    "title": "Variables",
+    "hint": "Named values for the whole part. Type a name in a dimension or a parameter (for example \"width / 2\") and it follows the variable; an expression may use other variables.",
+    "name": "Name",
+    "expression": "Value or equation",
+    "value": "Result",
+    "add": "Add variable",
+    "remove": "Remove variable",
+    "empty": "No variables yet.",
+    "sketchFailed_one": "{{count}} sketch could not follow the new values and kept its previous state.",
+    "sketchFailed_other": "{{count}} sketches could not follow the new values and kept their previous state.",
+    "problems": {
+      "name": "Names start with a letter and use letters, digits and _ (not units or functions such as mm or sin).",
+      "duplicate": "Another variable has this name."
+    },
+    "errors": {
+      "syntax": "This is not a valid value or equation.",
+      "unknown": "Uses a name that is not a variable.",
+      "cycle": "Depends on itself (through other variables).",
+      "dependency": "Uses a variable that has no value."
     }
   }
 }

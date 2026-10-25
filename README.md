@@ -96,6 +96,8 @@ Preview 0.2 adds the 2D sketcher (Phase 1) to the foundation of Phase 0:
   presets, hover and selection highlighting of faces and edges.
 - **Feature tree and property panels:** live preview while editing, rollback of later features,
   suppress, delete, undo and redo; clear error messages when a feature cannot be built.
+- **Variables and equations:** named values for the whole part, used by name in parameters and sketch
+  dimensions; calculations with units in every number field.
 - **2D sketcher:** sketches on the front, top and right plane and on planar faces, with their own undo
   history.
   - *Drawing:* lines and centerlines, rectangles (corner, center, 3-point, parallelogram), circles
@@ -129,7 +131,6 @@ See the [user guide](docs/user-guide/README.md) for details.
 
 ### 2D sketcher (rest of Phase 1)
 - Points on splines, trimming at splines
-- Global variables and equations
 
 ### Part modeling
 - Feature tree with rollback bar, suppress, reorder and edit-in-place

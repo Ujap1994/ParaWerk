@@ -1,7 +1,9 @@
-import { useId, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { formatNumber, parseNumber } from '../format.ts';
+import { evaluate, variableNames } from '../expression.ts';
+import { formatNumber } from '../format.ts';
 import { useAppState } from '../state/store.ts';
+import { variableValues } from '../variables.ts';
 
 interface NumberFieldProps {
   label: string;
@@ -12,25 +14,44 @@ interface NumberFieldProps {
   unit?: string;
   step?: number;
   testId?: string;
+  /** The value as an equation over the part's variables, if it is given as one. */
+  expression?: string;
+  /** Receives the typed text when it uses variables, undefined when it is a plain value. Without it, variables are not offered. */
+  onExpression?(expression: string | undefined): void;
 }
 
 /**
  * Numeric input with live preview: every valid keystroke updates the model,
  * arrow keys step the value (Shift: ×10), both "," and "." are accepted.
  */
-export function NumberField({ label, value, onChange, signed = false, unit = 'mm', step = 1, testId }: NumberFieldProps) {
+export function NumberField({ label, value, onChange, signed = false, unit = 'mm', step = 1, testId, expression, onExpression }: NumberFieldProps) {
   const { t } = useTranslation();
   const language = useAppState((state) => state.language);
+  const features = useAppState((state) => state.history.features);
+  const variables = useMemo(() => (onExpression ? variableValues(features) : new Map<string, number>()), [features, onExpression]);
   const id = useId();
-  // Text typed by the user while the field has focus; otherwise the formatted value is shown.
+  // Text typed by the user while the field has focus; otherwise the equation or the formatted value is shown.
   const [draft, setDraft] = useState<string | null>(null);
-  const text = draft ?? formatNumber(value, language);
-  const parsed = parseNumber(text);
+  const shown = expression ?? formatNumber(value, language);
+  const text = draft ?? shown;
+  const parsed = evaluate(text, variables);
   const valid = parsed !== null && (signed || parsed > 0);
+  /** Applies typed text: its value, and the text itself if it uses variables. */
+  const apply = (typed: string) => {
+    const next = evaluate(typed, variables);
+    if (next === null || !(signed || next > 0)) return;
+    onChange(next);
+    if (!onExpression) return;
+    const uses = (variableNames(typed) ?? []).length > 0;
+    const nextExpression = uses ? typed.trim() : undefined;
+    if (nextExpression !== expression) onExpression(nextExpression);
+  };
 
   const commit = (next: number) => {
     setDraft(formatNumber(next, language));
     onChange(next);
+    // Stepping with the arrow keys replaces an equation with a plain value.
+    if (expression !== undefined) onExpression?.(undefined);
   };
 
   return (
@@ -49,14 +70,13 @@ export function NumberField({ label, value, onChange, signed = false, unit = 'mm
           data-testid={testId}
           aria-invalid={!valid}
           onFocus={(event) => {
-            setDraft(formatNumber(value, language));
+            setDraft(shown);
             event.currentTarget.select();
           }}
           onBlur={() => setDraft(null)}
           onChange={(event) => {
             setDraft(event.target.value);
-            const next = parseNumber(event.target.value);
-            if (next !== null && (signed || next > 0)) onChange(next);
+            apply(event.target.value);
           }}
           onKeyDown={(event) => {
             if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
@@ -69,6 +89,11 @@ export function NumberField({ label, value, onChange, signed = false, unit = 'mm
         <span className="field-unit">{unit}</span>
       </div>
       {valid ? null : <div className="field-error">{t('panel.invalidNumber')}</div>}
+      {valid && expression !== undefined && draft === null ? (
+        <div className="field-note" data-testid={testId ? `${testId}-value` : undefined}>
+          = {formatNumber(value, language)} {unit}
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -323,6 +323,15 @@ export const ThreePointArcIcon = (p: P) => (
   </Icon>
 );
 
+/** "fx": named values and equations. */
+export const VariablesIcon = (p: P) => (
+  <Icon {...p}>
+    <rect x="3" y="4" width="18" height="16" rx="3" />
+    <path d="M11 8.5c-1.6-.6-2.8 0-3 1.6L7.2 16c-.2 1.5-1.3 2.1-2.4 1.6M5.8 11.5h4" />
+    <path d="m13 11 5 5.5M18 11l-5 5.5" />
+  </Icon>
+);
+
 /** A model edge projected down onto the sketch plane. */
 export const ConvertIcon = (p: P) => (
   <Icon {...p}>
@@ -456,6 +465,7 @@ export const PlaneIcon = (p: P) => (
 );
 
 export const FEATURE_ICONS = {
+  variables: VariablesIcon,
   sketch: SketchIcon,
   box: BoxIcon,
   cylinder: CylinderIcon,

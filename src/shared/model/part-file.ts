@@ -12,8 +12,24 @@ import { parseFeatures, ValidationError } from './validate.ts';
  */
 
 export const PART_FORMAT = 'parawerk-part';
-/** 2: sketch features. Version 1 files are read unchanged. */
-export const PART_FORMAT_VERSION = 2;
+/**
+ * 2: sketch features. 3: variables, parameter and dimension expressions, splines.
+ * Older versions are read unchanged.
+ */
+export const PART_FORMAT_VERSION = 3;
+
+/** The oldest format version that can hold the document, so older ParaWerk versions can still open it. */
+export function formatVersionOf(features: readonly Feature[]): number {
+  const needsThree = features.some(
+    (feature) =>
+      feature.type === 'variables' ||
+      (feature.expressions !== undefined && Object.keys(feature.expressions).length > 0) ||
+      (feature.type === 'sketch' &&
+        (feature.sketch.entities.some((entity) => entity.type === 'spline') || feature.sketch.constraints.some((constraint) => 'expression' in constraint && constraint.expression !== undefined))),
+  );
+  if (needsThree) return 3;
+  return features.some((feature) => feature.type === 'sketch') ? 2 : 1;
+}
 
 /** Upper bound for the uncompressed size of one entry, to reject zip bombs. */
 const MAX_ENTRY_BYTES = 64 * 1024 * 1024;
@@ -44,7 +60,7 @@ export function encodePartFile(document: PartDocument, meta: PartFileMeta): Uint
   const documentJson = {
     format: PART_FORMAT,
     // Files without new content stay readable by older ParaWerk versions.
-    version: document.features.some((feature) => feature.type === 'sketch') ? PART_FORMAT_VERSION : 1,
+    version: formatVersionOf(document.features),
     units: document.units,
     features: document.features,
   };

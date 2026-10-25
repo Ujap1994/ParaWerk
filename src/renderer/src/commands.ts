@@ -26,7 +26,8 @@ import {
   undoSketch,
   type SketchSession,
 } from './sketch/session.ts';
-import { applyEdit, commit, emptyHistory, hasBodyBefore, redo as redoHistory, undo as undoHistory } from './state/document.ts';
+import { applyEdit, commit, emptyHistory, hasBodyBefore, redo as redoHistory, undo as undoHistory, type ActiveEdit } from './state/document.ts';
+import { regenerate, variablesFeature } from './variables.ts';
 import { kernel, whenIdle } from './state/rebuild.ts';
 import { getState, setHistory, setState, showToast, type AppState, type CommandTab, type Pick } from './state/store.ts';
 import type { SketchToolName } from './sketch/tools.ts';
@@ -173,6 +174,10 @@ export function startFeature(type: FeatureType): void {
     startSketch();
     return;
   }
+  if (type === 'variables') {
+    editVariables();
+    return;
+  }
   const state = getState();
   if (state.sketch || state.choosingSketchPlane) return;
   if (state.activeEdit) commitEdit();
@@ -205,10 +210,54 @@ export function editFeature(id: string): void {
   setState({ activeEdit: { mode: 'edit', index, draft: feature }, selection: [], choosingSketchPlane: false });
 }
 
+/** Opens the part's variables in the property panel (a new, empty list at the top of the tree if there is none). */
+export function editVariables(): void {
+  const state = getState();
+  if (state.sketch || state.choosingSketchPlane) return;
+  const existing = variablesFeature(state.history.features);
+  if (existing) {
+    editFeature(existing.id);
+    return;
+  }
+  if (state.activeEdit) commitEdit();
+  setState({ activeEdit: { mode: 'create', index: 0, draft: defaultFeature('variables') }, selection: [] });
+}
+
+/**
+ * Applies changed variables: every expression in the part is evaluated again and the sketches whose
+ * dimensions change are solved again, all in one undo step.
+ */
+async function commitVariables(edit: ActiveEdit): Promise<void> {
+  const before = getState().history;
+  const features = applyEdit(before.features, edit);
+  setState({ activeEdit: null });
+  try {
+    const { features: regenerated, failed } = await regenerate(features, async (sketch) => {
+      const solution = await sketchSolver().solve(sketch, { analyze: false });
+      return solution.converged && solution.unsatisfied.length === 0 ? solution.sketch : null;
+    });
+    if (getState().history !== before) return;
+    setHistory(commit(before, regenerated));
+    if (failed.length > 0) showToast('error', t('variables.sketchFailed', { count: failed.length }));
+  } catch (error) {
+    showToast('error', t('errors.unknown', { detail: error instanceof Error ? error.message : String(error) }));
+  }
+}
+
 export function updateDraft(patch: Partial<Feature>): void {
   const edit = getState().activeEdit;
   if (!edit) return;
   setState({ activeEdit: { ...edit, draft: { ...edit.draft, ...patch } as Feature } });
+}
+
+/** Gives a parameter of the edited feature as an equation (undefined: a plain value again). */
+export function setDraftExpression(field: string, expression: string | undefined): void {
+  const edit = getState().activeEdit;
+  if (!edit) return;
+  const { [field]: _old, ...rest } = edit.draft.expressions ?? {};
+  const expressions = expression === undefined ? rest : { ...rest, [field]: expression };
+  const { expressions: _previous, ...draft } = edit.draft;
+  setState({ activeEdit: { ...edit, draft: (Object.keys(expressions).length > 0 ? { ...draft, expressions } : draft) as Feature } });
 }
 
 export function toggleDraftEdge(index: number): void {
@@ -226,6 +275,10 @@ export function commitEdit(): void {
   const unchanged = edit.mode === 'edit' && state.history.features[edit.index] === edit.draft;
   if (unchanged) {
     setState({ activeEdit: null });
+    return;
+  }
+  if (edit.draft.type === 'variables') {
+    void commitVariables(edit);
     return;
   }
   setHistory(commit(state.history, applyEdit(state.history.features, edit)), { activeEdit: null });
@@ -483,7 +536,7 @@ function replaceConstraint(sketch: SketchData, constraint: SketchDimension): Ske
  * Adds a dimension and applies the typed value (null keeps the measured one). A dimension that
  * would over-define the sketch becomes a driven (reference) dimension that only shows the value.
  */
-export async function addSketchDimension(draft: DimensionDraft, typed: number | null): Promise<void> {
+export async function addSketchDimension(draft: DimensionDraft, typed: number | null, expression?: string): Promise<void> {
   const session = getState().sketch;
   if (!session) return;
   const base = session.draft.sketch;
@@ -500,7 +553,7 @@ export async function addSketchDimension(draft: DimensionDraft, typed: number | 
     }
     const value = typed === null ? probe.value : dimensionValue(base, probe, typed);
     if (value === null) showToast('error', t('sketch.messages.invalidDimension'));
-    const next = value === null ? measured : replaceConstraint(measured, { ...probe, value });
+    const next = value === null ? measured : replaceConstraint(measured, expression ? { ...probe, value, expression } : { ...probe, value });
     const solution = await solver.solve(next, { analyze: false });
     if (getState().sketch?.draft.sketch !== base) return;
     if (solution.converged) {
@@ -515,7 +568,7 @@ export async function addSketchDimension(draft: DimensionDraft, typed: number | 
 }
 
 /** Changes the value of a driving dimension; the geometry follows if the sketch can be solved. */
-export async function setSketchDimensionValue(id: string, typed: number): Promise<void> {
+export async function setSketchDimensionValue(id: string, typed: number, expression?: string): Promise<void> {
   const session = getState().sketch;
   if (!session) return;
   const base = session.draft.sketch;
@@ -531,7 +584,9 @@ export async function setSketchDimensionValue(id: string, typed: number): Promis
     return;
   }
   try {
-    const solution = await sketchSolver().solve(replaceConstraint(base, { ...dimension, value }), { analyze: false });
+    const { expression: _previous, ...plain } = dimension;
+    const updated: SketchDimension = expression ? { ...plain, value, expression } : { ...plain, value };
+    const solution = await sketchSolver().solve(replaceConstraint(base, updated), { analyze: false });
     if (getState().sketch?.draft.sketch !== base) return;
     if (solution.converged) recordSketchChange(solution.sketch);
     else showToast('error', t('sketch.messages.dimensionNotApplied'));

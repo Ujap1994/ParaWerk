@@ -120,7 +120,7 @@ serves all platforms, and the kernel runs sandboxed). First preview released as
 | Spline (fit points; points on splines and trimming at splines later) | ✅ done |
 | Scale of the selection | ✅ done |
 | Convert model edges into the sketch (fixed; associative later) | ✅ done |
-| Global variables and equations (basic) | ⏳ next |
+| Global variables and equations (basic) | ✅ done |
 | Relations for the selection, checked by the solver; relation list | ✅ done |
 | Smart dimension (with driven dimensions for redundant ones) | ✅ done |
 | Status colors, conflict diagnosis | ✅ done |

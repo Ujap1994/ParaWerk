@@ -1,12 +1,14 @@
 import { isDimension, type SketchData, type SketchDimension } from '../../../shared/model/sketch.ts';
 import * as commands from '../commands.ts';
-import { formatNumber, parseNumber } from '../format.ts';
+import { evaluate, variableNames } from '../expression.ts';
+import { formatNumber } from '../format.ts';
 import { t } from '../i18n.ts';
 import { getState, setState, showToast, store, type AppState } from '../state/store.ts';
 import type { SketchInput, SketchPointer, ViewportEngine } from '../viewport/engine.ts';
 import type { SketchHighlight, SketchStatusColors } from '../viewport/sketch-graphics.ts';
 import type { SketchToolDisplay } from '../viewport/sketch-layer.ts';
 import type { SketchToolControl } from '../viewport/registry.ts';
+import { variableValues } from '../variables.ts';
 import { displayValue, type DimensionDraft } from './dimensions.ts';
 import { dragTarget, sameGeometry } from './drag.ts';
 import { hitTest, pointPositions, type SketchHit } from './geometry.ts';
@@ -251,8 +253,8 @@ export class SketchController implements SketchInput, SketchToolControl {
     }
     const sketch = getState().sketch?.draft.sketch;
     if (!sketch) return;
-    this.openEditor(dimension.id, displayValue(sketch, dimension), (typed) => {
-      if (typed !== null) void commands.setSketchDimensionValue(dimension.id, typed);
+    this.openEditor(dimension.id, dimension.expression ?? displayValue(sketch, dimension), (typed, expression) => {
+      if (typed !== null) void commands.setSketchDimensionValue(dimension.id, typed, expression);
     });
   }
 
@@ -260,7 +262,11 @@ export class SketchController implements SketchInput, SketchToolControl {
    * The value editor over a dimension label. Enter or clicking elsewhere applies the value, Esc
    * closes without a value (`apply(null)`).
    */
-  private openEditor(dimensionId: string, value: number | null, apply: (typed: number | null) => void): void {
+  /**
+   * `apply` gets the typed value and, if the text uses the part's variables, the text itself (it is
+   * kept as the dimension's expression).
+   */
+  private openEditor(dimensionId: string, value: number | string | null, apply: (typed: number | null, expression?: string) => void): void {
     this.closeEditor();
     const host = this.editorHost;
     const label = this.engine.dimensionLabel(dimensionId);
@@ -272,24 +278,29 @@ export class SketchController implements SketchInput, SketchToolControl {
     input.className = 'dimension-editor';
     input.dataset.testid = 'dimension-editor';
     input.inputMode = 'decimal';
-    input.value = value === null ? '' : formatNumber(value, getState().language, 4);
+    input.value = value === null ? '' : typeof value === 'string' ? value : formatNumber(value, getState().language, 4);
     const hostRect = host.getBoundingClientRect();
     const labelRect = label.getBoundingClientRect();
     input.style.transform = `translate(${Math.round(labelRect.left - hostRect.left + labelRect.width / 2 - 46)}px, ${Math.round(labelRect.top - hostRect.top + labelRect.height / 2 - 12)}px)`;
     let done = false;
-    const finish = (typed: number | null) => {
+    const finish = (text: string | null) => {
       if (done) return;
       done = true;
       this.closeEditor();
-      apply(typed);
+      if (text === null) {
+        apply(null);
+        return;
+      }
+      const names = variableNames(text) ?? [];
+      apply(evaluate(text, variableValues(getState().history.features)), names.length > 0 ? text.trim() : undefined);
     };
     input.addEventListener('keydown', (event) => {
       // The editor owns these keys; the app's shortcuts must not see them.
       event.stopPropagation();
-      if (event.key === 'Enter') finish(parseNumber(input.value));
+      if (event.key === 'Enter') finish(input.value);
       else if (event.key === 'Escape') finish(null);
     });
-    input.addEventListener('blur', () => finish(parseNumber(input.value)));
+    input.addEventListener('blur', () => finish(input.value));
     host.appendChild(input);
     this.editor = input;
     input.focus();
@@ -371,9 +382,9 @@ export class SketchController implements SketchInput, SketchToolControl {
     this.engine.setSketchToolDisplay(null);
     // The label element is created and positioned by the next frame; render it now to place the editor on it.
     this.engine.renderFrame();
-    this.openEditor(DRAFT_ID, displayValue(sketch, draft), (typed) => {
+    this.openEditor(DRAFT_ID, displayValue(sketch, draft), (typed, expression) => {
       this.draftShown = false;
-      void commands.addSketchDimension(draft, typed);
+      void commands.addSketchDimension(draft, typed, expression);
     });
   }
 
