@@ -17,18 +17,30 @@ export type BooleanOperation = 'add' | 'cut';
 export type Axis = 'x' | 'y' | 'z';
 
 /**
- * Reference to an edge of the body that a feature modifies.
- *
- * Phase 0 references edges by their topological index in the input body.
- * This is deliberately simple and will be replaced by persistent names
- * (docs/adr/0002-persistent-naming.md) before parametric editing grows.
+ * Reference to an edge by its topological index in the input body. Files of ParaWerk 0.2 and earlier
+ * use it; it breaks when earlier features change the topology, so it is converted to an EdgeNameRef
+ * as soon as the body is known (docs/adr/0002-persistent-naming.md).
  */
 export interface EdgeIndexRef {
   kind: 'edge-index';
   index: number;
 }
 
-export type EdgeRef = EdgeIndexRef;
+/**
+ * Reference to an edge by the persistent names of the two faces it lies between (the same name twice
+ * for a seam), e.g. the edge between the top face of a box and the side face that sketch line l3
+ * swept. Names survive changes of earlier features; `at` decides between edges with the same faces
+ * and finds an edge again whose faces were renamed (docs/adr/0002-persistent-naming.md).
+ */
+export interface EdgeNameRef {
+  kind: 'edge';
+  /** Sorted. */
+  faces: [string, string];
+  /** The middle of the edge when it was chosen. */
+  at: Vec3;
+}
+
+export type EdgeRef = EdgeIndexRef | EdgeNameRef;
 
 interface FeatureBase {
   id: string;

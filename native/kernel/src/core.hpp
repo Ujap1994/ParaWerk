@@ -63,9 +63,25 @@ struct MeshData {
   std::vector<double> edgeGeometry;
 };
 
-int makeBox(double x, double y, double z, double dx, double dy, double dz);
-int makeCylinder(double px, double py, double pz, double dx, double dy, double dz, double radius, double height);
-/** op: 0 = fuse (add material), 1 = cut (remove material). */
+/**
+ * Persistent names of a body's faces (docs/adr/0002-persistent-naming.md): every stored shape keeps one
+ * name per face, in TopExp::MapShapes order. Operations name the faces they create after the feature
+ * (`name` parameters, usually "<feature id>:<role>") and pass the names of modified faces on.
+ */
+using FaceNames = std::vector<std::string>;
+
+/** Face names of a body and how its edges lie between faces (edge i follows TopExp::MapShapes order). */
+struct Naming {
+  FaceNames faces;
+  std::vector<int32_t> edgeFaces;     // 2 per edge: face indices on both sides (the same twice for seams, -1 for none)
+  std::vector<double> edgeMidpoints;  // 3 per edge: the point in the middle of the curve (NaN when degenerate)
+};
+
+/** Faces are named "<name>:left|right|front|back|bottom|top" after their outward normal (-x, +x, -y, +y, -z, +z). */
+int makeBox(double x, double y, double z, double dx, double dy, double dz, const std::string& name = "");
+/** Faces are named "<name>:side|bottom|top". */
+int makeCylinder(double px, double py, double pz, double dx, double dy, double dz, double radius, double height, const std::string& name = "");
+/** op: 0 = fuse (add material), 1 = cut (remove material). Faces keep the names of the faces they come from. */
 int booleanOperation(int bodyId, int toolId, int op);
 
 /**
@@ -80,18 +96,32 @@ int booleanOperation(int bodyId, int toolId, int op);
  *   3 ellipse   cx cy ux uy a b ccw             (u: unit direction of semi-axis a; b lies to its left)
  *   4 bspline   poleCount x y ... knotCount k ...  (cubic; every inner knot joins two Bézier spans)
  * `frame` is the plane: origin, x direction and normal (9 values).
+ *
+ * `edgeNames` holds one name per profile edge in the same order: the side face an edge sweeps is named
+ * "<name>:side:<edge name>"; the end faces are "<name>:start" (at `from`) and "<name>:end".
  */
-int extrudeProfile(const std::vector<double>& profile, const std::vector<double>& frame, double from, double to);
+int extrudeProfile(const std::vector<double>& profile, const std::vector<double>& frame, double from, double to,
+                   const std::vector<std::string>& edgeNames = {}, const std::string& name = "");
 
 /**
  * The solid swept by the regions of `profile` (encoded as for extrudeProfile) around `axis`, a line in
- * plane coordinates (x0 y0 x1 y1), from angle `from` to `to` in radians (at most a full turn).
+ * plane coordinates (x0 y0 x1 y1), from angle `from` to `to` in radians (at most a full turn). Faces are
+ * named as for extrudeProfile.
  */
-int revolveProfile(const std::vector<double>& profile, const std::vector<double>& frame, const std::vector<double>& axis, double from, double to);
-int fillet(int bodyId, const std::vector<int>& edgeIndices, double radius);
-int chamfer(int bodyId, const std::vector<int>& edgeIndices, double distance);
+int revolveProfile(const std::vector<double>& profile, const std::vector<double>& frame, const std::vector<double>& axis, double from, double to,
+                   const std::vector<std::string>& edgeNames = {}, const std::string& name = "");
+/**
+ * Rounds the given edges. The faces made for edge k are named `edgeNames[k]`, other new faces (corners
+ * where rounds meet) "<name>:corner".
+ */
+int fillet(int bodyId, const std::vector<int>& edgeIndices, double radius, const std::vector<std::string>& edgeNames = {}, const std::string& name = "");
+/** Bevels the given edges; faces are named as for fillet. */
+int chamfer(int bodyId, const std::vector<int>& edgeIndices, double distance, const std::vector<std::string>& edgeNames = {}, const std::string& name = "");
 void release(int id);
 int shapeCount();
+
+/** The face names of a body and the faces on both sides of each edge. */
+Naming naming(int id);
 
 Counts counts(int id);
 BoundingBox boundingBox(int id);

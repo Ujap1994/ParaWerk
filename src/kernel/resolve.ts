@@ -1,7 +1,9 @@
-import type { Feature, SketchFeature, SolidModelingFeature } from '../shared/model/feature.ts';
+import { isEdgeFeature, type EdgeFeature, type EdgeRef, type Feature, type SketchFeature, type SolidModelingFeature } from '../shared/model/feature.ts';
+import { edgeFaceNames, edgeRefOf, resolveEdgeRefs, type BodyNaming } from '../shared/model/naming.ts';
 import { sketchProfile, type Profile } from '../shared/model/profile.ts';
 import { frameOf, ORIGIN_ID } from '../shared/model/sketch.ts';
-import type { KernelFeature } from './backend.ts';
+import { hashString } from '../shared/hash.ts';
+import type { KernelFeature, ResolvedEdgeFeature } from './backend.ts';
 import { FeatureError } from './feature-error.ts';
 
 const coordinate = (value: number) => String(Math.round(value * 100) / 100);
@@ -44,11 +46,45 @@ function axisOf(sketch: SketchFeature, axis: string, profile: Profile): [number,
 }
 
 /**
- * Gives a feature what it needs from earlier features: extrusions and revolutions get the closed
- * outlines and the plane of their sketch (a revolution also its axis). Throws FeatureError when the
- * sketch is missing or has no usable outline.
+ * The edges a fillet or chamfer means in the body it modifies. The faces made for an edge are named
+ * after the faces it lies between, so they keep their names when other edges join or leave the feature.
  */
-export function resolveFeature(feature: SolidModelingFeature, before: readonly Feature[]): KernelFeature {
+function resolveEdges(feature: EdgeFeature, naming: BodyNaming): ResolvedEdgeFeature {
+  if (feature.edges.length === 0) throw new FeatureError('no-edges');
+  const matches = resolveEdgeRefs(feature.edges, naming);
+  const missing = matches.filter((match) => match === null).length;
+  if (missing > 0) throw new FeatureError('edge-missing', `${missing}/${matches.length}`);
+  const edgeIndices: number[] = [];
+  const edgeNames: string[] = [];
+  let healed = false;
+  const healedEdges: EdgeRef[] = feature.edges.map((ref, i) => {
+    const match = matches[i];
+    if (!match) return ref;
+    if (!edgeIndices.includes(match.index)) {
+      edgeIndices.push(match.index);
+      const faces = ref.kind === 'edge' ? ref.faces : edgeFaceNames(naming, match.index);
+      edgeNames.push(`${feature.id}:${hashString(faces.join('|'))}`);
+    }
+    if (match.kind === 'name') return ref;
+    const current = edgeRefOf(naming, match.index);
+    if (!current) return ref;
+    healed = true;
+    return current;
+  });
+  return { ...feature, edgeIndices, edgeNames, ...(healed ? { healedEdges } : {}) };
+}
+
+/**
+ * Gives a feature what it needs from earlier features: extrusions and revolutions get the closed
+ * outlines and the plane of their sketch (a revolution also its axis), fillets and chamfers the edges
+ * of `body` (the body they modify, null when there is none) that their references mean. Throws
+ * FeatureError when the sketch is missing or has no usable outline, or when an edge is gone.
+ */
+export function resolveFeature(feature: SolidModelingFeature, before: readonly Feature[], body: (() => BodyNaming) | null): KernelFeature {
+  if (isEdgeFeature(feature)) {
+    if (!body) throw new FeatureError('no-body');
+    return resolveEdges(feature, body());
+  }
   if (feature.type !== 'extrude' && feature.type !== 'revolve') return feature;
   const sketch = before.find((candidate): candidate is SketchFeature => candidate.type === 'sketch' && candidate.id === feature.sketch);
   if (!sketch || sketch.suppressed) throw new FeatureError('sketch-missing');

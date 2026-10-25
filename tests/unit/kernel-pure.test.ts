@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { featureKeys, hashString } from '../../src/kernel/rebuild.ts';
+import { featureKeys } from '../../src/kernel/rebuild.ts';
+import { hashString } from '../../src/shared/hash.ts';
 import { writeBinaryStl } from '../../src/kernel/stl.ts';
 import { displayQuality, exportQuality } from '../../src/kernel/mesh-quality.ts';
 import { defaultFeature, extrudeRange, type BoxFeature, type ExtrudeFeature, type SketchFeature } from '../../src/shared/model/feature.ts';

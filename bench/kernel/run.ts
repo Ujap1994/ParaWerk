@@ -9,6 +9,7 @@ import type { BackendName } from '../../src/kernel/kernel.ts';
 import { displayQuality } from '../../src/kernel/mesh-quality.ts';
 import type { RebuildRequest } from '../../src/kernel/protocol.ts';
 import type { Feature } from '../../src/shared/model/feature.ts';
+import { edgeFaceNames, edgeRefOf, resolveEdgeRefs } from '../../src/shared/model/naming.ts';
 import { calibration, measure, meta, printReport, summarize, writeReport, type BenchReport, type CaseResult } from '../lib.ts';
 
 const cases: Record<string, CaseResult> = {};
@@ -84,6 +85,17 @@ if (shape) {
   }, { iterations: 10 });
   cases['plate.100holes.mesh'].info = { triangles };
   cases['plate.100holes.massProperties'] = measure(() => kernel.backend.massProperties(shape), { iterations: 10 });
+  if (backendName === 'parawerk') {
+    // What a fillet of the 100 upper hole edges spends on finding them: the body's names, then the references.
+    const naming = kernel.backend.naming(shape);
+    const refs = Array.from({ length: naming.edgeFaces.length / 2 }, (_, edge) => edge)
+      .filter((edge) => edgeFaceNames(naming, edge).includes('plate:top'))
+      .flatMap((edge) => edgeRefOf(naming, edge) ?? []);
+    cases['plate.100holes.resolveEdges'] = {
+      ...measure(() => resolveEdgeRefs(refs, kernel.backend.naming(shape)), { iterations: 10 }),
+      info: { references: refs.length },
+    };
+  }
 }
 // The same plate as one sketch (outline and 100 circles) extruded in one feature; then a spline profile.
 if (backendName === 'parawerk') {

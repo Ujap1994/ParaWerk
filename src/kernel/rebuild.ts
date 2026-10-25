@@ -1,3 +1,4 @@
+import { hashString } from '../shared/hash.ts';
 import { isSketchBased, type Feature, type SketchFeature } from '../shared/model/feature.ts';
 import type { GeometryBackend, ShapeHandle } from './backend.ts';
 import { FeatureError } from './feature-error.ts';
@@ -16,19 +17,6 @@ interface CacheEntry {
 
 export const ROOT_KEY = 'root';
 
-/** cyrb53: a fast 53-bit string hash. */
-export function hashString(text: string, seed = 0): string {
-  let h1 = 0xdeadbeef ^ seed;
-  let h2 = 0x41c6ce57 ^ seed;
-  for (let i = 0; i < text.length; i++) {
-    const ch = text.charCodeAt(i);
-    h1 = Math.imul(h1 ^ ch, 2654435761);
-    h2 = Math.imul(h2 ^ ch, 1597334677);
-  }
-  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
-  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
-  return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
-}
 
 function stableStringify(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
@@ -116,13 +104,15 @@ export class Rebuilder implements Disposable {
       }
 
       try {
-        const shape = this.backend.applyFeature(input, resolveFeature(feature, features.slice(0, i)));
+        const resolved = resolveFeature(feature, features.slice(0, i), input ? () => this.backend.naming(input) : null);
+        const shape = this.backend.applyFeature(input, resolved);
+        const healed = 'healedEdges' in resolved ? resolved.healedEdges : undefined;
         this.entries.push({
           key,
           shapeKey: key,
           shape,
           ownsShape: true,
-          result: { id: feature.id, status: 'ok', timeMs: performance.now() - start, cached: false },
+          result: { id: feature.id, status: 'ok', timeMs: performance.now() - start, cached: false, ...(healed ? { healedEdges: healed } : {}) },
         });
       } catch (error) {
         const failure =

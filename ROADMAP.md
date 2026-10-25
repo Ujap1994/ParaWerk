@@ -152,6 +152,8 @@ Marked complete for now: open points from hands-on testing are handled alongside
 | Extrude and cut from sketch profiles (blind, reversed, mid-plane; exact splines and ellipses) | ✅ done ([ADR 0009](docs/adr/0009-sketch-based-features.md)) |
 | Revolve and revolved cut (axis from the sketch, up to 360°, symmetric) | ✅ done |
 | Extrude end condition *through all* | ✅ done |
+| Persistent naming: named faces, fillet and chamfer edges by face names, regression suite | ✅ done ([ADR 0002](docs/adr/0002-persistent-naming.md)) |
+| Sketches on faces follow their face; repair dialog for lost references | ⏳ next |
 
 ## 2. Guiding principles
 

@@ -3,7 +3,7 @@ import type { FeatureResult, MassProperties, MeshPayload } from '../../../kernel
 import { t } from '../i18n.ts';
 import { KernelClient, KernelCrashedError } from '../kernel/kernel-client.ts';
 import { rebuildPlan, type RebuildPlan } from './document.ts';
-import { getState, setState, showToast, store, type DisplayMeshes } from './store.ts';
+import { getState, setHistory, setState, showToast, store, type DisplayMeshes } from './store.ts';
 
 /** Show "Rebuilding…" only for rebuilds that take noticeably long, to avoid flicker while typing. */
 const BUSY_INDICATOR_DELAY_MS = 150;
@@ -146,4 +146,24 @@ function applyResult(
       ...(bodyChanged ? { selection: [], hover: null } : {}),
     };
   });
+  takeOverHealedEdges(plan, results);
+}
+
+/**
+ * Takes over edge references that the kernel brought up to date: edge indices of older files and
+ * edges found again only by position get their current names (docs/adr/0002-persistent-naming.md).
+ * This is not an undo step, and a document that was saved stays saved: its geometry is the same.
+ */
+function takeOverHealedEdges(plan: RebuildPlan, results: FeatureResult[]): void {
+  const healed = new Map(results.flatMap((result) => (result.healedEdges ? [[result.id, result.healedEdges] as const] : [])));
+  if (healed.size === 0) return;
+  const state = getState();
+  // Only the document as it is: while a feature or sketch is edited, the plan is not the whole part.
+  if (state.activeEdit || state.sketch || state.history.features !== plan.features) return;
+  const features = state.history.features.map((feature) => {
+    const edges = healed.get(feature.id);
+    return edges && isEdgeFeature(feature) ? { ...feature, edges } : feature;
+  });
+  const saved = state.savedFeatures === state.history.features;
+  setHistory({ ...state.history, features }, saved ? { savedFeatures: features } : {});
 }

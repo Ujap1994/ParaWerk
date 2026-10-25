@@ -1,4 +1,5 @@
-import type { Feature, Vec3 } from '../shared/model/feature.ts';
+import type { EdgeRef, Feature, Vec3 } from '../shared/model/feature.ts';
+import type { BodyNaming } from '../shared/model/naming.ts';
 
 export type SurfaceKind = 'plane' | 'cylinder' | 'cone' | 'sphere' | 'torus' | 'bspline' | 'revolution' | 'extrusion' | 'other';
 export type CurveKind = 'line' | 'circle' | 'ellipse' | 'bspline' | 'other';
@@ -47,6 +48,8 @@ export interface MeshPayload {
   /** Exact geometry per face and edge (same indices as the ranges); empty for export meshes. */
   faceInfo: FaceInfo[];
   edgeInfo: EdgeInfo[];
+  /** Persistent face names and edge positions, for references to faces and edges. */
+  naming: BodyNaming;
 }
 
 export type FeatureErrorCode =
@@ -70,6 +73,11 @@ export interface FeatureResult {
   /** Time spent on this feature in the last rebuild (0 when it came from the cache). */
   timeMs: number;
   cached: boolean;
+  /**
+   * Fillets and chamfers whose references were older edge indices or found their edges only by position:
+   * the up-to-date references, for the document to take over (docs/adr/0002-persistent-naming.md).
+   */
+  healedEdges?: EdgeRef[];
 }
 
 export interface MassProperties {

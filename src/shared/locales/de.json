@@ -330,7 +330,7 @@
   "errors": {
     "no-body": "Es gibt noch keinen Körper, der verändert werden kann.",
     "no-edges": "Bitte mindestens eine Kante auswählen.",
-    "edge-missing": "Eine ausgewählte Kante existiert nicht mehr. Bearbeite das Feature und wähle die Kanten neu aus.",
+    "edge-missing": "Eine ausgewählte Kante existiert nicht mehr, eine frühere Änderung hat sie entfernt. Bearbeite das Feature und wähle die Kanten neu aus.",
     "empty-result": "Die Operation hat den gesamten Körper entfernt.",
     "first-must-add": "Das erste Feature muss Material hinzufügen.",
     "sketch-missing": "Die Skizze dieses Features fehlt oder ist unterdrückt. Bearbeite das Feature und wähle eine Skizze.",

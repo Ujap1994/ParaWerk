@@ -4,7 +4,8 @@ import type { GeometryBackend, KernelFeature, ShapeHandle } from '../backend.ts'
 import { FeatureError } from '../feature-error.ts';
 import { axisDirection } from '../feature-geometry.ts';
 import type { MeshQuality } from '../mesh-quality.ts';
-import { encodeProfile } from '../profile-data.ts';
+import { encodeProfile, profileEdgeNames } from '../profile-data.ts';
+import type { BodyNaming } from '../../shared/model/naming.ts';
 import type { CurveKind, EdgeInfo, FaceInfo, FeatureErrorCode, MassProperties, MeshPayload, SurfaceKind } from '../protocol.ts';
 
 type KernelModule = Awaited<ReturnType<typeof createParaWerkKernel>>;
@@ -113,10 +114,10 @@ export class ParaWerkBackend implements GeometryBackend {
         const [x, y, z] = feature.position;
         let tool: ShapeHandle;
         if (feature.type === 'box') {
-          tool = this.handle(k.makeBox(x - feature.width / 2, y - feature.depth / 2, z, feature.width, feature.depth, feature.height));
+          tool = this.handle(k.makeBox(x - feature.width / 2, y - feature.depth / 2, z, feature.width, feature.depth, feature.height, feature.id));
         } else {
           const [dx, dy, dz] = axisDirection(feature.axis);
-          tool = this.handle(k.makeCylinder(x, y, z, dx, dy, dz, feature.radius, feature.height));
+          tool = this.handle(k.makeCylinder(x, y, z, dx, dy, dz, feature.radius, feature.height, feature.id));
         }
         return this.combine(body, tool, feature.operation);
       }
@@ -134,23 +135,25 @@ export class ParaWerkBackend implements GeometryBackend {
           extent = [Math.min(...along), Math.max(...along)];
         }
         const [from, to] = extrudeRange(feature, extent);
-        const tool = this.handle(k.extrudeProfile(encodeProfile(feature.profile), [...origin, ...xDir, ...normal], from, to));
+        const tool = this.handle(k.extrudeProfile(encodeProfile(feature.profile), [...origin, ...xDir, ...normal], from, to, profileEdgeNames(feature.profile), feature.id));
         return this.combine(body, tool, feature.operation);
       }
       case 'revolve': {
         const [from, to] = revolveRange(feature);
         const { origin, xDir, normal } = feature.frame;
-        const tool = this.handle(k.revolveProfile(encodeProfile(feature.profile), [...origin, ...xDir, ...normal], feature.line, from, to));
+        const tool = this.handle(
+          k.revolveProfile(encodeProfile(feature.profile), [...origin, ...xDir, ...normal], feature.line, from, to, profileEdgeNames(feature.profile), feature.id),
+        );
         return this.combine(body, tool, feature.operation);
       }
       case 'fillet':
       case 'chamfer': {
         if (body === null) throw new FeatureError('no-body');
-        if (feature.edges.length === 0) throw new FeatureError('no-edges');
-        const edges = feature.edges.map((ref) => ref.index);
+        if (feature.edgeIndices.length === 0) throw new FeatureError('no-edges');
+        const { edgeIndices, edgeNames, id } = feature;
         return feature.type === 'fillet'
-          ? this.handle(k.fillet(this.id(body), edges, feature.radius))
-          : this.handle(k.chamfer(this.id(body), edges, feature.distance));
+          ? this.handle(k.fillet(this.id(body), edgeIndices, feature.radius, edgeNames, id))
+          : this.handle(k.chamfer(this.id(body), edgeIndices, feature.distance, edgeNames, id));
       }
     }
   }
@@ -167,6 +170,11 @@ export class ParaWerkBackend implements GeometryBackend {
   boundingBox(handle: ShapeHandle): { min: Vec3; max: Vec3 } {
     const result = check(this.kernel.boundingBox(this.id(handle)) as { ok: true; min: Vec3; max: Vec3 } | Failure);
     return { min: result.min, max: result.max };
+  }
+
+  naming(handle: ShapeHandle): BodyNaming {
+    const result = check(this.kernel.naming(this.id(handle)) as ({ ok: true } & BodyNaming) | Failure);
+    return { faces: result.faces, edgeFaces: result.edgeFaces, edgeMidpoints: result.edgeMidpoints };
   }
 
   massProperties(handle: ShapeHandle): MassProperties {
@@ -206,6 +214,7 @@ export class ParaWerkBackend implements GeometryBackend {
     });
     return {
       key,
+      naming: this.naming(handle),
       positions: raw.positions,
       normals: raw.normals,
       indices: raw.indices,

@@ -74,6 +74,19 @@ so you can keep picking.
 
 Bevels edges with an equal *Distance* on both faces. Edge selection works like for fillets.
 
+## How features remember their edges
+
+A fillet or chamfer remembers each edge by the two faces it lies between – for example "the top face of
+Box1 and the side face that line l3 of Sketch1 swept" – not by a number. Every face is named after the
+feature that made it, and keeps its name when later features cut, add or round the body. So when you
+change an earlier feature – make a sketch wider, add a hole to it, insert or suppress a cut – the fillet
+stays on the edge you picked, even though the body now has more or fewer edges.
+
+If the edge is really gone, for example because a corner of the sketch was rounded and the two side
+faces no longer meet, the fillet is marked in red and explains that an edge no longer exists. Edit it
+and pick the edges again. When a face was only made anew (a sketch line deleted and drawn again in the
+same place), ParaWerk finds the edge by its position and updates what the feature remembers.
+
 ## Variables and equations
 
 **Variables** (in the *Features* tab) holds named values for the whole part – a width, a wall thickness,

@@ -8,6 +8,7 @@
 #include <BRepAlgoAPI_Fuse.hxx>
 #include <BRepBndLib.hxx>
 #include <BRepBuilderAPI_Copy.hxx>
+#include <BRepBuilderAPI_MakeShape.hxx>
 #include <BRepBuilderAPI_MakeEdge.hxx>
 #include <BRepBuilderAPI_MakeFace.hxx>
 #include <BRepBuilderAPI_MakeWire.hxx>
@@ -65,6 +66,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <optional>
 #include <sstream>
 #include <unordered_map>
 
@@ -82,25 +84,33 @@ constexpr double kNaN = std::numeric_limits<double>::quiet_NaN();
 
 bool parallel = false;
 
+/** A body and the names of its faces (see FaceNames in core.hpp). */
+struct StoredShape {
+  TopoDS_Shape shape;
+  FaceNames names;
+};
+
 class ShapeStore {
  public:
-  int add(const TopoDS_Shape& shape) {
+  int add(const TopoDS_Shape& shape, FaceNames names = {}) {
     const int id = next_++;
-    shapes_.emplace(id, shape);
+    shapes_.emplace(id, StoredShape{shape, std::move(names)});
     return id;
   }
 
-  const TopoDS_Shape& get(int id) const {
+  const StoredShape& entry(int id) const {
     const auto it = shapes_.find(id);
     if (it == shapes_.end()) throw KernelError("unknown", "unknown shape id " + std::to_string(id));
     return it->second;
   }
 
+  const TopoDS_Shape& get(int id) const { return entry(id).shape; }
+
   void release(int id) { shapes_.erase(id); }
   int size() const { return static_cast<int>(shapes_.size()); }
 
  private:
-  std::unordered_map<int, TopoDS_Shape> shapes_;
+  std::unordered_map<int, StoredShape> shapes_;
   int next_ = 1;
 };
 
@@ -114,6 +124,69 @@ int countSolids(const TopoDS_Shape& shape) {
   TopExp::MapShapes(shape, TopAbs_SOLID, solids);
   return solids.Extent();
 }
+
+/**
+ * Names the faces of `result` after the faces of the inputs they come from: unchanged, modified (split
+ * faces share the name) or merged (the earlier input wins, so faces of the existing body keep their
+ * names). Faces without a source stay unnamed ("").
+ */
+class FaceNamer {
+ public:
+  explicit FaceNamer(const TopoDS_Shape& result) {
+    TopExp::MapShapes(result, TopAbs_FACE, faces_);
+    names_.resize(static_cast<size_t>(faces_.Extent()));
+    named_.resize(static_cast<size_t>(faces_.Extent()), false);
+  }
+
+  /** Gives the face its name unless it already has one. */
+  void assign(const TopoDS_Shape& face, const std::string& name) {
+    const int index = faces_.FindIndex(face);
+    if (index == 0 || named_[static_cast<size_t>(index - 1)]) return;
+    names_[static_cast<size_t>(index - 1)] = name;
+    named_[static_cast<size_t>(index - 1)] = true;
+  }
+
+  void inherit(BRepBuilderAPI_MakeShape& maker, const TopoDS_Shape& input, const FaceNames& names) {
+    ShapeMap inputFaces;
+    TopExp::MapShapes(input, TopAbs_FACE, inputFaces);
+    for (int f = 1; f <= inputFaces.Extent(); ++f) {
+      const TopoDS_Shape& face = inputFaces(f);
+      const std::string& name = f <= static_cast<int>(names.size()) ? names[static_cast<size_t>(f - 1)] : empty_;
+      const NCollection_List<TopoDS_Shape>& modified = maker.Modified(face);
+      if (!modified.IsEmpty()) {
+        for (const TopoDS_Shape& piece : modified) assign(piece, name);
+      } else if (!maker.IsDeleted(face)) {
+        assign(face, name);
+      }
+    }
+  }
+
+  /** Names the faces generated from `source` (an edge or vertex). */
+  void generated(BRepBuilderAPI_MakeShape& maker, const TopoDS_Shape& source, const std::string& name) {
+    for (const TopoDS_Shape& shape : maker.Generated(source)) {
+      if (shape.ShapeType() == TopAbs_FACE) assign(shape, name);
+    }
+  }
+
+  /** Names every face that has no name yet. */
+  void rest(const std::string& name) {
+    for (size_t i = 0; i < names_.size(); ++i) {
+      if (!named_[i]) names_[i] = name;
+      named_[i] = true;
+    }
+  }
+
+  FaceNames take() { return std::move(names_); }
+
+ private:
+  ShapeMap faces_;
+  FaceNames names_;
+  std::vector<bool> named_;
+  const std::string empty_;
+};
+
+/** "<prefix>:<role>", or no name when the operation has none. */
+std::string faceName(const std::string& prefix, const std::string& role) { return prefix.empty() ? std::string() : prefix + ":" + role; }
 
 std::vector<TopoDS_Edge> selectEdges(const TopoDS_Shape& body, const std::vector<int>& edgeIndices) {
   ShapeMap edges;
@@ -431,7 +504,18 @@ TopoDS_Edge readEdge(ProfileReader& in, const occ::handle<Geom_Plane>& plane) {
   }
 }
 
-TopoDS_Wire readLoop(ProfileReader& in, const occ::handle<Geom_Plane>& plane) {
+/** The edges of a profile as they are in its faces, with the names of the sketch curves they come from. */
+struct NamedEdges {
+  const std::vector<std::string>& names;
+  std::vector<std::pair<TopoDS_Edge, std::string>> edges;
+
+  void add(const TopoDS_Edge& edge) {
+    const size_t next = edges.size();
+    edges.emplace_back(edge, next < names.size() ? names[next] : std::string());
+  }
+};
+
+TopoDS_Wire readLoop(ProfileReader& in, const occ::handle<Geom_Plane>& plane, NamedEdges& named) {
   const int edgeCount = in.count(1 << 20);
   BRepBuilderAPI_MakeWire wire;
   for (int e = 0; e < edgeCount; ++e) {
@@ -439,6 +523,8 @@ TopoDS_Wire readLoop(ProfileReader& in, const occ::handle<Geom_Plane>& plane) {
     BRepLib::BuildCurves3d(edge);
     wire.Add(edge);
     if (!wire.IsDone()) throw KernelError("operation-failed", "the edges of a profile outline do not connect");
+    // The wire may replace the edge to share vertices with its neighbours: remember the edge it keeps.
+    named.add(wire.Edge());
   }
   if (!wire.IsDone() || !wire.Wire().Closed()) throw KernelError("operation-failed", "a profile outline is not closed");
   return wire.Wire();
@@ -458,7 +544,7 @@ occ::handle<Geom_Plane> framePlane(const std::vector<double>& frame) {
 }
 
 /** One planar face per profile region (see extrudeProfile in core.hpp for the encoding). */
-std::vector<TopoDS_Face> readFaces(const std::vector<double>& profile, const occ::handle<Geom_Plane>& plane) {
+std::vector<TopoDS_Face> readFaces(const std::vector<double>& profile, const occ::handle<Geom_Plane>& plane, NamedEdges& named) {
   ProfileReader in(profile);
   const int regionCount = in.count(1 << 20);
   if (regionCount == 0) throw KernelError("operation-failed", "the sketch has no closed outline");
@@ -467,53 +553,68 @@ std::vector<TopoDS_Face> readFaces(const std::vector<double>& profile, const occ
     const int loopCount = in.count(1 << 20);
     if (loopCount == 0) throw KernelError("operation-failed", "a profile region has no outline");
     // Outer loops run counterclockwise and holes clockwise, as the face needs them.
-    BRepBuilderAPI_MakeFace faceMaker(plane, readLoop(in, plane), Precision::Confusion());
-    for (int l = 1; l < loopCount; ++l) faceMaker.Add(readLoop(in, plane));
+    BRepBuilderAPI_MakeFace faceMaker(plane, readLoop(in, plane, named), Precision::Confusion());
+    for (int l = 1; l < loopCount; ++l) faceMaker.Add(readLoop(in, plane, named));
     if (!faceMaker.IsDone()) throw KernelError("operation-failed", "a face could not be built from the profile");
     faces.push_back(faceMaker.Face());
   }
   return faces;
 }
 
-/** Joins the solids made from the regions of one profile. */
-TopoDS_Shape joinRegions(const std::vector<TopoDS_Shape>& solids, const char* what) {
-  TopoDS_Shape result;
-  for (const TopoDS_Shape& solid : solids) {
-    if (result.IsNull()) {
+/** Joins the solids made from the regions of one profile (with their face names). */
+StoredShape joinRegions(const std::vector<StoredShape>& solids, const char* what) {
+  StoredShape result;
+  for (const StoredShape& solid : solids) {
+    if (result.shape.IsNull()) {
       result = solid;
       continue;
     }
     BRepAlgoAPI_Fuse fuse;
-    configure(fuse, result, solid);
+    configure(fuse, result.shape, solid.shape);
     if (fuse.HasErrors()) throw KernelError("operation-failed", std::string("the ") + what + " regions could not be joined");
     fuse.SimplifyResult(true, true, 1e-6);
-    result = fuse.Shape();
+    FaceNamer namer(fuse.Shape());
+    namer.inherit(fuse, result.shape, result.names);
+    namer.inherit(fuse, solid.shape, solid.names);
+    result = {fuse.Shape(), namer.take()};
   }
-  if (countSolids(result) == 0) throw KernelError("operation-failed", std::string("the ") + what + " is not a solid");
+  if (countSolids(result.shape) == 0) throw KernelError("operation-failed", std::string("the ") + what + " is not a solid");
   return result;
+}
+
+/** Names the faces a sweep (prism or revolution) made from `face`: sides after their profile edges, then the ends. */
+template <typename Sweep>
+FaceNames sweepNames(Sweep& sweep, const NamedEdges& named, const std::string& name) {
+  FaceNamer namer(sweep.Shape());
+  for (const auto& [edge, edgeName] : named.edges) namer.generated(sweep, edge, faceName(name, "side:" + edgeName));
+  namer.assign(sweep.FirstShape(), faceName(name, "start"));
+  namer.assign(sweep.LastShape(), faceName(name, "end"));
+  namer.rest(faceName(name, "other"));
+  return namer.take();
 }
 
 }  // namespace
 
-int extrudeProfile(const std::vector<double>& profile, const std::vector<double>& frame, double from, double to) {
+int extrudeProfile(const std::vector<double>& profile, const std::vector<double>& frame, double from, double to,
+                   const std::vector<std::string>& edgeNames, const std::string& name) {
   if (!(std::abs(to - from) > 1e-9)) throw KernelError("operation-failed", "the extrusion has no depth");
   const occ::handle<Geom_Plane> plane = framePlane(frame);
   const gp_Vec normal(plane->Position().Direction());
-  std::vector<TopoDS_Shape> solids;
-  for (TopoDS_Shape face : readFaces(profile, plane)) {
-    if (from != 0) {
-      gp_Trsf shift;
-      shift.SetTranslation(normal * from);
-      face = BRepBuilderAPI_Transform(face, shift, true).Shape();
-    }
+  // The faces start on the plane moved to `from`: the profile coordinates are the plane's own parameters.
+  if (from != 0) plane->Translate(normal * from);
+  NamedEdges named{edgeNames, {}};
+  std::vector<StoredShape> solids;
+  for (const TopoDS_Face& face : readFaces(profile, plane, named)) {
     BRepPrimAPI_MakePrism prism(face, normal * (to - from));
     if (!prism.IsDone()) throw KernelError("operation-failed", "the profile could not be extruded");
-    solids.push_back(prism.Shape());
+    solids.push_back({prism.Shape(), sweepNames(prism, named, name)});
   }
-  return store().add(joinRegions(solids, "extruded"));
+  StoredShape result = joinRegions(solids, "extruded");
+  return store().add(result.shape, std::move(result.names));
 }
 
-int revolveProfile(const std::vector<double>& profile, const std::vector<double>& frame, const std::vector<double>& axis, double from, double to) {
+int revolveProfile(const std::vector<double>& profile, const std::vector<double>& frame, const std::vector<double>& axis, double from, double to,
+                   const std::vector<std::string>& edgeNames, const std::string& name) {
   if (axis.size() != 4) throw KernelError("operation-failed", "an axis needs 4 values");
   if (!(to - from > 1e-9 && to - from <= 2 * M_PI + 1e-9)) throw KernelError("operation-failed", "the angle must be above 0 and up to 360 degrees");
   const occ::handle<Geom_Plane> plane = framePlane(frame);
@@ -523,80 +624,163 @@ int revolveProfile(const std::vector<double>& profile, const std::vector<double>
   const gp_Ax1 line(start, gp_Dir(gp_Vec(start, end)));
   // A full turn is exactly 2π, so the solid closes on itself.
   const double sweep = std::min(to - from, 2 * M_PI);
-  std::vector<TopoDS_Shape> solids;
-  for (TopoDS_Shape face : readFaces(profile, plane)) {
-    if (from != 0) {
-      gp_Trsf turn;
-      turn.SetRotation(line, from);
-      face = BRepBuilderAPI_Transform(face, turn, true).Shape();
-    }
+  // The faces start on the plane turned to `from` (the axis lies in the plane, so it stays where it is).
+  if (from != 0) plane->Rotate(line, from);
+  NamedEdges named{edgeNames, {}};
+  std::vector<StoredShape> solids;
+  for (const TopoDS_Face& face : readFaces(profile, plane, named)) {
     BRepPrimAPI_MakeRevol revolution(face, line, sweep);
     if (!revolution.IsDone()) throw KernelError("operation-failed", "the profile could not be revolved");
-    solids.push_back(revolution.Shape());
+    solids.push_back({revolution.Shape(), sweepNames(revolution, named, name)});
   }
-  return store().add(joinRegions(solids, "revolved"));
+  StoredShape result = joinRegions(solids, "revolved");
+  return store().add(result.shape, std::move(result.names));
 }
 
 void setParallel(bool enabled) { parallel = enabled; }
 
 // ------------------------------------------------------------------ features
 
-int makeBox(double x, double y, double z, double dx, double dy, double dz) {
-  BRepPrimAPI_MakeBox maker(gp_Pnt(x, y, z), dx, dy, dz);
-  return store().add(maker.Shape());
+namespace {
+
+/** The outward normal of a planar face, or nothing for other faces. */
+std::optional<gp_Dir> planeNormal(const TopoDS_Face& face) {
+  BRepAdaptor_Surface surface(face, false);
+  if (surface.GetType() != GeomAbs_Plane) return std::nullopt;
+  gp_Dir normal = surface.Plane().Axis().Direction();
+  if (face.Orientation() == TopAbs_REVERSED) normal.Reverse();
+  return normal;
 }
 
-int makeCylinder(double px, double py, double pz, double dx, double dy, double dz, double radius, double height) {
-  BRepPrimAPI_MakeCylinder maker(gp_Ax2(gp_Pnt(px, py, pz), gp_Dir(dx, dy, dz)), radius, height);
-  return store().add(maker.Shape());
+/** Names the faces of a primitive by what `role` says about each face. */
+template <typename Role>
+FaceNames primitiveNames(const TopoDS_Shape& shape, const std::string& name, Role role) {
+  FaceNamer namer(shape);
+  ShapeMap faces;
+  TopExp::MapShapes(shape, TopAbs_FACE, faces);
+  for (int f = 1; f <= faces.Extent(); ++f) namer.assign(faces(f), faceName(name, role(TopoDS::Face(faces(f)))));
+  return namer.take();
+}
+
+/** Rounds or bevels edges (BRepFilletAPI_MakeFillet or _MakeChamfer) and names the new faces. */
+template <typename Maker>
+int finishEdgeFeature(Maker& maker, int bodyId, const std::vector<TopoDS_Edge>& edges, const std::vector<std::string>& edgeNames,
+                      const std::string& name, const char* what, const char* failure) {
+  maker.Build();
+  if (!maker.IsDone()) throw KernelError("operation-failed", failure);
+  const TopoDS_Shape result = maker.Shape();
+  requireValidSolid(result, what);
+  const StoredShape& body = store().entry(bodyId);
+  FaceNamer namer(result);
+  for (size_t k = 0; k < edges.size(); ++k) namer.generated(maker, edges[k], k < edgeNames.size() ? edgeNames[k] : faceName(name, std::to_string(k)));
+  namer.inherit(maker, body.shape, body.names);
+  namer.rest(faceName(name, "corner"));
+  return store().add(result, namer.take());
+}
+
+}  // namespace
+
+int makeBox(double x, double y, double z, double dx, double dy, double dz, const std::string& name) {
+  BRepPrimAPI_MakeBox maker(gp_Pnt(x, y, z), dx, dy, dz);
+  const TopoDS_Shape shape = maker.Shape();
+  return store().add(shape, primitiveNames(shape, name, [](const TopoDS_Face& face) {
+    const gp_Dir n = planeNormal(face).value_or(gp_Dir(0, 0, 1));
+    const double ax = std::abs(n.X()), ay = std::abs(n.Y()), az = std::abs(n.Z());
+    if (ax >= ay && ax >= az) return n.X() < 0 ? "left" : "right";
+    if (ay >= az) return n.Y() < 0 ? "front" : "back";
+    return n.Z() < 0 ? "bottom" : "top";
+  }));
+}
+
+int makeCylinder(double px, double py, double pz, double dx, double dy, double dz, double radius, double height, const std::string& name) {
+  const gp_Dir axis(dx, dy, dz);
+  BRepPrimAPI_MakeCylinder maker(gp_Ax2(gp_Pnt(px, py, pz), axis), radius, height);
+  const TopoDS_Shape shape = maker.Shape();
+  return store().add(shape, primitiveNames(shape, name, [&](const TopoDS_Face& face) {
+    const std::optional<gp_Dir> normal = planeNormal(face);
+    if (!normal) return "side";
+    return normal->Dot(axis) > 0 ? "top" : "bottom";
+  }));
 }
 
 int booleanOperation(int bodyId, int toolId, int op) {
-  const TopoDS_Shape& body = store().get(bodyId);
-  const TopoDS_Shape& tool = store().get(toolId);
-  TopoDS_Shape result;
+  const StoredShape& body = store().entry(bodyId);
+  const StoredShape& tool = store().entry(toolId);
+  const auto run = [&](BRepAlgoAPI_BooleanOperation& algorithm) {
+    configure(algorithm, body.shape, tool.shape);
+    if (algorithm.HasErrors()) throw KernelError("operation-failed", "boolean operation failed");
+    algorithm.SimplifyResult(true, true, 1e-6);
+    const TopoDS_Shape result = algorithm.Shape();
+    if (countSolids(result) == 0) throw KernelError("empty-result", "the operation removed the whole body");
+    // Faces of the body win over coplanar tool faces merged into them, so existing names stay.
+    FaceNamer namer(result);
+    namer.inherit(algorithm, body.shape, body.names);
+    namer.inherit(algorithm, tool.shape, tool.names);
+    return store().add(result, namer.take());
+  };
   if (op == 0) {
     BRepAlgoAPI_Fuse algorithm;
-    configure(algorithm, body, tool);
-    if (algorithm.HasErrors()) throw KernelError("operation-failed", "boolean operation failed");
-    algorithm.SimplifyResult(true, true, 1e-6);
-    result = algorithm.Shape();
-  } else {
-    BRepAlgoAPI_Cut algorithm;
-    configure(algorithm, body, tool);
-    if (algorithm.HasErrors()) throw KernelError("operation-failed", "boolean operation failed");
-    algorithm.SimplifyResult(true, true, 1e-6);
-    result = algorithm.Shape();
+    return run(algorithm);
   }
-  if (countSolids(result) == 0) throw KernelError("empty-result", "the operation removed the whole body");
-  return store().add(result);
+  BRepAlgoAPI_Cut algorithm;
+  return run(algorithm);
 }
 
-int fillet(int bodyId, const std::vector<int>& edgeIndices, double radius) {
+int fillet(int bodyId, const std::vector<int>& edgeIndices, double radius, const std::vector<std::string>& edgeNames, const std::string& name) {
   const TopoDS_Shape& body = store().get(bodyId);
   BRepFilletAPI_MakeFillet maker(body, ChFi3d_Rational);
-  for (const TopoDS_Edge& edge : selectEdges(body, edgeIndices)) maker.Add(radius, edge);
-  maker.Build();
-  if (!maker.IsDone()) throw KernelError("operation-failed", "fillet could not be computed (radius too large?)");
-  const TopoDS_Shape result = maker.Shape();
-  requireValidSolid(result, "fillet");
-  return store().add(result);
+  const std::vector<TopoDS_Edge> edges = selectEdges(body, edgeIndices);
+  for (const TopoDS_Edge& edge : edges) maker.Add(radius, edge);
+  return finishEdgeFeature(maker, bodyId, edges, edgeNames, name, "fillet", "fillet could not be computed (radius too large?)");
 }
 
-int chamfer(int bodyId, const std::vector<int>& edgeIndices, double distance) {
+int chamfer(int bodyId, const std::vector<int>& edgeIndices, double distance, const std::vector<std::string>& edgeNames, const std::string& name) {
   const TopoDS_Shape& body = store().get(bodyId);
   BRepFilletAPI_MakeChamfer maker(body);
-  for (const TopoDS_Edge& edge : selectEdges(body, edgeIndices)) maker.Add(distance, edge);
-  maker.Build();
-  if (!maker.IsDone()) throw KernelError("operation-failed", "chamfer could not be computed (distance too large?)");
-  const TopoDS_Shape result = maker.Shape();
-  requireValidSolid(result, "chamfer");
-  return store().add(result);
+  const std::vector<TopoDS_Edge> edges = selectEdges(body, edgeIndices);
+  for (const TopoDS_Edge& edge : edges) maker.Add(distance, edge);
+  return finishEdgeFeature(maker, bodyId, edges, edgeNames, name, "chamfer", "chamfer could not be computed (distance too large?)");
 }
 
 void release(int id) { store().release(id); }
 
 int shapeCount() { return store().size(); }
+
+Naming naming(int id) {
+  const StoredShape& entry = store().entry(id);
+  ShapeMap faces, edges;
+  TopExp::MapShapes(entry.shape, TopAbs_FACE, faces);
+  TopExp::MapShapes(entry.shape, TopAbs_EDGE, edges);
+  AncestorMap edgeFaces;
+  TopExp::MapShapesAndAncestors(entry.shape, TopAbs_EDGE, TopAbs_FACE, edgeFaces);
+
+  Naming result;
+  result.faces.resize(static_cast<size_t>(faces.Extent()));
+  for (size_t f = 0; f < result.faces.size() && f < entry.names.size(); ++f) result.faces[f] = entry.names[f];
+  result.edgeFaces.reserve(static_cast<size_t>(edges.Extent()) * 2);
+  result.edgeMidpoints.reserve(static_cast<size_t>(edges.Extent()) * 3);
+  for (int e = 1; e <= edges.Extent(); ++e) {
+    const TopoDS_Edge edge = TopoDS::Edge(edges(e));
+    int32_t sides[2] = {-1, -1};
+    if (const NCollection_List<TopoDS_Shape>* adjacent = edgeFaces.Seek(edge)) {
+      int k = 0;
+      for (const TopoDS_Shape& face : *adjacent) {
+        if (k < 2) sides[k++] = faces.FindIndex(face) - 1;
+      }
+      // A seam lies between a face and itself.
+      if (k == 1) sides[1] = sides[0];
+    }
+    result.edgeFaces.insert(result.edgeFaces.end(), {sides[0], sides[1]});
+    if (BRep_Tool::Degenerated(edge)) {
+      result.edgeMidpoints.insert(result.edgeMidpoints.end(), 3, kNaN);
+    } else {
+      BRepAdaptor_Curve curve(edge);
+      const gp_Pnt middle = curve.Value((curve.FirstParameter() + curve.LastParameter()) / 2);
+      result.edgeMidpoints.insert(result.edgeMidpoints.end(), {middle.X(), middle.Y(), middle.Z()});
+    }
+  }
+  return result;
+}
 
 // ------------------------------------------------------------------ queries
 

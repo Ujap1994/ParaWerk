@@ -1,3 +1,4 @@
+import { anonymousNaming } from '../../shared/model/naming.ts';
 import type { GeometryBackend, KernelFeature, ShapeHandle } from '../backend.ts';
 import { applyFeature } from '../features.ts';
 import { extractMesh } from '../mesh.ts';
@@ -47,6 +48,12 @@ export class ReplicadBackend implements GeometryBackend {
 
   boundingBox(handle: ShapeHandle) {
     return boundingBox(this.oc, this.shape(handle));
+  }
+
+  /** This backend does not track face names: edges can only be referenced by index. */
+  naming(handle: ShapeHandle) {
+    const { faces, edges } = this.counts(handle);
+    return anonymousNaming(faces, edges);
   }
 
   massProperties(handle: ShapeHandle) {

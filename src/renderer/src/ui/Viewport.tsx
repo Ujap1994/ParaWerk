@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isEdgeFeature, isSketchBased } from '../../../shared/model/feature.ts';
+import { resolveEdgeRefs } from '../../../shared/model/naming.ts';
 import { frameOf, STANDARD_PLANES } from '../../../shared/model/sketch.ts';
 import * as commands from '../commands.ts';
 import { SketchController, sketchHighlight, statusColors } from '../sketch/controller.ts';
@@ -26,7 +27,11 @@ function cubeLabels(t: (key: string) => string): Record<CubeFace, string> {
 /** Selection shown in the view: the draft's edges while editing a fillet/chamfer, otherwise the user selection. */
 function visibleSelection(state: AppState): Pick[] {
   const edit = state.activeEdit;
-  if (edit && isEdgeFeature(edit.draft)) return edit.draft.edges.map((ref) => ({ kind: 'edge', index: ref.index }));
+  if (edit && isEdgeFeature(edit.draft)) {
+    const naming = state.display.body?.naming;
+    if (!naming) return [];
+    return resolveEdgeRefs(edit.draft.edges, naming).flatMap((match) => (match ? [{ kind: 'edge' as const, index: match.index }] : []));
+  }
   return state.selection;
 }
 

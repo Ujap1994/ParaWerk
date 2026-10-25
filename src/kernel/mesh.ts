@@ -1,3 +1,4 @@
+import { anonymousNaming } from '../shared/model/naming.ts';
 import { Arena, type OC, type TopoDS_Shape } from './occt.ts';
 import type { MeshPayload } from './protocol.ts';
 import type { MeshQuality } from './mesh-quality.ts';
@@ -38,7 +39,18 @@ export function extractMesh(oc: OC, shape: TopoDS_Shape, quality: MeshQuality, k
   }
 
   if (!withEdges) {
-    return { key, positions, normals, indices, faceRanges, edgePositions: new Float32Array(0), edgeRanges: new Uint32Array(0), faceInfo: [], edgeInfo: [] };
+    return {
+      key,
+      positions,
+      normals,
+      indices,
+      faceRanges,
+      edgePositions: new Float32Array(0),
+      edgeRanges: new Uint32Array(0),
+      faceInfo: [],
+      edgeInfo: [],
+      naming: anonymousNaming(0, 0),
+    };
   }
 
   const edges = oc.ReplicadEdgeMeshExtractor.extract(shape, quality.linear, quality.angular);
@@ -56,7 +68,7 @@ export function extractMesh(oc: OC, shape: TopoDS_Shape, quality: MeshQuality, k
   if (hidden.size > 0) ({ edgePositions, edgeRanges } = withoutEdges(edgePositions, edgeRanges, hidden));
   const { faces: faceInfo, edges: edgeInfo } = describeTopology(oc, shape);
 
-  return { key, positions, normals, indices, faceRanges, edgePositions, edgeRanges, faceInfo, edgeInfo };
+  return { key, positions, normals, indices, faceRanges, edgePositions, edgeRanges, faceInfo, edgeInfo, naming: anonymousNaming(faceInfo.length, edgeInfo.length) };
 }
 
 /**

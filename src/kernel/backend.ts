@@ -1,4 +1,5 @@
-import type { ExtrudeFeature, RevolveFeature, SolidModelingFeature, Vec3 } from '../shared/model/feature.ts';
+import type { EdgeFeature, EdgeRef, ExtrudeFeature, RevolveFeature, SolidModelingFeature, Vec3 } from '../shared/model/feature.ts';
+import type { BodyNaming } from '../shared/model/naming.ts';
 import type { Profile } from '../shared/model/profile.ts';
 import type { SketchFrame } from '../shared/model/sketch.ts';
 import type { MassProperties, MeshPayload } from './protocol.ts';
@@ -18,8 +19,22 @@ export interface ResolvedRevolve extends RevolveFeature {
   line: [number, number, number, number];
 }
 
+/** A fillet or chamfer with its edge references resolved in the body it modifies. */
+export type ResolvedEdgeFeature = EdgeFeature & {
+  /** Topological indices of the edges, without duplicates. */
+  edgeIndices: number[];
+  /** Per edge: the name of the faces made for it (see FaceNames in native/kernel/src/core.hpp). */
+  edgeNames: string[];
+  /** The references the document should take over (older index references, edges found again by position). */
+  healedEdges?: EdgeRef[];
+};
+
 /** A feature as a backend builds it, with its references to earlier features resolved. */
-export type KernelFeature = Exclude<SolidModelingFeature, ExtrudeFeature | RevolveFeature> | ResolvedExtrude | ResolvedRevolve;
+export type KernelFeature =
+  | Exclude<SolidModelingFeature, ExtrudeFeature | RevolveFeature | EdgeFeature>
+  | ResolvedExtrude
+  | ResolvedRevolve
+  | ResolvedEdgeFeature;
 
 /** Opaque reference to a shape owned by a backend. */
 export type ShapeHandle = { readonly __shape: unique symbol };
@@ -36,6 +51,8 @@ export interface GeometryBackend {
   release(shape: ShapeHandle): void;
   counts(shape: ShapeHandle): { faces: number; edges: number; solids: number };
   boundingBox(shape: ShapeHandle): { min: Vec3; max: Vec3 };
+  /** Persistent face names and edge positions (docs/adr/0002-persistent-naming.md). */
+  naming(shape: ShapeHandle): BodyNaming;
   massProperties(shape: ShapeHandle): MassProperties;
   /** Display mesh with edges and exact face/edge information. */
   mesh(shape: ShapeHandle, quality: MeshQuality, key: string): MeshPayload;

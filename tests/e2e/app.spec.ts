@@ -112,6 +112,43 @@ test('creates a box, rounds edges picked in the 3D view and exports STEP and STL
   await expect(page.locator('[data-testid="toast-success"]').last()).toBeVisible();
 });
 
+test('keeps a fillet on its edge when an earlier feature changes the topology', async () => {
+  launched = await launchApp({ width: 1440, height: 900 });
+  const { page } = launched;
+  await createBox(page);
+  // A hole through the box: more faces and edges, numbered differently than in the plain box.
+  await page.click('[data-command="cylinder"]');
+  await page.evaluate(() =>
+    (window as unknown as { __parawerk: { commands: { updateDraft(patch: object): void } } }).__parawerk.commands.updateDraft({
+      operation: 'cut',
+      radius: 8,
+      height: 60,
+      position: [0, 0, -10],
+    }),
+  );
+  await page.click('[data-testid="panel-ok"]');
+  await idle(page);
+
+  await page.click('[data-command="fillet"]');
+  await idle(page);
+  await clickWorldPoint(page, [0, -30, 40]);
+  await expect(page.locator('[data-testid="edge-count"]')).toContainText('1');
+  await page.locator('[data-testid="fillet-radius"]').fill('5');
+  await page.click('[data-testid="panel-ok"]');
+  const loss = 25 * (1 - Math.PI / 4) * 100;
+  expect(await volume(page)).toBeCloseTo(240_000 - 64 * Math.PI * 40 - loss, 1);
+
+  // The fillet stores the faces of its edge, not an index.
+  const [boxFeature, hole, fillet] = (await state(page)).history.features as unknown as { id: string; edges?: { kind: string; faces: string[] }[] }[];
+  expect(fillet?.edges).toMatchObject([{ kind: 'edge', faces: [`${boxFeature?.id}:front`, `${boxFeature?.id}:top`] }]);
+
+  // Suppressing the hole renumbers the edges; the fillet stays on the top front edge.
+  await page.locator(`[data-feature-id="${hole?.id}"]`).hover();
+  await page.locator(`[data-feature-id="${hole?.id}"] .tree-actions button`).nth(1).click();
+  expect(await volume(page)).toBeCloseTo(240_000 - loss, 1);
+  expect((await state(page)).rebuild?.results.map((result) => result.status)).toEqual(['ok', 'suppressed', 'ok']);
+});
+
 test('picks whole B-Rep faces and shows their exact geometry', async () => {
   launched = await launchApp({ width: 1440, height: 900 });
   const { page } = launched;

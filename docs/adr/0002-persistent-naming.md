@@ -1,6 +1,7 @@
 # 0002 – Persistent naming of faces and edges
 
-**Status:** accepted as design; Phase 0 uses a simplified scheme, the full scheme is built in Phase 2.
+**Status:** accepted. Phase 0 used edge indices; Phase 2 implements face names and named edge references
+(see *Implementation*). Sketches on faces following their face and the repair dialog come next.
 
 ## Context
 
@@ -27,6 +28,59 @@ tests), and a missing index produces a clear `edge-missing` error instead of a c
    user pick the replacement.
 5. A regression suite edits early features of reference models and checks that downstream features
    still resolve to the intended sub-shapes.
+
+## Implementation (Phase 2)
+
+**Face names.** The kernel stores one name per face with every body (`FaceNames` in
+`native/kernel/src/core.hpp`). Each operation names the faces it creates after the feature id and a role,
+using OCCT's history to pass the names of the faces it modifies on:
+
+| Operation | New faces | History used |
+|---|---|---|
+| Box | `<id>:left/right/front/back/bottom/top` (by outward normal: −x, +x, −y, +y, −z, +z) | – |
+| Cylinder | `<id>:side/bottom/top` | – |
+| Extrude, revolve | `<id>:side:<sketch curve id>`, `<id>:start`, `<id>:end` | `Generated(edge)`, `FirstShape`, `LastShape` |
+| Boolean (add, cut) | none: every face keeps the name of the face it comes from | `Modified`, `IsDeleted`, merged by `SimplifyResult` |
+| Fillet, chamfer | `<id>:<hash of the edge's two face names>`; corners `<id>:corner` | `Generated(edge)`, `Modified` |
+
+Split faces share their name; when faces are merged (coplanar faces after a union), the face of the
+existing body wins, so names already referenced stay. The faces of an extrusion are built on the sketch
+plane moved to the start of the extrusion instead of transforming a copy, so the profile edges and the
+side faces they sweep stay connected through the history. Fillet faces are named after the edge they
+replace, not after its position in the feature's list, so removing another edge from the fillet does not
+rename them.
+
+**Edge references.** A fillet or chamfer stores `{ kind: 'edge', faces: [a, b], at }`: the sorted names of
+the two faces the edge lies between (the same name twice for a seam) and the middle of the edge when it
+was picked. `resolveEdgeRefs` (`src/shared/model/naming.ts`) is shared by the kernel worker, which
+resolves the references in the input body before every build, and the renderer, which highlights the
+picked edges in the displayed body. Resolution:
+
+1. Edges between faces with both names: the one nearest to `at` (two edges can share both faces, for
+   example a cross hole meeting a tube on both sides).
+2. Both faces still exist but no longer meet: the edge is gone, `edge-missing`.
+3. One face was renamed (for example, its sketch line was deleted and drawn again): the nearest edge of
+   the other face within 5 % of the body size.
+4. Both faces were renamed: an edge in practically the same place (within 0.01 % of the body size).
+
+References found by position, and edge indices from files of ParaWerk 0.2 and earlier, are *healed*: the
+rebuild reports the up-to-date references (`FeatureResult.healedEdges`) and the document takes them over
+without an undo step, so they resolve by name from then on. Part files with named references are format
+version 5.
+
+**Cost.** Naming adds no measurable time to booleans and fillets (kernel benchmarks before and after are
+within noise); resolving the 104 upper hole edges of the 100-hole plate takes 0.24 ms
+(`plate.100holes.resolveEdges`).
+
+**Regression suite.** `tests/integration/naming.test.ts` edits earlier features of reference models (a
+sketch made wider, split and given a hole; a cut inserted before a fillet; a fillet on a fillet face; a
+sketch line drawn again; a rounded sketch corner) and checks that the fillets and chamfers after them
+keep their edges, or report the edge that is really gone. The end-to-end test *keeps a fillet on its
+edge when an earlier feature changes the topology* does the same through the UI.
+
+**Known limits.** An edge that an earlier change splits into pieces resolves to the piece nearest to
+where it was, not to all pieces. Sketches on faces still store their plane, so they do not yet follow
+their face.
 
 ## Consequences
 

@@ -6,17 +6,19 @@ declare var RuntimeExports: {
 interface WasmModule {
 }
 
+type EmbindString = ArrayBuffer|Uint8Array|Uint8ClampedArray|Int8Array|string;
 interface EmbindModule {
   release(_0: number): void;
   shapeCount(): number;
   version(): string;
-  makeBox(_0: number, _1: number, _2: number, _3: number, _4: number, _5: number): any;
-  makeCylinder(_0: number, _1: number, _2: number, _3: number, _4: number, _5: number, _6: number, _7: number): any;
+  makeBox(_0: number, _1: number, _2: number, _3: number, _4: number, _5: number, _6: EmbindString): any;
+  makeCylinder(_0: number, _1: number, _2: number, _3: number, _4: number, _5: number, _6: number, _7: number, _8: EmbindString): any;
   booleanOperation(_0: number, _1: number, _2: number): any;
-  extrudeProfile(_0: any, _1: any, _2: number, _3: number): any;
-  revolveProfile(_0: any, _1: any, _2: any, _3: number, _4: number): any;
-  fillet(_0: number, _1: any, _2: number): any;
-  chamfer(_0: number, _1: any, _2: number): any;
+  extrudeProfile(_0: any, _1: any, _2: number, _3: number, _4: any, _5: EmbindString): any;
+  revolveProfile(_0: any, _1: any, _2: any, _3: number, _4: number, _5: any, _6: EmbindString): any;
+  fillet(_0: number, _1: any, _2: number, _3: any, _4: EmbindString): any;
+  chamfer(_0: number, _1: any, _2: number, _3: any, _4: EmbindString): any;
+  naming(_0: number): any;
   counts(_0: number): any;
   boundingBox(_0: number): any;
   massProperties(_0: number): any;

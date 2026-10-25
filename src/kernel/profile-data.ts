@@ -39,3 +39,8 @@ export function encodeProfile(profile: Profile): number[] {
   }
   return out;
 }
+
+/** The sketch curve of every profile edge, in the order of encodeProfile: the kernel names side faces after them. */
+export function profileEdgeNames(profile: Profile): string[] {
+  return profile.regions.flatMap((region) => [region.outer, ...region.holes].flatMap((loop) => loop.curves));
+}

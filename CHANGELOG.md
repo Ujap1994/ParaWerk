@@ -19,6 +19,12 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
   solid or a cut; angle up to 360° (also as an equation), one way, the other way or symmetric. The axis is
   chosen in the side panel and shown in orange; outlines on both sides of the axis are reported. Shafts,
   bushes, grooves and tori come out with exact volumes.
+- Persistent naming ([ADR 0002](docs/adr/0002-persistent-naming.md)): every face is named after the
+  feature that made it (for an extrusion, after the sketch curve that swept it), and fillets and
+  chamfers remember their edges by the two faces they lie between. Editing earlier features – a wider
+  sketch, a new hole, a cut inserted or suppressed before the fillet – no longer moves fillets to other
+  edges; an edge that is really gone is reported. Edge numbers in files of earlier versions are converted
+  when the part is opened; part files with named edges are saved as format version 5.
 
 ### Fixed
 - The labels of choice fields in the side panel had no space above them.

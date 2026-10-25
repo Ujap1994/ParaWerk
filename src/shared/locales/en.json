@@ -330,7 +330,7 @@
   "errors": {
     "no-body": "There is no body to modify yet.",
     "no-edges": "Select at least one edge.",
-    "edge-missing": "A selected edge no longer exists. Edit the feature and select the edges again.",
+    "edge-missing": "A selected edge no longer exists: an earlier change removed it. Edit the feature and select the edges again.",
     "empty-result": "The operation removed the whole body.",
     "first-must-add": "The first feature must add material.",
     "sketch-missing": "The sketch of this feature is missing or suppressed. Edit the feature and choose a sketch.",

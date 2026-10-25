@@ -45,6 +45,8 @@ val guarded(Body&& body) {
   }
 }
 
+std::vector<std::string> toStringVector(const val& array) { return emscripten::vecFromJSArray<std::string>(array); }
+
 std::vector<int> toIntVector(const val& array) {
   const int length = array["length"].as<int>();
   std::vector<int> result(static_cast<size_t>(length));
@@ -73,41 +75,52 @@ val meshResult(const parawerk::MeshData& mesh) {
   return result;
 }
 
-val makeBox(double x, double y, double z, double dx, double dy, double dz) {
-  return guarded([&] { return idResult(parawerk::makeBox(x, y, z, dx, dy, dz)); });
+val makeBox(double x, double y, double z, double dx, double dy, double dz, std::string name) {
+  return guarded([&] { return idResult(parawerk::makeBox(x, y, z, dx, dy, dz, name)); });
 }
 
-val makeCylinder(double px, double py, double pz, double dx, double dy, double dz, double radius, double height) {
-  return guarded([&] { return idResult(parawerk::makeCylinder(px, py, pz, dx, dy, dz, radius, height)); });
+val makeCylinder(double px, double py, double pz, double dx, double dy, double dz, double radius, double height, std::string name) {
+  return guarded([&] { return idResult(parawerk::makeCylinder(px, py, pz, dx, dy, dz, radius, height, name)); });
 }
 
 val booleanOperation(int bodyId, int toolId, int op) {
   return guarded([&] { return idResult(parawerk::booleanOperation(bodyId, toolId, op)); });
 }
 
-val extrudeProfile(val profile, val frame, double from, double to) {
+val extrudeProfile(val profile, val frame, double from, double to, val edgeNames, std::string name) {
   return guarded([&] {
     const std::vector<double> data = emscripten::convertJSArrayToNumberVector<double>(profile);
     const std::vector<double> plane = emscripten::convertJSArrayToNumberVector<double>(frame);
-    return idResult(parawerk::extrudeProfile(data, plane, from, to));
+    return idResult(parawerk::extrudeProfile(data, plane, from, to, toStringVector(edgeNames), name));
   });
 }
 
-val revolveProfile(val profile, val frame, val axis, double from, double to) {
+val revolveProfile(val profile, val frame, val axis, double from, double to, val edgeNames, std::string name) {
   return guarded([&] {
     const std::vector<double> data = emscripten::convertJSArrayToNumberVector<double>(profile);
     const std::vector<double> plane = emscripten::convertJSArrayToNumberVector<double>(frame);
     const std::vector<double> line = emscripten::convertJSArrayToNumberVector<double>(axis);
-    return idResult(parawerk::revolveProfile(data, plane, line, from, to));
+    return idResult(parawerk::revolveProfile(data, plane, line, from, to, toStringVector(edgeNames), name));
   });
 }
 
-val fillet(int bodyId, val edgeIndices, double radius) {
-  return guarded([&] { return idResult(parawerk::fillet(bodyId, toIntVector(edgeIndices), radius)); });
+val fillet(int bodyId, val edgeIndices, double radius, val edgeNames, std::string name) {
+  return guarded([&] { return idResult(parawerk::fillet(bodyId, toIntVector(edgeIndices), radius, toStringVector(edgeNames), name)); });
 }
 
-val chamfer(int bodyId, val edgeIndices, double distance) {
-  return guarded([&] { return idResult(parawerk::chamfer(bodyId, toIntVector(edgeIndices), distance)); });
+val chamfer(int bodyId, val edgeIndices, double distance, val edgeNames, std::string name) {
+  return guarded([&] { return idResult(parawerk::chamfer(bodyId, toIntVector(edgeIndices), distance, toStringVector(edgeNames), name)); });
+}
+
+val naming(int id) {
+  return guarded([&] {
+    const parawerk::Naming naming = parawerk::naming(id);
+    val result = okObject();
+    result.set("faces", val::array(naming.faces));
+    result.set("edgeFaces", typedArray("Int32Array", naming.edgeFaces));
+    result.set("edgeMidpoints", typedArray("Float64Array", naming.edgeMidpoints));
+    return result;
+  });
 }
 
 val counts(int id) {
@@ -166,7 +179,7 @@ val importStep(val bytes) {
   });
 }
 
-std::string version() { return "parawerk-kernel 0.3 / OCCT " PARAWERK_OCCT_VERSION; }
+std::string version() { return "parawerk-kernel 0.4 / OCCT " PARAWERK_OCCT_VERSION; }
 
 }  // namespace
 
@@ -181,6 +194,7 @@ EMSCRIPTEN_BINDINGS(parawerk_kernel) {
   emscripten::function("chamfer", &chamfer);
   emscripten::function("release", &parawerk::release);
   emscripten::function("shapeCount", &parawerk::shapeCount);
+  emscripten::function("naming", &naming);
   emscripten::function("counts", &counts);
   emscripten::function("boundingBox", &boundingBox);
   emscripten::function("massProperties", &massProperties);

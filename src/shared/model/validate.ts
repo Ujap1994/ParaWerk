@@ -49,10 +49,23 @@ function axis(value: unknown, path: string): Axis {
   return value;
 }
 
+/** Longest persistent face name accepted (feature id, role and sketch curve id). */
+const MAX_FACE_NAME = 256;
+
+function faceName(value: unknown, path: string): string {
+  if (typeof value !== 'string' || value.length > MAX_FACE_NAME) throw new ValidationError('expected a face name', path);
+  return value;
+}
+
 function edges(value: unknown, path: string): EdgeRef[] {
   if (!Array.isArray(value)) throw new ValidationError('expected a list of edges', path);
-  return value.map((ref, i) => {
+  return value.map((ref, i): EdgeRef => {
     const p = `${path}[${i}]`;
+    if (isObject(ref) && ref.kind === 'edge') {
+      if (!Array.isArray(ref.faces) || ref.faces.length !== 2) throw new ValidationError('expected two face names', `${p}.faces`);
+      const faces = [faceName(ref.faces[0], `${p}.faces[0]`), faceName(ref.faces[1], `${p}.faces[1]`)].sort() as [string, string];
+      return { kind: 'edge', faces, at: vec3(ref.at, `${p}.at`) };
+    }
     if (!isObject(ref) || ref.kind !== 'edge-index') throw new ValidationError('unknown edge reference', p);
     const index = ref.index;
     if (typeof index !== 'number' || !Number.isInteger(index) || index < 0) {

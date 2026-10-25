@@ -1,5 +1,5 @@
-import type { BoxFeature, CylinderFeature, EdgeFeature } from '../shared/model/feature.ts';
-import type { KernelFeature } from './backend.ts';
+import type { BoxFeature, CylinderFeature } from '../shared/model/feature.ts';
+import type { KernelFeature, ResolvedEdgeFeature } from './backend.ts';
 import { axisDirection } from './feature-geometry.ts';
 import { Arena, describeError, type OC, type TopoDS_Shape } from './occt.ts';
 import { FeatureError } from './feature-error.ts';
@@ -40,12 +40,12 @@ function combine(oc: OC, arena: Arena, body: TopoDS_Shape | null, tool: TopoDS_S
   return result;
 }
 
-function applyEdgeFeature(oc: OC, arena: Arena, body: TopoDS_Shape | null, feature: EdgeFeature): TopoDS_Shape {
+function applyEdgeFeature(oc: OC, arena: Arena, body: TopoDS_Shape | null, feature: ResolvedEdgeFeature): TopoDS_Shape {
   if (body === null) throw new FeatureError('no-body');
-  if (feature.edges.length === 0) throw new FeatureError('no-edges');
+  if (feature.edgeIndices.length === 0) throw new FeatureError('no-edges');
   const edges = uniqueSubShapes(oc, arena, body, 'edge');
-  const selected = feature.edges.map((ref) => {
-    const edge = edges[ref.index];
+  const selected = feature.edgeIndices.map((index) => {
+    const edge = edges[index];
     if (!edge) throw new FeatureError('edge-missing');
     return oc.TopoDS.Edge(edge);
   });

@@ -2,6 +2,7 @@ import { resolveLanguage } from '../../shared/i18n.ts';
 import type { MenuCommand } from '../../shared/ipc.ts';
 import { PART_FILE_EXTENSION } from '../../shared/app-info.ts';
 import { defaultFeature, isEdgeFeature, isSketchBased, type EdgeRef, type Feature, type FeatureType, type SketchFeature } from '../../shared/model/feature.ts';
+import { edgeRefOf, resolveEdgeRefs } from '../../shared/model/naming.ts';
 import { decodePartFile, encodePartFile, PartFileError } from '../../shared/model/part-file.ts';
 import { frameOf, frameOnPlane, isDimension, ORIGIN_ID, STANDARD_PLANES, type SketchData, type SketchDimension, type SketchPlaneRef } from '../../shared/model/sketch.ts';
 import type { Settings } from '../../shared/settings.ts';
@@ -194,9 +195,13 @@ export function startFeature(type: FeatureType): void {
     draft = draft.type === 'extrude' ? { ...draft, sketch: sketch.id, operation } : { ...draft, sketch: sketch.id, axis: defaultAxis(sketch), operation };
   } else if (isEdgeFeature(draft)) {
     // Edges selected before starting the command are taken over (select first, then act).
-    const edges: EdgeRef[] = getState()
-      .selection.filter((pick) => pick.kind === 'edge')
-      .map((pick) => ({ kind: 'edge-index', index: pick.index }));
+    const naming = getState().display.body?.naming;
+    const edges: EdgeRef[] = naming
+      ? getState().selection.flatMap((pick) => {
+          const ref = pick.kind === 'edge' ? edgeRefOf(naming, pick.index) : null;
+          return ref ? [ref] : [];
+        })
+      : [];
     draft = { ...draft, edges };
   } else if (!hasBodyBefore(features, index) && (draft.type === 'box' || draft.type === 'cylinder')) {
     draft = { ...draft, operation: 'add' };
@@ -289,12 +294,24 @@ export function setDraftExpression(field: string, expression: string | undefined
   setState({ activeEdit: { ...edit, draft: (Object.keys(expressions).length > 0 ? { ...draft, expressions } : draft) as Feature } });
 }
 
+/**
+ * Adds or removes an edge of the shown body (the body the fillet or chamfer modifies). The other
+ * references are brought up to date on the way: edges found only by position or index get their
+ * current names.
+ */
 export function toggleDraftEdge(index: number): void {
-  const edit = getState().activeEdit;
-  if (!edit || !isEdgeFeature(edit.draft)) return;
-  const exists = edit.draft.edges.some((ref) => ref.index === index);
-  const edges = exists ? edit.draft.edges.filter((ref) => ref.index !== index) : [...edit.draft.edges, { kind: 'edge-index' as const, index }];
-  updateDraft({ edges });
+  const { activeEdit: edit, display } = getState();
+  const naming = display.body?.naming;
+  if (!edit || !isEdgeFeature(edit.draft) || !naming) return;
+  const matches = resolveEdgeRefs(edit.draft.edges, naming);
+  const exists = matches.some((match) => match?.index === index);
+  const kept = edit.draft.edges.flatMap((ref, i): EdgeRef[] => {
+    const match = matches[i];
+    if (match?.index === index) return [];
+    return [match && match.kind !== 'name' ? (edgeRefOf(naming, match.index) ?? ref) : ref];
+  });
+  const added = exists ? null : edgeRefOf(naming, index);
+  updateDraft({ edges: added ? [...kept, added] : kept });
 }
 
 export function commitEdit(): void {
