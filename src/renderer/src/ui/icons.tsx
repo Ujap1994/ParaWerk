@@ -483,9 +483,38 @@ export const RevolveIcon = (p: P) => (
   </Icon>
 );
 
+/** Reference plane: a plane and a dashed copy of it lifted above, with the distance between them. */
+export const ReferencePlaneIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="M2.5 20.5 6 15h15.5L18 20.5z" />
+    <path d="M2.5 10.5 6 5h15.5L18 10.5z" strokeDasharray="2.2 2" />
+    <path d="M10.5 17.5v-5M8.8 14l1.7-1.7 1.7 1.7" />
+  </Icon>
+);
+
+/** Reference axis: a dash-dot line through a ring turning around it. */
+export const ReferenceAxisIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="M12 2v4.5M12 8.5v3M12 13.5v3M12 18.5V22" />
+    <ellipse cx="12" cy="12" rx="7.5" ry="3" />
+  </Icon>
+);
+
+/** Reference point: a point in a ring with marks to its four sides. */
+export const ReferencePointIcon = (p: P) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="5.5" />
+    <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3" />
+    {dot(12, 12, 1.8)}
+  </Icon>
+);
+
 export const FEATURE_ICONS = {
   variables: VariablesIcon,
   sketch: SketchIcon,
+  plane: ReferencePlaneIcon,
+  axis: ReferenceAxisIcon,
+  point: ReferencePointIcon,
   extrude: ExtrudeIcon,
   revolve: RevolveIcon,
   box: BoxIcon,

@@ -168,7 +168,7 @@ export function parseSketchData(raw: unknown, path = 'sketch'): SketchData {
   return { entities, constraints };
 }
 
-function unitVector(value: unknown, path: string) {
+export function unitVector(value: unknown, path: string) {
   const v = vec3(value, path);
   const length = Math.hypot(v[0], v[1], v[2]);
   if (Math.abs(length - 1) > 1e-6) throw new ValidationError('expected a unit vector', path);
@@ -181,8 +181,7 @@ export function parsePlaneRef(raw: unknown, path = 'plane'): SketchPlaneRef {
     if (raw.plane !== 'front' && raw.plane !== 'top' && raw.plane !== 'right') throw new ValidationError('unknown plane', `${path}.plane`);
     return { kind: 'standard', plane: raw.plane };
   }
-  if (raw.kind === 'face') {
-    if (typeof raw.face !== 'number' || !Number.isInteger(raw.face) || raw.face < 0) throw new ValidationError('expected a face index', `${path}.face`);
+  if (raw.kind === 'face' || raw.kind === 'feature') {
     if (!isObject(raw.frame)) throw new ValidationError('expected a frame', `${path}.frame`);
     const frame: SketchFrame = {
       origin: vec3(raw.frame.origin, `${path}.frame.origin`),
@@ -190,6 +189,12 @@ export function parsePlaneRef(raw: unknown, path = 'plane'): SketchPlaneRef {
       yDir: unitVector(raw.frame.yDir, `${path}.frame.yDir`),
       normal: unitVector(raw.frame.normal, `${path}.frame.normal`),
     };
+    if (raw.kind === 'feature') {
+      // An unknown feature id is kept: the rebuild reports the missing plane at the sketch.
+      if (typeof raw.feature !== 'string' || raw.feature.length > 64) throw new ValidationError('expected a feature id', `${path}.feature`);
+      return { kind: 'feature', feature: raw.feature, frame };
+    }
+    if (typeof raw.face !== 'number' || !Number.isInteger(raw.face) || raw.face < 0) throw new ValidationError('expected a face index', `${path}.face`);
     if (raw.name === undefined) return { kind: 'face', face: raw.face, frame };
     if (typeof raw.name !== 'string' || raw.name.length > 256) throw new ValidationError('expected a face name', `${path}.name`);
     return { kind: 'face', face: raw.face, frame, name: raw.name };

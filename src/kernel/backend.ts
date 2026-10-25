@@ -2,7 +2,7 @@ import type { EdgeFeature, EdgeRef, ExtrudeFeature, RevolveFeature, SolidModelin
 import type { BodyNaming } from '../shared/model/naming.ts';
 import type { Profile } from '../shared/model/profile.ts';
 import type { SketchFrame } from '../shared/model/sketch.ts';
-import type { MassProperties, MeshPayload } from './protocol.ts';
+import type { EdgeGeometry, FaceGeometry, MassProperties, MeshPayload } from './protocol.ts';
 import type { MeshQuality } from './mesh-quality.ts';
 
 /** An extrude with the closed outlines and the plane of its sketch (see resolveFeature). */
@@ -55,6 +55,9 @@ export interface GeometryBackend {
   boundingBox(shape: ShapeHandle): { min: Vec3; max: Vec3 };
   /** Persistent face names and edge positions (docs/adr/0002-persistent-naming.md). */
   naming(shape: ShapeHandle): BodyNaming;
+  /** Exact geometry of one face or edge (topological index); throws when the backend cannot tell. */
+  faceGeometry(shape: ShapeHandle, index: number): FaceGeometry;
+  edgeGeometry(shape: ShapeHandle, index: number): EdgeGeometry;
   massProperties(shape: ShapeHandle): MassProperties;
   /** Display mesh with edges and exact face/edge information. */
   mesh(shape: ShapeHandle, quality: MeshQuality, key: string): MeshPayload;

@@ -6,7 +6,7 @@ import { axisDirection } from '../feature-geometry.ts';
 import type { MeshQuality } from '../mesh-quality.ts';
 import { encodeProfile, profileEdgeNames } from '../profile-data.ts';
 import type { BodyNaming } from '../../shared/model/naming.ts';
-import type { CurveKind, EdgeInfo, FaceInfo, FeatureErrorCode, MassProperties, MeshPayload, SurfaceKind } from '../protocol.ts';
+import type { CurveKind, EdgeGeometry, EdgeInfo, FaceGeometry, FaceInfo, FeatureErrorCode, MassProperties, MeshPayload, SurfaceKind } from '../protocol.ts';
 
 type KernelModule = Awaited<ReturnType<typeof createParaWerkKernel>>;
 
@@ -36,9 +36,15 @@ const SURFACE_KINDS: SurfaceKind[] = ['plane', 'cylinder', 'cone', 'sphere', 'to
 const CURVE_KINDS: CurveKind[] = ['line', 'circle', 'ellipse', 'bspline', 'other'];
 
 const FEATURE_ERROR_CODES = new Set<FeatureErrorCode>([
-  'no-body', 'no-edges', 'edge-missing', 'face-missing', 'empty-result', 'first-must-add', 'sketch-missing', 'profile-empty', 'profile-crossing', 'axis-missing', 'profile-crosses-axis',
+  'no-body', 'no-edges', 'edge-missing', 'face-missing', 'plane-missing', 'reference-missing', 'reference-kind', 'reference-parallel', 'reference-not-parallel', 'reference-collinear', 'empty-result', 'first-must-add', 'sketch-missing', 'profile-empty', 'profile-crossing', 'axis-missing', 'profile-crosses-axis',
   'operation-failed', 'unknown',
 ]);
+
+/** Three finite numbers from `values` at `at`, or null. */
+function vec3(values: readonly number[], at: number): Vec3 | null {
+  const v = values.slice(at, at + 3);
+  return v.length === 3 && v.every(Number.isFinite) ? (v as Vec3) : null;
+}
 
 class KernelCallError extends Error {
   constructor(message: string) {
@@ -174,7 +180,47 @@ export class ParaWerkBackend implements GeometryBackend {
 
   naming(handle: ShapeHandle): BodyNaming {
     const result = check(this.kernel.naming(this.id(handle)) as ({ ok: true } & BodyNaming) | Failure);
-    return { faces: result.faces, facePlanes: result.facePlanes, edgeFaces: result.edgeFaces, edgeMidpoints: result.edgeMidpoints };
+    return {
+      faces: result.faces,
+      facePlanes: result.facePlanes,
+      edgeFaces: result.edgeFaces,
+      edgeMidpoints: result.edgeMidpoints,
+      edgeVertices: result.edgeVertices,
+      vertexPositions: result.vertexPositions,
+      vertexFaceOffsets: result.vertexFaceOffsets,
+      vertexFaces: result.vertexFaces,
+    };
+  }
+
+  faceGeometry(handle: ShapeHandle, index: number): FaceGeometry {
+    type Raw = { ok: true; kind: number; area: number; center: number[]; plane: number[]; axis: number[]; radius: number };
+    const raw = check(this.kernel.faceGeometry(this.id(handle), index) as Raw | Failure);
+    const result: FaceGeometry = { kind: SURFACE_KINDS[raw.kind] ?? 'other', area: raw.area, center: vec3(raw.center, 0) ?? [NaN, NaN, NaN] };
+    const [point, normal] = [vec3(raw.plane, 0), vec3(raw.plane, 3)];
+    if (point && normal) result.plane = { point, normal };
+    const [axisPoint, direction] = [vec3(raw.axis, 0), vec3(raw.axis, 3)];
+    if (axisPoint && direction) result.axis = { point: axisPoint, direction };
+    else if (axisPoint) result.sphereCenter = axisPoint;
+    if (Number.isFinite(raw.radius)) result.radius = raw.radius;
+    return result;
+  }
+
+  edgeGeometry(handle: ShapeHandle, index: number): EdgeGeometry {
+    type Raw = { ok: true; kind: number; length: number; start: number[]; end: number[]; middle: number[]; center: number[]; axis: number[]; radius: number };
+    const raw = check(this.kernel.edgeGeometry(this.id(handle), index) as Raw | Failure);
+    const missing: Vec3 = [NaN, NaN, NaN];
+    const result: EdgeGeometry = {
+      kind: CURVE_KINDS[raw.kind] ?? 'other',
+      length: raw.length,
+      start: vec3(raw.start, 0) ?? missing,
+      end: vec3(raw.end, 0) ?? missing,
+      middle: vec3(raw.middle, 0) ?? missing,
+    };
+    const [center, axis] = [vec3(raw.center, 0), vec3(raw.axis, 0)];
+    if (center) result.center = center;
+    if (axis) result.axis = axis;
+    if (Number.isFinite(raw.radius)) result.radius = raw.radius;
+    return result;
   }
 
   massProperties(handle: ShapeHandle): MassProperties {

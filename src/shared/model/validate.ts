@@ -1,4 +1,5 @@
 import { EXPRESSION_FIELDS, EXTRUDE_DIRECTIONS, EXTRUDE_ENDS, type Axis, type BooleanOperation, type EdgeRef, type ExtrudeDirection, type ExtrudeEnd, type Feature, type FeatureType, type Variable, type Vec3 } from './feature.ts';
+import { AXIS_METHODS, PLANE_METHODS, POINT_METHODS, type GeometryRef } from './reference.ts';
 import { parseSketchData, parsePlaneRef } from './validate-sketch.ts';
 
 export class ValidationError extends Error {
@@ -73,6 +74,52 @@ function edges(value: unknown, path: string): EdgeRef[] {
     }
     return { kind: 'edge-index', index };
   });
+}
+
+/** Most references a reference feature takes (three points). */
+const MAX_REFERENCES = 3;
+
+function geometryRef(value: unknown, path: string): GeometryRef {
+  if (!isObject(value)) throw new ValidationError('expected a reference', path);
+  switch (value.kind) {
+    case 'standard-plane':
+      if (value.plane !== 'front' && value.plane !== 'top' && value.plane !== 'right') throw new ValidationError('unknown plane', `${path}.plane`);
+      return { kind: 'standard-plane', plane: value.plane };
+    case 'origin':
+      return { kind: 'origin' };
+    case 'feature':
+      if (typeof value.feature !== 'string' || value.feature.length > 64) throw new ValidationError('expected a feature id', `${path}.feature`);
+      return { kind: 'feature', feature: value.feature };
+    case 'face':
+      return { kind: 'face', name: faceName(value.name, `${path}.name`), at: vec3(value.at, `${path}.at`) };
+    case 'edge': {
+      const [ref] = edges([value], path);
+      if (ref?.kind !== 'edge') throw new ValidationError('expected an edge reference', path);
+      return ref;
+    }
+    case 'vertex': {
+      if (!Array.isArray(value.faces) || value.faces.length > 64) throw new ValidationError('expected face names', `${path}.faces`);
+      const faces = value.faces.map((name, i) => faceName(name, `${path}.faces[${i}]`)).sort();
+      return { kind: 'vertex', faces, at: vec3(value.at, `${path}.at`) };
+    }
+    default:
+      throw new ValidationError('unknown reference', `${path}.kind`);
+  }
+}
+
+function geometryRefs(value: unknown, path: string): GeometryRef[] {
+  if (!Array.isArray(value) || value.length > MAX_REFERENCES) throw new ValidationError(`expected up to ${MAX_REFERENCES} references`, path);
+  return value.map((ref, i) => geometryRef(ref, `${path}[${i}]`));
+}
+
+function method<T extends string>(value: unknown, methods: readonly T[], path: string): T {
+  if (!(methods as readonly unknown[]).includes(value)) throw new ValidationError(`expected one of ${methods.join(', ')}`, path);
+  return value as T;
+}
+
+function finiteNumber(value: unknown, path: string, limit = MAX_LENGTH): number {
+  if (typeof value !== 'number' || !Number.isFinite(value) || Math.abs(value) > limit) throw new ValidationError('expected a number', path);
+  return value;
 }
 
 function base(raw: Json, path: string): { id: string; name?: string; suppressed?: boolean } {
@@ -151,6 +198,29 @@ function parseFeatureFields(raw: Json, path: string): Feature {
         type: 'sketch',
         plane: parsePlaneRef(raw.plane, `${path}.plane`),
         sketch: parseSketchData(raw.sketch, `${path}.sketch`),
+      };
+    case 'plane':
+      if (typeof raw.flip !== 'boolean') throw new ValidationError('expected true or false', `${path}.flip`);
+      return {
+        ...common,
+        type: 'plane',
+        method: method(raw.method, PLANE_METHODS, `${path}.method`),
+        references: geometryRefs(raw.references, `${path}.references`),
+        distance: finiteNumber(raw.distance, `${path}.distance`),
+        angle: finiteNumber(raw.angle, `${path}.angle`, 360),
+        flip: raw.flip,
+      };
+    case 'axis':
+      return { ...common, type: 'axis', method: method(raw.method, AXIS_METHODS, `${path}.method`), references: geometryRefs(raw.references, `${path}.references`) };
+    case 'point':
+      return {
+        ...common,
+        type: 'point',
+        method: method(raw.method, POINT_METHODS, `${path}.method`),
+        references: geometryRefs(raw.references, `${path}.references`),
+        x: coordinate(raw.x, `${path}.x`),
+        y: coordinate(raw.y, `${path}.y`),
+        z: coordinate(raw.z, `${path}.z`),
       };
     case 'extrude': {
       // An empty or unknown sketch id is kept: the rebuild reports the missing sketch at the feature.

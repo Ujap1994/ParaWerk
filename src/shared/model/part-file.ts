@@ -1,5 +1,5 @@
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
-import { isEdgeFeature, type Feature } from './feature.ts';
+import { isEdgeFeature, isReferenceFeature, type Feature } from './feature.ts';
 import { parseFeatures, ValidationError } from './validate.ts';
 
 /**
@@ -15,12 +15,14 @@ export const PART_FORMAT = 'parawerk-part';
 /**
  * 2: sketch features. 3: variables, parameter and dimension expressions, splines. 4: extrusions and
  * revolutions. 5: edges and sketch faces referenced by persistent names (docs/adr/0002-persistent-naming.md).
+ * 6: reference planes, axes and points, and sketches on reference planes.
  * Older versions are read unchanged.
  */
-export const PART_FORMAT_VERSION = 5;
+export const PART_FORMAT_VERSION = 6;
 
 /** The oldest format version that can hold the document, so older ParaWerk versions can still open it. */
 export function formatVersionOf(features: readonly Feature[]): number {
+  if (features.some((feature) => isReferenceFeature(feature) || (feature.type === 'sketch' && feature.plane.kind === 'feature'))) return 6;
   const named = features.some(
     (feature) =>
       (isEdgeFeature(feature) && feature.edges.some((ref) => ref.kind === 'edge')) || (feature.type === 'sketch' && feature.plane.kind === 'face' && feature.plane.name !== undefined),

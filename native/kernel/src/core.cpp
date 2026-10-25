@@ -54,6 +54,11 @@
 #include <TopoDS_Edge.hxx>
 #include <TopoDS_Face.hxx>
 #include <TopoDS_Shape.hxx>
+#include <TopoDS_Vertex.hxx>
+#include <gp_Cone.hxx>
+#include <gp_Elips.hxx>
+#include <gp_Lin.hxx>
+#include <gp_Torus.hxx>
 #include <gp_Ax2.hxx>
 #include <gp_Circ.hxx>
 #include <gp_Cylinder.hxx>
@@ -788,6 +793,133 @@ Naming naming(int id) {
       const gp_Pnt middle = curve.Value((curve.FirstParameter() + curve.LastParameter()) / 2);
       result.edgeMidpoints.insert(result.edgeMidpoints.end(), {middle.X(), middle.Y(), middle.Z()});
     }
+  }
+
+  ShapeMap vertices;
+  TopExp::MapShapes(entry.shape, TopAbs_VERTEX, vertices);
+  for (int e = 1; e <= edges.Extent(); ++e) {
+    TopoDS_Vertex first, last;
+    TopExp::Vertices(TopoDS::Edge(edges(e)), first, last);
+    result.edgeVertices.push_back(first.IsNull() ? -1 : vertices.FindIndex(first) - 1);
+    result.edgeVertices.push_back(last.IsNull() ? -1 : vertices.FindIndex(last) - 1);
+  }
+  AncestorMap vertexFaces;
+  TopExp::MapShapesAndUniqueAncestors(entry.shape, TopAbs_VERTEX, TopAbs_FACE, vertexFaces);
+  result.vertexPositions.reserve(static_cast<size_t>(vertices.Extent()) * 3);
+  result.vertexFaceOffsets.reserve(static_cast<size_t>(vertices.Extent()) + 1);
+  result.vertexFaceOffsets.push_back(0);
+  for (int v = 1; v <= vertices.Extent(); ++v) {
+    const gp_Pnt point = BRep_Tool::Pnt(TopoDS::Vertex(vertices(v)));
+    result.vertexPositions.insert(result.vertexPositions.end(), {point.X(), point.Y(), point.Z()});
+    if (const NCollection_List<TopoDS_Shape>* adjacent = vertexFaces.Seek(vertices(v))) {
+      for (const TopoDS_Shape& face : *adjacent) result.vertexFaces.push_back(faces.FindIndex(face) - 1);
+    }
+    result.vertexFaceOffsets.push_back(static_cast<int32_t>(result.vertexFaces.size()));
+  }
+  return result;
+}
+
+namespace {
+
+template <size_t N>
+void setPoint(double (&out)[N], size_t at, const gp_XYZ& value) {
+  out[at] = value.X();
+  out[at + 1] = value.Y();
+  out[at + 2] = value.Z();
+}
+
+template <size_t N>
+void setNaN(double (&out)[N]) {
+  std::fill(std::begin(out), std::end(out), kNaN);
+}
+
+TopoDS_Shape subShape(int id, TopAbs_ShapeEnum type, int index, const char* what) {
+  ShapeMap shapes;
+  TopExp::MapShapes(store().get(id), type, shapes);
+  if (index < 0 || index >= shapes.Extent()) throw KernelError("unknown", std::string(what) + " " + std::to_string(index) + " does not exist");
+  return shapes(index + 1);
+}
+
+}  // namespace
+
+FaceGeometry faceGeometry(int id, int index) {
+  const TopoDS_Face face = TopoDS::Face(subShape(id, TopAbs_FACE, index, "face"));
+  FaceGeometry result;
+  setNaN(result.center);
+  setNaN(result.plane);
+  setNaN(result.axis);
+  result.radius = kNaN;
+  BRepAdaptor_Surface surface(face, true);
+  result.kind = surfaceKind(surface.GetType());
+  GProp_GProps props;
+  BRepGProp::SurfaceProperties(face, props);
+  result.area = props.Mass();
+  setPoint(result.center, 0, props.CentreOfMass().XYZ());
+  const auto setAxis = [&](const gp_Ax1& axis) {
+    setPoint(result.axis, 0, axis.Location().XYZ());
+    setPoint(result.axis, 3, axis.Direction().XYZ());
+  };
+  switch (result.kind) {
+    case Plane: {
+      gp_Dir normal = surface.Plane().Axis().Direction();
+      if (face.Orientation() == TopAbs_REVERSED) normal.Reverse();
+      setPoint(result.plane, 0, surface.Plane().Location().XYZ());
+      setPoint(result.plane, 3, normal.XYZ());
+      break;
+    }
+    case Cylinder:
+      setAxis(surface.Cylinder().Axis());
+      result.radius = surface.Cylinder().Radius();
+      break;
+    case Cone:
+      setAxis(surface.Cone().Axis());
+      break;
+    case Torus:
+      setAxis(surface.Torus().Axis());
+      break;
+    case Revolution:
+      setAxis(surface.AxeOfRevolution());
+      break;
+    case Sphere:
+      setPoint(result.axis, 0, surface.Sphere().Location().XYZ());
+      result.radius = surface.Sphere().Radius();
+      break;
+    default:
+      break;
+  }
+  return result;
+}
+
+EdgeGeometry edgeGeometry(int id, int index) {
+  const TopoDS_Edge edge = TopoDS::Edge(subShape(id, TopAbs_EDGE, index, "edge"));
+  EdgeGeometry result;
+  for (double* values : {result.start, result.end, result.middle, result.center, result.axis}) std::fill(values, values + 3, kNaN);
+  result.radius = kNaN;
+  if (BRep_Tool::Degenerated(edge)) return result;
+  BRepAdaptor_Curve curve(edge);
+  result.kind = curveKind(curve.GetType());
+  GProp_GProps props;
+  BRepGProp::LinearProperties(edge, props);
+  result.length = props.Mass();
+  const double first = curve.FirstParameter(), last = curve.LastParameter();
+  setPoint(result.start, 0, curve.Value(first).XYZ());
+  setPoint(result.end, 0, curve.Value(last).XYZ());
+  setPoint(result.middle, 0, curve.Value((first + last) / 2).XYZ());
+  switch (result.kind) {
+    case Line:
+      setPoint(result.axis, 0, curve.Line().Direction().XYZ());
+      break;
+    case Circle:
+      setPoint(result.center, 0, curve.Circle().Location().XYZ());
+      setPoint(result.axis, 0, curve.Circle().Axis().Direction().XYZ());
+      result.radius = curve.Circle().Radius();
+      break;
+    case Ellipse:
+      setPoint(result.center, 0, curve.Ellipse().Location().XYZ());
+      setPoint(result.axis, 0, curve.Ellipse().Axis().Direction().XYZ());
+      break;
+    default:
+      break;
   }
   return result;
 }

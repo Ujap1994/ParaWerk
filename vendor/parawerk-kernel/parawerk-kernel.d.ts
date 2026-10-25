@@ -19,6 +19,8 @@ interface EmbindModule {
   fillet(_0: number, _1: any, _2: number, _3: any, _4: EmbindString): any;
   chamfer(_0: number, _1: any, _2: number, _3: any, _4: EmbindString): any;
   naming(_0: number): any;
+  faceGeometry(_0: number, _1: number): any;
+  edgeGeometry(_0: number, _1: number): any;
   counts(_0: number): any;
   boundingBox(_0: number): any;
   massProperties(_0: number): any;

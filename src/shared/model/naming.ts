@@ -7,6 +7,7 @@
  */
 
 import type { EdgeNameRef, EdgeRef, Vec3 } from './feature.ts';
+import type { FaceNameRef, VertexNameRef } from './reference.ts';
 import type { SketchFrame } from './sketch.ts';
 
 /** Face names of one body and where its edges lie; index i is topological face or edge index i. */
@@ -19,6 +20,13 @@ export interface BodyNaming {
   edgeFaces: Int32Array;
   /** Per edge: the point in the middle of its curve (NaN for degenerate edges). */
   edgeMidpoints: Float64Array;
+  /** Per edge: the vertex indices at its start and end (-1 when none). */
+  edgeVertices: Int32Array;
+  /** Per vertex: its position. */
+  vertexPositions: Float64Array;
+  /** Vertex v meets the faces vertexFaces[vertexFaceOffsets[v] .. vertexFaceOffsets[v + 1]). */
+  vertexFaceOffsets: Int32Array;
+  vertexFaces: Int32Array;
 }
 
 /** How a reference found its edge: by face names, by position only (its faces were renamed) or by index. */
@@ -155,7 +163,87 @@ export function anonymousNaming(faces: number, edges: number): BodyNaming {
     facePlanes: new Float64Array(6 * faces).fill(NaN),
     edgeFaces: new Int32Array(2 * edges).fill(-1),
     edgeMidpoints: new Float64Array(3 * edges).fill(NaN),
+    edgeVertices: new Int32Array(2 * edges).fill(-1),
+    vertexPositions: new Float64Array(0),
+    vertexFaceOffsets: new Int32Array(1),
+    vertexFaces: new Int32Array(0),
   };
+}
+
+export function vertexCount(naming: BodyNaming): number {
+  return naming.vertexPositions.length / 3;
+}
+
+export function vertexPosition(naming: BodyNaming, vertex: number): Vec3 {
+  return [naming.vertexPositions[3 * vertex] ?? NaN, naming.vertexPositions[3 * vertex + 1] ?? NaN, naming.vertexPositions[3 * vertex + 2] ?? NaN];
+}
+
+/** The names of the faces that meet at a vertex, sorted. */
+export function vertexFaceNames(naming: BodyNaming, vertex: number): string[] {
+  const from = naming.vertexFaceOffsets[vertex] ?? 0;
+  const to = naming.vertexFaceOffsets[vertex + 1] ?? from;
+  return Array.from(naming.vertexFaces.subarray(from, to), (face) => faceNameOf(naming, face)).sort();
+}
+
+/** A persistent reference to vertex `index` of the body. */
+export function vertexRefOf(naming: BodyNaming, index: number): VertexNameRef | null {
+  if (!Number.isInteger(index) || index < 0 || index >= vertexCount(naming)) return null;
+  return { kind: 'vertex', faces: vertexFaceNames(naming, index), at: vertexPosition(naming, index) };
+}
+
+/** A persistent reference to face `index` of the body, picked at `at`; null for faces without a name. */
+export function faceRefOf(naming: BodyNaming, index: number, at: Vec3): FaceNameRef | null {
+  const name = naming.faces[index];
+  return name ? { kind: 'face', name, at } : null;
+}
+
+/**
+ * The vertex a reference means: the one where faces with the same names meet (the nearest, if there are
+ * several), else – when some of the faces were renamed – the nearest vertex that still has two of them
+ * within 5 % of the body size, else a vertex in practically the same place.
+ */
+export function resolveVertexRef(ref: VertexNameRef, naming: BodyNaming): EdgeMatch | null {
+  const count = vertexCount(naming);
+  const key = ref.faces.join('\u0000');
+  const all = Array.from({ length: count }, (_, v) => v);
+  const nearest = (candidates: number[], limit = Infinity): number | null => {
+    let best: number | null = null;
+    let bestDistance = limit;
+    for (const v of candidates) {
+      const d = distance(vertexPosition(naming, v), ref.at);
+      if (d <= bestDistance) {
+        best = v;
+        bestDistance = d;
+      }
+    }
+    return best;
+  };
+  const named = all.filter((v) => vertexFaceNames(naming, v).join('\u0000') === key);
+  const exact = nearest(named);
+  if (exact !== null) return { index: exact, kind: 'name' };
+  const size = bodySize(naming);
+  const wanted = new Set(ref.faces.filter((name) => name !== ''));
+  const sharing = all.filter((v) => vertexFaceNames(naming, v).filter((name) => wanted.has(name)).length >= 2);
+  const index = nearest(sharing, NEARBY * size) ?? nearest(all, SAME_PLACE * size);
+  return index === null ? null : { index, kind: 'position' };
+}
+
+/**
+ * The face a reference means: the face with its name (when a split face left several pieces, the one
+ * `distanceTo` says is nearest to where it was picked), else – when it was renamed – a planar face whose
+ * plane goes through that point.
+ */
+export function resolveFaceRef(ref: FaceNameRef, naming: BodyNaming, distanceTo: (face: number, point: Vec3) => number): EdgeMatch | null {
+  const nearest = (faces: number[]) => faces.reduce((a, b) => (distanceTo(b, ref.at) < distanceTo(a, ref.at) ? b : a));
+  const named = naming.faces.flatMap((name, face) => (name === ref.name ? [face] : []));
+  if (named.length > 0) return { index: named.length === 1 ? (named[0] as number) : nearest(named), kind: 'name' };
+  const size = bodySize(naming);
+  const through = naming.faces.flatMap((_, face) => {
+    const plane = facePlane(naming, face);
+    const offset = plane ? Math.abs(dot([ref.at[0] - plane.point[0], ref.at[1] - plane.point[1], ref.at[2] - plane.point[2]], plane.normal)) : Infinity;
+    return offset <= SAME_PLACE * size ? [face] : [];
+  });
+  return through.length > 0 ? { index: nearest(through), kind: 'position' } : null;
 }
 
 /** A planar face of a body: its index and name, and a point on its plane with the outward normal. */

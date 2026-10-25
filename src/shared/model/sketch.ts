@@ -147,7 +147,9 @@ export const STANDARD_PLANES: readonly StandardPlane[] = ['front', 'top', 'right
  */
 export type SketchPlaneRef =
   | { kind: 'standard'; plane: StandardPlane }
-  | { kind: 'face'; face: number; frame: SketchFrame; name?: string };
+  | { kind: 'face'; face: number; frame: SketchFrame; name?: string }
+  /** A reference plane (by feature id); `frame` is where it is now, updated by every rebuild. */
+  | { kind: 'feature'; feature: string; frame: SketchFrame };
 
 /** A plane in model space: origin plus orthonormal axes (sketch x, sketch y, normal). */
 export interface SketchFrame {

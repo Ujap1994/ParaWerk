@@ -162,6 +162,9 @@
     "revolve": "Revolve"
   },
   "features": {
+    "plane": "Plane",
+    "axis": "Axis",
+    "point": "Point",
     "sketch": "Sketch",
     "box": "Box",
     "cylinder": "Cylinder",
@@ -344,7 +347,13 @@
     "operation-failed": "The geometry kernel could not build this feature ({{detail}}).",
     "unknown": "Unexpected error: {{detail}}",
     "axis-missing": "The axis of this revolution is missing. Edit the feature and choose a line of the sketch as the axis.",
-    "profile-crosses-axis": "Outlines of the sketch lie on both sides of the axis. Keep them on one side; they may touch it."
+    "profile-crosses-axis": "Outlines of the sketch lie on both sides of the axis. Keep them on one side; they may touch it.",
+    "plane-missing": "The reference plane this sketch was drawn on no longer exists. The sketch stays where the plane was.",
+    "reference-missing": "Reference {{detail}} of this feature is missing: it was not chosen yet, or an earlier change removed it. Edit the feature and choose it.",
+    "reference-kind": "Reference {{detail}} does not fit: choose a plane, an axis or a point, as its field asks for.",
+    "reference-parallel": "The references are parallel, so they do not meet. Choose references that cross each other.",
+    "reference-not-parallel": "The axis must lie parallel to the plane: the new plane turns around it.",
+    "reference-collinear": "The points lie on one line or on each other, so they do not define the plane or axis."
   },
   "warnings": {
     "edge-missing_one": "{{count}} selected edge no longer exists and is left out. Edit the feature to remove it or pick another edge.",

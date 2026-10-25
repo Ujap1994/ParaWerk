@@ -1,6 +1,7 @@
 import { isEdgeFeature, type EdgeFeature, type EdgeRef, type Feature, type SketchFeature, type SolidModelingFeature } from '../shared/model/feature.ts';
 import { edgeFaceNames, edgeRefOf, resolveEdgeRefs, resolveFacePlane, type BodyNaming } from '../shared/model/naming.ts';
 import { sketchProfile, type Profile } from '../shared/model/profile.ts';
+import type { ReferenceGeometry } from '../shared/model/reference.ts';
 import { frameOf, frameOnPlane, ORIGIN_ID, type SketchFrame, type SketchPlaneRef } from '../shared/model/sketch.ts';
 import { hashString } from '../shared/hash.ts';
 import type { KernelFeature, ResolvedEdgeFeature } from './backend.ts';
@@ -84,16 +85,23 @@ function sameFrame(a: SketchFrame, b: SketchFrame): boolean {
 export interface SketchPlacement {
   frame: SketchFrame;
   healed?: SketchPlaneRef;
-  /** The face of a sketch on a face is gone; the sketch stays where the face was. */
+  /** The face or reference plane of the sketch is gone; the sketch stays where it was. */
   missing?: boolean;
 }
 
 /**
  * Places a sketch: a sketch on a face follows the face in `body` (the body before the sketch), found by
- * its persistent name or, in older files, by its plane (docs/adr/0002-persistent-naming.md).
+ * its persistent name or, in older files, by its plane (docs/adr/0002-persistent-naming.md); a sketch on
+ * a reference plane follows that plane (`references`: where the reference features before it lie).
  */
-export function placeSketch(sketch: SketchFeature, body: (() => BodyNaming) | null): SketchPlacement {
+export function placeSketch(sketch: SketchFeature, body: (() => BodyNaming) | null, references: ReadonlyMap<string, ReferenceGeometry> = new Map()): SketchPlacement {
   const plane = sketch.plane;
+  if (plane.kind === 'feature') {
+    const geometry = references.get(plane.feature);
+    if (geometry?.kind !== 'plane') return { frame: plane.frame, missing: true };
+    if (sameFrame(geometry.frame, plane.frame)) return { frame: plane.frame };
+    return { frame: geometry.frame, healed: { ...plane, frame: geometry.frame } };
+  }
   if (plane.kind !== 'face') return { frame: frameOf(plane) };
   const face = body ? resolveFacePlane(plane.name, plane.frame, body()) : null;
   if (!face) return { frame: plane.frame, missing: true };

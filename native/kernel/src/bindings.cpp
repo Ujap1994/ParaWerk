@@ -120,6 +120,45 @@ val naming(int id) {
     result.set("facePlanes", typedArray("Float64Array", naming.facePlanes));
     result.set("edgeFaces", typedArray("Int32Array", naming.edgeFaces));
     result.set("edgeMidpoints", typedArray("Float64Array", naming.edgeMidpoints));
+    result.set("edgeVertices", typedArray("Int32Array", naming.edgeVertices));
+    result.set("vertexPositions", typedArray("Float64Array", naming.vertexPositions));
+    result.set("vertexFaceOffsets", typedArray("Int32Array", naming.vertexFaceOffsets));
+    result.set("vertexFaces", typedArray("Int32Array", naming.vertexFaces));
+    return result;
+  });
+}
+
+template <size_t N>
+val numbers(const double (&values)[N]) {
+  return val::array(std::vector<double>(std::begin(values), std::end(values)));
+}
+
+val faceGeometry(int id, int index) {
+  return guarded([&] {
+    const parawerk::FaceGeometry face = parawerk::faceGeometry(id, index);
+    val result = okObject();
+    result.set("kind", face.kind);
+    result.set("area", face.area);
+    result.set("center", numbers(face.center));
+    result.set("plane", numbers(face.plane));
+    result.set("axis", numbers(face.axis));
+    result.set("radius", face.radius);
+    return result;
+  });
+}
+
+val edgeGeometry(int id, int index) {
+  return guarded([&] {
+    const parawerk::EdgeGeometry edge = parawerk::edgeGeometry(id, index);
+    val result = okObject();
+    result.set("kind", edge.kind);
+    result.set("length", edge.length);
+    result.set("start", numbers(edge.start));
+    result.set("end", numbers(edge.end));
+    result.set("middle", numbers(edge.middle));
+    result.set("center", numbers(edge.center));
+    result.set("axis", numbers(edge.axis));
+    result.set("radius", edge.radius);
     return result;
   });
 }
@@ -180,7 +219,7 @@ val importStep(val bytes) {
   });
 }
 
-std::string version() { return "parawerk-kernel 0.4 / OCCT " PARAWERK_OCCT_VERSION; }
+std::string version() { return "parawerk-kernel 0.5 / OCCT " PARAWERK_OCCT_VERSION; }
 
 }  // namespace
 
@@ -196,6 +235,8 @@ EMSCRIPTEN_BINDINGS(parawerk_kernel) {
   emscripten::function("release", &parawerk::release);
   emscripten::function("shapeCount", &parawerk::shapeCount);
   emscripten::function("naming", &naming);
+  emscripten::function("faceGeometry", &faceGeometry);
+  emscripten::function("edgeGeometry", &edgeGeometry);
   emscripten::function("counts", &counts);
   emscripten::function("boundingBox", &boundingBox);
   emscripten::function("massProperties", &massProperties);

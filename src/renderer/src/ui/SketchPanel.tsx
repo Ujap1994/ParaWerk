@@ -13,7 +13,13 @@ import { NumberField } from './NumberField.tsx';
 
 function usePlaneName() {
   const { t } = useTranslation();
-  return (plane: SketchPlaneRef): string => (plane.kind === 'standard' ? t(`planes.${plane.plane}`) : t('status.face', { index: plane.face + 1 }));
+  const nameOf = useFeatureName();
+  const features = useAppState((state) => state.history.features);
+  return (plane: SketchPlaneRef): string => {
+    if (plane.kind === 'standard') return t(`planes.${plane.plane}`);
+    if (plane.kind === 'face') return t('status.face', { index: plane.face + 1 });
+    return nameOf(features, features.findIndex((feature) => feature.id === plane.feature));
+  };
 }
 
 function PlaneChoice() {

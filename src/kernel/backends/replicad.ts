@@ -5,6 +5,7 @@ import { extractMesh } from '../mesh.ts';
 import type { MeshQuality } from '../mesh-quality.ts';
 import { Arena, describeError, loadOpenCascade, type OC, type TopoDS_Shape } from '../occt.ts';
 import { boundingBox, massProperties } from '../properties.ts';
+import { FeatureError } from '../feature-error.ts';
 import { exportStep, importStep } from '../step.ts';
 import { countSubShapes } from '../topology.ts';
 
@@ -54,6 +55,14 @@ export class ReplicadBackend implements GeometryBackend {
   naming(handle: ShapeHandle) {
     const { faces, edges } = this.counts(handle);
     return anonymousNaming(faces, edges);
+  }
+
+  faceGeometry(): never {
+    throw new FeatureError('operation-failed', 'reference geometry needs the ParaWerk kernel');
+  }
+
+  edgeGeometry(): never {
+    throw new FeatureError('operation-failed', 'reference geometry needs the ParaWerk kernel');
   }
 
   massProperties(handle: ShapeHandle) {

@@ -1,9 +1,12 @@
 import { hashString } from '../shared/hash.ts';
-import { isEdgeFeature, isSketchBased, type Feature, type SketchFeature } from '../shared/model/feature.ts';
+import { isEdgeFeature, isReferenceFeature, isSketchBased, type Feature, type SketchFeature } from '../shared/model/feature.ts';
+import type { BodyNaming } from '../shared/model/naming.ts';
+import type { ReferenceGeometry } from '../shared/model/reference.ts';
 import type { SketchFrame, SketchPlaneRef } from '../shared/model/sketch.ts';
 import type { GeometryBackend, ShapeHandle } from './backend.ts';
 import { FeatureError } from './feature-error.ts';
 import type { FeatureResult } from './protocol.ts';
+import { computeReference, type BodyQuery } from './reference.ts';
 import { placeSketch, resolveFeature } from './resolve.ts';
 
 interface CacheEntry {
@@ -15,6 +18,8 @@ interface CacheEntry {
   ownsShape: boolean;
   /** Sketches: where the sketch lies (a sketch on a face follows its face). */
   frame?: SketchFrame;
+  /** Reference planes, axes and points: where they lie. */
+  reference?: ReferenceGeometry;
   result: FeatureResult;
 }
 
@@ -33,11 +38,12 @@ function stableStringify(value: unknown): string {
 }
 
 /**
- * What decides where a sketch lies. A sketch on a named face follows the face in the body before it,
- * which the keys cover already, so the frame the document keeps up to date is left out: taking it over
+ * What decides where a sketch lies. A sketch on a named face or a reference plane follows it, and the
+ * keys cover the features before the sketch already, so the frame the document keeps up to date is left out: taking it over
  * after a rebuild must not rebuild everything again.
  */
 function planeSignature(plane: SketchPlaneRef): unknown {
+  if (plane.kind === 'feature') return { kind: 'feature', feature: plane.feature };
   return plane.kind === 'face' && plane.name !== undefined ? { kind: 'face', name: plane.name } : plane;
 }
 
@@ -61,10 +67,11 @@ function featureSignature(feature: Feature, sketches: ReadonlyMap<string, Sketch
  * its frame out, so its cached result would otherwise report the same plane again and again.
  */
 function withoutTakenOver(result: FeatureResult, feature: Feature | undefined): FeatureResult {
-  const { healedEdges, healedPlane, ...rest } = result;
+  const { healedEdges, healedPlane, healedReferences, ...rest } = result;
   const edgesNew = healedEdges && !(feature && isEdgeFeature(feature) && stableStringify(feature.edges) === stableStringify(healedEdges));
   const planeNew = healedPlane && !(feature?.type === 'sketch' && stableStringify(feature.plane) === stableStringify(healedPlane));
-  return { ...rest, ...(edgesNew ? { healedEdges } : {}), ...(planeNew ? { healedPlane } : {}) };
+  const referencesNew = healedReferences && !(feature && isReferenceFeature(feature) && stableStringify(feature.references) === stableStringify(healedReferences));
+  return { ...rest, ...(edgesNew ? { healedEdges } : {}), ...(planeNew ? { healedPlane } : {}), ...(referencesNew ? { healedReferences } : {}) };
 }
 
 export function featureKeys(features: readonly Feature[]): string[] {
@@ -107,8 +114,25 @@ export class Rebuilder implements Disposable {
     }
     this.truncate(firstChanged);
     const frames = new Map<string, SketchFrame>();
+    const references = new Map<string, ReferenceGeometry>();
     this.entries.forEach((entry, i) => {
       if (entry.frame) frames.set(features[i]?.id ?? '', entry.frame);
+      if (entry.reference) references.set(features[i]?.id ?? '', entry.reference);
+    });
+    // Several features in a row may ask for the names of the same body.
+    const namings = new Map<ShapeHandle, BodyNaming>();
+    const naming = (shape: ShapeHandle): BodyNaming => {
+      let found = namings.get(shape);
+      if (!found) {
+        found = this.backend.naming(shape);
+        namings.set(shape, found);
+      }
+      return found;
+    };
+    const query = (shape: ShapeHandle): BodyQuery => ({
+      naming: () => naming(shape),
+      face: (index) => this.backend.faceGeometry(shape, index),
+      edge: (index) => this.backend.edgeGeometry(shape, index),
     });
 
     for (let i = firstChanged; i < features.length; i++) {
@@ -121,7 +145,7 @@ export class Rebuilder implements Disposable {
 
       // Sketches do not change the body (extrusions consume them); a sketch on a face follows its face.
       if (feature.type === 'sketch' && !feature.suppressed) {
-        const placement = placeSketch(feature, input ? () => this.backend.naming(input) : null);
+        const placement = placeSketch(feature, input ? () => naming(input) : null, references);
         frames.set(feature.id, placement.frame);
         this.entries.push({
           key,
@@ -134,15 +158,36 @@ export class Rebuilder implements Disposable {
             status: placement.missing ? 'error' : 'ok',
             timeMs: performance.now() - start,
             cached: false,
-            ...(placement.missing ? { error: { code: 'face-missing' as const } } : {}),
+            ...(placement.missing ? { error: { code: feature.plane.kind === 'feature' ? ('plane-missing' as const) : ('face-missing' as const) } } : {}),
             ...(placement.healed ? { healedPlane: placement.healed } : {}),
           },
         });
         continue;
       }
 
+      // Reference planes, axes and points do not change the body either.
+      if (isReferenceFeature(feature) && !feature.suppressed) {
+        let result: FeatureResult;
+        let reference: ReferenceGeometry | undefined;
+        try {
+          const computed = computeReference(feature, { body: input ? query(input) : null, references });
+          reference = computed.geometry;
+          references.set(feature.id, reference);
+          result = { id: feature.id, status: 'ok', timeMs: 0, cached: false, reference, ...(computed.healed ? { healedReferences: computed.healed } : {}) };
+        } catch (error) {
+          const failure =
+            error instanceof FeatureError
+              ? { code: error.code, ...(error.detail === undefined ? {} : { detail: error.detail }) }
+              : { code: 'unknown' as const, detail: this.backend.describeError(error) };
+          result = { id: feature.id, status: 'error', error: failure, timeMs: 0, cached: false };
+        }
+        result.timeMs = performance.now() - start;
+        this.entries.push({ key, shapeKey: inputKey, shape: input, ownsShape: false, ...(reference ? { reference } : {}), result });
+        continue;
+      }
+
       // Variables do not change the body either.
-      if (feature.suppressed || feature.type === 'sketch' || feature.type === 'variables') {
+      if (feature.suppressed || feature.type === 'sketch' || feature.type === 'variables' || isReferenceFeature(feature)) {
         this.entries.push({
           key,
           shapeKey: inputKey,
@@ -154,7 +199,7 @@ export class Rebuilder implements Disposable {
       }
 
       try {
-        const resolved = resolveFeature(feature, features.slice(0, i), input ? () => this.backend.naming(input) : null, frames);
+        const resolved = resolveFeature(feature, features.slice(0, i), input ? () => naming(input) : null, frames);
         const shape = this.backend.applyFeature(input, resolved);
         const healed = 'healedEdges' in resolved ? resolved.healedEdges : undefined;
         const missing = 'missingEdges' in resolved ? resolved.missingEdges : undefined;

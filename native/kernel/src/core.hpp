@@ -76,6 +76,32 @@ struct Naming {
   std::vector<double> facePlanes;     // 6 per face: a point on the plane and the outward normal (NaN when not planar)
   std::vector<int32_t> edgeFaces;     // 2 per edge: face indices on both sides (the same twice for seams, -1 for none)
   std::vector<double> edgeMidpoints;  // 3 per edge: the point in the middle of the curve (NaN when degenerate)
+  std::vector<int32_t> edgeVertices;  // 2 per edge: vertex indices at its start and end (-1 for none)
+  std::vector<double> vertexPositions;      // 3 per vertex (TopExp::MapShapes order)
+  std::vector<int32_t> vertexFaceOffsets;   // vertex v meets faces vertexFaces[offsets[v] .. offsets[v + 1])
+  std::vector<int32_t> vertexFaces;
+};
+
+/** Exact geometry of one face (see faceGeometry). Unused values are NaN. */
+struct FaceGeometry {
+  uint8_t kind = OtherSurface;
+  double area = 0;
+  double center[3];  // center of the area
+  double plane[6];   // planes: a point and the outward normal
+  double axis[6];    // cylinders, cones, tori, surfaces of revolution: a point on the axis and its direction; spheres: the center
+  double radius;     // cylinders and spheres
+};
+
+/** Exact geometry of one edge (see edgeGeometry). Unused values are NaN. */
+struct EdgeGeometry {
+  uint8_t kind = OtherCurve;
+  double length = 0;
+  double start[3];
+  double end[3];
+  double middle[3];
+  double center[3];  // circles and ellipses
+  double axis[3];    // circles and ellipses: the normal of their plane; lines: the direction from start to end
+  double radius;     // circles
 };
 
 /** Faces are named "<name>:left|right|front|back|bottom|top" after their outward normal (-x, +x, -y, +y, -z, +z). */
@@ -121,8 +147,12 @@ int chamfer(int bodyId, const std::vector<int>& edgeIndices, double distance, co
 void release(int id);
 int shapeCount();
 
-/** The face names of a body and the faces on both sides of each edge. */
+/** The face names of a body, the faces on both sides of each edge and the faces at each vertex. */
 Naming naming(int id);
+/** Exact geometry of face `index` (TopExp::MapShapes order) of a body. */
+FaceGeometry faceGeometry(int id, int index);
+/** Exact geometry of edge `index` (TopExp::MapShapes order) of a body. */
+EdgeGeometry edgeGeometry(int id, int index);
 
 Counts counts(int id);
 BoundingBox boundingBox(int id);

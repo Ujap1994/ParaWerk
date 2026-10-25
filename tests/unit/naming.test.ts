@@ -12,6 +12,10 @@ function body(edges: [string, string, [number, number, number]][]): BodyNaming {
     facePlanes: new Float64Array(6 * faces.length).fill(NaN),
     edgeFaces: Int32Array.from(edges.flatMap(([a, b]) => [faces.indexOf(a), faces.indexOf(b)])),
     edgeMidpoints: Float64Array.from(edges.flatMap(([, , at]) => at)),
+    edgeVertices: new Int32Array(2 * edges.length).fill(-1),
+    vertexPositions: new Float64Array(0),
+    vertexFaceOffsets: new Int32Array(1),
+    vertexFaces: new Int32Array(0),
   };
 }
 
@@ -76,5 +80,29 @@ describe('edge references in files', () => {
     expect(() => parseFeatures(fillet([{ kind: 'edge', faces: ['a', 7], at: [0, 0, 0] }]))).toThrow(ValidationError);
     expect(() => parseFeatures(fillet([{ kind: 'edge', faces: ['a', 'x'.repeat(300)], at: [0, 0, 0] }]))).toThrow(ValidationError);
     expect(() => parseFeatures(fillet([{ kind: 'edge', faces: ['a', 'b'], at: [0, 0] }]))).toThrow(ValidationError);
+  });
+});
+
+describe('reference features in files', () => {
+  const plane = (overrides: object = {}) => [{ id: 'p', type: 'plane', method: 'offset', references: [{ kind: 'standard-plane', plane: 'top' }], distance: 10, angle: 45, flip: false, ...overrides }];
+
+  it('reads planes, axes and points with their references', () => {
+    const features = parseFeatures([
+      ...plane(),
+      { id: 'a', type: 'axis', method: 'twoPoints', references: [{ kind: 'origin' }, { kind: 'vertex', faces: ['b:top', 'b:front', 'b:left'], at: [1, 2, 3] }] },
+      { id: 'q', type: 'point', method: 'center', references: [{ kind: 'face', name: 'b:top', at: [0, 0, 1] }], x: 0, y: 0, z: 0 },
+      { id: 's', type: 'sketch', plane: { kind: 'feature', feature: 'p', frame: { origin: [0, 0, 10], xDir: [1, 0, 0], yDir: [0, 1, 0], normal: [0, 0, 1] } }, sketch: { entities: [], constraints: [] } },
+    ]);
+    expect(features[1]).toMatchObject({ references: [{ kind: 'origin' }, { kind: 'vertex', faces: ['b:front', 'b:left', 'b:top'] }] });
+    expect(features[3]).toMatchObject({ plane: { kind: 'feature', feature: 'p' } });
+    expect(formatVersionOf(features)).toBe(6);
+  });
+
+  it('rejects unknown methods, too many references and damaged ones', () => {
+    expect(() => parseFeatures(plane({ method: 'tangent' }))).toThrow(ValidationError);
+    expect(() => parseFeatures(plane({ references: Array.from({ length: 4 }, () => ({ kind: 'origin' })) }))).toThrow(ValidationError);
+    expect(() => parseFeatures(plane({ references: [{ kind: 'face', name: 'x', at: [0, 0] }] }))).toThrow(ValidationError);
+    expect(() => parseFeatures(plane({ references: [{ kind: 'standard-plane', plane: 'side' }] }))).toThrow(ValidationError);
+    expect(() => parseFeatures(plane({ angle: 400 }))).toThrow(ValidationError);
   });
 });

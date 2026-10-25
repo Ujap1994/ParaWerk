@@ -1,5 +1,6 @@
 import type { EdgeRef, Feature, Vec3 } from '../shared/model/feature.ts';
 import type { BodyNaming } from '../shared/model/naming.ts';
+import type { GeometryRef, ReferenceGeometry } from '../shared/model/reference.ts';
 import type { SketchPlaneRef } from '../shared/model/sketch.ts';
 
 export type SurfaceKind = 'plane' | 'cylinder' | 'cone' | 'sphere' | 'torus' | 'bspline' | 'revolution' | 'extrusion' | 'other';
@@ -34,6 +35,34 @@ export interface EdgeInfo {
   axis?: Vec3;
 }
 
+/** Exact geometry of one face, for reference geometry built on it. */
+export interface FaceGeometry {
+  kind: SurfaceKind;
+  area: number;
+  /** Center of the area. */
+  center: Vec3;
+  /** Planes: a point on the plane and the outward normal. */
+  plane?: { point: Vec3; normal: Vec3 };
+  /** Cylinders, cones, tori and surfaces of revolution: their axis. */
+  axis?: { point: Vec3; direction: Vec3 };
+  sphereCenter?: Vec3;
+  radius?: number;
+}
+
+/** Exact geometry of one edge, for reference geometry built on it. */
+export interface EdgeGeometry {
+  kind: CurveKind;
+  length: number;
+  start: Vec3;
+  end: Vec3;
+  middle: Vec3;
+  /** Circles and ellipses. */
+  center?: Vec3;
+  /** Circles and ellipses: the normal of their plane; lines: the direction from start to end. */
+  axis?: Vec3;
+  radius?: number;
+}
+
 /** Triangulated body ready for rendering. All buffers are transferable. */
 export interface MeshPayload {
   key: string;
@@ -58,6 +87,12 @@ export type FeatureErrorCode =
   | 'no-edges'
   | 'edge-missing'
   | 'face-missing'
+  | 'plane-missing'
+  | 'reference-missing'
+  | 'reference-kind'
+  | 'reference-parallel'
+  | 'reference-not-parallel'
+  | 'reference-collinear'
   | 'empty-result'
   | 'first-must-add'
   | 'sketch-missing'
@@ -84,6 +119,10 @@ export interface FeatureResult {
   healedEdges?: EdgeRef[];
   /** Sketches on faces: where the face is now (or the plane of an older file with its face's name), for the document to take over. */
   healedPlane?: SketchPlaneRef;
+  /** Reference planes, axes and points: where they lie now. */
+  reference?: ReferenceGeometry;
+  /** Reference geometry whose references were found only by position: the up-to-date references, for the document to take over. */
+  healedReferences?: GeometryRef[];
 }
 
 export interface MassProperties {

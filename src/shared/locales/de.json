@@ -162,6 +162,9 @@
     "revolve": "Rotieren"
   },
   "features": {
+    "plane": "Ebene",
+    "axis": "Achse",
+    "point": "Punkt",
     "sketch": "Skizze",
     "box": "Quader",
     "cylinder": "Zylinder",
@@ -344,7 +347,13 @@
     "operation-failed": "Der Geometriekern konnte dieses Feature nicht erzeugen ({{detail}}).",
     "unknown": "Unerwarteter Fehler: {{detail}}",
     "axis-missing": "Die Achse dieser Rotation fehlt. Bearbeite das Feature und wähle eine Linie der Skizze als Achse.",
-    "profile-crosses-axis": "Konturen der Skizze liegen auf beiden Seiten der Achse. Halte sie auf einer Seite; berühren dürfen sie die Achse."
+    "profile-crosses-axis": "Konturen der Skizze liegen auf beiden Seiten der Achse. Halte sie auf einer Seite; berühren dürfen sie die Achse.",
+    "plane-missing": "Die Referenzebene, auf der diese Skizze gezeichnet wurde, existiert nicht mehr. Die Skizze bleibt, wo die Ebene war.",
+    "reference-missing": "Referenz {{detail}} dieses Features fehlt: Sie wurde noch nicht gewählt, oder eine frühere Änderung hat sie entfernt. Bearbeite das Feature und wähle sie.",
+    "reference-kind": "Referenz {{detail}} passt nicht: Wähle eine Ebene, eine Achse oder einen Punkt, wie es ihr Feld verlangt.",
+    "reference-parallel": "Die Referenzen sind parallel und treffen sich deshalb nicht. Wähle Referenzen, die sich schneiden.",
+    "reference-not-parallel": "Die Achse muss parallel zur Ebene liegen: Die neue Ebene dreht sich um sie.",
+    "reference-collinear": "Die Punkte liegen auf einer Linie oder aufeinander und legen deshalb keine Ebene oder Achse fest."
   },
   "warnings": {
     "edge-missing_one": "{{count}} ausgewählte Kante existiert nicht mehr und wird ausgelassen. Bearbeite das Feature, um sie zu entfernen oder eine andere Kante zu wählen.",

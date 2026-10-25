@@ -5,11 +5,12 @@
  * (see docs/adr/0004-coordinate-system-and-units.md).
  */
 
+import type { AxisMethod, GeometryRef, PlaneMethod, PointMethod } from './reference.ts';
 import type { SketchData, SketchPlaneRef } from './sketch.ts';
 
 export type Vec3 = [number, number, number];
 
-export type FeatureType = 'variables' | 'sketch' | 'extrude' | 'revolve' | 'box' | 'cylinder' | 'fillet' | 'chamfer';
+export type FeatureType = 'variables' | 'sketch' | 'plane' | 'axis' | 'point' | 'extrude' | 'revolve' | 'box' | 'cylinder' | 'fillet' | 'chamfer';
 
 /** How a solid-creating feature combines with the existing body. */
 export type BooleanOperation = 'add' | 'cut';
@@ -58,6 +59,9 @@ interface FeatureBase {
 export const EXPRESSION_FIELDS: Readonly<Record<FeatureType, readonly string[]>> = {
   variables: [],
   sketch: [],
+  plane: ['distance', 'angle'],
+  axis: [],
+  point: ['x', 'y', 'z'],
   extrude: ['depth'],
   revolve: ['angle'],
   box: ['width', 'depth', 'height'],
@@ -115,6 +119,42 @@ export interface SketchFeature extends FeatureBase {
   type: 'sketch';
   plane: SketchPlaneRef;
   sketch: SketchData;
+}
+
+/** A reference plane (see src/shared/model/reference.ts); it does not change the body. */
+export interface PlaneFeature extends FeatureBase {
+  type: 'plane';
+  method: PlaneMethod;
+  references: GeometryRef[];
+  /** Offset: the distance from the reference plane, in mm. */
+  distance: number;
+  /** At an angle: degrees from the reference plane, around the axis. */
+  angle: number;
+  /** Offset to the other side; the angle the other way round; for the other methods the normal reversed. */
+  flip: boolean;
+}
+
+/** A reference axis. */
+export interface AxisFeature extends FeatureBase {
+  type: 'axis';
+  method: AxisMethod;
+  references: GeometryRef[];
+}
+
+/** A reference point; `x`, `y` and `z` are its coordinates for the coordinates method. */
+export interface PointFeature extends FeatureBase {
+  type: 'point';
+  method: PointMethod;
+  references: GeometryRef[];
+  x: number;
+  y: number;
+  z: number;
+}
+
+export type ReferenceFeature = PlaneFeature | AxisFeature | PointFeature;
+
+export function isReferenceFeature(feature: Feature): feature is ReferenceFeature {
+  return feature.type === 'plane' || feature.type === 'axis' || feature.type === 'point';
 }
 
 /** Which way an extrusion goes from its sketch plane: along the plane normal, against it, or half each way. */
@@ -193,10 +233,21 @@ export function isSketchBased(feature: Feature): feature is SketchBasedFeature {
   return feature.type === 'extrude' || feature.type === 'revolve';
 }
 
-export type Feature = VariablesFeature | SketchFeature | ExtrudeFeature | RevolveFeature | BoxFeature | CylinderFeature | FilletFeature | ChamferFeature;
+export type Feature =
+  | VariablesFeature
+  | SketchFeature
+  | PlaneFeature
+  | AxisFeature
+  | PointFeature
+  | ExtrudeFeature
+  | RevolveFeature
+  | BoxFeature
+  | CylinderFeature
+  | FilletFeature
+  | ChamferFeature;
 
-/** Features that build or modify the solid body (everything except variables and sketches). */
-export type SolidModelingFeature = Exclude<Feature, SketchFeature | VariablesFeature>;
+/** Features that build or modify the solid body (everything except variables, sketches and reference geometry). */
+export type SolidModelingFeature = Exclude<Feature, SketchFeature | VariablesFeature | ReferenceFeature>;
 
 export type EdgeFeature = FilletFeature | ChamferFeature;
 
@@ -208,7 +259,7 @@ export function isSolidFeature(feature: Feature): feature is BoxFeature | Cylind
   return feature.type === 'box' || feature.type === 'cylinder';
 }
 
-export const FEATURE_TYPES: readonly FeatureType[] = ['variables', 'sketch', 'extrude', 'revolve', 'box', 'cylinder', 'fillet', 'chamfer'];
+export const FEATURE_TYPES: readonly FeatureType[] = ['variables', 'sketch', 'plane', 'axis', 'point', 'extrude', 'revolve', 'box', 'cylinder', 'fillet', 'chamfer'];
 
 let idCounter = 0;
 
@@ -225,6 +276,12 @@ export function defaultFeature(type: FeatureType, id: string = createFeatureId()
       return { id, type, variables: [] };
     case 'sketch':
       return { id, type, plane: { kind: 'standard', plane: 'top' }, sketch: { entities: [], constraints: [] } };
+    case 'plane':
+      return { id, type, method: 'offset', references: [], distance: 10, angle: 45, flip: false };
+    case 'axis':
+      return { id, type, method: 'reference', references: [] };
+    case 'point':
+      return { id, type, method: 'coordinates', references: [], x: 0, y: 0, z: 0 };
     case 'extrude':
       return { id, type, operation: 'add', sketch: '', depth: 20, direction: 'normal', end: 'blind' };
     case 'revolve':
