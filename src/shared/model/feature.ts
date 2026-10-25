@@ -110,18 +110,33 @@ export type ExtrudeDirection = 'normal' | 'reverse' | 'both';
 
 export const EXTRUDE_DIRECTIONS: readonly ExtrudeDirection[] = ['normal', 'reverse', 'both'];
 
+/** How far an extrusion goes: a given depth, or through the whole body in its direction. */
+export type ExtrudeEnd = 'blind' | 'throughAll';
+
+export const EXTRUDE_ENDS: readonly ExtrudeEnd[] = ['blind', 'throughAll'];
+
 /** Extrudes the closed outlines of a sketch (adding material) or cuts them out of the body. */
 export interface ExtrudeFeature extends FeatureBase {
   type: 'extrude';
   operation: BooleanOperation;
   /** Id of the sketch feature (before this one) whose outlines are extruded. */
   sketch: string;
+  /** Used when `end` is blind. */
   depth: number;
   direction: ExtrudeDirection;
+  end: ExtrudeEnd;
 }
 
-/** Where an extrusion starts and ends along the sketch plane normal. */
-export function extrudeRange(feature: Pick<ExtrudeFeature, 'depth' | 'direction'>): [number, number] {
+/**
+ * Where an extrusion starts and ends along the sketch plane normal. Through all needs `extent`, how far
+ * the body reaches along the normal (from the sketch plane); the extrusion then passes it with a margin.
+ */
+export function extrudeRange(feature: Pick<ExtrudeFeature, 'depth' | 'direction' | 'end'>, extent?: readonly [number, number]): [number, number] {
+  if (feature.end === 'throughAll' && extent) {
+    const margin = 1 + 0.01 * (extent[1] - extent[0]);
+    const [below, above] = [Math.min(extent[0], 0) - margin, Math.max(extent[1], 0) + margin];
+    return feature.direction === 'normal' ? [0, above] : feature.direction === 'reverse' ? [below, 0] : [below, above];
+  }
   switch (feature.direction) {
     case 'normal':
       return [0, feature.depth];
@@ -199,7 +214,7 @@ export function defaultFeature(type: FeatureType, id: string = createFeatureId()
     case 'sketch':
       return { id, type, plane: { kind: 'standard', plane: 'top' }, sketch: { entities: [], constraints: [] } };
     case 'extrude':
-      return { id, type, operation: 'add', sketch: '', depth: 20, direction: 'normal' };
+      return { id, type, operation: 'add', sketch: '', depth: 20, direction: 'normal', end: 'blind' };
     case 'revolve':
       return { id, type, operation: 'add', sketch: '', axis: '', angle: 360, direction: 'normal' };
     case 'box':

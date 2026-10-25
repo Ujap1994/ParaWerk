@@ -282,7 +282,7 @@ describe('extrude from sketches (parawerk backend)', () => {
   const sketchFeature = (id: string, entities: SketchEntity[], plane: SketchFeature['plane'] = { kind: 'standard', plane: 'top' }): SketchFeature => ({
     id, type: 'sketch', plane, sketch: { entities, constraints: [] },
   });
-  const extrude = (overrides: Partial<ExtrudeFeature> = {}): ExtrudeFeature => ({ id: 'extrude', type: 'extrude', operation: 'add', sketch: 'sketch', depth: 10, direction: 'normal', ...overrides });
+  const extrude = (overrides: Partial<ExtrudeFeature> = {}): ExtrudeFeature => ({ id: 'extrude', type: 'extrude', operation: 'add', sketch: 'sketch', depth: 10, direction: 'normal', end: 'blind', ...overrides });
 
   function build(features: Feature[]) {
     const { result } = kernel.rebuild({ features, captures: [features.length - 1], knownMeshKeys: [], withProperties: true });
@@ -351,6 +351,21 @@ describe('extrude from sketches (parawerk backend)', () => {
     expect(build([box, onTop(10), cut]).state.properties?.volume).toBeCloseTo(240_000 - Math.PI * 100 * 25, 4);
     // Changing the sketch rebuilds the cut.
     expect(build([box, onTop(5), cut]).state.properties?.volume).toBeCloseTo(240_000 - Math.PI * 25 * 25, 4);
+  });
+
+  it('cuts through all of the body, also after the body grows', () => {
+    const box: BoxFeature = { id: 'box', type: 'box', operation: 'add', width: 100, depth: 60, height: 40, position: [0, 0, 0] };
+    // A circle on the top plane (z = 0, the bottom of the box): through all along the normal goes up through the box.
+    const circle = sketchFeature('sketch', [P('c', 10, 0), { id: 'hole', type: 'circle', center: 'c', radius: 10 }]);
+    const cut = extrude({ operation: 'cut', end: 'throughAll' });
+    expect(build([box, circle, cut]).state.properties?.volume).toBeCloseTo(240_000 - Math.PI * 100 * 40, 4);
+    const taller: BoxFeature = { ...box, height: 70 };
+    expect(build([taller, circle, cut]).state.properties?.volume).toBeCloseTo(420_000 - Math.PI * 100 * 70, 4);
+    // Reversed, nothing lies below the plane: the body stays as it is.
+    expect(build([box, circle, extrude({ operation: 'cut', end: 'throughAll', direction: 'reverse' })]).state.properties?.volume).toBeCloseTo(240_000, 4);
+    // Through all needs a body.
+    const errorOf = kernel.rebuild({ features: [circle, cut], captures: [], knownMeshKeys: [], withProperties: false }).result.features.at(-1)?.error?.code;
+    expect(errorOf).toBe('no-body');
   });
 
   it('explains missing sketches, crossing curves and sketches without outlines', () => {

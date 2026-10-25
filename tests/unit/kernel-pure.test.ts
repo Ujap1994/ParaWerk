@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { featureKeys, hashString } from '../../src/kernel/rebuild.ts';
 import { writeBinaryStl } from '../../src/kernel/stl.ts';
 import { displayQuality, exportQuality } from '../../src/kernel/mesh-quality.ts';
-import { defaultFeature, type BoxFeature, type ExtrudeFeature, type SketchFeature } from '../../src/shared/model/feature.ts';
+import { defaultFeature, extrudeRange, type BoxFeature, type ExtrudeFeature, type SketchFeature } from '../../src/shared/model/feature.ts';
 
 describe('binary STL writer', () => {
   it('writes header, count, normal and vertices', () => {
@@ -45,13 +45,23 @@ describe('rebuild keys', () => {
 
   it('include the sketch of an extrusion, so editing the sketch rebuilds it and what follows', () => {
     const sketch = defaultFeature('sketch', 's') as SketchFeature;
-    const extrude: ExtrudeFeature = { id: 'e', type: 'extrude', operation: 'add', sketch: 's', depth: 5, direction: 'normal' };
+    const extrude: ExtrudeFeature = { id: 'e', type: 'extrude', operation: 'add', sketch: 's', depth: 5, direction: 'normal', end: 'blind' };
     const edited = { ...sketch, sketch: { entities: [{ id: 'p', type: 'point' as const, x: 1, y: 2 }], constraints: [] } };
     const [before, after] = [featureKeys([box, sketch, extrude, fillet]), featureKeys([box, edited, extrude, fillet])];
     expect(after.slice(0, 2)).toEqual(before.slice(0, 2));
     expect(after[2]).not.toBe(before[2]);
     expect(after[3]).not.toBe(before[3]);
     expect(featureKeys([box, { ...sketch, suppressed: true }, extrude])[2]).not.toBe(before[2]);
+  });
+
+  it('extrude through all past the body in the chosen direction', () => {
+    const through = { depth: 5, end: 'throughAll' as const };
+    // The body reaches from 10 below to 30 above the sketch plane; the margin is 1 mm + 1 % of 40 mm.
+    expect(extrudeRange({ ...through, direction: 'normal' }, [-10, 30])).toEqual([0, 31.4]);
+    expect(extrudeRange({ ...through, direction: 'reverse' }, [-10, 30])).toEqual([-11.4, 0]);
+    expect(extrudeRange({ ...through, direction: 'both' }, [-10, 30])).toEqual([-11.4, 31.4]);
+    // Blind ignores the body.
+    expect(extrudeRange({ depth: 5, end: 'blind', direction: 'both' }, [-10, 30])).toEqual([-2.5, 2.5]);
   });
 
   it('hash strings deterministically', () => {

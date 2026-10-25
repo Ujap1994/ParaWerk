@@ -121,8 +121,19 @@ export class ParaWerkBackend implements GeometryBackend {
         return this.combine(body, tool, feature.operation);
       }
       case 'extrude': {
-        const [from, to] = extrudeRange(feature);
         const { origin, xDir, normal } = feature.frame;
+        let extent: [number, number] | undefined;
+        if (feature.end === 'throughAll') {
+          // Through all goes past the body: its extent along the normal, from the corners of its box.
+          if (body === null) throw new FeatureError('no-body');
+          const { min, max } = this.boundingBox(body);
+          const along = [0, 1, 2, 3, 4, 5, 6, 7].map((corner) => {
+            const p: Vec3 = [corner & 1 ? max[0] : min[0], corner & 2 ? max[1] : min[1], corner & 4 ? max[2] : min[2]];
+            return (p[0] - origin[0]) * normal[0] + (p[1] - origin[1]) * normal[1] + (p[2] - origin[2]) * normal[2];
+          });
+          extent = [Math.min(...along), Math.max(...along)];
+        }
+        const [from, to] = extrudeRange(feature, extent);
         const tool = this.handle(k.extrudeProfile(encodeProfile(feature.profile), [...origin, ...xDir, ...normal], from, to));
         return this.combine(body, tool, feature.operation);
       }

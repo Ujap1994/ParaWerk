@@ -1,4 +1,4 @@
-import { EXPRESSION_FIELDS, EXTRUDE_DIRECTIONS, type Axis, type BooleanOperation, type EdgeRef, type ExtrudeDirection, type Feature, type FeatureType, type Variable, type Vec3 } from './feature.ts';
+import { EXPRESSION_FIELDS, EXTRUDE_DIRECTIONS, EXTRUDE_ENDS, type Axis, type BooleanOperation, type EdgeRef, type ExtrudeDirection, type ExtrudeEnd, type Feature, type FeatureType, type Variable, type Vec3 } from './feature.ts';
 import { parseSketchData, parsePlaneRef } from './validate-sketch.ts';
 
 export class ValidationError extends Error {
@@ -113,6 +113,13 @@ function expressions(value: unknown, type: FeatureType, path: string): Record<st
   return result;
 }
 
+/** The end condition of an extrusion; absent means blind (a given depth). */
+function extrudeEnd(value: unknown, path: string): ExtrudeEnd {
+  if (value === undefined) return 'blind';
+  if (!(EXTRUDE_ENDS as readonly unknown[]).includes(value)) throw new ValidationError('expected blind or throughAll', path);
+  return value as ExtrudeEnd;
+}
+
 export function parseFeature(raw: unknown, path = 'feature'): Feature {
   if (!isObject(raw)) throw new ValidationError('expected an object', path);
   const feature = parseFeatureFields(raw, path);
@@ -143,6 +150,7 @@ function parseFeatureFields(raw: Json, path: string): Feature {
         sketch: raw.sketch,
         depth: positiveLength(raw.depth, `${path}.depth`),
         direction: raw.direction as ExtrudeDirection,
+        end: extrudeEnd(raw.end, `${path}.end`),
       };
     }
     case 'revolve': {

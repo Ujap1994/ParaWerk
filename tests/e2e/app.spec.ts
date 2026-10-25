@@ -252,7 +252,7 @@ test('variables drive feature parameters: a box follows the variable it is sized
 test('extrudes a sketch into a plate and cuts a pocket from a sketch on its top face', async () => {
   launched = await launchApp();
   const { page } = launched;
-  const features = async () => (await state(page)).history.features as unknown as { id: string; type: string; sketch?: unknown; operation?: string; direction?: string; depth?: number }[];
+  const features = async () => (await state(page)).history.features as unknown as { id: string; type: string; sketch?: unknown; operation?: string; direction?: string; depth?: number; end?: string }[];
 
   // Without a sketch there is nothing to extrude.
   await page.click('[data-command="extrude"]');
@@ -307,9 +307,18 @@ test('extrudes a sketch into a plate and cuts a pocket from a sketch on its top 
   await expect.poll(async () => (await features()).at(-1)).toMatchObject({ type: 'extrude', sketch: 'pocket', operation: 'cut', direction: 'reverse', depth: 10 });
   expect(await volume(page)).toBeCloseTo((2400 - 36 * Math.PI) * 15 - 64 * Math.PI * 10, 2);
 
-  // Undo takes the pocket back.
+  // Undo takes the pocket back; through all turns the same circle into a hole through the plate.
   await page.click('[data-command="undo"]');
   expect(await volume(page)).toBeCloseTo((2400 - 36 * Math.PI) * 15, 2);
+  await page.click('[data-command="extrude"]');
+  await expect(page.locator('[data-testid="feature-sketch"]')).toHaveValue('pocket');
+  await page.getByRole('radio', { name: 'Remove material' }).click();
+  await page.getByRole('radio', { name: 'Reversed' }).click();
+  await page.getByRole('radio', { name: 'Through all' }).click();
+  await expect(page.locator('[data-testid="extrude-depth"]')).toHaveCount(0);
+  await page.click('[data-testid="panel-ok"]');
+  await expect.poll(async () => (await features()).at(-1)).toMatchObject({ type: 'extrude', sketch: 'pocket', end: 'throughAll' });
+  expect(await volume(page)).toBeCloseTo((2400 - 36 * Math.PI - 64 * Math.PI) * 15, 2);
 });
 
 test('revolves a half section around its centerline into a shaft and edits the angle', async () => {

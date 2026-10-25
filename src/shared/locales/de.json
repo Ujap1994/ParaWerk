@@ -217,13 +217,16 @@
     "directionNormal": "Normal",
     "directionReverse": "Umgekehrt",
     "directionBoth": "Mittelebene",
-    "extrudeHint": "Jede geschlossene Kontur der Skizze wird extrudiert; Konturen in anderen werden zu Löchern. Normal geht entlang der Normalen der Skizzenebene, Mittelebene je zur Hälfte in beide Richtungen.",
+    "extrudeHint": "Jede geschlossene Kontur der Skizze wird extrudiert; Konturen in anderen werden zu Löchern. Normal geht entlang der Normalen der Skizzenebene, Mittelebene je zur Hälfte in beide Richtungen. Durch alles geht durch den ganzen Körper, auch wenn er sich später ändert.",
     "angle": "Winkel",
     "directionSymmetric": "Symmetrisch",
     "centerline": "Mittellinie {{n}}",
     "line": "Linie {{n}}",
     "noAxis": "(Achse wählen)",
-    "revolveHint": "Jede geschlossene Kontur der Skizze wird um die Achse rotiert, eine Linie derselben Skizze (meist eine Mittellinie). Die Konturen müssen auf einer Seite der Achse bleiben; sie dürfen sie berühren."
+    "revolveHint": "Jede geschlossene Kontur der Skizze wird um die Achse rotiert, eine Linie derselben Skizze (meist eine Mittellinie). Die Konturen müssen auf einer Seite der Achse bleiben; sie dürfen sie berühren.",
+    "end": "Ende",
+    "endBlind": "Tiefe",
+    "endThroughAll": "Durch alles"
   },
   "status": {
     "kernelLoading": "Geometriekern wird gestartet…",

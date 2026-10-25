@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import type { Axis, BooleanOperation, ExtrudeDirection, Feature, Vec3 } from '../../../shared/model/feature.ts';
+import type { Axis, BooleanOperation, ExtrudeDirection, ExtrudeEnd, Feature, Vec3 } from '../../../shared/model/feature.ts';
 import * as commands from '../commands.ts';
 import { hasBodyBefore } from '../state/document.ts';
 import { useAppState } from '../state/store.ts';
@@ -147,7 +147,19 @@ function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
         <Section title={t('panel.parameters')}>
           <SketchField value={draft.sketch} index={index} />
           <OperationField value={draft.operation} firstFeature={firstFeature} />
-          <NumberField label={t('panel.extrudeDepth')} value={draft.depth} testId="extrude-depth" {...equation(draft, 'depth')} onChange={(depth) => commands.updateDraft({ depth })} />
+          <Segmented<ExtrudeEnd>
+            label={t('panel.end')}
+            value={draft.end ?? 'blind'}
+            disabled={firstFeature}
+            options={[
+              { value: 'blind', label: t('panel.endBlind') },
+              { value: 'throughAll', label: t('panel.endThroughAll') },
+            ]}
+            onChange={(end) => commands.updateDraft({ end })}
+          />
+          {draft.end === 'throughAll' ? null : (
+            <NumberField label={t('panel.extrudeDepth')} value={draft.depth} testId="extrude-depth" {...equation(draft, 'depth')} onChange={(depth) => commands.updateDraft({ depth })} />
+          )}
           <Segmented<ExtrudeDirection>
             label={t('panel.direction')}
             value={draft.direction}

@@ -217,13 +217,16 @@
     "directionNormal": "Normal",
     "directionReverse": "Reversed",
     "directionBoth": "Mid-plane",
-    "extrudeHint": "Every closed outline of the sketch is extruded; outlines inside others become holes. Normal goes along the normal of the sketch plane, Mid-plane goes half the depth each way.",
+    "extrudeHint": "Every closed outline of the sketch is extruded; outlines inside others become holes. Normal goes along the normal of the sketch plane, Mid-plane goes half the depth each way. Through all goes past the whole body, also when it changes later.",
     "angle": "Angle",
     "directionSymmetric": "Symmetric",
     "centerline": "Centerline {{n}}",
     "line": "Line {{n}}",
     "noAxis": "(choose an axis)",
-    "revolveHint": "Every closed outline of the sketch is revolved around the axis, a line of the same sketch (usually a centerline). The outlines must stay on one side of it; they may touch it."
+    "revolveHint": "Every closed outline of the sketch is revolved around the axis, a line of the same sketch (usually a centerline). The outlines must stay on one side of it; they may touch it.",
+    "end": "End",
+    "endBlind": "Depth",
+    "endThroughAll": "Through all"
   },
   "status": {
     "kernelLoading": "Starting geometry kernel…",

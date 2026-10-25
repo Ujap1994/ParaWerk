@@ -10,8 +10,10 @@ of the body with **Remove material**. Draw and close the outlines in a [sketch](
 choose **Extrude**: it takes the newest sketch that no extrusion or revolution uses yet; *Sketch* in the side panel
 chooses another one.
 
-- *Depth* is how far the profile is extruded, in millimeters; like every parameter it takes a
-  calculation or a [variable](#variables-and-equations).
+- *End*: **Depth** extrudes a given distance in millimeters; like every parameter it takes a calculation
+  or a [variable](#variables-and-equations). **Through all** goes past the whole body in the chosen
+  direction – the usual choice for holes and cut-outs through a plate – and still does when the body
+  grows later. It needs a body to go through.
 - *Direction*: **Normal** extrudes along the normal of the sketch plane (out of the face for a sketch on a
   face), **Reversed** the other way (into the body, as a pocket usually needs), **Mid-plane** half the
   depth to each side.

@@ -101,7 +101,7 @@ if (backendName === 'parawerk') {
     }
     return [
       { id: 'sketch', type: 'sketch', plane: { kind: 'standard', plane: 'top' }, sketch: { entities, constraints: [] } },
-      { id: 'extrude', type: 'extrude', operation: 'add', sketch: 'sketch', depth: 12, direction: 'normal' },
+      { id: 'extrude', type: 'extrude', operation: 'add', sketch: 'sketch', depth: 12, direction: 'normal', end: 'blind' },
     ];
   };
   cases['extrude.plate100holes.rebuild'] = measure((i) => kernel.rebuild(request(sketchPlate(100, 400 + (i + 1) * 0.01))), { iterations: 5, warmup: 1 });
@@ -116,7 +116,7 @@ if (backendName === 'parawerk') {
     );
     return [
       { id: 'sketch', type: 'sketch', plane: { kind: 'standard', plane: 'top' }, sketch: { entities, constraints: [] } },
-      { id: 'extrude', type: 'extrude', operation: 'add', sketch: 'sketch', depth: 10, direction: 'normal' },
+      { id: 'extrude', type: 'extrude', operation: 'add', sketch: 'sketch', depth: 10, direction: 'normal', end: 'blind' },
     ];
   };
   cases['extrude.spline100.rebuildWithProperties'] = measure((i) => kernel.rebuild(request(wave(100 + (i % 2)), true)), { iterations: 5, warmup: 1 });
