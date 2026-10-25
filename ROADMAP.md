@@ -169,6 +169,7 @@ Marked complete for now: open points from hands-on testing are handled alongside
 | Chamfer with two distances and with distance and angle | ✅ done |
 | Extrude in two directions, draft while extruding | ✅ done |
 | Reference suite for Gate 2: 30 parts edited at early features | ✅ done |
+| Benchmarks of parts with 100 and 301 features (full rebuild, editing the last feature) | ✅ done |
 | Extrude up to next, up to curved surfaces, thin feature | open |
 
 ## 2. Guiding principles
@@ -561,6 +562,11 @@ rungs remain in the suite as regression tests.
 | Selection in large assemblies | ≤ 100 ms |
 | Updating a drawing of a 200-component assembly | ≤ 10 s in the background, progressive display |
 | Main thread | never blocked for more than 100 ms |
+
+Measured for Phase 2 (`npm run bench:kernel`, Apple M3, 2026-10-25): a part of 301 features (a plate
+with 100 bosses, each a sketch on the plate's face, an extrusion and a rim fillet) rebuilds fully in
+2.8 s in the kernel worker; editing its last feature takes 86 ms (32 ms at 100 features). Both are well
+inside the budgets above (≤ 10 s and ≤ 1 s).
 
 ### How it runs
 

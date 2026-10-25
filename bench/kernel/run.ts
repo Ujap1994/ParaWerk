@@ -162,6 +162,42 @@ if (backendName === 'parawerk') {
   cases['revolve.spline100.rebuildWithProperties'] = measure((i) => kernel.rebuild(request(vase(100 + (i % 2)), true)), { iterations: 5, warmup: 1 });
 }
 
+// A part with many features as users build them: per boss a sketch on the plate's top face, the extrusion
+// and a fillet on its rim (3 features each). Editing the last feature must stay cheap at 301 features;
+// an early edit rebuilds everything after it.
+if (backendName === 'parawerk') {
+  const bossPart = (bosses: number, depth = 10): Feature[] => {
+    const side = Math.ceil(Math.sqrt(bosses));
+    const pitch = 600 / side;
+    const top = { origin: [0, 0, 10] as Vec3, xDir: [1, 0, 0] as Vec3, yDir: [0, 1, 0] as Vec3, normal: [0, 0, 1] as Vec3 };
+    const features: Feature[] = [{ id: 'plate', type: 'box', operation: 'add', width: 640, depth: 640, height: 10, position: [0, 0, 0] }];
+    for (let i = 0; i < bosses; i++) {
+      const [x, y] = [-300 + pitch / 2 + (i % side) * pitch, -300 + pitch / 2 + Math.floor(i / side) * pitch];
+      features.push(
+        { id: `s${i}`, type: 'sketch', plane: { kind: 'face', face: 5, name: 'plate:top', frame: top }, sketch: { entities: [{ id: 'm', type: 'point', x, y }, { id: 'k', type: 'circle', center: 'm', radius: 8 }], constraints: [] } },
+        { id: `b${i}`, type: 'extrude', operation: 'add', sketch: `s${i}`, depth: i === 0 ? depth : 10, direction: 'normal', end: 'blind' },
+        { id: `f${i}`, type: 'fillet', radius: 1.5, edges: [{ kind: 'edge', faces: [`b${i}:end`, `b${i}:side:k`], at: [x + 8, y, 10 + (i === 0 ? depth : 10)] }] },
+      );
+    }
+    return features;
+  };
+  for (const bosses of [33, 100]) {
+    const features = bossPart(bosses);
+    const label = `bosses.${features.length}features`;
+    cases[`${label}.fullRebuild`] = {
+      ...measure((i) => kernel.rebuild(request(bossPart(bosses).map((feature) => (feature.id === 'plate' ? { ...feature, height: 10 + (i + 1) * 1e-3 } : feature)))), { iterations: bosses >= 100 ? 1 : 3, warmup: 0 }),
+      info: { features: features.length },
+    };
+    kernel.rebuild(request(features));
+    cases[`${label}.editLast`] = measure((i) => {
+      const edited = [...features];
+      const last = features[features.length - 1] as Extract<Feature, { type: 'fillet' }>;
+      edited[edited.length - 1] = { ...last, radius: 1 + (i % 5) * 0.1 };
+      kernel.rebuild(request(edited));
+    }, { iterations: 5 });
+  }
+}
+
 cases['plate.100holes.exportStep'] = measure(() => kernel.exportModel({ features: big, format: 'step' }), { iterations: 5, warmup: 1 });
 cases['plate.100holes.exportStl'] = measure(() => kernel.exportModel({ features: big, format: 'stl' }), { iterations: 5, warmup: 1 });
 cases['memory.wasmHeapMb'] = { ...summarize([0]), info: { mb: Math.round(kernel.memoryStats().wasmHeapBytes / 1048576) } };
