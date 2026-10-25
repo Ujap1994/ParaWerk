@@ -8,6 +8,12 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### Added
+- Feature tree: a rollback bar to build the part only up to a point; new features and sketches go in
+  at the bar (insert a feature in the middle of the history). Drag the bar or move it with the arrow
+  keys; *Roll to end* builds everything again.
+- Reorder features by dragging them in the tree. Moves that would put a feature before a feature it
+  builds on (sketch, reference geometry, faces and edges, copied features) or after one that builds on
+  it are refused with an explanation.
 - Extrude (Phase 2): the closed outlines of a sketch become a solid, or are cut out of the body with
   *Remove material*; a depth (also as an equation) or *through all* of the body, direction along the
   sketch normal, reversed or mid-plane. Outlines inside others become holes; curves that cross each other are reported with their

@@ -7,7 +7,7 @@ import { edgeRefOf, faceRefOf, resolveEdgeRefs, resolveFaceRef, resolveVertexRef
 import { REFERENCE_ROLES, type GeometryRef, type ReferenceGeometry, type ReferenceRole } from '../../shared/model/reference.ts';
 import { STANDARD_PLANES } from '../../shared/model/sketch.ts';
 import type { CosmeticThread } from '../../shared/model/hole.ts';
-import type { AppState, Pick } from './state/store.ts';
+import { modelEnd, type AppState, type Pick } from './state/store.ts';
 import type { ReferenceItem } from './viewport/reference-geometry.ts';
 
 /** An extrusion that ends up to a surface or vertex. */
@@ -129,7 +129,7 @@ export function referencePicks(refs: readonly GeometryRef[], state: ReferenceSta
 export function visibleThreads(state: AppState): CosmeticThread[] {
   const features = state.history.features;
   const edit = state.activeEdit;
-  const end = state.sketch?.index ?? edit?.index ?? features.length;
+  const end = modelEnd(state);
   const shown = new Set(features.slice(0, end).filter((feature) => feature.type === 'hole' && !feature.suppressed).map((feature) => feature.id));
   if (edit?.draft.type === 'hole' && !state.sketch) shown.add(edit.draft.id);
   return (state.rebuild?.results ?? []).flatMap((result) => (shown.has(result.id) ? (result.threads ?? []) : []));
@@ -142,7 +142,7 @@ export function visibleThreads(state: AppState): CosmeticThread[] {
 export function referenceItems(state: AppState): ReferenceItem[] {
   const features = state.history.features;
   const edit = state.activeEdit;
-  const end = state.sketch?.index ?? edit?.index ?? features.length;
+  const end = modelEnd(state);
   const results = new Map(state.rebuild?.results.map((result) => [result.id, result]));
   // What the edited feature is built on is highlighted: the references of reference geometry, the axis of a revolution.
   const built = edit ? builtOn(edit.draft) : [];

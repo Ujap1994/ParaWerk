@@ -30,10 +30,11 @@ import {
   undoSketch,
   type SketchSession,
 } from './sketch/session.ts';
-import { applyEdit, commit, emptyHistory, hasBodyBefore, redo as redoHistory, undo as undoHistory, type ActiveEdit } from './state/document.ts';
+import { applyEdit, commit, emptyHistory, featureName, hasBodyBefore, redo as redoHistory, rollbackIndex, undo as undoHistory, type ActiveEdit } from './state/document.ts';
+import { dropRow, type TreeRow } from './state/tree-order.ts';
 import { regenerate, variablesFeature } from './variables.ts';
 import { kernel, whenIdle } from './state/rebuild.ts';
-import { getState, setHistory, setState, showToast, type AppState, type CommandTab, type Pick } from './state/store.ts';
+import { getState, modelEnd, setHistory, setState, showToast, type AppState, type CommandTab, type Pick } from './state/store.ts';
 import type { SketchToolName } from './sketch/tools.ts';
 import { sketchToolControl, viewport } from './viewport/registry.ts';
 import type { StandardView } from './viewport/views.ts';
@@ -84,7 +85,7 @@ async function confirmDiscard(): Promise<boolean> {
 export async function newDocument(): Promise<void> {
   if (!(await confirmDiscard())) return;
   const history = emptyHistory();
-  setState({ history, savedFeatures: history.features, dirty: false, filePath: null, fileName: null, ...closedModes() });
+  setState({ history, savedFeatures: history.features, dirty: false, filePath: null, fileName: null, rollback: null, ...closedModes() });
   viewport()?.requestFitOnNextBody();
   viewport()?.setStandardView('isometric');
 }
@@ -99,6 +100,7 @@ export function loadDocument(path: string, data: Uint8Array): void {
       dirty: false,
       filePath: path,
       fileName: baseName(path),
+      rollback: null,
       ...closedModes(),
     });
     viewport()?.requestFitOnNextBody();
@@ -185,8 +187,9 @@ export function startFeature(type: FeatureType): void {
   const state = getState();
   if (state.sketch || state.choosingSketchPlane) return;
   if (state.activeEdit) commitEdit();
-  const features = getState().history.features;
-  const index = features.length;
+  // New features go in at the rollback bar; they see only the features before it.
+  const index = modelEnd(getState());
+  const features = getState().history.features.slice(0, index);
   let draft: Feature = defaultFeature(type);
   if (draft.type === 'extrude' || draft.type === 'revolve') {
     const sketch = sketchToUse(features);
@@ -357,8 +360,7 @@ export const FEATURES_SLOT = -1;
 function seedOfFace(face: number): string | null {
   const state = getState();
   const id = state.display.body?.naming.faces[face]?.split(':')[0];
-  const end = state.activeEdit?.index ?? state.history.features.length;
-  const feature = state.history.features.slice(0, end).find((candidate) => candidate.id === id);
+  const feature = state.history.features.slice(0, modelEnd(state)).find((candidate) => candidate.id === id);
   return feature && COPYABLE_TYPES.has(feature.type) ? feature.id : null;
 }
 
@@ -447,6 +449,8 @@ export function editFeature(id: string): void {
   const index = features.findIndex((feature) => feature.id === id);
   const feature = features[index];
   if (!feature) return;
+  // A feature behind the rollback bar is edited with the bar right behind it.
+  if (index >= rollbackIndex(features, getState().rollback)) setState({ rollback: features[index + 1]?.id ?? null });
   if (feature.type === 'sketch') {
     enterSketch(openSketchSession('edit', index, feature));
     return;
@@ -617,8 +621,54 @@ export function deleteFeature(id: string): void {
   const state = getState();
   if (state.sketch) return;
   if (state.activeEdit) cancelEdit();
+  const index = state.history.features.findIndex((feature) => feature.id === id);
   const features = state.history.features.filter((feature) => feature.id !== id);
-  setHistory(commit(state.history, features));
+  // The rollback bar stays where it is when the feature behind it goes.
+  const rollback = state.rollback === id ? (state.history.features[index + 1]?.id ?? null) : state.rollback;
+  setHistory(commit(state.history, features), { rollback });
+}
+
+// ------------------------------------------------------------------ feature tree
+
+/** Puts the rollback bar in front of feature `id` (null: at the end, the whole part is built). */
+export function setRollback(id: string | null): void {
+  const state = getState();
+  if (state.sketch || state.activeEdit || state.choosingSketchPlane) return;
+  const features = state.history.features;
+  // Nothing comes before the part's variables, not even the bar.
+  const rollback = id !== null && features[0]?.type === 'variables' && features[0].id === id ? (features[1]?.id ?? null) : id;
+  if (rollback !== state.rollback) setState({ rollback, selection: [], hover: null });
+}
+
+/** Moves the rollback bar `steps` features down (negative: up). */
+export function moveRollback(steps: number): void {
+  const { history, rollback } = getState();
+  const index = Math.max(0, Math.min(history.features.length, rollbackIndex(history.features, rollback) + steps));
+  setRollback(history.features[index]?.id ?? null);
+}
+
+/**
+ * Drops a feature (or the rollback bar) dragged in the tree into gap `gap` of the tree rows (see
+ * state/tree-order.ts). A move that would put a feature before a feature it builds on, or after one
+ * that builds on it, is refused with a message.
+ */
+export function dropTreeRow(dragged: TreeRow, gap: number): void {
+  const state = getState();
+  if (state.sketch || state.activeEdit || state.choosingSketchPlane) return;
+  const features = state.history.features;
+  const result = dropRow(features, state.rollback, dragged, gap);
+  if (result.kind === 'unchanged') return;
+  if (result.kind === 'refused') {
+    const nameOf = (id: string | null) => {
+      const index = features.findIndex((feature) => feature.id === id);
+      return index >= 0 ? featureName(features, index, t) : '';
+    };
+    showToast('info', t(`tree.moveRefused.${result.reason}`, { name: nameOf(result.feature), other: nameOf(result.other) }));
+    return;
+  }
+  const reordered = result.features.some((feature, i) => feature !== features[i]);
+  if (reordered) setHistory(commit(state.history, result.features), { rollback: result.rollback, selection: [], hover: null });
+  else setRollback(result.rollback);
 }
 
 export function toggleSuppress(id: string): void {
@@ -705,11 +755,11 @@ export function sketchOnReferencePlane(id: string): void {
   if (plane) chooseSketchPlane(plane);
 }
 
-/** Opens a new sketch on `plane`, behind the last feature. */
+/** Opens a new sketch on `plane`, at the rollback bar (behind the last feature). */
 export function chooseSketchPlane(plane: SketchPlaneRef): void {
   if (getState().sketch) return;
   const draft: SketchFeature = { ...(defaultFeature('sketch') as SketchFeature), plane };
-  enterSketch(openSketchSession('create', getState().history.features.length, draft));
+  enterSketch(openSketchSession('create', rollbackIndex(getState().history.features, getState().rollback), draft));
 }
 
 function enterSketch(session: SketchSession): void {

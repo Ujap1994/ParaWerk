@@ -7,7 +7,7 @@ import * as commands from '../commands.ts';
 import { builtOn, extrudesUpTo, picksReferences, referenceItems, referencePicks, visibleThreads } from '../references.ts';
 import { SketchController, sketchHighlight, statusColors } from '../sketch/controller.ts';
 import { sketchSolver } from '../sketch/solver.ts';
-import { setState, store, type AppState, type Pick } from '../state/store.ts';
+import { modelEnd, setState, store, type AppState, type Pick } from '../state/store.ts';
 import { ViewportEngine, type InactiveSketch, type PickFilter } from '../viewport/engine.ts';
 import type { PlaneDisplay } from '../viewport/reference-planes.ts';
 import { registerSketchControl, registerViewport } from '../viewport/registry.ts';
@@ -75,7 +75,7 @@ function pickFilter(state: AppState): PickFilter {
 /** Sketches shown in the 3D view besides the open one: those before the current edit position, unless suppressed. */
 function inactiveSketches(state: AppState): InactiveSketch[] {
   const features = state.history.features;
-  const end = state.sketch?.index ?? state.activeEdit?.index ?? features.length;
+  const end = modelEnd(state);
   // Sketches that an extrusion or revolution has turned into a solid are hidden (editing that feature shows its sketch).
   const used = new Set(features.slice(0, end).flatMap((feature) => (isSketchBased(feature) && !feature.suppressed ? [feature.sketch] : [])));
   // The axis of the revolution being edited is highlighted in its sketch.
@@ -192,7 +192,8 @@ export function Viewport() {
         !previous ||
         state.history.features !== previous.history.features ||
         state.sketch?.index !== previous.sketch?.index ||
-        state.activeEdit?.index !== previous.activeEdit?.index
+        state.activeEdit?.index !== previous.activeEdit?.index ||
+        state.rollback !== previous.rollback
       ) {
         engine.setInactiveSketches(inactiveSketches(state));
       }

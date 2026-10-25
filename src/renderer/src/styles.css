@@ -553,6 +553,74 @@ input {
   cursor: default;
 }
 
+/* Rollback bar: a grip line between the features; everything below it is not built. */
+.tree-rollback {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 14px;
+  padding: 0 4px 0 8px;
+  border-radius: var(--radius-sm);
+  cursor: ns-resize;
+  touch-action: none;
+}
+
+.tree-rollback-line {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-strong);
+  transition: background 120ms ease;
+}
+
+.tree-rollback:hover .tree-rollback-line,
+.tree-rollback:focus-visible .tree-rollback-line,
+.tree-rollback.is-rolled-back .tree-rollback-line {
+  background: var(--orange);
+}
+
+.tree-rollback:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.tree-rollback .icon-button {
+  height: 20px;
+  width: 22px;
+  color: var(--orange);
+}
+
+.tree-item[data-row] {
+  touch-action: none;
+}
+
+.tree-item.is-dragging,
+.tree-rollback.is-dragging {
+  opacity: 0.45;
+}
+
+.feature-tree.is-dragging,
+.feature-tree.is-dragging .tree-item {
+  cursor: grabbing;
+}
+
+/* Where a dragged row would go: a line above (or below the last) row; red where it cannot go. */
+.drop-before {
+  box-shadow: inset 0 2px 0 var(--accent);
+}
+
+.drop-after {
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.drop-before.is-refused {
+  box-shadow: inset 0 2px 0 var(--danger);
+}
+
+.drop-after.is-refused {
+  box-shadow: inset 0 -2px 0 var(--danger);
+}
+
 /* ------------------------------------------------------------ reference geometry fields */
 
 .reference-slots {

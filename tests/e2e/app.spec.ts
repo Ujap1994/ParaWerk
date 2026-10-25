@@ -260,6 +260,70 @@ test('undo, redo and suppress', async () => {
   await expect(page.locator(`[data-feature-id="${cylinderId}"]`)).toHaveClass(/is-suppressed/);
 });
 
+/** Drags a row of the feature tree (a feature or the rollback bar) just above or below another row. */
+async function dragInTree(page: Page, from: string, to: string, where: 'above' | 'below'): Promise<void> {
+  const source = await page.locator(from).boundingBox();
+  const target = await page.locator(to).boundingBox();
+  if (!source || !target) throw new Error('tree row not visible');
+  const x = source.x + 30;
+  await page.mouse.move(x, source.y + source.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(x, where === 'above' ? target.y + 3 : target.y + target.height - 3, { steps: 6 });
+  await page.mouse.up();
+  await idle(page);
+}
+
+test('rolls the part back with the rollback bar, inserts features there and reorders features', async () => {
+  launched = await launchApp({ width: 1440, height: 900 });
+  const { page } = launched;
+  await createBox(page);
+  await page.click('[data-command="fillet"]');
+  await idle(page);
+  await clickWorldPoint(page, [0, -30, 40]);
+  await page.locator('[data-testid="fillet-radius"]').fill('5');
+  await page.click('[data-testid="panel-ok"]');
+  await page.click('[data-command="cylinder"]');
+  await page.click('[data-testid="panel-ok"]');
+  const full = await volume(page);
+  const [boxId, filletId, cylinderId] = (await state(page)).history.features.map((feature) => feature.id);
+
+  // The bar dragged in front of the fillet: only the box is built.
+  await dragInTree(page, '[data-testid="rollback-bar"]', `[data-feature-id="${filletId}"]`, 'above');
+  expect(await volume(page)).toBeCloseTo(240_000, 3);
+  await expect(page.locator(`[data-feature-id="${filletId}"]`)).toHaveClass(/is-rolled-back/);
+  await expect(page.locator(`[data-feature-id="${cylinderId}"]`)).toHaveClass(/is-rolled-back/);
+  await expect(page.locator(`[data-feature-id="${boxId}"]`)).not.toHaveClass(/is-rolled-back/);
+
+  // A new feature goes in at the bar, which stays in front of the fillet.
+  await page.click('[data-command="cylinder"]');
+  await page.click('[data-testid="panel-ok"]');
+  await idle(page);
+  expect((await state(page)).history.features.map((feature) => feature.type)).toEqual(['box', 'cylinder', 'fillet', 'cylinder']);
+  await expect(page.locator(`[data-feature-id="${filletId}"]`)).toHaveClass(/is-rolled-back/);
+  await page.click('[data-command="undo"]');
+
+  // The arrow keys move the bar; End rolls the part forward to the end.
+  await page.locator('[data-testid="rollback-bar"]').focus();
+  await page.keyboard.press('ArrowDown');
+  await idle(page);
+  await expect(page.locator(`[data-feature-id="${filletId}"]`)).not.toHaveClass(/is-rolled-back/);
+  await page.keyboard.press('End');
+  expect(await volume(page)).toBeCloseTo(full, 3);
+  await expect(page.locator('[data-testid="roll-to-end"]')).toHaveCount(0);
+
+  // The fillet cannot move above the box its edge belongs to; the cylinder can move above the fillet.
+  await dragInTree(page, `[data-feature-id="${filletId}"]`, `[data-feature-id="${boxId}"]`, 'above');
+  await expect(page.locator('[data-testid="toast-info"]').last()).toContainText('builds on');
+  expect((await state(page)).history.features.map((feature) => feature.id)).toEqual([boxId, filletId, cylinderId]);
+  await dragInTree(page, `[data-feature-id="${cylinderId}"]`, `[data-feature-id="${filletId}"]`, 'above');
+  expect((await state(page)).history.features.map((feature) => feature.id)).toEqual([boxId, cylinderId, filletId]);
+  expect(await volume(page)).toBeCloseTo(full, 3);
+  expect((await state(page)).rebuild?.results.map((result) => result.status)).toEqual(['ok', 'ok', 'ok']);
+  // Reordering is one undo step.
+  await page.click('[data-command="undo"]');
+  expect((await state(page)).history.features.map((feature) => feature.id)).toEqual([boxId, filletId, cylinderId]);
+});
+
 test('shows a feature error instead of failing', async () => {
   launched = await launchApp();
   const { page } = launched;

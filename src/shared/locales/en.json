@@ -209,9 +209,17 @@
     "statusError": "Rebuild error",
     "statusWarning": "Rebuild warning",
     "statusSuppressed": "Suppressed",
-    "rolledBack": "Not part of the current edit",
+    "rolledBack": "Rolled back: not built",
     "sketchUnder": "Sketch is under defined",
-    "sketchOver": "Sketch is over defined"
+    "sketchOver": "Sketch is over defined",
+    "rollbackBar": "Rollback bar",
+    "rollbackHint": "Drag the bar (or use the arrow keys) to roll the part back. Features below it are not built; new features go in above it.",
+    "rollToEnd": "Roll to end",
+    "moveRefused": {
+      "parent": "{{name}} cannot move above {{other}}: it builds on it.",
+      "child": "{{name}} cannot move below {{other}}: {{other}} builds on it.",
+      "variables": "The variables stay at the top of the tree."
+    }
   },
   "panel": {
     "ok": "OK",

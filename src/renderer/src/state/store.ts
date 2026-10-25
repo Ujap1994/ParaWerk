@@ -8,7 +8,7 @@ import type { FeatureResult, MassProperties, MeshPayload } from '../../../kernel
 import type { SketchSession } from '../sketch/session.ts';
 import type { SketchAnalysis } from './sketch-status.ts';
 import type { SketchToolName } from '../sketch/tools.ts';
-import { emptyHistory, type ActiveEdit, type History } from './document.ts';
+import { emptyHistory, rollbackIndex, type ActiveEdit, type History } from './document.ts';
 
 /** A picked body face or edge (topological index), or a standard plane (index into STANDARD_PLANES). */
 /**
@@ -66,6 +66,8 @@ export interface AppState {
   dirty: boolean;
 
   activeEdit: ActiveEdit | null;
+  /** Id of the first feature behind the rollback bar (not built); null: the whole part is built. */
+  rollback: string | null;
   /** The reference field of the edited reference plane, axis or point that the next pick fills. */
   referenceSlot: number;
   /** The sketch command waits for a plane (or planar face) to sketch on. */
@@ -120,6 +122,7 @@ export const initialState: AppState = {
   fileName: null,
   dirty: false,
   activeEdit: null,
+  rollback: null,
   referenceSlot: 0,
   choosingSketchPlane: false,
   sketch: null,
@@ -154,6 +157,11 @@ export const setState = store.setState;
 
 export function features(): Feature[] {
   return store.getState().history.features;
+}
+
+/** Index of the first feature that is not built: the sketch or feature being edited, else the rollback bar. */
+export function modelEnd(state: AppState): number {
+  return state.sketch?.index ?? state.activeEdit?.index ?? rollbackIndex(state.history.features, state.rollback);
 }
 
 /** Replaces the document history and keeps the dirty flag in sync. */

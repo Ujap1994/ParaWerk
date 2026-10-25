@@ -209,9 +209,17 @@
     "statusError": "Fehler beim Neuaufbau",
     "statusWarning": "Warnung beim Neuaufbau",
     "statusSuppressed": "Unterdrückt",
-    "rolledBack": "Nicht Teil der aktuellen Bearbeitung",
+    "rolledBack": "Zurückgesetzt: wird nicht aufgebaut",
     "sketchUnder": "Skizze ist unterbestimmt",
-    "sketchOver": "Skizze ist überbestimmt"
+    "sketchOver": "Skizze ist überbestimmt",
+    "rollbackBar": "Rollback-Leiste",
+    "rollbackHint": "Leiste ziehen (oder Pfeiltasten), um das Teil zurückzusetzen. Features darunter werden nicht aufgebaut; neue Features kommen darüber hinein.",
+    "rollToEnd": "Ans Ende setzen",
+    "moveRefused": {
+      "parent": "{{name}} kann nicht über {{other}} stehen: es baut darauf auf.",
+      "child": "{{name}} kann nicht unter {{other}} stehen: {{other}} baut darauf auf.",
+      "variables": "Die Variablen bleiben oben im Baum."
+    }
   },
   "panel": {
     "ok": "OK",

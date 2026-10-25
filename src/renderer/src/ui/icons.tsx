@@ -203,6 +203,13 @@ export const MoreIcon = (p: P) => (
   </Icon>
 );
 
+/** Rolls the part forward: an arrow down to the end of the tree. */
+export const RollForwardIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 20h14" />
+  </Icon>
+);
+
 export const AlertIcon = (p: P) => (
   <Icon {...p}>
     <path d="M12 3.5 2.5 20h19z" />

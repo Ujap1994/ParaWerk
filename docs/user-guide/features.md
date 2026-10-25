@@ -258,6 +258,26 @@ matter. Units and functions (`mm`, `in`, `sin`, `sqrt`, `pi`, …) cannot be use
 - **Delete:** the trash icon removes the feature.
 - **Undo / Redo:** every change can be undone (up to 200 steps).
 
+### Rolling back and inserting features
+
+The **rollback bar**, a grey line at the end of the tree (orange while the part is rolled back), marks
+how far the part is built. Drag it up
+between two features (or focus it and use the arrow keys) and everything below it is rolled back: dimmed
+in the tree and not built, so you see the part as it was at that point. New features and sketches go in
+above the bar, so you can add a feature in the middle of the history, for example a hole before the
+fillets that round its rim. The arrow button on the bar (or <kbd>End</kbd>) rolls the part forward to
+the end. Editing a feature below the bar moves the bar to just below it.
+
+![The rollback bar above the last two features: they are dimmed and not built](../images/screenshots/feature-tree-rollback.png)
+
+### Reordering features
+
+Drag a feature up or down in the tree to change the order in which the part is built. A blue line shows
+where it goes. A feature cannot move above a feature it builds on (its sketch, the reference plane its
+sketch lies on, the faces and edges it uses, the features a pattern copies) or below a feature that
+builds on it. There the line turns red, and dropping it explains which feature is in the way. Moving a
+feature is one undo step; the variables always stay at the top.
+
 ## When a feature fails
 
 If the kernel cannot build a feature, for example because a fillet radius is larger than the adjacent

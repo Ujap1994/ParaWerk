@@ -3,7 +3,7 @@ import type { FeatureResult, MassProperties, MeshPayload } from '../../../kernel
 import { t } from '../i18n.ts';
 import { KernelClient, KernelCrashedError } from '../kernel/kernel-client.ts';
 import { extrudesUpTo } from '../references.ts';
-import { rebuildPlan, type RebuildPlan } from './document.ts';
+import { rebuildPlan, rollbackIndex, type RebuildPlan } from './document.ts';
 import { getState, setHistory, setState, showToast, store, type DisplayMeshes } from './store.ts';
 
 /** Show "Rebuilding…" only for rebuilds that take noticeably long, to avoid flicker while typing. */
@@ -37,6 +37,7 @@ export function startKernel(): KernelClient {
     if (
       state.history.features !== previous.history.features ||
       state.activeEdit !== previous.activeEdit ||
+      state.rollback !== previous.rollback ||
       state.sketch?.index !== previous.sketch?.index
     ) {
       scheduleRebuild();
@@ -72,7 +73,7 @@ async function runLoop(): Promise<void> {
   while (queued) {
     queued = false;
     const state = getState();
-    const plan = rebuildPlan(state.history.features, state.activeEdit, state.sketch?.index ?? null);
+    const plan = rebuildPlan(state.history.features, state.activeEdit, state.sketch?.index ?? null, rollbackIndex(state.history.features, state.rollback));
     const busyTimer = setTimeout(() => setState({ kernelStatus: 'busy' }), BUSY_INDICATOR_DELAY_MS);
     try {
       const { result, meshes } = await client.rebuild({

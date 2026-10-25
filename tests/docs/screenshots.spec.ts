@@ -812,3 +812,24 @@ test('shell screenshots', async () => {
   await page.click('[data-testid="panel-ok"]');
   await app.close();
 });
+
+test('feature tree screenshots', async () => {
+  const { app, page } = await launchApp({ width: 1440, height: 900 });
+  // A flange: plate, boss, bore and two rounded edges; the bar sits above the fillet and the bore.
+  await page.evaluate(() => {
+    const features = [
+      { id: 'plate', type: 'box', operation: 'add', width: 100, depth: 70, height: 15, position: [0, 0, 0] },
+      { id: 'boss', type: 'cylinder', operation: 'add', radius: 22, height: 30, axis: 'z', position: [0, 0, 15] },
+      { id: 'round', type: 'fillet', radius: 6, edges: [0, 2, 4, 6].map((index) => ({ kind: 'edge-index', index })) },
+      { id: 'bore', type: 'cylinder', operation: 'cut', radius: 12, height: 60, axis: 'z', position: [0, 0, -5] },
+    ];
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features, past: [], future: [] }, savedFeatures: features, fileName: 'Flange', rollback: 'round' });
+  });
+  await idle(page);
+  await page.evaluate(() => (window as unknown as { __parawerk: { viewport: { zoomToFit(): void } } }).__parawerk.viewport.zoomToFit());
+  await page.waitForTimeout(600);
+  await page.locator('[data-testid="rollback-bar"]').hover();
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: out('feature-tree-rollback.png') });
+  await app.close();
+});
