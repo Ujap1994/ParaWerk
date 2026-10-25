@@ -195,6 +195,40 @@ class FaceNamer {
   const std::string empty_;
 };
 
+/** Set by cuts that leave every face of the body as it was (the tool missed the body). */
+bool cutMissed = false;
+
+/** The faces of `result` that come from faces of `input` (unchanged, modified or merged). */
+ShapeMap facesFrom(BRepBuilderAPI_MakeShape& maker, const TopoDS_Shape& input, const ShapeMap& result) {
+  ShapeMap faces, from;
+  TopExp::MapShapes(input, TopAbs_FACE, faces);
+  for (int f = 1; f <= faces.Extent(); ++f) {
+    for (const TopoDS_Shape& piece : maker.Modified(faces(f))) {
+      if (result.Contains(piece)) from.Add(piece);
+    }
+    if (!maker.IsDeleted(faces(f)) && result.Contains(faces(f))) from.Add(faces(f));
+  }
+  return from;
+}
+
+/**
+ * Whether a cut removed material: then walls of its tools are faces of the result that do not come from
+ * the body. A tool that misses the body, or only touches it (its face merges into a face of the body),
+ * leaves none.
+ */
+bool toolsLeftWalls(BRepBuilderAPI_MakeShape& maker, const TopoDS_Shape& body, const std::vector<TopoDS_Shape>& tools, const TopoDS_Shape& result) {
+  ShapeMap kept;
+  TopExp::MapShapes(result, TopAbs_FACE, kept);
+  const ShapeMap fromBody = facesFrom(maker, body, kept);
+  for (const TopoDS_Shape& tool : tools) {
+    const ShapeMap fromTool = facesFrom(maker, tool, kept);
+    for (int f = 1; f <= fromTool.Extent(); ++f) {
+      if (!fromBody.Contains(fromTool(f))) return true;
+    }
+  }
+  return false;
+}
+
 /** "<prefix>:<role>", or no name when the operation has none. */
 std::string faceName(const std::string& prefix, const std::string& role) { return prefix.empty() ? std::string() : prefix + ":" + role; }
 
@@ -691,6 +725,9 @@ int cutHoles(int bodyId, const std::vector<double>& profile, const std::vector<d
   algorithm.SimplifyResult(true, true, 1e-6);
   const TopoDS_Shape result = algorithm.Shape();
   if (countSolids(result) == 0) throw KernelError("empty-result", "the holes removed the whole body");
+  std::vector<TopoDS_Shape> holeShapes;
+  for (const StoredShape& copy : placed) holeShapes.push_back(copy.shape);
+  cutMissed = !toolsLeftWalls(algorithm, body.shape, holeShapes, result);
   FaceNamer namer(result);
   namer.inherit(algorithm, body.shape, body.names);
   for (const StoredShape& copy : placed) namer.inherit(algorithm, copy.shape, copy.names);
@@ -833,6 +870,11 @@ int combineCopies(int bodyId, int toolId, const std::vector<double>& transforms,
     algorithm.SimplifyResult(true, true, 1e-6);
     const TopoDS_Shape result = algorithm.Shape();
     if (countSolids(result) == 0) throw KernelError("empty-result", "the operation removed the whole body");
+    if (op == 1) {
+      std::vector<TopoDS_Shape> copyShapes;
+      for (const StoredShape& copy : copies) copyShapes.push_back(copy.shape);
+      cutMissed = !toolsLeftWalls(algorithm, body.shape, copyShapes, result);
+    }
     FaceNamer namer(result);
     namer.inherit(algorithm, body.shape, body.names);
     for (const StoredShape& copy : copies) namer.inherit(algorithm, copy.shape, copy.names);
@@ -844,6 +886,12 @@ int combineCopies(int bodyId, int toolId, const std::vector<double>& transforms,
   }
   BRepAlgoAPI_Cut algorithm;
   return run(algorithm);
+}
+
+bool takeCutMissed() {
+  const bool missed = cutMissed;
+  cutMissed = false;
+  return missed;
 }
 
 void setParallel(bool enabled) { parallel = enabled; }
@@ -921,6 +969,7 @@ int booleanOperation(int bodyId, int toolId, int op) {
     algorithm.SimplifyResult(true, true, 1e-6);
     const TopoDS_Shape result = algorithm.Shape();
     if (countSolids(result) == 0) throw KernelError("empty-result", "the operation removed the whole body");
+    if (op == 1) cutMissed = !toolsLeftWalls(algorithm, body.shape, {tool.shape}, result);
     // Faces of the body win over coplanar tool faces merged into them, so existing names stay.
     FaceNamer namer(result);
     namer.inherit(algorithm, body.shape, body.names);

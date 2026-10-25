@@ -701,3 +701,39 @@ test('extrudes up to a reference plane picked in the tree, with an offset', asyn
   expect(await volume(page)).toBeCloseTo(2500, 3);
   expect((await state(page)).history.features[2]).toMatchObject({ type: 'extrude', end: 'upToSurface', endRef: { kind: 'feature', feature: 'plane' }, endOffset: 5 });
 });
+
+test('cutting from a sketch on a face goes into the part, and a cut that misses warns', async () => {
+  launched = await launchApp({ width: 1440, height: 900 });
+  const { page } = launched;
+  // A box and a 10 × 10 square on its top face.
+  await page.evaluate(() => {
+    const P = (id: string, x: number, y: number) => ({ id, type: 'point', x, y });
+    const L = (id: string, p1: string, p2: string) => ({ id, type: 'line', p1, p2 });
+    const features = [
+      { id: 'box', type: 'box', operation: 'add', width: 100, depth: 60, height: 40, position: [0, 0, 0] },
+      {
+        id: 'square', type: 'sketch',
+        plane: { kind: 'face', face: 5, name: 'box:top', frame: { origin: [0, 0, 40], xDir: [1, 0, 0], yDir: [0, 1, 0], normal: [0, 0, 1] } },
+        sketch: { entities: [P('a', 0, 0), P('b', 10, 0), P('c', 10, 10), P('d', 0, 10), L('ab', 'a', 'b'), L('bc', 'b', 'c'), L('cd', 'c', 'd'), L('da', 'd', 'a')], constraints: [] },
+      },
+    ];
+    const history = { features, past: [], future: [] };
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history, savedFeatures: features, dirty: false });
+  });
+  await idle(page);
+  await page.click('[data-command="extrude"]');
+  await page.locator('[data-testid="extrude-depth"]').fill('5');
+  await page.locator('[data-testid="extrude-depth"]').press('Tab');
+  // Remove material turns the direction into the part.
+  await page.getByRole('radio', { name: 'Remove material' }).click();
+  await expect(page.getByRole('radio', { name: 'Reversed' })).toHaveAttribute('aria-checked', 'true');
+  await idle(page);
+  await expect(page.locator('[data-testid="panel-warning"]')).toHaveCount(0);
+  // Out of the part, the cut removes nothing: the panel says so.
+  await page.getByRole('radio', { name: 'Normal' }).click();
+  await idle(page);
+  await expect(page.locator('[data-testid="panel-warning"]')).toContainText('does not touch the part');
+  await page.getByRole('radio', { name: 'Reversed' }).click();
+  await page.click('[data-testid="panel-ok"]');
+  expect(await volume(page)).toBeCloseTo(240_000 - 500, 2);
+});

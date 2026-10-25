@@ -28,6 +28,8 @@ val okObject() {
 val idResult(int id) {
   val result = okObject();
   result.set("id", id);
+  // A cut that removed nothing is not an error, but worth a warning.
+  if (parawerk::takeCutMissed()) result.set("missed", true);
   return result;
 }
 

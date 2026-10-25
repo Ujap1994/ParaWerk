@@ -78,6 +78,9 @@ describe('holes', () => {
     // On the top plane (z = 0, normal up) the holes go down, away from the plate: nothing is cut.
     const below = positions({ kind: 'standard', plane: 'top' });
     expect(volumeOf([plate, below, hole()])).toBeCloseTo(PLATE, 4);
+    // Holes that miss the part are built, with a warning.
+    expect(build([plate, below, hole()]).features[2]).toMatchObject({ status: 'ok', warning: { code: 'cut-nothing' } });
+    expect(build([plate, below, hole({ reverse: true })]).features[2]?.warning).toBeUndefined();
     expect(volumeOf([plate, below, hole({ reverse: true })])).toBeCloseTo(PLATE - 2 * cylinder(6.6, 20), 4);
   });
 

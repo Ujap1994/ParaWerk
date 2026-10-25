@@ -752,20 +752,31 @@ export class DimensionTool implements SketchTool {
       : hit.type === 'point'
         ? { kind: 'point', id: hit.id }
         : { kind: 'curve', curve: hit.id, curveType: hit.type };
-    const draft = this.picks.length > 0 ? proposeDimension(sketch, this.picks, [event.u, event.v]) : null;
+    // With one entity picked, hovering a second one shows the dimension between the two.
+    const [first] = this.picks;
+    const joined = first && this.picks.length === 1 && hit && hit.id !== first ? proposeDimension(sketch, [first, hit.id], [event.u, event.v]) : null;
+    const draft = joined ?? (this.picks.length > 0 ? proposeDimension(sketch, this.picks, [event.u, event.v]) : null);
     return { geometry: EMPTY, snap: { u: event.u, v: event.v, target, alignments: [] }, info: null, picks: this.picks, ...(draft ? { dimension: draft } : {}) };
+  }
+
+  /** Whether a click now would add an entity (fewer than two are picked) rather than place the dimension. */
+  get picking(): boolean {
+    return this.picks.length < 2;
+  }
+
+  /** Picks an entity as if it was clicked (for model edges brought into the sketch by the click). */
+  pick(sketch: SketchData, id: string, event: ToolEvent): ToolPreview {
+    const [first] = this.picks;
+    if (!this.picks.includes(id)) {
+      // A second entity joins the first if the two can be dimensioned together; otherwise it starts over.
+      this.picks = first && this.picks.length === 1 && proposeDimension(sketch, [first, id], [event.u, event.v]) ? [first, id] : [id];
+    }
+    return this.hover(sketch, event);
   }
 
   click(sketch: SketchData, event: ToolEvent): ToolStep {
     const hit = this.hit(sketch, event);
-    if (hit) {
-      const [first] = this.picks;
-      if (!this.picks.includes(hit.id)) {
-        // A second entity joins the first if the two can be dimensioned together; otherwise it starts over.
-        this.picks = first && this.picks.length === 1 && proposeDimension(sketch, [first, hit.id], [event.u, event.v]) ? [first, hit.id] : [hit.id];
-      }
-      return { commit: null, preview: this.hover(sketch, event) };
-    }
+    if (hit) return { commit: null, preview: this.pick(sketch, hit.id, event) };
     const draft = this.picks.length > 0 ? proposeDimension(sketch, this.picks, [event.u, event.v]) : null;
     this.picks = [];
     return { commit: null, preview: this.hover(sketch, event), ...(draft ? { place: draft } : {}) };

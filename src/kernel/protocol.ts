@@ -109,6 +109,7 @@ export type FeatureErrorCode =
   | 'shell-face-missing'
   | 'end-behind'
   | 'end-parallel'
+  | 'cut-nothing'
   | 'profile-crosses-axis'
   | 'operation-failed'
   | 'unknown';

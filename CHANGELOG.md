@@ -57,6 +57,13 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
   marks where they were in the 3D view and removes them with one click.
 
 ### Fixed
+- Dimensions can refer to edges of the part: pick a circle (its center), a point or a line, then an edge of
+  the part, for example to place a hole relative to the edge of a face. The edge becomes fixed construction
+  geometry of the sketch. After the first pick, moving over a second entity previews the dimension
+  between the two.
+- Removing material with an extrusion from a sketch on a face now goes into the part: *Remove material*
+  sets the direction to *Reversed*. Cuts that do not touch the part (extrusions, holes, patterns) are
+  marked with a warning instead of silently removing nothing; warnings are also shown in the side panel.
 - The labels of choice fields in the side panel had no space above them.
 - Volume and surface area of bodies with ellipses or splines are now exact; OCCT's default integration
   was off by up to 1e-4 on such faces.

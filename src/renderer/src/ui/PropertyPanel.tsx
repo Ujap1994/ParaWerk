@@ -57,7 +57,7 @@ function OperationField({ value, firstFeature }: { value: BooleanOperation; firs
         { value: 'add', label: t('panel.add') },
         { value: 'cut', label: t('panel.cut') },
       ]}
-      onChange={(operation) => commands.updateDraft({ operation })}
+      onChange={commands.setOperation}
     />
   );
 }
@@ -352,6 +352,8 @@ export function PropertyPanel() {
   const incomplete = hasReferenceSlots(draft) && (draft.references.length < referenceRoles(draft).length || (isCopyFeature(draft) && draft.features.length === 0));
   const failure = result?.id === draft.id && result.status === 'error' ? result.error : undefined;
   const error = incomplete && (failure?.code === 'reference-missing' || failure?.code === 'pattern-empty') ? undefined : failure;
+  // Lost fillet edges have their own notice in the edges section.
+  const warning = result?.id === draft.id && result.status === 'ok' && result.warning?.code !== 'edge-missing' ? result.warning : undefined;
   // Variables are applied only when every one has a valid name and a value.
   const applicable = (edit.draft.type !== 'variables' || variablesValid(edit.draft.variables)) && !incomplete;
 
@@ -384,6 +386,11 @@ export function PropertyPanel() {
       {error ? (
         <div className="panel-error" role="alert">
           {t(`errors.${error.code}`, { detail: error.detail ?? '' })}
+        </div>
+      ) : null}
+      {warning ? (
+        <div className="panel-warning panel-notice" role="status" data-testid="panel-warning">
+          {t(`warnings.${warning.code}`, { count: Number(warning.detail) || 0 })}
         </div>
       ) : null}
       <FeatureFields draft={edit.draft} index={edit.index} />

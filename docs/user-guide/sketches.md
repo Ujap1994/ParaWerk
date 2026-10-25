@@ -302,7 +302,8 @@ Dimensions give the geometry its sizes. There is one **Dimension** tool (key **D
 group of the *Sketch* tab); what it measures follows from what you pick and from where you put the value:
 
 1. Click a line, a circle or an arc – or two entities, for example two points, a point and a line, two
-   lines or two circles.
+   lines or two circles. After the first click, moving over a second entity already shows the dimension
+   between the two.
 2. Move the mouse: the dimension follows and shows the current value. Click where the value should go.
 3. Type the value and press **Enter**. The geometry changes so the dimension holds. **Esc** keeps the
    measured value.
@@ -326,8 +327,13 @@ dimension follows when the variable changes, and the sketch is solved again.
 | Two lines that cross | anywhere | angle (in degrees) |
 | Two parallel lines | anywhere | distance between them |
 | Circles and arcs together with points or each other | as for points | distance between the centers |
+| A circle and a line | anywhere | distance from the center to the line |
 
-The sketch origin can be picked as well, so geometry can be dimensioned from the origin.
+The sketch origin can be picked as well, so geometry can be dimensioned from the origin. **Edges of the
+part** can be picked too – a sketch on a face is usually dimensioned to the edges of that face, for
+example a hole's center 20 mm from the front edge: click the circle, then the edge of the part (it is
+highlighted under the cursor), then place the value. The edge becomes fixed construction geometry of the
+sketch, as with [Convert](#converting-model-edges), and the dimension refers to it.
 
 - **Change a value:** double-click the dimension, type the new value, press **Enter**.
 - **Move a value:** drag it; only the label moves.

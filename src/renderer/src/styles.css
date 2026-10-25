@@ -973,6 +973,10 @@ input {
   font-size: 12px;
 }
 
+.panel-warning.panel-notice {
+  margin: 10px 12px 0;
+}
+
 .panel-warning.edge-missing {
   display: flex;
   gap: 8px;

@@ -77,9 +77,17 @@ describe('convert entities', () => {
   });
 
   it('skips edges perpendicular to the sketch and does not stack repeated conversions', () => {
-    expect(convertEdges(EMPTY, top, [line([5, 5, 0], [5, 5, 20])])).toEqual({ ok: false, error: 'nothing-to-convert' });
+    expect(convertEdges(EMPTY, top, [line([5, 5, 0], [5, 5, 20])])).toEqual({ ok: false, error: 'nothing-to-convert', curves: [] });
     const once = convert([line([0, 0, 0], [10, 0, 0])]);
-    expect(convertEdges(once, top, [line([10, 0, 0], [0, 0, 0])])).toEqual({ ok: false, error: 'already-converted' });
+    // The repeated edge reports the curve it was converted to before (dimensions refer to it).
+    const lineId = once.entities.find((e) => e.type === 'line')?.id;
+    expect(convertEdges(once, top, [line([10, 0, 0], [0, 0, 0])])).toEqual({ ok: false, error: 'already-converted', curves: [lineId] });
+  });
+
+  it('converts edges as construction geometry on request', () => {
+    const result = convertEdges(EMPTY, top, [line([0, 0, 0], [10, 0, 0])], { construction: true });
+    expect(result.ok && result.sketch.entities.find((e) => e.type === 'line')).toMatchObject({ construction: true });
+    expect(result.curves).toHaveLength(1);
   });
 
   it('turns other curves into splines through points of the edge', () => {

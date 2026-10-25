@@ -1316,3 +1316,46 @@ test('exit check: a bracket profile with two holes is drawn and fully defined wi
     [expect.closeTo(5, 6), expect.closeTo(30, 6)],
   ]);
 });
+
+test('dimensions a circle center to an edge of the part', async () => {
+  launched = await launchApp({ width: 1440, height: 900 });
+  const { page } = launched;
+  // A 100 × 60 × 40 box and a sketch on its top face with a circle.
+  await page.evaluate(() => {
+    const features = [
+      { id: 'box', type: 'box', operation: 'add', width: 100, depth: 60, height: 40, position: [0, 0, 0] },
+      {
+        id: 's', type: 'sketch',
+        plane: { kind: 'face', face: 5, name: 'box:top', frame: { origin: [0, 0, 40], xDir: [1, 0, 0], yDir: [0, 1, 0], normal: [0, 0, 1] } },
+        sketch: { entities: [{ id: 'm', type: 'point', x: 10, y: 5 }, { id: 'k', type: 'circle', center: 'm', radius: 4 }], constraints: [] },
+      },
+    ];
+    (window as unknown as { __parawerk: Hooks }).__parawerk.setState({ history: { features, past: [], future: [] }, savedFeatures: features, dirty: false });
+  });
+  await page.dblclick('.tree-item[data-feature-id="s"]');
+  await expectNormalView(page, [1, 0, 0], [0, 1, 0]);
+  const canvas = await page.locator('.viewport-canvas').boundingBox();
+  if (!canvas) throw new Error('viewport not visible');
+  const click = async (u: number, v: number) => {
+    const p = await project(page, [u, v, 40]);
+    await page.mouse.move(canvas.x + p.x, canvas.y + p.y, { steps: 3 });
+    await page.mouse.click(canvas.x + p.x, canvas.y + p.y);
+  };
+  const editor = page.locator('[data-testid="dimension-editor"]');
+  const sketch = async () => (await state(page)).sketch?.draft.sketch;
+
+  // The circle, then the front edge of the part (no sketch geometry there), then where the value goes.
+  await page.keyboard.press('d');
+  await click(14, 5);
+  await click(-20, -30);
+  await click(25, -12);
+  await expect(editor).toHaveValue('35');
+  await editor.fill('20');
+  await editor.press('Enter');
+  await expect.poll(async () => (await sketch())?.entities.find((e) => e.id === 'm')).toMatchObject({ y: expect.closeTo(-10, 6) });
+  // The edge became fixed construction geometry of the sketch, which the dimension refers to.
+  const current = await sketch();
+  const edge = current?.entities.find((e) => e.type === 'line') as { id: string; construction?: boolean } | undefined;
+  expect(edge?.construction).toBe(true);
+  expect((current?.constraints as { type?: string }[] | undefined)?.find((c) => c.type === 'distance')).toMatchObject({ a: 'm', b: edge?.id, value: 20 });
+});

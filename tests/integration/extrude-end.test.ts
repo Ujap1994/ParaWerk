@@ -75,3 +75,17 @@ describe('extrude up to a vertex', () => {
     expect(build([point('v', 0, 0, -5), square, extrude({ end: 'upToVertex', endRef: { kind: 'feature', feature: 'v' } })]).features[2]?.error?.code).toBe('end-behind');
   });
 });
+
+describe('cuts that remove nothing', () => {
+  it('warns about a cut along the outward normal of a face, but not about one into the part', () => {
+    const box: BoxFeature = { id: 'box', type: 'box', operation: 'add', width: 100, depth: 60, height: 40, position: [0, 0, 0] };
+    const onTop: SketchFeature = { ...square, plane: { kind: 'face', face: 5, name: 'box:top', frame: { origin: [0, 0, 40], xDir: [1, 0, 0], yDir: [0, 1, 0], normal: [0, 0, 1] } } };
+    const cut = (direction: ExtrudeFeature['direction']) => extrude({ operation: 'cut', end: 'blind', depth: 5, direction });
+    const outward = build([box, onTop, cut('normal')]);
+    expect(outward.features[2]).toMatchObject({ status: 'ok', warning: { code: 'cut-nothing' } });
+    expect(outward.captures[0]?.properties?.volume).toBeCloseTo(240_000, 4);
+    const inward = build([box, onTop, cut('reverse')]);
+    expect(inward.features[2]?.warning).toBeUndefined();
+    expect(inward.captures[0]?.properties?.volume).toBeCloseTo(240_000 - 500, 4);
+  });
+});

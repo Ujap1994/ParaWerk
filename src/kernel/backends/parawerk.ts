@@ -12,7 +12,7 @@ import type { CurveKind, EdgeGeometry, EdgeInfo, FaceGeometry, FaceInfo, Feature
 
 type KernelModule = Awaited<ReturnType<typeof createParaWerkKernel>>;
 
-type IdResult = { ok: true; id: number } | { ok: false; code: string; message: string };
+type IdResult = { ok: true; id: number; missed?: boolean } | { ok: false; code: string; message: string };
 type Failure = { ok: false; code: string; message: string };
 
 interface RawMesh {
@@ -89,8 +89,17 @@ export class ParaWerkBackend implements GeometryBackend {
     return handle as unknown as number;
   }
 
+  private cutMissed = false;
+
+  takeCutMissed(): boolean {
+    const missed = this.cutMissed;
+    this.cutMissed = false;
+    return missed;
+  }
+
   private handle(result: unknown): ShapeHandle {
     const value = result as IdResult;
+    if (value.ok && value.missed) this.cutMissed = true;
     if (!value.ok) {
       const code = FEATURE_ERROR_CODES.has(value.code as FeatureErrorCode) ? (value.code as FeatureErrorCode) : 'operation-failed';
       throw new FeatureError(code, value.message);

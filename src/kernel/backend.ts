@@ -80,6 +80,8 @@ export interface GeometryBackend {
   /** Builds the body after `feature`; throws FeatureError. The caller owns the result. */
   applyFeature(body: ShapeHandle | null, feature: KernelFeature): ShapeHandle;
   release(shape: ShapeHandle): void;
+  /** Whether a cut since the last call removed nothing (its tool missed the body); the call clears it. */
+  takeCutMissed?(): boolean;
   counts(shape: ShapeHandle): { faces: number; edges: number; solids: number };
   boundingBox(shape: ShapeHandle): { min: Vec3; max: Vec3 };
   /** Persistent face names and edge positions (docs/adr/0002-persistent-naming.md). */

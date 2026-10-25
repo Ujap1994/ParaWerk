@@ -1,7 +1,7 @@
 import { resolveLanguage } from '../../shared/i18n.ts';
 import type { MenuCommand } from '../../shared/ipc.ts';
 import { PART_FILE_EXTENSION } from '../../shared/app-info.ts';
-import { COPYABLE_TYPES, defaultFeature, hasReferenceSlots, isCopyFeature, isEdgeFeature, isReferenceFeature, isSketchBased, type EdgeRef, type ExtrudeEnd, type Feature, type FeatureType, type HoleFeature, type ReferenceFeature, type SketchFeature, type SlotFeature } from '../../shared/model/feature.ts';
+import { COPYABLE_TYPES, defaultFeature, type BooleanOperation, hasReferenceSlots, isCopyFeature, isEdgeFeature, isReferenceFeature, isSketchBased, type EdgeRef, type ExtrudeEnd, type Feature, type FeatureType, type HoleFeature, type ReferenceFeature, type SketchFeature, type SlotFeature } from '../../shared/model/feature.ts';
 import { holePositions, metricSize, sizesFor, standardHoleDimensions } from '../../shared/model/hole.ts';
 import { AXIS_METHODS, PLANE_METHODS, POINT_METHODS, REFERENCE_ROLES, type GeometryRef, type ReferenceRole } from '../../shared/model/reference.ts';
 import { extrudesUpTo, referenceFits, referenceGeometry, referenceOfPick, referencePicks, referenceRoles } from './references.ts';
@@ -492,6 +492,24 @@ export function updateDraft(patch: Partial<Feature>): void {
   const edit = getState().activeEdit;
   if (!edit) return;
   setState({ activeEdit: { ...edit, draft: { ...edit.draft, ...patch } as Feature } });
+}
+
+/**
+ * Adds or removes material. An extrusion from a sketch on a face turns with it: the face's normal points
+ * out of the part, so adding goes along it and removing goes against it, into the part.
+ */
+export function setOperation(operation: BooleanOperation): void {
+  const edit = getState().activeEdit;
+  if (!edit || !('operation' in edit.draft)) return;
+  const draft = edit.draft;
+  if (draft.type === 'extrude' && draft.direction !== 'both') {
+    const sketch = getState().history.features.find((feature) => feature.type === 'sketch' && feature.id === draft.sketch);
+    if (sketch?.type === 'sketch' && sketch.plane.kind === 'face') {
+      updateDraft({ operation, direction: operation === 'cut' ? 'reverse' : 'normal' });
+      return;
+    }
+  }
+  updateDraft({ operation });
 }
 
 /** Gives a parameter of the edited feature as an equation (undefined: a plain value again). */
@@ -996,6 +1014,25 @@ export function convertModelEdge(edge: number): void {
   const result = convertEdges(sketch.draft.sketch, frameOf(sketch.draft.plane), [{ info, polyline }]);
   if (result.ok) recordSketchChange(result.sketch);
   else showToast('info', t(`sketch.messages.${result.error === 'already-converted' ? 'convertRepeated' : 'convertNothing'}`));
+}
+
+/**
+ * A model edge as fixed construction geometry of the open sketch, so it can be dimensioned to (an edge
+ * converted before is reused): the curve and the sketch with it (`changed` when it was added; the caller
+ * records it), or null.
+ */
+export function modelEdgeReference(edge: number): { sketch: SketchData; curve: string; changed: boolean } | null {
+  const { sketch, display } = getState();
+  const body = display.body;
+  const info = body?.edgeInfo[edge];
+  if (!sketch || !body || !info) return null;
+  const start = body.edgeRanges[edge * 2] ?? 0;
+  const count = body.edgeRanges[edge * 2 + 1] ?? 0;
+  const polyline = body.edgePositions.subarray(start * 3, (start + count) * 3);
+  const result = convertEdges(sketch.draft.sketch, frameOf(sketch.draft.plane), [{ info, polyline }], { construction: true });
+  const curve = result.curves[0];
+  if (!curve) return null;
+  return { sketch: result.ok ? result.sketch : sketch.draft.sketch, curve, changed: result.ok };
 }
 
 /** Offsets the selected curves; closed outlines grow outwards unless `flip`. */

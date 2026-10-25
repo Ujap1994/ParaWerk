@@ -214,7 +214,9 @@ export class Rebuilder implements Disposable {
 
       try {
         const resolved = resolveFeature(feature, features.slice(0, i), { body: input ? query(input) : null, frames, references });
+        this.backend.takeCutMissed?.();
         const shape = this.backend.applyFeature(input, resolved);
+        const missed = this.backend.takeCutMissed?.() ?? false;
         const healed = 'healedEdges' in resolved ? resolved.healedEdges : undefined;
         const healedFaces = 'healedFaces' in resolved ? resolved.healedFaces : undefined;
         const missing = 'missingEdges' in resolved ? resolved.missingEdges : undefined;
@@ -234,6 +236,7 @@ export class Rebuilder implements Disposable {
             ...(missing ? { warning: { code: 'edge-missing' as const, detail: String(missing) } } : {}),
             ...(healedFaces ? { healedFaces } : {}),
             ...(missingFaces ? { warning: { code: 'shell-face-missing' as const, detail: String(missingFaces) } } : {}),
+            ...(missed ? { warning: { code: 'cut-nothing' as const } } : {}),
             ...(threads.length > 0 ? { threads } : {}),
           },
         });

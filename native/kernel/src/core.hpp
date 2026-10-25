@@ -193,6 +193,9 @@ MeshData exportMesh(int id, double linear, double angular);
 std::string exportStep(int id);
 int importStep(const std::string& data);
 
+/** Whether the last cut left the body as it was (its tool missed the body); reading it clears it. */
+bool takeCutMissed();
+
 /** Enables OCCT's parallel algorithms (meshing, booleans); requires a threaded build. */
 void setParallel(bool enabled);
 

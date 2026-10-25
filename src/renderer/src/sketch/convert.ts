@@ -21,7 +21,10 @@ export interface ModelEdge {
   polyline: Float32Array;
 }
 
-export type ConvertResult = { ok: true; sketch: SketchData; added: number } | { ok: false; error: 'nothing-to-convert' | 'already-converted' };
+/** `curves`: per converted edge the curve it became, or the curve converted from it before. */
+export type ConvertResult =
+  | { ok: true; sketch: SketchData; added: number; curves: string[] }
+  | { ok: false; error: 'nothing-to-convert' | 'already-converted'; curves: string[] };
 
 /** Most fit points of a spline made from a curved edge. */
 const MAX_SPLINE_POINTS = 48;
@@ -33,7 +36,9 @@ const norm = (a: Vec3): Vec3 => {
   return [a[0] / length, a[1] / length, a[2] / length];
 };
 
-export function convertEdges(sketch: SketchData, frame: SketchFrame, edges: readonly ModelEdge[]): ConvertResult {
+export function convertEdges(sketch: SketchData, frame: SketchFrame, edges: readonly ModelEdge[], options: { construction?: boolean } = {}): ConvertResult {
+  const construction = options.construction ?? false;
+  const curves: string[] = [];
   const builder = new SketchBuilder(sketch);
   const positions = pointPositions(sketch);
   let size = 1;
@@ -61,14 +66,17 @@ export function convertEdges(sketch: SketchData, frame: SketchFrame, edges: read
   let repeated = 0;
   // Converting the same edge twice must not stack identical curves.
   const exists = (type: string, points: readonly string[], radius?: number) => {
-    const found = [...sketch.entities, ...builder.build().entities.slice(sketch.entities.length)].some((entity) => {
+    const found = [...sketch.entities, ...builder.build().entities.slice(sketch.entities.length)].find((entity) => {
       if (entity.type !== type) return false;
       const own = curvePointsOf(entity);
       if (radius !== undefined && entity.type === 'circle' && Math.abs(entity.radius - radius) > tolerance * 10) return false;
       return own.length === points.length && (own.every((id, i) => id === points[i]) || own.every((id, i) => id === points[points.length - 1 - i]));
     });
-    if (found) repeated++;
-    return found;
+    if (found) {
+      repeated++;
+      curves.push(found.id);
+    }
+    return found !== undefined;
   };
 
   for (const { info, polyline } of edges) {
@@ -77,7 +85,7 @@ export function convertEdges(sketch: SketchData, frame: SketchFrame, edges: read
       if (Math.hypot(b[0] - a[0], b[1] - a[1]) <= tolerance * 10) continue;
       const [pa, pb] = [pointAt(a), pointAt(b)];
       if (exists('line', [pa, pb])) continue;
-      builder.line(pa, pb);
+      curves.push(builder.line(pa, pb, construction));
       fix(pa);
       fix(pb);
       added++;
@@ -93,7 +101,8 @@ export function convertEdges(sketch: SketchData, frame: SketchFrame, edges: read
         if (closed) {
           if (exists('circle', [c], info.radius)) continue;
           // The radius is held by a fixed point on the circle.
-          const circle = builder.circle(c, info.radius);
+          const circle = builder.circle(c, info.radius, construction);
+          curves.push(circle);
           const rim = pointAt(project(info.start));
           builder.relation({ type: 'pointOnCircle', point: rim, circle });
           fix(rim);
@@ -101,8 +110,7 @@ export function convertEdges(sketch: SketchData, frame: SketchFrame, edges: read
           const [s, e] = [pointAt(project(info.start)), pointAt(project(info.end))];
           if (exists('arc', facing > 0 ? [c, s, e] : [c, e, s])) continue;
           // Counterclockwise around the axis; seen from the other side it runs the other way.
-          if (facing > 0) builder.arc(c, s, e);
-          else builder.arc(c, e, s);
+          curves.push(facing > 0 ? builder.arc(c, s, e, construction) : builder.arc(c, e, s, construction));
           fix(s);
           fix(e);
         }
@@ -119,7 +127,7 @@ export function convertEdges(sketch: SketchData, frame: SketchFrame, edges: read
         const c = pointAt(center);
         const [ma, mi] = [pointAt(project(major)), pointAt(project(minor))];
         if (exists('ellipse', [c, ma, mi])) continue;
-        builder.ellipse(c, ma, mi);
+        curves.push(builder.ellipse(c, ma, mi, construction));
         [c, ma, mi].forEach(fix);
         added++;
         continue;
@@ -137,10 +145,10 @@ export function convertEdges(sketch: SketchData, frame: SketchFrame, edges: read
     const fit = points.filter((_, i) => i % step === 0 || i === points.length - 1);
     const ids = fit.map(pointAt);
     if (new Set(ids).size < 2 || exists('spline', ids)) continue;
-    builder.spline(ids);
+    curves.push(builder.spline(ids, construction));
     ids.forEach(fix);
     added++;
   }
-  if (added === 0) return { ok: false, error: repeated > 0 ? 'already-converted' : 'nothing-to-convert' };
-  return { ok: true, sketch: builder.build(), added };
+  if (added === 0) return { ok: false, error: repeated > 0 ? 'already-converted' : 'nothing-to-convert', curves };
+  return { ok: true, sketch: builder.build(), added, curves };
 }

@@ -13,7 +13,7 @@ import { displayValue, type DimensionDraft } from './dimensions.ts';
 import { dragTarget, sameGeometry } from './drag.ts';
 import { hitTest, pointPositions, type SketchHit } from './geometry.ts';
 import type { DragSession, SolverClient } from './solver-client.ts';
-import { createTool, type SketchTool, type ToolEvent, type ToolInfo, type ToolPreview } from './tools.ts';
+import { createTool, DimensionTool, type SketchTool, type ToolEvent, type ToolInfo, type ToolPreview } from './tools.ts';
 
 /** How close (in pixels) the cursor must be to grab geometry. */
 const PICK_TOLERANCE_PX = 6;
@@ -354,7 +354,10 @@ export class SketchController implements SketchInput, SketchToolControl {
       this.engine.setModelEdgeHover(this.engine.modelEdgeAt(pointer.x, pointer.y));
       return;
     }
-    this.showPreview(this.tool.hover(sketch, toolEvent(pointer)), pointer);
+    const preview = this.tool.hover(sketch, toolEvent(pointer));
+    this.showPreview(preview, pointer);
+    // The dimension tool also takes edges of the part: the one under the cursor is highlighted.
+    this.engine.setModelEdgeHover(this.modelEdgeForDimension(preview, pointer));
   }
 
   private toolClick(pointer: SketchPointer): void {
@@ -366,6 +369,18 @@ export class SketchController implements SketchInput, SketchToolControl {
       else showToast('info', t('sketch.messages.convertMissed'));
       return;
     }
+    if (this.tool instanceof DimensionTool) {
+      const edge = this.modelEdgeForDimension(this.tool.hover(sketch, toolEvent(pointer)), pointer);
+      const reference = edge === null ? null : commands.modelEdgeReference(edge);
+      if (reference) {
+        // The tool made this change itself: it keeps its picks (see the store subscription).
+        this.toolSketch = reference.sketch;
+        if (reference.changed) commands.recordSketchChange(reference.sketch);
+        this.engine.setModelEdgeHover(null);
+        this.showPreview(this.tool.pick(reference.sketch, reference.curve, toolEvent(pointer)), pointer);
+        return;
+      }
+    }
     const step = this.tool.click(sketch, toolEvent(pointer));
     if (step.commit && step.commit !== sketch) {
       this.toolSketch = step.commit;
@@ -374,6 +389,15 @@ export class SketchController implements SketchInput, SketchToolControl {
     this.showPreview(step.preview, pointer);
     if (step.place) this.placeDimension(step.place);
     if (step.message) showToast('info', t(`sketch.messages.${step.message}`));
+  }
+
+  /**
+   * The edge of the part a dimension would refer to under the cursor: only while the dimension tool picks
+   * entities and no sketch geometry is under the cursor.
+   */
+  private modelEdgeForDimension(preview: ToolPreview, pointer: SketchPointer): number | null {
+    if (!(this.tool instanceof DimensionTool) || !this.tool.picking || preview.snap.target.kind !== 'none') return null;
+    return this.engine.modelEdgeAt(pointer.x, pointer.y);
   }
 
   /** The dimension tool placed a dimension: ask for its value, then add it. */

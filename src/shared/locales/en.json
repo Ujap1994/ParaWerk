@@ -404,7 +404,8 @@
     "edge-missing_one": "{{count}} selected edge no longer exists and is left out. Edit the feature to remove it or pick another edge.",
     "edge-missing_other": "{{count}} selected edges no longer exist and are left out. Edit the feature to remove them or pick other edges.",
     "shell-face-missing_one": "{{count}} face to open no longer exists and is left out. Edit the shell to pick another face.",
-    "shell-face-missing_other": "{{count}} faces to open no longer exist and are left out. Edit the shell to pick other faces."
+    "shell-face-missing_other": "{{count}} faces to open no longer exist and are left out. Edit the shell to pick other faces.",
+    "cut-nothing": "This cut does not touch the part, so it removes nothing. Try the other direction (for a sketch on a face: Reversed, into the part)."
   },
   "fileErrors": {
     "not-a-zip": "This is not a ParaWerk part file.",
@@ -467,7 +468,7 @@
       "point": "Click to place points; on a line or circle they stay on it.",
       "spline": "Click the points the curve passes through; each one is a sketch point that can be dimensioned and related. Esc or a second click on the last point ends the spline.",
       "snapping": "Points snap to end points, midpoints and curves and align with other points (dashed lines); the matching relations are added automatically. Esc leaves the tool.",
-      "dimension": "Click a line, circle or arc, or two entities (points, lines, circles). Move the value to where it belongs – above, beside or along the geometry – and click. Then type the value and press Enter.",
+      "dimension": "Click a line, circle or arc for its length or size, or two entities – points, lines, circles (at their centers), the origin or an edge of the part – for the distance or angle between them. Move the value to where it belongs and click. Then type the value and press Enter. An edge of the part becomes fixed construction geometry of the sketch.",
       "threePointCircle": "Click three points the circle passes through.",
       "ellipse": "Click the center, then the end of one axis; move sideways to set the other axis and click. Dimension the axes from the center to the two axis points.",
       "tangentArc": "Click the end point of a line or arc, then where the arc should end. The arc leaves the line or arc tangentially.",
