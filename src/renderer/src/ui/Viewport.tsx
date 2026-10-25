@@ -7,12 +7,14 @@ import * as commands from '../commands.ts';
 import { builtOn, extrudesUpTo, picksReferences, referenceItems, referencePicks, visibleThreads } from '../references.ts';
 import { SketchController, sketchHighlight, statusColors } from '../sketch/controller.ts';
 import { sketchSolver } from '../sketch/solver.ts';
-import { modelEnd, setState, store, type AppState, type Pick } from '../state/store.ts';
+import { modelEnd, partProperties, setState, store, type AppState, type Pick } from '../state/store.ts';
+import { partColor } from '../../../shared/model/material.ts';
 import { ViewportEngine, type InactiveSketch, type PickFilter } from '../viewport/engine.ts';
 import type { PlaneDisplay } from '../viewport/reference-planes.ts';
 import { registerSketchControl, registerViewport } from '../viewport/registry.ts';
 import type { CubeFace } from '../viewport/view-cube.ts';
 import { ViewToolbar } from './ViewToolbar.tsx';
+import { MassPropertiesPanel } from './MassPropertiesPanel.tsx';
 
 function cubeLabels(t: (key: string) => string): Record<CubeFace, string> {
   return {
@@ -198,6 +200,7 @@ export function Viewport() {
         engine.setInactiveSketches(inactiveSketches(state));
       }
       if (!previous || state.effectiveTheme !== previous.effectiveTheme) engine.setTheme(state.effectiveTheme);
+      if (!previous || state.history.properties !== previous.history.properties) engine.setBodyColor(partColor(partProperties(state.history)));
       if (!previous || state.language !== previous.language) engine.setDimensionLanguage(state.language);
       if (!previous || state.settings.projection !== previous.settings.projection) engine.setProjection(state.settings.projection);
       if (!previous || state.settings.navigation !== previous.settings.navigation) engine.setNavigation(state.settings.navigation);
@@ -230,6 +233,7 @@ export function Viewport() {
       <div ref={containerRef} className="viewport-surface" />
       <div ref={cursorInfoRef} className="sketch-cursor-info" data-testid="sketch-cursor-info" hidden />
       <ViewToolbar />
+      <MassPropertiesPanel />
     </div>
   );
 }

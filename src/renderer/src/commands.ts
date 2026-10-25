@@ -8,6 +8,7 @@ import { extrudesUpTo, referenceFits, referenceGeometry, referenceOfPick, refere
 import { edgeRefOf, faceRefOf, resolveEdgeRefs } from '../../shared/model/naming.ts';
 import { decodePartFile, encodePartFile, PartFileError } from '../../shared/model/part-file.ts';
 import { frameOf, frameOnPlane, isDimension, ORIGIN_ID, STANDARD_PLANES, type SketchData, type SketchDimension, type SketchPlaneRef } from '../../shared/model/sketch.ts';
+import type { PartMaterial, PartProperties } from '../../shared/model/material.ts';
 import type { Settings } from '../../shared/settings.ts';
 import { changeLanguage, t } from './i18n.ts';
 import { SketchBuilder } from './sketch/builder.ts';
@@ -34,7 +35,7 @@ import { applyEdit, commit, emptyHistory, featureName, hasBodyBefore, redo as re
 import { dropRow, type TreeRow } from './state/tree-order.ts';
 import { regenerate, variablesFeature } from './variables.ts';
 import { kernel, whenIdle } from './state/rebuild.ts';
-import { getState, modelEnd, setHistory, setState, showToast, type AppState, type CommandTab, type Pick } from './state/store.ts';
+import { getState, modelEnd, partProperties, setHistory, setState, showToast, type AppState, type CommandTab, type Pick } from './state/store.ts';
 import type { SketchToolName } from './sketch/tools.ts';
 import { sketchToolControl, viewport } from './viewport/registry.ts';
 import type { StandardView } from './viewport/views.ts';
@@ -85,7 +86,7 @@ async function confirmDiscard(): Promise<boolean> {
 export async function newDocument(): Promise<void> {
   if (!(await confirmDiscard())) return;
   const history = emptyHistory();
-  setState({ history, savedFeatures: history.features, dirty: false, filePath: null, fileName: null, rollback: null, ...closedModes() });
+  setState({ history, savedFeatures: history.features, savedProperties: partProperties(history), dirty: false, filePath: null, fileName: null, rollback: null, ...closedModes() });
   viewport()?.requestFitOnNextBody();
   viewport()?.setStandardView('isometric');
 }
@@ -93,10 +94,11 @@ export async function newDocument(): Promise<void> {
 export function loadDocument(path: string, data: Uint8Array): void {
   try {
     const { document } = decodePartFile(data);
-    const history = emptyHistory(document.features);
+    const history = emptyHistory(document.features, document.properties);
     setState({
       history,
       savedFeatures: history.features,
+      savedProperties: partProperties(history),
       dirty: false,
       filePath: path,
       fileName: baseName(path),
@@ -132,7 +134,7 @@ export async function saveDocument(saveAs = false): Promise<boolean> {
   storeOpenSketch();
   const state = getState();
   const data = encodePartFile(
-    { units: 'mm', features: state.history.features },
+    { units: 'mm', features: state.history.features, properties: partProperties(state.history) },
     { appVersion: state.appInfo?.version ?? 'dev', savedAt: new Date().toISOString() },
   );
   const result = await api().saveFile({
@@ -143,7 +145,7 @@ export async function saveDocument(saveAs = false): Promise<boolean> {
     ...(saveAs || !state.filePath ? {} : { path: state.filePath }),
   });
   if (result.status === 'saved') {
-    setState({ filePath: result.path, fileName: baseName(result.path), savedFeatures: state.history.features, dirty: false });
+    setState({ filePath: result.path, fileName: baseName(result.path), savedFeatures: state.history.features, savedProperties: partProperties(state.history), dirty: false });
     showToast('success', t('toasts.saved', { name: baseName(result.path) }));
     return true;
   }
@@ -715,6 +717,33 @@ export function redo(): void {
   setHistory(redoHistory(getState().history), { selection: [] });
 }
 
+// ------------------------------------------------------------------ material and appearance
+
+/** Gives the part a material (null: none); one undo step. A library material starts with its own density. */
+export function setMaterial(material: PartMaterial | null): void {
+  const state = getState();
+  const properties = partProperties(state.history);
+  const { material: _old, ...rest } = properties;
+  const next: PartProperties = material ? { ...rest, material } : rest;
+  if (JSON.stringify(next) === JSON.stringify(properties)) return;
+  setHistory(commit(state.history, state.history.features, next));
+}
+
+/** Shows or hides the mass properties panel over the 3D view. */
+export function toggleMassProperties(show = !getState().showMassProperties): void {
+  setState({ showMassProperties: show });
+}
+
+/** Gives the part its own color in the 3D view (null: the material's color); one undo step. */
+export function setPartColor(color: string | null): void {
+  const state = getState();
+  const properties = partProperties(state.history);
+  const { color: _old, ...rest } = properties;
+  const next: PartProperties = color ? { ...rest, color: color.toLowerCase() } : rest;
+  if (next.color === properties.color) return;
+  setHistory(commit(state.history, state.history.features, next));
+}
+
 // ------------------------------------------------------------------ sketches
 
 /** Where a picked plane or planar face lies, or null if a sketch cannot be placed on the pick. */
@@ -780,7 +809,10 @@ function updateSketch(sketch: SketchSession | null, extra: Partial<AppState> = {
   setState((state) => ({
     ...extra,
     sketch,
-    dirty: state.history.features !== state.savedFeatures || (sketch !== null && hasSketchChanges(sketch, state.history.features)),
+    dirty:
+      state.history.features !== state.savedFeatures ||
+      partProperties(state.history) !== state.savedProperties ||
+      (sketch !== null && hasSketchChanges(sketch, state.history.features)),
   }));
 }
 
@@ -1297,11 +1329,11 @@ export function zoomToFit(): void {
   viewport()?.zoomToFit();
 }
 
-export function openDialog(dialog: 'settings' | 'about'): void {
+export function openDialog(dialog: 'settings' | 'about' | 'material'): void {
   setState((state) => ({ dialogs: { ...state.dialogs, [dialog]: true } }));
 }
 
-export function closeDialog(dialog: 'settings' | 'about'): void {
+export function closeDialog(dialog: 'settings' | 'about' | 'material'): void {
   setState((state) => ({ dialogs: { ...state.dialogs, [dialog]: false } }));
 }
 

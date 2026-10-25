@@ -8,6 +8,12 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### Added
+- Material and appearance: a library of 27 metals, plastics and woods with typical densities, custom
+  materials with an own density, and a color for the part (the material's or any other). Shown at the
+  top of the feature tree, saved in the part file (format version 7), one undo step per change.
+- Mass properties: a panel over the 3D view with mass, volume, surface area, center of mass, bounding
+  box, principal moments of inertia and the inertia tensor at the center of mass, integrated exactly over
+  the B-Rep; the mass is also shown in the status bar. New command tab *Evaluate*.
 - Feature tree: a rollback bar to build the part only up to a point; new features and sketches go in
   at the bar (insert a feature in the middle of the history). Drag the bar or move it with the arrow
   keys; *Roll to end* builds everything again.

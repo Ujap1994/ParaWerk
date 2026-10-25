@@ -40,6 +40,8 @@ struct MassProperties {
   double volume = 0;
   double area = 0;
   double center[3] = {0, 0, 0};
+  /** Inertia tensor at the center of mass for density 1 (mm^5): xx, yy, zz, xy, xz, yz. */
+  double inertia[6] = {0, 0, 0, 0, 0, 0};
 };
 
 /** Everything the 3D view needs for one body. Face i / edge i follow TopExp::MapShapes order. */

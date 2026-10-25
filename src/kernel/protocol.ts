@@ -148,6 +148,12 @@ export interface MassProperties {
   center: Vec3;
   bboxMin: Vec3;
   bboxMax: Vec3;
+  /**
+   * Inertia tensor at the center of mass, in axes parallel to the model axes, for density 1 (mm⁵):
+   * xx, yy, zz, xy, xz, yz. The products are those of the tensor (−∫xy dV). Multiplied by the density
+   * it gives the moments of inertia (see src/shared/model/material.ts).
+   */
+  inertia?: [number, number, number, number, number, number];
 }
 
 /** The state of the body after a given feature, as requested by `RebuildRequest.captures`. */

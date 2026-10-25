@@ -1,5 +1,6 @@
 import { EXPRESSION_FIELDS, EXTRUDE_DIRECTIONS, EXTRUDE_ENDS, HOLE_ENDS, type Axis, type BooleanOperation, type EdgeRef, type ExtrudeDirection, type ExtrudeEnd, type Feature, type FeatureType, type HoleEnd, type Variable, type Vec3 } from './feature.ts';
 import { HOLE_FITS, HOLE_KINDS } from './hole.ts';
+import { CUSTOM_MATERIAL, materialInfo, MAX_DENSITY, MIN_DENSITY, NO_PROPERTIES, type PartProperties } from './material.ts';
 import { MAX_PATTERN_COUNT } from './pattern.ts';
 import { AXIS_METHODS, PLANE_METHODS, POINT_METHODS, type GeometryRef } from './reference.ts';
 import { parseSketchData, parsePlaneRef } from './validate-sketch.ts';
@@ -386,4 +387,36 @@ export function parseFeatures(raw: unknown, path = 'features'): Feature[] {
     ids.add(feature.id);
   }
   return features;
+}
+
+const COLOR = /^#[0-9a-f]{6}$/i;
+/** Longest name of a custom material. */
+const MAX_MATERIAL_NAME = 120;
+
+/** The part's material and color (document.json `properties`); a missing value is no properties. */
+export function parsePartProperties(raw: unknown, path = 'properties'): PartProperties {
+  if (raw === undefined) return NO_PROPERTIES;
+  if (!isObject(raw)) throw new ValidationError('expected an object', path);
+  const properties: PartProperties = {};
+  if (raw.material !== undefined) {
+    const material = raw.material;
+    if (!isObject(material)) throw new ValidationError('expected an object', `${path}.material`);
+    if (typeof material.id !== 'string' || (material.id !== CUSTOM_MATERIAL && !materialInfo(material.id))) {
+      throw new ValidationError('expected a material of the library or "custom"', `${path}.material.id`);
+    }
+    const density = material.density;
+    if (typeof density !== 'number' || !Number.isFinite(density) || density < MIN_DENSITY || density > MAX_DENSITY) {
+      throw new ValidationError(`expected a density between ${MIN_DENSITY} and ${MAX_DENSITY} kg/m³`, `${path}.material.density`);
+    }
+    properties.material = { id: material.id, density };
+    if (material.name !== undefined) {
+      if (typeof material.name !== 'string' || material.name.length > MAX_MATERIAL_NAME) throw new ValidationError('expected a name', `${path}.material.name`);
+      properties.material.name = material.name;
+    }
+  }
+  if (raw.color !== undefined) {
+    if (typeof raw.color !== 'string' || !COLOR.test(raw.color)) throw new ValidationError('expected a color "#rrggbb"', `${path}.color`);
+    properties.color = raw.color.toLowerCase();
+  }
+  return properties;
 }

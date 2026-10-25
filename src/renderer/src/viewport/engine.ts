@@ -164,6 +164,8 @@ export class ViewportEngine {
   private readonly pivotMarker: Mesh<SphereGeometry, MeshBasicMaterial>;
   private readonly lostMarkers = new LostMarkers();
   private palette: ViewportPalette = palettes.light;
+  /** The part's own color, over the theme's body color. */
+  private bodyColor: string | null = null;
   private readonly materials: {
     face: MeshStandardMaterial;
     edge: LineMaterial;
@@ -523,10 +525,17 @@ export class ViewportEngine {
 
   // ---------------------------------------------------------------- appearance
 
+  /** The part's own color ('#rrggbb'); null shows it in the theme's body color. */
+  setBodyColor(color: string | null): void {
+    this.bodyColor = color;
+    this.materials.face.color.set(color ?? this.palette.body);
+    this.requestRender();
+  }
+
   setTheme(theme: 'light' | 'dark'): void {
     this.palette = palettes[theme];
     const p = this.palette;
-    this.materials.face.color.setHex(p.body);
+    this.materials.face.color.set(this.bodyColor ?? p.body);
     this.materials.edge.color.setHex(p.edge);
     this.materials.hoverFace.color.setHex(p.hover);
     this.materials.hoverEdge.color.setHex(p.hover);

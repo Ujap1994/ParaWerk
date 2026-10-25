@@ -260,6 +260,65 @@ test('undo, redo and suppress', async () => {
   await expect(page.locator(`[data-feature-id="${cylinderId}"]`)).toHaveClass(/is-suppressed/);
 });
 
+test('gives the part a material and a color and shows its mass properties', async () => {
+  launched = await launchApp({ width: 1440, height: 900 });
+  const { page, outputDir } = launched;
+  await createBox(page);
+  await expect(page.locator('[data-testid="tree-material"]')).toContainText('not specified');
+
+  // Steel: the 100 × 60 × 40 box weighs 1.884 kg.
+  await page.click('[data-tab="evaluate"]');
+  await page.click('[data-command="material"]');
+  await page.click('[data-material="steel-s235"]');
+  await page.click('[data-testid="material-ok"]');
+  await expect(page.locator('[data-testid="status-mass"]')).toHaveText('Mass: 1.884 kg');
+  await expect(page.locator('[data-testid="tree-material"]')).toContainText('Structural steel S235JR');
+  await page.click('[data-command="mass-properties"]');
+  await expect(page.locator('[data-testid="mass-value"]')).toHaveText('1.884 kg');
+  await expect(page.locator('[data-testid="mass-center"]')).toHaveText('0 ; 0 ; 20 mm');
+  // Principal moments m(b² + c²)/12 in kg·mm².
+  await expect(page.locator('[data-testid="mass-principal"]')).toContainText('816.4');
+  await expect(page.locator('[data-testid="mass-principal"]')).toContainText('1,821.2');
+  await expect(page.locator('[data-testid="mass-principal"]')).toContainText('2,135.2');
+
+  // A custom material with the density of water; the dialog is opened from the tree.
+  await page.locator('[data-testid="tree-material"]').dblclick();
+  await page.click('[data-material="custom"]');
+  await page.locator('[data-testid="material-name"]').fill('Test resin');
+  await page.locator('[data-testid="material-density"]').fill('1000');
+  await page.click('[data-testid="material-ok"]');
+  await expect(page.locator('[data-testid="mass-value"]')).toHaveText('240 g');
+  await expect(page.locator('[data-testid="tree-material"]')).toContainText('Test resin');
+
+  // An own color; Cancel keeps everything as it is.
+  await page.click('[data-command="material"]');
+  await page.getByRole('radio', { name: '#d64545' }).click();
+  await page.click('[data-testid="material-ok"]');
+  await page.click('[data-command="material"]');
+  await page.getByRole('radio', { name: '#3f9d5a' }).click();
+  await page.getByRole('button', { name: 'Cancel' }).click();
+  const properties = () => page.evaluate(() => (window as unknown as { __parawerk: { getState(): { history: { properties?: object } } } }).__parawerk.getState().history.properties);
+  expect(await properties()).toEqual({ material: { id: 'custom', density: 1000, name: 'Test resin' }, color: '#d64545' });
+
+  // Saved with the part, and each change is one undo step.
+  await page.click('[data-command="save"]');
+  await expect.poll(async () => (await state(page)).dirty).toBe(false);
+  const fileName = (await state(page)).fileName;
+  const file = path.join(outputDir, `${fileName}.pwpart`);
+  await page.click('[data-command="new"]');
+  await page.evaluate(async (bytes) => {
+    const hooks = (window as unknown as { __parawerk: { commands: { loadDocument(path: string, data: Uint8Array): void } } }).__parawerk;
+    hooks.commands.loadDocument('reopened.pwpart', new Uint8Array(bytes));
+  }, [...(await readFile(file))]);
+  expect(await properties()).toEqual({ material: { id: 'custom', density: 1000, name: 'Test resin' }, color: '#d64545' });
+  await page.locator('[data-testid="tree-material"]').hover();
+  await page.evaluate(() => (window as unknown as { __parawerk: { commands: { setPartColor(color: string | null): void } } }).__parawerk.commands.setPartColor(null));
+  expect((await state(page)).dirty).toBe(true);
+  await page.click('[data-command="undo"]');
+  expect(await properties()).toEqual({ material: { id: 'custom', density: 1000, name: 'Test resin' }, color: '#d64545' });
+  expect((await state(page)).dirty).toBe(false);
+});
+
 /** Drags a row of the feature tree (a feature or the rollback bar) just above or below another row. */
 async function dragInTree(page: Page, from: string, to: string, where: 'above' | 'below'): Promise<void> {
   const source = await page.locator(from).boundingBox();

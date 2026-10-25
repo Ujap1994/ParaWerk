@@ -820,7 +820,17 @@ test('feature tree screenshots', async () => {
     const features = [
       { id: 'plate', type: 'box', operation: 'add', width: 100, depth: 70, height: 15, position: [0, 0, 0] },
       { id: 'boss', type: 'cylinder', operation: 'add', radius: 22, height: 30, axis: 'z', position: [0, 0, 15] },
-      { id: 'round', type: 'fillet', radius: 6, edges: [0, 2, 4, 6].map((index) => ({ kind: 'edge-index', index })) },
+      {
+        id: 'round',
+        type: 'fillet',
+        radius: 8,
+        edges: [
+          { kind: 'edge', faces: ['plate:front', 'plate:left'], at: [-50, -35, 7.5] },
+          { kind: 'edge', faces: ['plate:front', 'plate:right'], at: [50, -35, 7.5] },
+          { kind: 'edge', faces: ['plate:back', 'plate:right'], at: [50, 35, 7.5] },
+          { kind: 'edge', faces: ['plate:back', 'plate:left'], at: [-50, 35, 7.5] },
+        ],
+      },
       { id: 'bore', type: 'cylinder', operation: 'cut', radius: 12, height: 60, axis: 'z', position: [0, 0, -5] },
     ];
     (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features, past: [], future: [] }, savedFeatures: features, fileName: 'Flange', rollback: 'round' });
@@ -831,5 +841,43 @@ test('feature tree screenshots', async () => {
   await page.locator('[data-testid="rollback-bar"]').hover();
   await page.waitForTimeout(300);
   await page.screenshot({ path: out('feature-tree-rollback.png') });
+  await app.close();
+});
+
+test('material and mass properties screenshots', async () => {
+  const { app, page } = await launchApp({ width: 1440, height: 900 });
+  // The flange of the feature tree screenshots, all built.
+  await page.evaluate(() => {
+    const features = [
+      { id: 'plate', type: 'box', operation: 'add', width: 100, depth: 70, height: 15, position: [0, 0, 0] },
+      { id: 'boss', type: 'cylinder', operation: 'add', radius: 22, height: 30, axis: 'z', position: [0, 0, 15] },
+      {
+        id: 'round',
+        type: 'fillet',
+        radius: 8,
+        // The four vertical edges of the plate, between its sides.
+        edges: [
+          { kind: 'edge', faces: ['plate:front', 'plate:left'], at: [-50, -35, 7.5] },
+          { kind: 'edge', faces: ['plate:front', 'plate:right'], at: [50, -35, 7.5] },
+          { kind: 'edge', faces: ['plate:back', 'plate:right'], at: [50, 35, 7.5] },
+          { kind: 'edge', faces: ['plate:back', 'plate:left'], at: [-50, 35, 7.5] },
+        ],
+      },
+      { id: 'bore', type: 'cylinder', operation: 'cut', radius: 12, height: 60, axis: 'z', position: [0, 0, -5] },
+    ];
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features, past: [], future: [] }, savedFeatures: features, fileName: 'Flange' });
+  });
+  await idle(page);
+  await page.evaluate(() => (window as unknown as { __parawerk: { viewport: { zoomToFit(): void } } }).__parawerk.viewport.zoomToFit());
+  await page.click('[data-tab="evaluate"]');
+  await page.click('[data-command="material"]');
+  await page.click('[data-material="aluminium-6061"]');
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: out('material-dialog.png') });
+  await page.click('[data-testid="material-ok"]');
+  await page.click('[data-command="mass-properties"]');
+  await idle(page);
+  await page.waitForTimeout(500);
+  await page.screenshot({ path: out('mass-properties.png') });
   await app.close();
 });

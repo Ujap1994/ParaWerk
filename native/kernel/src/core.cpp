@@ -70,6 +70,7 @@
 #include <gp_Ax3.hxx>
 #include <gp_Dir.hxx>
 #include <gp_Pln.hxx>
+#include <gp_Mat.hxx>
 #include <gp_Pnt.hxx>
 #include <gp_Sphere.hxx>
 
@@ -1260,6 +1261,14 @@ MassProperties massProperties(int id) {
   result.center[0] = center.X();
   result.center[1] = center.Y();
   result.center[2] = center.Z();
+  // OCCT gives the tensor in axes through the center of mass, parallel to the model axes.
+  const gp_Mat inertia = volume.MatrixOfInertia();
+  result.inertia[0] = inertia.Value(1, 1);
+  result.inertia[1] = inertia.Value(2, 2);
+  result.inertia[2] = inertia.Value(3, 3);
+  result.inertia[3] = inertia.Value(1, 2);
+  result.inertia[4] = inertia.Value(1, 3);
+  result.inertia[5] = inertia.Value(2, 3);
   return result;
 }
 

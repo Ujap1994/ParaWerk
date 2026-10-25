@@ -18,3 +18,14 @@ export function formatQuantity(value: number, language: Language, unit: string, 
   const formatted = new Intl.NumberFormat(language, { maximumFractionDigits, useGrouping: true }).format(value);
   return `${formatted} ${unit}`;
 }
+
+/** A value with `significant` digits at most, for quantities that span many orders of magnitude. */
+export function formatSignificant(value: number, language: Language, unit: string, significant = 6): string {
+  const formatted = new Intl.NumberFormat(language, { maximumSignificantDigits: significant, useGrouping: true }).format(value);
+  return `${formatted} ${unit}`;
+}
+
+/** A mass in kg: grams below 1 kg. */
+export function formatMass(kilograms: number, language: Language): string {
+  return Math.abs(kilograms) < 1 ? formatQuantity(kilograms * 1000, language, 'g', 2) : formatQuantity(kilograms, language, 'kg', 3);
+}

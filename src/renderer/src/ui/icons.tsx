@@ -203,6 +203,24 @@ export const MoreIcon = (p: P) => (
   </Icon>
 );
 
+/** Material: a block with the grain of its stock on the front. */
+export const MaterialIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="M4 7.5 12 3.5l8 4v9l-8 4-8-4z" />
+    <path d="M4 7.5l8 4 8-4M12 11.5v9" />
+    <path d="M6.5 12.2 9.5 9.7M6.5 15.6l3.5-3M8.2 18.1l1.8-1.6" />
+  </Icon>
+);
+
+/** Mass properties: a weight with its center of mass. */
+export const MassPropertiesIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="M9.5 8.5a2.5 2.5 0 1 1 5 0" />
+    <path d="M7 8.5h10l2.5 11.5h-15z" />
+    <circle cx="12" cy="14.5" r="1.6" />
+  </Icon>
+);
+
 /** Rolls the part forward: an arrow down to the end of the tree. */
 export const RollForwardIcon = (p: P) => (
   <Icon {...p}>

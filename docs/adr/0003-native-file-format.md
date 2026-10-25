@@ -8,7 +8,7 @@ A `.pwpart` file is a ZIP container:
 
 | Entry | Content |
 |---|---|
-| `document.json` | `{ format: "parawerk-part", version, units: "mm", features: [...] }`, the source of truth |
+| `document.json` | `{ format: "parawerk-part", version, units: "mm", features: [...], properties? }`, the source of truth; `properties` holds the material and color of the part (version 7) |
 | `meta.json` | application version and save time (informational) |
 | later: `brep/*.brep` | cached B-Rep results for fast opening of large parts |
 | later: `thumbnail.png` | preview for file browsers |

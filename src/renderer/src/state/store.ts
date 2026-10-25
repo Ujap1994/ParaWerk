@@ -3,6 +3,7 @@ import { createStore } from 'zustand/vanilla';
 import type { Language } from '../../../shared/i18n.ts';
 import type { AppInfo } from '../../../shared/ipc.ts';
 import type { Feature, Vec3 } from '../../../shared/model/feature.ts';
+import { NO_PROPERTIES, type PartProperties } from '../../../shared/model/material.ts';
 import { DEFAULT_SETTINGS, type Settings } from '../../../shared/settings.ts';
 import type { FeatureResult, MassProperties, MeshPayload } from '../../../kernel/protocol.ts';
 import type { SketchSession } from '../sketch/session.ts';
@@ -22,7 +23,7 @@ export interface Pick {
   at?: Vec3;
 }
 
-export type CommandTab = 'features' | 'sketch';
+export type CommandTab = 'features' | 'sketch' | 'evaluate';
 
 export type KernelStatus = 'loading' | 'ready' | 'busy' | 'error';
 
@@ -61,6 +62,8 @@ export interface AppState {
   history: History;
   /** Feature list as last saved or opened; the document is dirty when it differs. */
   savedFeatures: Feature[];
+  /** Material and color as last saved or opened. */
+  savedProperties: PartProperties;
   filePath: string | null;
   fileName: string | null;
   dirty: boolean;
@@ -106,7 +109,9 @@ export interface AppState {
   display: DisplayMeshes;
 
   commandTab: CommandTab;
-  dialogs: { settings: boolean; about: boolean };
+  dialogs: { settings: boolean; about: boolean; material: boolean };
+  /** The mass properties panel over the 3D view. */
+  showMassProperties: boolean;
   toasts: Toast[];
   frameStats: FrameStats | null;
 }
@@ -118,6 +123,7 @@ export const initialState: AppState = {
   effectiveTheme: 'light',
   history: emptyHistory(),
   savedFeatures: [],
+  savedProperties: NO_PROPERTIES,
   filePath: null,
   fileName: null,
   dirty: false,
@@ -141,7 +147,8 @@ export const initialState: AppState = {
   rebuild: null,
   display: { body: null, preview: null, pickable: true },
   commandTab: 'features',
-  dialogs: { settings: false, about: false },
+  dialogs: { settings: false, about: false, material: false },
+  showMassProperties: false,
   toasts: [],
   frameStats: null,
 };
@@ -159,6 +166,11 @@ export function features(): Feature[] {
   return store.getState().history.features;
 }
 
+/** The part's material and color. */
+export function partProperties(history: History): PartProperties {
+  return history.properties ?? NO_PROPERTIES;
+}
+
 /** Index of the first feature that is not built: the sketch or feature being edited, else the rollback bar. */
 export function modelEnd(state: AppState): number {
   return state.sketch?.index ?? state.activeEdit?.index ?? rollbackIndex(state.history.features, state.rollback);
@@ -168,7 +180,8 @@ export function modelEnd(state: AppState): number {
 export function setHistory(history: History, extra: Partial<AppState> = {}): void {
   setState((state) => {
     const savedFeatures = extra.savedFeatures ?? state.savedFeatures;
-    return { ...extra, history, dirty: history.features !== savedFeatures };
+    const savedProperties = extra.savedProperties ?? state.savedProperties;
+    return { ...extra, history, dirty: history.features !== savedFeatures || partProperties(history) !== savedProperties };
   });
 }
 

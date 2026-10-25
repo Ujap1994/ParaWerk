@@ -58,7 +58,9 @@
       "define": "Define",
       "draw": "Draw",
       "modify": "Modify",
-      "exchange": "DXF"
+      "exchange": "DXF",
+      "part": "Part",
+      "evaluate": "Evaluate"
     },
     "new": "New",
     "open": "Open",
@@ -103,12 +105,15 @@
       "pattern": "Copy features in a row along a direction",
       "circularPattern": "Copy features around an axis",
       "mirror": "Mirror features through a plane",
-      "shell": "Hollow the part out to thin walls, open at the faces you pick"
+      "shell": "Hollow the part out to thin walls, open at the faces you pick",
+      "material": "Choose the material (density) and the color of the part",
+      "massProperties": "Show mass, center of mass and moments of inertia of the part"
     },
     "tabs": {
       "label": "Command tabs",
       "features": "Features",
-      "sketch": "Sketch"
+      "sketch": "Sketch",
+      "evaluate": "Evaluate"
     },
     "sketchTools": {
       "line": "Line",
@@ -177,7 +182,9 @@
     "circularPattern": "Circular pattern",
     "mirror": "Mirror",
     "copyGeometry": "Patterns and mirror",
-    "shell": "Shell"
+    "shell": "Shell",
+    "material": "Material",
+    "massProperties": "Mass properties"
   },
   "features": {
     "plane": "Plane",
@@ -300,7 +307,8 @@
     "selected_one": "{{count}} item selected",
     "selected_other": "{{count}} items selected",
     "frameStats": "{{fps}} fps · {{ms}} ms",
-    "vertex": "Vertex {{index}}"
+    "vertex": "Vertex {{index}}",
+    "mass": "Mass"
   },
   "viewcube": {
     "front": "Front",
@@ -725,5 +733,74 @@
     "none": "Closed: the part gets a cavity inside",
     "clear": "Close all",
     "hint": "Click faces in the 3D view to open the shell there. Click again to close them."
+  },
+  "material": {
+    "title": "Material and appearance",
+    "none": "not specified",
+    "treeLabel": "Material: {{name}}",
+    "categories": {
+      "metal": "Metals",
+      "plastic": "Plastics",
+      "wood": "Wood",
+      "other": "Other"
+    },
+    "custom": "Custom material",
+    "customName": "Name",
+    "customDefault": "My material",
+    "density": "Density",
+    "densityHint": "Library densities are typical values; change the density to match your data sheet.",
+    "libraryDensity": "Library value",
+    "remove": "No material",
+    "appearance": "Appearance",
+    "useMaterialColor": "Color of the material",
+    "color": "Color",
+    "names": {
+      "steel-s235": "Structural steel S235JR",
+      "steel-c45": "Steel C45 (1.0503)",
+      "stainless-steel": "Stainless steel 1.4301 (304)",
+      "cast-iron": "Grey cast iron EN-GJL-250",
+      "aluminium-6061": "Aluminium EN AW-6061",
+      "aluminium-7075": "Aluminium EN AW-7075",
+      "brass": "Brass CuZn39Pb3",
+      "bronze": "Tin bronze CuSn8",
+      "copper": "Copper Cu-ETP",
+      "titanium": "Titanium Ti-6Al-4V",
+      "pla": "PLA",
+      "petg": "PETG",
+      "abs": "ABS",
+      "asa": "ASA",
+      "tpu": "TPU (95A)",
+      "pa12": "Polyamide PA12",
+      "pa6": "Polyamide PA6",
+      "pom": "Acetal POM-C",
+      "pc": "Polycarbonate PC",
+      "pmma": "Acrylic glass PMMA",
+      "hdpe": "Polyethylene HDPE",
+      "ptfe": "PTFE",
+      "oak": "Oak",
+      "beech": "Beech",
+      "pine": "Pine",
+      "birch-plywood": "Birch plywood",
+      "mdf": "MDF"
+    }
+  },
+  "massProperties": {
+    "title": "Mass properties",
+    "close": "Close",
+    "material": "Material",
+    "density": "Density",
+    "mass": "Mass",
+    "volume": "Volume",
+    "area": "Surface area",
+    "center": "Center of mass",
+    "size": "Bounding box",
+    "principal": "Principal moments of inertia",
+    "tensor": "Inertia tensor at the center of mass",
+    "tensorHint": "Axes through the center of mass, parallel to the model axes; the off-diagonal terms are the negative products of inertia.",
+    "noMaterial": "Choose a material to get the mass and the moments of inertia.",
+    "choose": "Choose material…",
+    "empty": "There is no body yet.",
+    "rolledBack": "Rolled back: the values are for the part above the rollback bar.",
+    "editing": "The values are updated when the edit is finished."
   }
 }

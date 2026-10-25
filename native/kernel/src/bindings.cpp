@@ -216,6 +216,9 @@ val massProperties(int id) {
     result.set("volume", props.volume);
     result.set("area", props.area);
     result.set("center", point(props.center));
+    val inertia = val::array();
+    for (int i = 0; i < 6; ++i) inertia.call<void>("push", props.inertia[i]);
+    result.set("inertia", inertia);
     return result;
   });
 }
@@ -244,7 +247,7 @@ val importStep(val bytes) {
   });
 }
 
-std::string version() { return "parawerk-kernel 0.5 / OCCT " PARAWERK_OCCT_VERSION; }
+std::string version() { return "parawerk-kernel 0.6 / OCCT " PARAWERK_OCCT_VERSION; }
 
 }  // namespace
 

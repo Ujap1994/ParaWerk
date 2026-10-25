@@ -58,7 +58,9 @@
       "define": "Bestimmen",
       "draw": "Zeichnen",
       "modify": "Ändern",
-      "exchange": "DXF"
+      "exchange": "DXF",
+      "part": "Teil",
+      "evaluate": "Auswerten"
     },
     "new": "Neu",
     "open": "Öffnen",
@@ -103,12 +105,15 @@
       "pattern": "Features in einer Reihe entlang einer Richtung kopieren",
       "circularPattern": "Features um eine Achse kopieren",
       "mirror": "Features an einer Ebene spiegeln",
-      "shell": "Das Teil zu dünnen Wänden aushöhlen, offen an den gewählten Flächen"
+      "shell": "Das Teil zu dünnen Wänden aushöhlen, offen an den gewählten Flächen",
+      "material": "Material (Dichte) und Farbe des Teils wählen",
+      "massProperties": "Masse, Schwerpunkt und Trägheitsmomente des Teils anzeigen"
     },
     "tabs": {
       "label": "Befehlsregister",
       "features": "Features",
-      "sketch": "Skizze"
+      "sketch": "Skizze",
+      "evaluate": "Auswerten"
     },
     "sketchTools": {
       "line": "Linie",
@@ -177,7 +182,9 @@
     "circularPattern": "Kreismuster",
     "mirror": "Spiegeln",
     "copyGeometry": "Muster und Spiegeln",
-    "shell": "Schale"
+    "shell": "Schale",
+    "material": "Material",
+    "massProperties": "Masseeigenschaften"
   },
   "features": {
     "plane": "Ebene",
@@ -300,7 +307,8 @@
     "selected_one": "{{count}} Element ausgewählt",
     "selected_other": "{{count}} Elemente ausgewählt",
     "frameStats": "{{fps}} fps · {{ms}} ms",
-    "vertex": "Eckpunkt {{index}}"
+    "vertex": "Eckpunkt {{index}}",
+    "mass": "Masse"
   },
   "viewcube": {
     "front": "Vorne",
@@ -725,5 +733,74 @@
     "none": "Geschlossen: Das Teil bekommt einen Hohlraum",
     "clear": "Alle schließen",
     "hint": "Flächen in der 3D-Ansicht anklicken, um die Schale dort zu öffnen. Erneutes Klicken schließt sie."
+  },
+  "material": {
+    "title": "Material und Aussehen",
+    "none": "nicht festgelegt",
+    "treeLabel": "Material: {{name}}",
+    "categories": {
+      "metal": "Metalle",
+      "plastic": "Kunststoffe",
+      "wood": "Holz",
+      "other": "Sonstige"
+    },
+    "custom": "Eigenes Material",
+    "customName": "Name",
+    "customDefault": "Mein Material",
+    "density": "Dichte",
+    "densityHint": "Die Dichten der Bibliothek sind typische Werte; passen Sie die Dichte an Ihr Datenblatt an.",
+    "libraryDensity": "Wert der Bibliothek",
+    "remove": "Kein Material",
+    "appearance": "Aussehen",
+    "useMaterialColor": "Farbe des Materials",
+    "color": "Farbe",
+    "names": {
+      "steel-s235": "Baustahl S235JR",
+      "steel-c45": "Vergütungsstahl C45 (1.0503)",
+      "stainless-steel": "Edelstahl 1.4301 (V2A)",
+      "cast-iron": "Grauguss EN-GJL-250",
+      "aluminium-6061": "Aluminium EN AW-6061",
+      "aluminium-7075": "Aluminium EN AW-7075",
+      "brass": "Messing CuZn39Pb3",
+      "bronze": "Zinnbronze CuSn8",
+      "copper": "Kupfer Cu-ETP",
+      "titanium": "Titan Ti-6Al-4V",
+      "pla": "PLA",
+      "petg": "PETG",
+      "abs": "ABS",
+      "asa": "ASA",
+      "tpu": "TPU (95A)",
+      "pa12": "Polyamid PA12",
+      "pa6": "Polyamid PA6",
+      "pom": "Polyoxymethylen POM-C",
+      "pc": "Polycarbonat PC",
+      "pmma": "Acrylglas PMMA",
+      "hdpe": "Polyethylen HDPE",
+      "ptfe": "PTFE",
+      "oak": "Eiche",
+      "beech": "Buche",
+      "pine": "Kiefer",
+      "birch-plywood": "Birken-Sperrholz",
+      "mdf": "MDF"
+    }
+  },
+  "massProperties": {
+    "title": "Masseeigenschaften",
+    "close": "Schließen",
+    "material": "Material",
+    "density": "Dichte",
+    "mass": "Masse",
+    "volume": "Volumen",
+    "area": "Oberfläche",
+    "center": "Schwerpunkt",
+    "size": "Umgebende Box",
+    "principal": "Hauptträgheitsmomente",
+    "tensor": "Trägheitstensor im Schwerpunkt",
+    "tensorHint": "Achsen durch den Schwerpunkt, parallel zu den Modellachsen; außerhalb der Diagonale stehen die negativen Deviationsmomente.",
+    "noMaterial": "Wählen Sie ein Material, um Masse und Trägheitsmomente zu erhalten.",
+    "choose": "Material wählen…",
+    "empty": "Es gibt noch keinen Körper.",
+    "rolledBack": "Zurückgesetzt: Die Werte gelten für das Teil über der Rollback-Leiste.",
+    "editing": "Die Werte werden nach der Bearbeitung aktualisiert."
   }
 }

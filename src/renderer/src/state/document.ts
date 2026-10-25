@@ -1,32 +1,45 @@
 import type { Feature, FeatureType } from '../../../shared/model/feature.ts';
+import { NO_PROPERTIES, type PartProperties } from '../../../shared/model/material.ts';
 
 /** Undo steps kept per document. */
 export const HISTORY_LIMIT = 200;
 
+/** The document as one undo step sees it: the features and the part's material and color. */
+export interface Snapshot {
+  features: Feature[];
+  properties?: PartProperties;
+}
+
 export interface History {
   features: Feature[];
-  past: Feature[][];
-  future: Feature[][];
+  /** Material and color of the part; absent: none. */
+  properties?: PartProperties;
+  past: Snapshot[];
+  future: Snapshot[];
 }
 
-export function emptyHistory(features: Feature[] = []): History {
-  return { features, past: [], future: [] };
+export function emptyHistory(features: Feature[] = [], properties: PartProperties = NO_PROPERTIES): History {
+  return { features, properties, past: [], future: [] };
 }
 
-export function commit(history: History, features: Feature[]): History {
-  return { features, past: [...history.past, history.features].slice(-HISTORY_LIMIT), future: [] };
+function snapshot(history: History): Snapshot {
+  return { features: history.features, properties: history.properties ?? NO_PROPERTIES };
+}
+
+export function commit(history: History, features: Feature[], properties: PartProperties = history.properties ?? NO_PROPERTIES): History {
+  return { features, properties, past: [...history.past, snapshot(history)].slice(-HISTORY_LIMIT), future: [] };
 }
 
 export function undo(history: History): History {
   const previous = history.past.at(-1);
   if (!previous) return history;
-  return { features: previous, past: history.past.slice(0, -1), future: [history.features, ...history.future] };
+  return { ...previous, properties: previous.properties ?? NO_PROPERTIES, past: history.past.slice(0, -1), future: [snapshot(history), ...history.future] };
 }
 
 export function redo(history: History): History {
   const next = history.future[0];
   if (!next) return history;
-  return { features: next, past: [...history.past, history.features], future: history.future.slice(1) };
+  return { ...next, properties: next.properties ?? NO_PROPERTIES, past: [...history.past, snapshot(history)], future: history.future.slice(1) };
 }
 
 /**

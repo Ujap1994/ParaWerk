@@ -6,12 +6,30 @@ import * as commands from '../commands.ts';
 import { picksReferences } from '../references.ts';
 import { featureName, rollbackIndex } from '../state/document.ts';
 import { dropRow, ROLLBACK_ROW, type TreeRow } from '../state/tree-order.ts';
-import { getState, useAppState } from '../state/store.ts';
-import { AlertIcon, EditIcon, EyeIcon, EyeOffIcon, FEATURE_ICONS, OriginIcon, PlaneIcon, RollForwardIcon, SketchIcon, TrashIcon } from './icons.tsx';
+import { getState, partProperties, useAppState } from '../state/store.ts';
+import { materialName } from './MaterialDialog.tsx';
+import { AlertIcon, EditIcon, EyeIcon, EyeOffIcon, FEATURE_ICONS, MaterialIcon, OriginIcon, PlaneIcon, RollForwardIcon, SketchIcon, TrashIcon } from './icons.tsx';
 
 export function useFeatureName() {
   const { t } = useTranslation();
   return (features: readonly Feature[], index: number): string => featureName(features, index, t);
+}
+
+/** The part's material: double-click (or the pencil) chooses it and the part's color. */
+function MaterialItem({ locked }: { locked: boolean }) {
+  const { t } = useTranslation();
+  const material = useAppState((state) => partProperties(state.history).material);
+  return (
+    <li className="tree-item is-static" role="treeitem" aria-selected={false} data-testid="tree-material" onDoubleClick={() => commands.openDialog('material')}>
+      <MaterialIcon className="tree-icon" />
+      <span className="tree-name">{t('material.treeLabel', { name: materialName(material, t) })}</span>
+      <span className="tree-actions" hidden={locked}>
+        <button type="button" className="icon-button" title={t('commands.tooltips.material')} aria-label={t('commands.tooltips.material')} onClick={() => commands.openDialog('material')}>
+          <EditIcon />
+        </button>
+      </span>
+    </li>
+  );
 }
 
 /** Front, Top and Right plane: select them, or sketch on them. */
@@ -321,6 +339,7 @@ export function FeatureTree() {
     <section className={`panel feature-tree${locked ? ' is-locked' : ''}${drag?.gap !== null && drag ? ' is-dragging' : ''}`} aria-label={t('tree.title')}>
       <h2 className="panel-title">{t('tree.title')}</h2>
       <ul className="tree-list" role="tree" ref={listRef}>
+        <MaterialItem locked={locked} />
         <li
           className={`tree-item is-static${editingReference ? ' is-choice' : ''}`}
           role="treeitem"

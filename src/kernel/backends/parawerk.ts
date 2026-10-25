@@ -304,9 +304,11 @@ export class ParaWerkBackend implements GeometryBackend {
   }
 
   massProperties(handle: ShapeHandle): MassProperties {
-    const props = check(this.kernel.massProperties(this.id(handle)) as { ok: true; volume: number; area: number; center: Vec3 } | Failure);
+    const props = check(
+      this.kernel.massProperties(this.id(handle)) as { ok: true; volume: number; area: number; center: Vec3; inertia: MassProperties['inertia'] } | Failure,
+    );
     const bbox = this.boundingBox(handle);
-    return { volume: props.volume, area: props.area, center: props.center, bboxMin: bbox.min, bboxMax: bbox.max };
+    return { volume: props.volume, area: props.area, center: props.center, bboxMin: bbox.min, bboxMax: bbox.max, ...(props.inertia ? { inertia: props.inertia } : {}) };
   }
 
   mesh(handle: ShapeHandle, quality: MeshQuality, key: string): MeshPayload {

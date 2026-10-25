@@ -2,11 +2,12 @@ import { useTranslation } from 'react-i18next';
 import type { Language } from '../../../shared/i18n.ts';
 import type { MeshPayload } from '../../../kernel/protocol.ts';
 import { ORIGIN_ID, STANDARD_PLANES, type SketchData } from '../../../shared/model/sketch.ts';
-import { formatNumber, formatQuantity } from '../format.ts';
+import { formatMass, formatNumber, formatQuantity } from '../format.ts';
+import { massOf } from '../../../shared/model/material.ts';
 import { arcGeometry, ellipseOf, pointPositions, trimmedSplineOf } from '../sketch/geometry.ts';
 import { splineLength } from '../../../shared/model/spline.ts';
 import { relationKindOf } from '../sketch/relations.ts';
-import { useAppState, type Pick } from '../state/store.ts';
+import { partProperties, useAppState, type Pick } from '../state/store.ts';
 import { useFeatureName } from './FeatureTree.tsx';
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
@@ -69,6 +70,7 @@ function describePick(pick: Pick, mesh: MeshPayload | null, t: Translate, langua
 export function StatusBar() {
   const { t } = useTranslation();
   const features = useAppState((state) => state.history.features);
+  const history = useAppState((state) => state.history);
   const nameOf = useFeatureName();
   const referenceName = (index: number) => nameOf(features, index);
   const kernelStatus = useAppState((state) => state.kernelStatus);
@@ -96,6 +98,7 @@ export function StatusBar() {
             : t('status.kernelReady');
 
   const properties = rebuild?.properties;
+  const material = partProperties(history).material;
 
   return (
     <footer className="status-bar">
@@ -129,6 +132,11 @@ export function StatusBar() {
       <div className="status-spacer" />
       {properties ? (
         <>
+          {material ? (
+            <div className="status-item" data-testid="status-mass">
+              {t('status.mass')}: {formatMass(massOf(properties.volume, material.density), language)}
+            </div>
+          ) : null}
           <div className="status-item" data-testid="volume">
             {t('status.volume')}: {formatQuantity(properties.volume, language, 'mm³', 1)}
           </div>

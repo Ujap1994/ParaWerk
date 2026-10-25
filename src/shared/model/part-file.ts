@@ -1,6 +1,7 @@
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
 import { isCopyFeature, isEdgeFeature, isReferenceFeature, type Feature } from './feature.ts';
-import { parseFeatures, ValidationError } from './validate.ts';
+import { NO_PROPERTIES, type PartProperties } from './material.ts';
+import { parseFeatures, parsePartProperties, ValidationError } from './validate.ts';
 
 /**
  * Native part file (.pwpart): a ZIP container (docs/adr/0003-native-file-format.md).
@@ -16,13 +17,14 @@ export const PART_FORMAT = 'parawerk-part';
  * 2: sketch features. 3: variables, parameter and dimension expressions, splines. 4: extrusions and
  * revolutions. 5: edges and sketch faces referenced by persistent names (docs/adr/0002-persistent-naming.md).
  * 6: reference planes, axes and points, sketches on reference planes, revolutions around reference axes, holes,
- * patterns and mirror images, shells, extrusions up to a surface or vertex.
+ * patterns and mirror images, shells, extrusions up to a surface or vertex. 7: the part's material and color.
  * Older versions are read unchanged.
  */
-export const PART_FORMAT_VERSION = 6;
+export const PART_FORMAT_VERSION = 7;
 
 /** The oldest format version that can hold the document, so older ParaWerk versions can still open it. */
-export function formatVersionOf(features: readonly Feature[]): number {
+export function formatVersionOf(features: readonly Feature[], properties: PartProperties = NO_PROPERTIES): number {
+  if (properties.material !== undefined || properties.color !== undefined) return 7;
   const reference = (feature: Feature) =>
     isReferenceFeature(feature) ||
     isCopyFeature(feature) ||
@@ -55,6 +57,8 @@ const MAX_ENTRY_BYTES = 64 * 1024 * 1024;
 export interface PartDocument {
   units: 'mm';
   features: Feature[];
+  /** Material and color of the part (format version 7). */
+  properties?: PartProperties;
 }
 
 export interface PartFileMeta {
@@ -78,9 +82,10 @@ export function encodePartFile(document: PartDocument, meta: PartFileMeta): Uint
   const documentJson = {
     format: PART_FORMAT,
     // Files without new content stay readable by older ParaWerk versions.
-    version: formatVersionOf(document.features),
+    version: formatVersionOf(document.features, document.properties),
     units: document.units,
     features: document.features,
+    ...(document.properties && (document.properties.material || document.properties.color) ? { properties: document.properties } : {}),
   };
   return zipSync(
     {
@@ -125,8 +130,10 @@ export function decodePartFile(bytes: Uint8Array): { document: PartDocument; met
   if (json.units !== 'mm') throw new PartFileError('invalid-content', 'unsupported units');
 
   let features: Feature[];
+  let properties: PartProperties;
   try {
     features = parseFeatures(json.features);
+    properties = parsePartProperties(json.properties);
   } catch (error) {
     if (error instanceof ValidationError) throw new PartFileError('invalid-content', error.message);
     throw error;
@@ -143,5 +150,5 @@ export function decodePartFile(bytes: Uint8Array): { document: PartDocument; met
     }
   }
 
-  return { document: { units: 'mm', features }, meta };
+  return { document: { units: 'mm', features, properties }, meta };
 }

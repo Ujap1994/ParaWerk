@@ -42,6 +42,8 @@ import {
   RedoIcon,
   SaveIcon,
   LineIcon,
+  MassPropertiesIcon,
+  MaterialIcon,
   PointIcon,
   CircularPatternIcon,
   MirrorIcon,
@@ -134,7 +136,7 @@ const FEATURE_BUTTONS: { type: FeatureType; icon: IconType }[] = [
   { type: 'variables', icon: VariablesIcon },
 ];
 
-const TABS: CommandTab[] = ['features', 'sketch'];
+const TABS: CommandTab[] = ['features', 'sketch', 'evaluate'];
 
 interface SplitEntry {
   id: string;
@@ -433,6 +435,30 @@ function SketchTab() {
   );
 }
 
+/** The part as a whole: its material and color, and what it weighs. */
+function EvaluateTab() {
+  const { t } = useTranslation();
+  const showMass = useAppState((state) => state.showMassProperties);
+  const materialOpen = useAppState((state) => state.dialogs.material);
+  return (
+    <>
+      <Group label={t('commands.groups.part')}>
+        <CommandButton id="material" icon={MaterialIcon} label={t('commands.material')} tooltip={t('commands.tooltips.material')} active={materialOpen} onClick={() => commands.openDialog('material')} />
+      </Group>
+      <Group label={t('commands.groups.evaluate')}>
+        <CommandButton
+          id="mass-properties"
+          icon={MassPropertiesIcon}
+          label={t('commands.massProperties')}
+          tooltip={t('commands.tooltips.massProperties')}
+          active={showMass}
+          onClick={() => commands.toggleMassProperties()}
+        />
+      </Group>
+    </>
+  );
+}
+
 const DENSITIES = ['normal', 'tight', 'icons', 'dense'] as const;
 
 /**
@@ -506,7 +532,7 @@ export function CommandBar() {
         ))}
       </div>
       <div className="command-tab-panel" id="command-tab-panel" role="tabpanel" aria-labelledby={`command-tab-${tab}`}>
-        {tab === 'features' ? <FeaturesTab /> : <SketchTab />}
+        {tab === 'features' ? <FeaturesTab /> : tab === 'sketch' ? <SketchTab /> : <EvaluateTab />}
       </div>
       <div className="command-bar-spacer" />
       <Group label={t('commands.groups.export')}>
