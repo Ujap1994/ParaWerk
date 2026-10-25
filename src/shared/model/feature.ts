@@ -9,7 +9,7 @@ import type { SketchData, SketchPlaneRef } from './sketch.ts';
 
 export type Vec3 = [number, number, number];
 
-export type FeatureType = 'variables' | 'sketch' | 'box' | 'cylinder' | 'fillet' | 'chamfer';
+export type FeatureType = 'variables' | 'sketch' | 'extrude' | 'box' | 'cylinder' | 'fillet' | 'chamfer';
 
 /** How a solid-creating feature combines with the existing body. */
 export type BooleanOperation = 'add' | 'cut';
@@ -46,6 +46,7 @@ interface FeatureBase {
 export const EXPRESSION_FIELDS: Readonly<Record<FeatureType, readonly string[]>> = {
   variables: [],
   sketch: [],
+  extrude: ['depth'],
   box: ['width', 'depth', 'height'],
   cylinder: ['radius', 'height'],
   fillet: ['radius'],
@@ -103,7 +104,34 @@ export interface SketchFeature extends FeatureBase {
   sketch: SketchData;
 }
 
-export type Feature = VariablesFeature | SketchFeature | BoxFeature | CylinderFeature | FilletFeature | ChamferFeature;
+/** Which way an extrusion goes from its sketch plane: along the plane normal, against it, or half each way. */
+export type ExtrudeDirection = 'normal' | 'reverse' | 'both';
+
+export const EXTRUDE_DIRECTIONS: readonly ExtrudeDirection[] = ['normal', 'reverse', 'both'];
+
+/** Extrudes the closed outlines of a sketch (adding material) or cuts them out of the body. */
+export interface ExtrudeFeature extends FeatureBase {
+  type: 'extrude';
+  operation: BooleanOperation;
+  /** Id of the sketch feature (before this one) whose outlines are extruded. */
+  sketch: string;
+  depth: number;
+  direction: ExtrudeDirection;
+}
+
+/** Where an extrusion starts and ends along the sketch plane normal. */
+export function extrudeRange(feature: Pick<ExtrudeFeature, 'depth' | 'direction'>): [number, number] {
+  switch (feature.direction) {
+    case 'normal':
+      return [0, feature.depth];
+    case 'reverse':
+      return [-feature.depth, 0];
+    case 'both':
+      return [-feature.depth / 2, feature.depth / 2];
+  }
+}
+
+export type Feature = VariablesFeature | SketchFeature | ExtrudeFeature | BoxFeature | CylinderFeature | FilletFeature | ChamferFeature;
 
 /** Features that build or modify the solid body (everything except variables and sketches). */
 export type SolidModelingFeature = Exclude<Feature, SketchFeature | VariablesFeature>;
@@ -118,7 +146,7 @@ export function isSolidFeature(feature: Feature): feature is BoxFeature | Cylind
   return feature.type === 'box' || feature.type === 'cylinder';
 }
 
-export const FEATURE_TYPES: readonly FeatureType[] = ['variables', 'sketch', 'box', 'cylinder', 'fillet', 'chamfer'];
+export const FEATURE_TYPES: readonly FeatureType[] = ['variables', 'sketch', 'extrude', 'box', 'cylinder', 'fillet', 'chamfer'];
 
 let idCounter = 0;
 
@@ -135,6 +163,8 @@ export function defaultFeature(type: FeatureType, id: string = createFeatureId()
       return { id, type, variables: [] };
     case 'sketch':
       return { id, type, plane: { kind: 'standard', plane: 'top' }, sketch: { entities: [], constraints: [] } };
+    case 'extrude':
+      return { id, type, operation: 'add', sketch: '', depth: 20, direction: 'normal' };
     case 'box':
       return { id, type, operation: 'add', width: 100, depth: 60, height: 40, position: [0, 0, 0] };
     case 'cylinder':

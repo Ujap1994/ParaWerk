@@ -1,9 +1,10 @@
 import createParaWerkKernel from '../../../vendor/parawerk-kernel/parawerk-kernel.js';
-import type { SolidModelingFeature, Vec3 } from '../../shared/model/feature.ts';
-import type { GeometryBackend, ShapeHandle } from '../backend.ts';
+import { extrudeRange, type BooleanOperation, type Vec3 } from '../../shared/model/feature.ts';
+import type { GeometryBackend, KernelFeature, ShapeHandle } from '../backend.ts';
 import { FeatureError } from '../feature-error.ts';
 import { axisDirection } from '../feature-geometry.ts';
 import type { MeshQuality } from '../mesh-quality.ts';
+import { encodeProfile } from '../profile-data.ts';
 import type { CurveKind, EdgeInfo, FaceInfo, FeatureErrorCode, MassProperties, MeshPayload, SurfaceKind } from '../protocol.ts';
 
 type KernelModule = Awaited<ReturnType<typeof createParaWerkKernel>>;
@@ -33,7 +34,7 @@ interface RawMesh {
 const SURFACE_KINDS: SurfaceKind[] = ['plane', 'cylinder', 'cone', 'sphere', 'torus', 'bspline', 'revolution', 'extrusion', 'other'];
 const CURVE_KINDS: CurveKind[] = ['line', 'circle', 'ellipse', 'bspline', 'other'];
 
-const FEATURE_ERROR_CODES = new Set<FeatureErrorCode>(['no-body', 'no-edges', 'edge-missing', 'empty-result', 'first-must-add', 'operation-failed', 'unknown']);
+const FEATURE_ERROR_CODES = new Set<FeatureErrorCode>(['no-body', 'no-edges', 'edge-missing', 'empty-result', 'first-must-add', 'sketch-missing', 'profile-empty', 'profile-crossing', 'operation-failed', 'unknown']);
 
 class KernelCallError extends Error {
   constructor(message: string) {
@@ -85,7 +86,23 @@ export class ParaWerkBackend implements GeometryBackend {
     return value.id as unknown as ShapeHandle;
   }
 
-  applyFeature(body: ShapeHandle | null, feature: SolidModelingFeature): ShapeHandle {
+  /** Adds the tool to the body or cuts it out; the tool is released (or becomes the body). */
+  private combine(body: ShapeHandle | null, tool: ShapeHandle, operation: BooleanOperation): ShapeHandle {
+    if (body === null) {
+      if (operation === 'cut') {
+        this.release(tool);
+        throw new FeatureError('first-must-add');
+      }
+      return tool;
+    }
+    try {
+      return this.handle(this.kernel.booleanOperation(this.id(body), this.id(tool), operation === 'add' ? 0 : 1));
+    } finally {
+      this.release(tool);
+    }
+  }
+
+  applyFeature(body: ShapeHandle | null, feature: KernelFeature): ShapeHandle {
     const k = this.kernel;
     switch (feature.type) {
       case 'box':
@@ -98,18 +115,13 @@ export class ParaWerkBackend implements GeometryBackend {
           const [dx, dy, dz] = axisDirection(feature.axis);
           tool = this.handle(k.makeCylinder(x, y, z, dx, dy, dz, feature.radius, feature.height));
         }
-        if (body === null) {
-          if (feature.operation === 'cut') {
-            this.release(tool);
-            throw new FeatureError('first-must-add');
-          }
-          return tool;
-        }
-        try {
-          return this.handle(k.booleanOperation(this.id(body), this.id(tool), feature.operation === 'add' ? 0 : 1));
-        } finally {
-          this.release(tool);
-        }
+        return this.combine(body, tool, feature.operation);
+      }
+      case 'extrude': {
+        const [from, to] = extrudeRange(feature);
+        const { origin, xDir, normal } = feature.frame;
+        const tool = this.handle(k.extrudeProfile(encodeProfile(feature.profile), [...origin, ...xDir, ...normal], from, to));
+        return this.combine(body, tool, feature.operation);
       }
       case 'fillet':
       case 'chamfer': {

@@ -34,8 +34,8 @@ rebuilds your part; your document is not affected. Please report the steps that 
 
 ## Known limitations of the preview
 
-- Solids come only from box, cylinder, fillet and chamfer: sketches cannot be extruded or revolved yet
-  (Phase 2).
+- Sketches can be extruded but not revolved yet (Phase 2); extrusions go a fixed depth (no *up to
+  surface* or *through all* yet).
 - Converted model edges are fixed copies; they do not follow later changes of the model yet.
 - Ellipses can only be trimmed as a whole, and *Offset* leaves ellipses and splines out.
 - Edge references are stored by topological index; editing an early feature can make a later fillet

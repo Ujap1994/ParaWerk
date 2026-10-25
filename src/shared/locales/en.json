@@ -93,7 +93,8 @@
       "about": "Version and license",
       "importDxf": "Add the lines, circles and arcs of a DXF file to the sketch",
       "exportDxf": "Save the sketch as DXF, e.g. for laser cutting (without construction geometry)",
-      "variables": "Named values and equations: use them in dimensions and feature parameters"
+      "variables": "Named values and equations: use them in dimensions and feature parameters",
+      "extrude": "Extrude the closed outlines of a sketch, or cut them out of the body"
     },
     "tabs": {
       "label": "Command tabs",
@@ -155,7 +156,8 @@
     },
     "importDxf": "Import",
     "exportDxf": "Export",
-    "variables": "Variables"
+    "variables": "Variables",
+    "extrude": "Extrude"
   },
   "features": {
     "sketch": "Sketch",
@@ -164,7 +166,8 @@
     "fillet": "Fillet",
     "chamfer": "Chamfer",
     "origin": "Origin",
-    "variables": "Variables"
+    "variables": "Variables",
+    "extrude": "Extrude"
   },
   "tree": {
     "title": "Feature tree",
@@ -203,7 +206,15 @@
     "edgesCount_other": "{{count}} edges selected",
     "clearEdges": "Clear",
     "invalidNumber": "Enter a positive number.",
-    "firstMustAdd": "The first feature must add material."
+    "firstMustAdd": "The first feature must add material.",
+    "sketch": "Sketch",
+    "noSketch": "(missing sketch)",
+    "extrudeDepth": "Depth",
+    "direction": "Direction",
+    "directionNormal": "Normal",
+    "directionReverse": "Reversed",
+    "directionBoth": "Mid-plane",
+    "extrudeHint": "Every closed outline of the sketch is extruded; outlines inside others become holes. Normal goes along the normal of the sketch plane, Mid-plane goes half the depth each way."
   },
   "status": {
     "kernelLoading": "Starting geometry kernel…",
@@ -301,7 +312,8 @@
     "nothingToExport": "There is no body to export yet.",
     "kernelRestarted": "The geometry kernel was restarted after an error. Your document is unchanged.",
     "dxfImported": "Imported {{count}} entities.",
-    "dxfImportedSkipped": "Imported {{count}} entities; not supported and left out: {{skipped}}."
+    "dxfImportedSkipped": "Imported {{count}} entities; not supported and left out: {{skipped}}.",
+    "noSketchToExtrude": "Draw a sketch with a closed outline first."
   },
   "errors": {
     "no-body": "There is no body to modify yet.",
@@ -309,6 +321,9 @@
     "edge-missing": "A selected edge no longer exists. Edit the feature and select the edges again.",
     "empty-result": "The operation removed the whole body.",
     "first-must-add": "The first feature must add material.",
+    "sketch-missing": "The sketch of this feature is missing or suppressed. Edit the feature and choose a sketch.",
+    "profile-empty": "The sketch has no closed outline. Close its outlines, or choose another sketch.",
+    "profile-crossing": "Curves of the sketch cross each other near ({{detail}}) mm. Trim them so the outlines are clear.",
     "operation-failed": "The geometry kernel could not build this feature ({{detail}}).",
     "unknown": "Unexpected error: {{detail}}"
   },

@@ -1,8 +1,9 @@
 import { useTranslation } from 'react-i18next';
-import type { Axis, BooleanOperation, Feature, Vec3 } from '../../../shared/model/feature.ts';
+import type { Axis, BooleanOperation, ExtrudeDirection, Feature, Vec3 } from '../../../shared/model/feature.ts';
 import * as commands from '../commands.ts';
 import { hasBodyBefore } from '../state/document.ts';
 import { useAppState } from '../state/store.ts';
+import { useFeatureName } from './FeatureTree.tsx';
 import { CheckIcon, CloseIcon, FEATURE_ICONS } from './icons.tsx';
 import { NumberField } from './NumberField.tsx';
 import { VariablesEditor, variablesValid } from './VariablesPanel.tsx';
@@ -88,12 +89,52 @@ function OperationField({ value, firstFeature }: { value: BooleanOperation; firs
   );
 }
 
+/** The sketches before the feature, to choose the one an extrusion uses. */
+function SketchField({ value, index }: { value: string; index: number }) {
+  const { t } = useTranslation();
+  const features = useAppState((state) => state.history.features);
+  const nameOf = useFeatureName();
+  const sketches = features.slice(0, index).flatMap((feature, i) => (feature.type === 'sketch' ? [{ id: feature.id, name: nameOf(features, i) }] : []));
+  return (
+    <label className="field">
+      <span className="field-label">{t('panel.sketch')}</span>
+      <select className="field-select" value={value} data-testid="extrude-sketch" onChange={(event) => commands.updateDraft({ sketch: event.target.value })}>
+        {sketches.some((sketch) => sketch.id === value) ? null : <option value={value}>{t('panel.noSketch')}</option>}
+        {sketches.map((sketch) => (
+          <option key={sketch.id} value={sketch.id}>
+            {sketch.name}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
   const { t } = useTranslation();
   const features = useAppState((state) => state.history.features);
   const firstFeature = !hasBodyBefore(features, index);
 
   switch (draft.type) {
+    case 'extrude':
+      return (
+        <Section title={t('panel.parameters')}>
+          <SketchField value={draft.sketch} index={index} />
+          <OperationField value={draft.operation} firstFeature={firstFeature} />
+          <NumberField label={t('panel.extrudeDepth')} value={draft.depth} testId="extrude-depth" {...equation(draft, 'depth')} onChange={(depth) => commands.updateDraft({ depth })} />
+          <Segmented<ExtrudeDirection>
+            label={t('panel.direction')}
+            value={draft.direction}
+            options={[
+              { value: 'normal', label: t('panel.directionNormal') },
+              { value: 'reverse', label: t('panel.directionReverse') },
+              { value: 'both', label: t('panel.directionBoth') },
+            ]}
+            onChange={(direction) => commands.updateDraft({ direction })}
+          />
+          <p className="panel-hint">{t('panel.extrudeHint')}</p>
+        </Section>
+      );
     case 'box':
       return (
         <>

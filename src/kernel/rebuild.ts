@@ -1,7 +1,8 @@
-import type { Feature } from '../shared/model/feature.ts';
+import type { Feature, SketchFeature } from '../shared/model/feature.ts';
 import type { GeometryBackend, ShapeHandle } from './backend.ts';
 import { FeatureError } from './feature-error.ts';
 import type { FeatureResult } from './protocol.ts';
+import { resolveFeature } from './resolve.ts';
 
 interface CacheEntry {
   /** Identifies this feature together with everything before it. */
@@ -41,18 +42,25 @@ function stableStringify(value: unknown): string {
 }
 
 /** Everything that influences the geometry of a feature (the display name does not). */
-function featureSignature(feature: Feature): string {
+function featureSignature(feature: Feature, sketches: ReadonlyMap<string, SketchFeature>): string {
   // Sketches and variables never change the body, so editing them must not invalidate the features
   // after them (variables reach the body through the values of the features that use them).
   if (feature.type === 'sketch' || feature.type === 'variables') return `${feature.type}:${feature.id}`;
   const { name: _name, expressions: _expressions, ...geometry } = feature;
+  if (feature.type === 'extrude') {
+    // An extrusion follows its sketch: the sketch's plane and geometry belong to its signature.
+    const sketch = sketches.get(feature.sketch);
+    return stableStringify({ ...geometry, from: sketch && !sketch.suppressed ? { plane: sketch.plane, entities: sketch.sketch.entities } : null });
+  }
   return stableStringify(geometry);
 }
 
 export function featureKeys(features: readonly Feature[]): string[] {
   let previous = ROOT_KEY;
+  const sketches = new Map<string, SketchFeature>();
   return features.map((feature) => {
-    previous = hashString(`${previous}|${featureSignature(feature)}`);
+    previous = hashString(`${previous}|${featureSignature(feature, sketches)}`);
+    if (feature.type === 'sketch') sketches.set(feature.id, feature);
     return previous;
   });
 }
@@ -108,7 +116,7 @@ export class Rebuilder implements Disposable {
       }
 
       try {
-        const shape = this.backend.applyFeature(input, feature);
+        const shape = this.backend.applyFeature(input, resolveFeature(feature, features.slice(0, i)));
         this.entries.push({
           key,
           shapeKey: key,

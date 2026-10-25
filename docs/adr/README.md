@@ -13,3 +13,4 @@ and what would make us revisit it.
 | [0006](0006-ui-and-rendering.md) | UI stack and rendering | Accepted |
 | [0007](0007-security-model.md) | Electron security model | Accepted |
 | [0008](0008-dependency-licenses.md) | Dependency license policy | Accepted |
+| [0009](0009-sketch-based-features.md) | Sketch-based features: profiles and exact geometry | Accepted |

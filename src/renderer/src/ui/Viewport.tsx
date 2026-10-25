@@ -41,9 +41,11 @@ function pickFilter(state: AppState): PickFilter {
 function inactiveSketches(state: AppState): InactiveSketch[] {
   const features = state.history.features;
   const end = state.sketch?.index ?? state.activeEdit?.index ?? features.length;
+  // Sketches that an extrusion has turned into a solid are hidden (editing the extrusion shows its sketch).
+  const used = new Set(features.slice(0, end).flatMap((feature) => (feature.type === 'extrude' && !feature.suppressed ? [feature.sketch] : [])));
   const sketches: InactiveSketch[] = [];
   for (const feature of features.slice(0, end)) {
-    if (feature.type === 'sketch' && !feature.suppressed) sketches.push({ id: feature.id, frame: frameOf(feature.plane), data: feature.sketch });
+    if (feature.type === 'sketch' && !feature.suppressed && !used.has(feature.id)) sketches.push({ id: feature.id, frame: frameOf(feature.plane), data: feature.sketch });
   }
   return sketches;
 }

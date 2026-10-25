@@ -109,6 +109,14 @@ point on the curve. Median solve per drag step (`npm run bench:solver`):
 | 20 fit points | 10 | 3.3 ms |
 | 100 fit points | 20 | 18 ms |
 
+## Reference results – Phase 2 (Apple M3)
+
+| Case | Time |
+|---|---|
+| Plate with 100 holes as one sketch and one extrusion, full rebuild | 138 ms (101 box and cylinder features: 1,174 ms) |
+| Spline profile with 100 fit points, extrusion with exact volume | 6 ms |
+| Exact mass properties of the 100-hole plate (fast path for planes and circles) | 22 ms |
+
 ## CI runners – Phase 0 baselines
 
 | Case | Linux (AMD EPYC 7763) | Windows (Intel Xeon 8573C) | macOS (Apple M1, virtual) |

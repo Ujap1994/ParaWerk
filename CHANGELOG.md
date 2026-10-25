@@ -7,6 +7,19 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### Added
+- Extrude (Phase 2): the closed outlines of a sketch become a solid, or are cut out of the body with
+  *Remove material*; depth (also as an equation), direction along the sketch normal, reversed or
+  mid-plane. Outlines inside others become holes; curves that cross each other are reported with their
+  position. Lines, arcs, circles, ellipses and splines stay exact B-Rep geometry, and a sketch used by an
+  extrusion is hidden in the 3D view. Editing the sketch rebuilds the extrusion
+  ([ADR 0009](docs/adr/0009-sketch-based-features.md)). Part files with extrusions are saved as format
+  version 4.
+
+### Fixed
+- Volume and surface area of bodies with ellipses or splines are now exact; OCCT's default integration
+  was off by up to 1e-4 on such faces.
+
 ## [0.2.0-alpha.1] - 2026-10-25
 
 Completes the **2D sketcher** (Phase 1): splines with points on them and exact trimming, converting

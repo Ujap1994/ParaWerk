@@ -93,7 +93,8 @@
       "about": "Version und Lizenz",
       "importDxf": "Linien, Kreise und Bögen einer DXF-Datei zur Skizze hinzufügen",
       "exportDxf": "Skizze als DXF speichern, z. B. zum Laserschneiden (ohne Konstruktionsgeometrie)",
-      "variables": "Benannte Werte und Gleichungen: in Bemaßungen und Feature-Parametern verwenden"
+      "variables": "Benannte Werte und Gleichungen: in Bemaßungen und Feature-Parametern verwenden",
+      "extrude": "Die geschlossenen Konturen einer Skizze extrudieren oder aus dem Körper schneiden"
     },
     "tabs": {
       "label": "Befehlsregister",
@@ -155,7 +156,8 @@
     },
     "importDxf": "Import",
     "exportDxf": "Export",
-    "variables": "Variablen"
+    "variables": "Variablen",
+    "extrude": "Extrudieren"
   },
   "features": {
     "sketch": "Skizze",
@@ -164,7 +166,8 @@
     "fillet": "Verrundung",
     "chamfer": "Fase",
     "origin": "Ursprung",
-    "variables": "Variablen"
+    "variables": "Variablen",
+    "extrude": "Extrusion"
   },
   "tree": {
     "title": "Featurebaum",
@@ -203,7 +206,15 @@
     "edgesCount_other": "{{count}} Kanten ausgewählt",
     "clearEdges": "Leeren",
     "invalidNumber": "Bitte eine positive Zahl eingeben.",
-    "firstMustAdd": "Das erste Feature muss Material hinzufügen."
+    "firstMustAdd": "Das erste Feature muss Material hinzufügen.",
+    "sketch": "Skizze",
+    "noSketch": "(fehlende Skizze)",
+    "extrudeDepth": "Tiefe",
+    "direction": "Richtung",
+    "directionNormal": "Normal",
+    "directionReverse": "Umgekehrt",
+    "directionBoth": "Mittelebene",
+    "extrudeHint": "Jede geschlossene Kontur der Skizze wird extrudiert; Konturen in anderen werden zu Löchern. Normal geht entlang der Normalen der Skizzenebene, Mittelebene je zur Hälfte in beide Richtungen."
   },
   "status": {
     "kernelLoading": "Geometriekern wird gestartet…",
@@ -301,7 +312,8 @@
     "nothingToExport": "Es gibt noch keinen Körper zum Exportieren.",
     "kernelRestarted": "Der Geometriekern wurde nach einem Fehler neu gestartet. Dein Dokument ist unverändert.",
     "dxfImported": "{{count}} Elemente importiert.",
-    "dxfImportedSkipped": "{{count}} Elemente importiert; nicht unterstützt und ausgelassen: {{skipped}}."
+    "dxfImportedSkipped": "{{count}} Elemente importiert; nicht unterstützt und ausgelassen: {{skipped}}.",
+    "noSketchToExtrude": "Zeichne zuerst eine Skizze mit einer geschlossenen Kontur."
   },
   "errors": {
     "no-body": "Es gibt noch keinen Körper, der verändert werden kann.",
@@ -309,6 +321,9 @@
     "edge-missing": "Eine ausgewählte Kante existiert nicht mehr. Bearbeite das Feature und wähle die Kanten neu aus.",
     "empty-result": "Die Operation hat den gesamten Körper entfernt.",
     "first-must-add": "Das erste Feature muss Material hinzufügen.",
+    "sketch-missing": "Die Skizze dieses Features fehlt oder ist unterdrückt. Bearbeite das Feature und wähle eine Skizze.",
+    "profile-empty": "Die Skizze hat keine geschlossene Kontur. Schließe ihre Konturen oder wähle eine andere Skizze.",
+    "profile-crossing": "Kurven der Skizze kreuzen sich bei ({{detail}}) mm. Trimme sie, damit die Konturen eindeutig sind.",
     "operation-failed": "Der Geometriekern konnte dieses Feature nicht erzeugen ({{detail}}).",
     "unknown": "Unerwarteter Fehler: {{detail}}"
   },

@@ -85,6 +85,43 @@ if (shape) {
   cases['plate.100holes.mesh'].info = { triangles };
   cases['plate.100holes.massProperties'] = measure(() => kernel.backend.massProperties(shape), { iterations: 10 });
 }
+// The same plate as one sketch (outline and 100 circles) extruded in one feature; then a spline profile.
+if (backendName === 'parawerk') {
+  const sketchPlate = (holes: number, width: number): Feature[] => {
+    const side = Math.ceil(Math.sqrt(holes));
+    const pitch = 360 / side;
+    const [w, d] = [width / 2, 200];
+    const entities: Extract<Feature, { type: 'sketch' }>['sketch']['entities'] = [
+      { id: 'a', type: 'point', x: -w, y: -d }, { id: 'b', type: 'point', x: w, y: -d }, { id: 'c', type: 'point', x: w, y: d }, { id: 'd', type: 'point', x: -w, y: d },
+      { id: 'ab', type: 'line', p1: 'a', p2: 'b' }, { id: 'bc', type: 'line', p1: 'b', p2: 'c' }, { id: 'cd', type: 'line', p1: 'c', p2: 'd' }, { id: 'da', type: 'line', p1: 'd', p2: 'a' },
+    ];
+    for (let i = 0; i < holes; i++) {
+      entities.push({ id: `m${i}`, type: 'point', x: -180 + pitch / 2 + (i % side) * pitch, y: -180 + pitch / 2 + Math.floor(i / side) * pitch });
+      entities.push({ id: `h${i}`, type: 'circle', center: `m${i}`, radius: 4 });
+    }
+    return [
+      { id: 'sketch', type: 'sketch', plane: { kind: 'standard', plane: 'top' }, sketch: { entities, constraints: [] } },
+      { id: 'extrude', type: 'extrude', operation: 'add', sketch: 'sketch', depth: 12, direction: 'normal' },
+    ];
+  };
+  cases['extrude.plate100holes.rebuild'] = measure((i) => kernel.rebuild(request(sketchPlate(100, 400 + (i + 1) * 0.01))), { iterations: 5, warmup: 1 });
+  const wave = (points: number): Feature[] => {
+    const entities: Extract<Feature, { type: 'sketch' }>['sketch']['entities'] = [];
+    for (let i = 0; i < points; i++) entities.push({ id: `f${i}`, type: 'point', x: i * 10, y: 20 + 8 * Math.sin(i * 0.7) });
+    const last = (points - 1) * 10;
+    entities.push(
+      { id: 's', type: 'spline', points: entities.map((entity) => entity.id) },
+      { id: 'lo', type: 'point', x: 0, y: 0 }, { id: 'lr', type: 'point', x: last, y: 0 },
+      { id: 'right', type: 'line', p1: `f${points - 1}`, p2: 'lr' }, { id: 'base', type: 'line', p1: 'lr', p2: 'lo' }, { id: 'left', type: 'line', p1: 'lo', p2: 'f0' },
+    );
+    return [
+      { id: 'sketch', type: 'sketch', plane: { kind: 'standard', plane: 'top' }, sketch: { entities, constraints: [] } },
+      { id: 'extrude', type: 'extrude', operation: 'add', sketch: 'sketch', depth: 10, direction: 'normal' },
+    ];
+  };
+  cases['extrude.spline100.rebuildWithProperties'] = measure((i) => kernel.rebuild(request(wave(100 + (i % 2)), true)), { iterations: 5, warmup: 1 });
+}
+
 cases['plate.100holes.exportStep'] = measure(() => kernel.exportModel({ features: big, format: 'step' }), { iterations: 5, warmup: 1 });
 cases['plate.100holes.exportStl'] = measure(() => kernel.exportModel({ features: big, format: 'stl' }), { iterations: 5, warmup: 1 });
 cases['memory.wasmHeapMb'] = { ...summarize([0]), info: { mb: Math.round(kernel.memoryStats().wasmHeapBytes / 1048576) } };

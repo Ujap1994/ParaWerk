@@ -13,6 +13,7 @@ interface EmbindModule {
   makeBox(_0: number, _1: number, _2: number, _3: number, _4: number, _5: number): any;
   makeCylinder(_0: number, _1: number, _2: number, _3: number, _4: number, _5: number, _6: number, _7: number): any;
   booleanOperation(_0: number, _1: number, _2: number): any;
+  extrudeProfile(_0: any, _1: any, _2: number, _3: number): any;
   fillet(_0: number, _1: any, _2: number): any;
   chamfer(_0: number, _1: any, _2: number): any;
   counts(_0: number): any;

@@ -907,6 +907,26 @@ input {
   outline: none;
 }
 
+/* A choice among named items (e.g. the sketch of an extrusion), styled like the number fields. */
+.field-select {
+  width: 100%;
+  padding: 5px 28px 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E")
+    no-repeat right 6px center / 16px;
+  color: var(--text);
+  font: inherit;
+  appearance: none;
+  outline: none;
+}
+
+.field-select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
 .field-unit {
   padding: 0 8px 0 2px;
   color: var(--text-faint);

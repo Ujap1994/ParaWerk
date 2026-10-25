@@ -1,6 +1,17 @@
-import type { SolidModelingFeature, Vec3 } from '../shared/model/feature.ts';
+import type { ExtrudeFeature, SolidModelingFeature, Vec3 } from '../shared/model/feature.ts';
+import type { Profile } from '../shared/model/profile.ts';
+import type { SketchFrame } from '../shared/model/sketch.ts';
 import type { MassProperties, MeshPayload } from './protocol.ts';
 import type { MeshQuality } from './mesh-quality.ts';
+
+/** An extrude with the closed outlines and the plane of its sketch (see resolveFeature). */
+export interface ResolvedExtrude extends ExtrudeFeature {
+  profile: Profile;
+  frame: SketchFrame;
+}
+
+/** A feature as a backend builds it, with its references to earlier features resolved. */
+export type KernelFeature = Exclude<SolidModelingFeature, ExtrudeFeature> | ResolvedExtrude;
 
 /** Opaque reference to a shape owned by a backend. */
 export type ShapeHandle = { readonly __shape: unique symbol };
@@ -13,7 +24,7 @@ export type ShapeHandle = { readonly __shape: unique symbol };
 export interface GeometryBackend {
   readonly name: 'parawerk' | 'replicad';
   /** Builds the body after `feature`; throws FeatureError. The caller owns the result. */
-  applyFeature(body: ShapeHandle | null, feature: SolidModelingFeature): ShapeHandle;
+  applyFeature(body: ShapeHandle | null, feature: KernelFeature): ShapeHandle;
   release(shape: ShapeHandle): void;
   counts(shape: ShapeHandle): { faces: number; edges: number; solids: number };
   boundingBox(shape: ShapeHandle): { min: Vec3; max: Vec3 };

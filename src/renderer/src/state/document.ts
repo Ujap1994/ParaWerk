@@ -78,5 +78,5 @@ export function featureOrdinal(features: readonly Feature[], index: number): num
 }
 
 export function hasBodyBefore(features: readonly Feature[], index: number): boolean {
-  return features.slice(0, index).some((feature) => !feature.suppressed && (feature.type === 'box' || feature.type === 'cylinder'));
+  return features.slice(0, index).some((feature) => !feature.suppressed && (feature.type === 'box' || feature.type === 'cylinder' || feature.type === 'extrude'));
 }

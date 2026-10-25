@@ -184,7 +184,14 @@ export function startFeature(type: FeatureType): void {
   const features = getState().history.features;
   const index = features.length;
   let draft: Feature = defaultFeature(type);
-  if (isEdgeFeature(draft)) {
+  if (draft.type === 'extrude') {
+    const sketch = sketchToExtrude(features);
+    if (!sketch) {
+      showToast('info', t('toasts.noSketchToExtrude'));
+      return;
+    }
+    draft = { ...draft, sketch, operation: hasBodyBefore(features, index) ? draft.operation : 'add' };
+  } else if (isEdgeFeature(draft)) {
     // Edges selected before starting the command are taken over (select first, then act).
     const edges: EdgeRef[] = getState()
       .selection.filter((pick) => pick.kind === 'edge')
@@ -194,6 +201,13 @@ export function startFeature(type: FeatureType): void {
     draft = { ...draft, operation: 'add' };
   }
   setState({ activeEdit: { mode: 'create', index, draft }, selection: [] });
+}
+
+/** The sketch a new extrusion uses: the last one no extrusion uses yet, else the last one. */
+function sketchToExtrude(features: readonly Feature[]): string | null {
+  const used = new Set(features.flatMap((feature) => (feature.type === 'extrude' ? [feature.sketch] : [])));
+  const sketches = features.filter((feature): feature is SketchFeature => feature.type === 'sketch' && !feature.suppressed);
+  return (sketches.findLast((sketch) => !used.has(sketch.id)) ?? sketches.at(-1))?.id ?? null;
 }
 
 export function editFeature(id: string): void {

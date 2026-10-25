@@ -464,9 +464,19 @@ export const PlaneIcon = (p: P) => (
   </Icon>
 );
 
+/** Extrude: a flat profile, the top it grows to (dashed) and an arrow pointing up. */
+export const ExtrudeIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="M2.5 19.5 7 16h14.5L17 19.5z" />
+    <path d="M2.5 12.5 7 9h14.5L17 12.5zM2.5 19.5v-7M17 19.5v-7M21.5 16V9" strokeDasharray="2 2.4" opacity="0.55" />
+    <path d="M12 14.5V3.5M9 6.5l3-3 3 3" />
+  </Icon>
+);
+
 export const FEATURE_ICONS = {
   variables: VariablesIcon,
   sketch: SketchIcon,
+  extrude: ExtrudeIcon,
   box: BoxIcon,
   cylinder: CylinderIcon,
   fillet: FilletIcon,

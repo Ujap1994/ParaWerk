@@ -13,13 +13,14 @@ import { parseFeatures, ValidationError } from './validate.ts';
 
 export const PART_FORMAT = 'parawerk-part';
 /**
- * 2: sketch features. 3: variables, parameter and dimension expressions, splines.
+ * 2: sketch features. 3: variables, parameter and dimension expressions, splines. 4: extrusions.
  * Older versions are read unchanged.
  */
-export const PART_FORMAT_VERSION = 3;
+export const PART_FORMAT_VERSION = 4;
 
 /** The oldest format version that can hold the document, so older ParaWerk versions can still open it. */
 export function formatVersionOf(features: readonly Feature[]): number {
+  if (features.some((feature) => feature.type === 'extrude')) return 4;
   const needsThree = features.some(
     (feature) =>
       feature.type === 'variables' ||

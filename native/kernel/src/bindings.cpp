@@ -85,6 +85,14 @@ val booleanOperation(int bodyId, int toolId, int op) {
   return guarded([&] { return idResult(parawerk::booleanOperation(bodyId, toolId, op)); });
 }
 
+val extrudeProfile(val profile, val frame, double from, double to) {
+  return guarded([&] {
+    const std::vector<double> data = emscripten::convertJSArrayToNumberVector<double>(profile);
+    const std::vector<double> plane = emscripten::convertJSArrayToNumberVector<double>(frame);
+    return idResult(parawerk::extrudeProfile(data, plane, from, to));
+  });
+}
+
 val fillet(int bodyId, val edgeIndices, double radius) {
   return guarded([&] { return idResult(parawerk::fillet(bodyId, toIntVector(edgeIndices), radius)); });
 }
@@ -149,7 +157,7 @@ val importStep(val bytes) {
   });
 }
 
-std::string version() { return "parawerk-kernel 0.2 / OCCT " PARAWERK_OCCT_VERSION; }
+std::string version() { return "parawerk-kernel 0.3 / OCCT " PARAWERK_OCCT_VERSION; }
 
 }  // namespace
 
@@ -158,6 +166,7 @@ EMSCRIPTEN_BINDINGS(parawerk_kernel) {
   emscripten::function("makeBox", &makeBox);
   emscripten::function("makeCylinder", &makeCylinder);
   emscripten::function("booleanOperation", &booleanOperation);
+  emscripten::function("extrudeProfile", &extrudeProfile);
   emscripten::function("fillet", &fillet);
   emscripten::function("chamfer", &chamfer);
   emscripten::function("release", &parawerk::release);

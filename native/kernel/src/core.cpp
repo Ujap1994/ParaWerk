@@ -8,17 +8,29 @@
 #include <BRepAlgoAPI_Fuse.hxx>
 #include <BRepBndLib.hxx>
 #include <BRepBuilderAPI_Copy.hxx>
+#include <BRepBuilderAPI_MakeEdge.hxx>
+#include <BRepBuilderAPI_MakeFace.hxx>
+#include <BRepBuilderAPI_MakeWire.hxx>
+#include <BRepBuilderAPI_Transform.hxx>
 #include <BRepCheck_Analyzer.hxx>
 #include <BRepFilletAPI_MakeChamfer.hxx>
 #include <BRepFilletAPI_MakeFillet.hxx>
 #include <BRepGProp.hxx>
+#include <BRepLib.hxx>
 #include <BRepLib_ToolTriangulatedShape.hxx>
 #include <BRepMesh_IncrementalMesh.hxx>
 #include <BRepPrimAPI_MakeBox.hxx>
 #include <BRepPrimAPI_MakeCylinder.hxx>
+#include <BRepPrimAPI_MakePrism.hxx>
 #include <BRep_Tool.hxx>
 #include <Bnd_Box.hxx>
 #include <GCPnts_TangentialDeflection.hxx>
+#include <GCE2d_MakeSegment.hxx>
+#include <Geom2d_BSplineCurve.hxx>
+#include <Geom2d_Circle.hxx>
+#include <Geom2d_Ellipse.hxx>
+#include <Geom_Plane.hxx>
+#include <Precision.hxx>
 #include <GProp_GProps.hxx>
 #include <IFSelect_ReturnStatus.hxx>
 #include <IMeshTools_Parameters.hxx>
@@ -29,7 +41,11 @@
 #include <Poly_Triangulation.hxx>
 #include <STEPControl_Reader.hxx>
 #include <STEPControl_Writer.hxx>
+#include <ShapeCustom.hxx>
 #include <Standard_Failure.hxx>
+#include <TColStd_Array1OfInteger.hxx>
+#include <TColStd_Array1OfReal.hxx>
+#include <TColgp_Array1OfPnt2d.hxx>
 #include <TopExp.hxx>
 #include <TopTools_ShapeMapHasher.hxx>
 #include <TopoDS.hxx>
@@ -39,6 +55,7 @@
 #include <gp_Ax2.hxx>
 #include <gp_Circ.hxx>
 #include <gp_Cylinder.hxx>
+#include <gp_Ax3.hxx>
 #include <gp_Dir.hxx>
 #include <gp_Pln.hxx>
 #include <gp_Pnt.hxx>
@@ -322,6 +339,152 @@ void configure(BRepAlgoAPI_BooleanOperation& algorithm, const TopoDS_Shape& body
 
 }  // namespace
 
+namespace {
+
+/** Reads the numbers of an encoded profile in order. */
+class ProfileReader {
+ public:
+  explicit ProfileReader(const std::vector<double>& data) : data_(data) {}
+
+  double number() {
+    if (next_ >= data_.size()) throw KernelError("operation-failed", "profile data ends too early");
+    return data_[next_++];
+  }
+
+  int count(int limit) {
+    const double value = number();
+    if (!(value >= 0 && value <= limit) || value != static_cast<int>(value)) throw KernelError("operation-failed", "invalid count in profile data");
+    return static_cast<int>(value);
+  }
+
+ private:
+  const std::vector<double>& data_;
+  size_t next_ = 0;
+};
+
+TopoDS_Edge oriented(const TopoDS_Edge& edge, bool forward) {
+  return forward ? edge : TopoDS::Edge(edge.Reversed());
+}
+
+/**
+ * One exact edge of a profile loop (see extrudeProfile in core.hpp for the encoding), built from its
+ * 2D curve on the sketch plane: the sketch coordinates are the plane's own parameters. Areas and
+ * volumes are integrated along these curves, so they must not be approximations.
+ */
+TopoDS_Edge readEdge(ProfileReader& in, const occ::handle<Geom_Plane>& plane) {
+  const int kind = in.count(4);
+  switch (kind) {
+    case 0: {
+      const gp_Pnt2d from(in.number(), in.number());
+      const gp_Pnt2d to(in.number(), in.number());
+      if (from.Distance(to) <= Precision::Confusion()) throw KernelError("operation-failed", "a line of the profile has no length");
+      return BRepBuilderAPI_MakeEdge(GCE2d_MakeSegment(from, to).Value(), plane).Edge();
+    }
+    case 1:
+    case 2: {
+      const gp_Pnt2d center(in.number(), in.number());
+      const double radius = in.number();
+      const double start = kind == 1 ? in.number() : 0;
+      const double end = kind == 1 ? in.number() : 0;
+      const bool ccw = in.number() != 0;
+      occ::handle<Geom2d_Circle> circle = new Geom2d_Circle(gp_Ax2d(center, gp_Dir2d(1, 0)), radius);
+      if (kind == 2) return oriented(BRepBuilderAPI_MakeEdge(circle, plane).Edge(), ccw);
+      // The circle runs counterclockwise; a clockwise arc is the reversed counterclockwise one.
+      return ccw ? BRepBuilderAPI_MakeEdge(circle, plane, start, end).Edge() : oriented(BRepBuilderAPI_MakeEdge(circle, plane, end, start).Edge(), false);
+    }
+    case 3: {
+      const gp_Pnt2d center(in.number(), in.number());
+      const double ux = in.number(), uy = in.number(), a = in.number(), b = in.number();
+      const bool ccw = in.number() != 0;
+      // An ellipse needs the major radius first; the other axis is turned a quarter counterclockwise.
+      const bool aMajor = a >= b;
+      const gp_Dir2d major = aMajor ? gp_Dir2d(ux, uy) : gp_Dir2d(-uy, ux);
+      occ::handle<Geom2d_Ellipse> ellipse = new Geom2d_Ellipse(gp_Ax2d(center, major), aMajor ? a : b, aMajor ? b : a);
+      return oriented(BRepBuilderAPI_MakeEdge(ellipse, plane).Edge(), ccw);
+    }
+    default: {
+      const int poleCount = in.count(1 << 20);
+      TColgp_Array1OfPnt2d poles(1, poleCount);
+      for (int i = 1; i <= poleCount; ++i) {
+        const double u = in.number();
+        const double v = in.number();
+        poles.SetValue(i, gp_Pnt2d(u, v));
+      }
+      const int knotCount = in.count(1 << 20);
+      if (knotCount < 2 || poleCount != 3 * (knotCount - 1) + 1) throw KernelError("operation-failed", "invalid spline in profile data");
+      TColStd_Array1OfReal knots(1, knotCount);
+      TColStd_Array1OfInteger multiplicities(1, knotCount);
+      for (int i = 1; i <= knotCount; ++i) {
+        knots.SetValue(i, in.number());
+        multiplicities.SetValue(i, i == 1 || i == knotCount ? 4 : 3);
+      }
+      occ::handle<Geom2d_BSplineCurve> curve = new Geom2d_BSplineCurve(poles, knots, multiplicities, 3);
+      // The spans join with continuous curvature, so the inner knots reduce to simple ones exactly.
+      for (int i = 2; i < knotCount; ++i) curve->RemoveKnot(i, 1, 1e-9);
+      BRepBuilderAPI_MakeEdge maker(curve, plane);
+      if (!maker.IsDone()) throw KernelError("operation-failed", "a spline of the profile could not be built");
+      return maker.Edge();
+    }
+  }
+}
+
+TopoDS_Wire readLoop(ProfileReader& in, const occ::handle<Geom_Plane>& plane) {
+  const int edgeCount = in.count(1 << 20);
+  BRepBuilderAPI_MakeWire wire;
+  for (int e = 0; e < edgeCount; ++e) {
+    TopoDS_Edge edge = readEdge(in, plane);
+    BRepLib::BuildCurves3d(edge);
+    wire.Add(edge);
+    if (!wire.IsDone()) throw KernelError("operation-failed", "the edges of a profile outline do not connect");
+  }
+  if (!wire.IsDone() || !wire.Wire().Closed()) throw KernelError("operation-failed", "a profile outline is not closed");
+  return wire.Wire();
+}
+
+}  // namespace
+
+int extrudeProfile(const std::vector<double>& profile, const std::vector<double>& frame, double from, double to) {
+  if (frame.size() != 9) throw KernelError("operation-failed", "a plane needs 9 values");
+  if (!(std::abs(to - from) > 1e-9)) throw KernelError("operation-failed", "the extrusion has no depth");
+  const gp_Pnt origin(frame[0], frame[1], frame[2]);
+  const gp_Dir xDir(frame[3], frame[4], frame[5]);
+  const gp_Dir normal(frame[6], frame[7], frame[8]);
+  // u along xDir, v along normal × xDir: the sketch coordinates.
+  const occ::handle<Geom_Plane> plane = new Geom_Plane(gp_Ax3(origin, normal, xDir));
+
+  ProfileReader in(profile);
+  const int regionCount = in.count(1 << 20);
+  if (regionCount == 0) throw KernelError("operation-failed", "the sketch has no closed outline");
+  TopoDS_Shape result;
+  for (int r = 0; r < regionCount; ++r) {
+    const int loopCount = in.count(1 << 20);
+    if (loopCount == 0) throw KernelError("operation-failed", "a profile region has no outline");
+    // Outer loops run counterclockwise and holes clockwise, as the face needs them.
+    BRepBuilderAPI_MakeFace faceMaker(plane, readLoop(in, plane), Precision::Confusion());
+    for (int l = 1; l < loopCount; ++l) faceMaker.Add(readLoop(in, plane));
+    if (!faceMaker.IsDone()) throw KernelError("operation-failed", "a face could not be built from the profile");
+    TopoDS_Shape face = faceMaker.Face();
+    if (from != 0) {
+      gp_Trsf shift;
+      shift.SetTranslation(gp_Vec(normal) * from);
+      face = BRepBuilderAPI_Transform(face, shift, true).Shape();
+    }
+    BRepPrimAPI_MakePrism prism(face, gp_Vec(normal) * (to - from));
+    if (!prism.IsDone()) throw KernelError("operation-failed", "the profile could not be extruded");
+    if (result.IsNull()) {
+      result = prism.Shape();
+    } else {
+      BRepAlgoAPI_Fuse fuse;
+      configure(fuse, result, prism.Shape());
+      if (fuse.HasErrors()) throw KernelError("operation-failed", "the extruded regions could not be joined");
+      fuse.SimplifyResult(true, true, 1e-6);
+      result = fuse.Shape();
+    }
+  }
+  if (countSolids(result) == 0) throw KernelError("operation-failed", "the extrusion is not a solid");
+  return store().add(result);
+}
+
 void setParallel(bool enabled) { parallel = enabled; }
 
 // ------------------------------------------------------------------ features
@@ -409,12 +572,56 @@ BoundingBox boundingBox(int id) {
   return result;
 }
 
+namespace {
+
+/**
+ * Whether the fast fixed Gauss rule would be inexact: it integrates planes, cylinders, cones, spheres and
+ * tori bounded by lines and circles exactly, but not faces bounded by ellipses or splines, and OCCT
+ * integrates surfaces of extrusion and revolution over spline curves inaccurately in any mode.
+ */
+bool needsPreciseIntegration(const TopoDS_Shape& shape) {
+  ShapeMap faces;
+  TopExp::MapShapes(shape, TopAbs_FACE, faces);
+  for (int f = 1; f <= faces.Extent(); ++f) {
+    switch (BRepAdaptor_Surface(TopoDS::Face(faces(f)), false).GetType()) {
+      case GeomAbs_Plane:
+      case GeomAbs_Cylinder:
+      case GeomAbs_Cone:
+      case GeomAbs_Sphere:
+      case GeomAbs_Torus:
+        break;
+      default:
+        return true;
+    }
+  }
+  ShapeMap edges;
+  TopExp::MapShapes(shape, TopAbs_EDGE, edges);
+  for (int e = 1; e <= edges.Extent(); ++e) {
+    const TopoDS_Edge edge = TopoDS::Edge(edges(e));
+    if (BRep_Tool::Degenerated(edge)) continue;
+    const GeomAbs_CurveType type = BRepAdaptor_Curve(edge).GetType();
+    if (type != GeomAbs_Line && type != GeomAbs_Circle) return true;
+  }
+  return false;
+}
+
+}  // namespace
+
 MassProperties massProperties(int id) {
-  const TopoDS_Shape& shape = store().get(id);
+  const TopoDS_Shape& body = store().get(id);
   GProp_GProps volume;
-  BRepGProp::VolumeProperties(shape, volume);
   GProp_GProps surface;
-  BRepGProp::SurfaceProperties(shape, surface);
+  if (needsPreciseIntegration(body)) {
+    // Surfaces of extrusion and revolution become exact B-spline surfaces in a copy (the body keeps its
+    // analytic surfaces), then adaptive integration reaches the requested accuracy.
+    const TopoDS_Shape shape = ShapeCustom::ConvertToBSpline(body, true, true, false, false);
+    constexpr double kRelativeError = 1e-9;
+    BRepGProp::VolumeProperties(shape, volume, kRelativeError, true);
+    BRepGProp::SurfaceProperties(shape, surface, kRelativeError);
+  } else {
+    BRepGProp::VolumeProperties(body, volume);
+    BRepGProp::SurfaceProperties(body, surface);
+  }
   const gp_Pnt center = volume.CentreOfMass();
   MassProperties result;
   result.volume = volume.Mass();

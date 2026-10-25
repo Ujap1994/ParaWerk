@@ -502,6 +502,62 @@ test('README and user guide screenshots', async () => {
   await page.screenshot({ path: out('variables-parameters.png') });
   await page.click('[data-testid="panel-cancel"]');
 
+  // Extrude: a slot-shaped plate with two holes, then a pocket cut from a sketch on its top face.
+  await page.evaluate(() => {
+    const P = (id: string, x: number, y: number) => ({ id, type: 'point', x, y });
+    const L = (id: string, p1: string, p2: string) => ({ id, type: 'line', p1, p2 });
+    const plate = {
+      id: 'outline', type: 'sketch', plane: { kind: 'standard', plane: 'top' },
+      sketch: {
+        entities: [
+          P('cl', -35, 0), P('cr', 35, 0), P('a', -35, -25), P('b', 35, -25), P('c', 35, 25), P('d', -35, 25),
+          L('bottom', 'a', 'b'), { id: 'right', type: 'arc', center: 'cr', start: 'b', end: 'c' }, L('top', 'c', 'd'), { id: 'left', type: 'arc', center: 'cl', start: 'd', end: 'a' },
+          { id: 'h1', type: 'circle', center: 'cl', radius: 8 }, { id: 'h2', type: 'circle', center: 'cr', radius: 8 },
+        ],
+        constraints: [],
+      },
+    };
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features: [plate], past: [], future: [] } });
+  });
+  await idle(page);
+  await page.click('[data-command="extrude"]');
+  await page.locator('[data-testid="extrude-depth"]').fill('12');
+  await page.locator('[data-testid="extrude-depth"]').press('Tab');
+  await idle(page);
+  await page.evaluate(() => (window as unknown as { __parawerk: { commands: { setView(v: string): void } } }).__parawerk.commands.setView('isometric'));
+  await page.waitForTimeout(700);
+  await page.click('[data-testid="zoom-to-fit"]');
+  await page.waitForTimeout(700);
+  await page.screenshot({ path: out('extrude-plate.png') });
+  await page.click('[data-testid="panel-ok"]');
+  await idle(page);
+  await page.evaluate(() => {
+    const hooks = (window as unknown as { __parawerk: { setState(s: unknown): void; getState(): { history: { features: unknown[] } } } }).__parawerk;
+    const pocket = {
+      id: 'pocket', type: 'sketch',
+      plane: { kind: 'face', face: 0, frame: { origin: [0, 0, 12], xDir: [1, 0, 0], yDir: [0, 1, 0], normal: [0, 0, 1] } },
+      sketch: {
+        entities: [
+          { id: 'p1', type: 'point', x: -15, y: -10 }, { id: 'p2', type: 'point', x: 15, y: -10 }, { id: 'p3', type: 'point', x: 15, y: 10 }, { id: 'p4', type: 'point', x: -15, y: 10 },
+          { id: 'l1', type: 'line', p1: 'p1', p2: 'p2' }, { id: 'l2', type: 'line', p1: 'p2', p2: 'p3' }, { id: 'l3', type: 'line', p1: 'p3', p2: 'p4' }, { id: 'l4', type: 'line', p1: 'p4', p2: 'p1' },
+        ],
+        constraints: [],
+      },
+    };
+    hooks.setState({ history: { features: [...hooks.getState().history.features, pocket], past: [], future: [] } });
+  });
+  await idle(page);
+  await page.click('[data-command="extrude"]');
+  await page.getByRole('radio', { name: 'Remove material' }).click();
+  await page.getByRole('radio', { name: 'Reversed' }).click();
+  await page.locator('[data-testid="extrude-depth"]').fill('6');
+  await page.locator('[data-testid="extrude-depth"]').press('Tab');
+  await page.click('[data-testid="panel-ok"]');
+  await idle(page);
+  if (canvas) await page.mouse.move(canvas.x + 20, canvas.y + canvas.height - 20);
+  await page.waitForTimeout(600);
+  await page.screenshot({ path: out('extrude-pocket.png') });
+
   await page.click('[data-command="settings"]');
   await page.waitForTimeout(300);
   await page.screenshot({ path: out('settings-dialog.png') });

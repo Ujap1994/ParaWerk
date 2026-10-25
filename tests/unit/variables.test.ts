@@ -129,6 +129,7 @@ describe('file format', () => {
     expect(formatVersionOf([box])).toBe(1);
     expect(formatVersionOf([defaultFeature('sketch', 's'), box])).toBe(2);
     expect(formatVersionOf([{ ...box, expressions: { width: 'a' } }])).toBe(3);
+    expect(formatVersionOf([defaultFeature('sketch', 's'), { ...defaultFeature('extrude', 'e'), sketch: 's' }])).toBe(4);
     const features: Feature[] = [{ id: 'v', type: 'variables', variables: [{ name: 'a', expression: '12' }] }, { ...box, expressions: { width: 'a * 2' } } as Feature];
     const bytes = encodePartFile({ units: 'mm', features }, { appVersion: '1', savedAt: '' });
     expect(decodePartFile(bytes).document.features).toEqual(features);

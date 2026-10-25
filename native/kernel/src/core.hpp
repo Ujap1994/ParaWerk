@@ -67,6 +67,21 @@ int makeBox(double x, double y, double z, double dx, double dy, double dz);
 int makeCylinder(double px, double py, double pz, double dx, double dy, double dz, double radius, double height);
 /** op: 0 = fuse (add material), 1 = cut (remove material). */
 int booleanOperation(int bodyId, int toolId, int op);
+
+/**
+ * The solid swept by planar regions along the normal of their plane, from `from` to `to`.
+ *
+ * `profile` holds the regions in plane coordinates: the region count, then per region its loop count
+ * (outer loop first, counterclockwise; holes clockwise), per loop its edge count, and per edge, in the
+ * direction the loop runs, its kind and parameters:
+ *   0 line      x0 y0 x1 y1
+ *   1 arc       cx cy radius start end ccw      (angles in radians from the x axis)
+ *   2 circle    cx cy radius ccw
+ *   3 ellipse   cx cy ux uy a b ccw             (u: unit direction of semi-axis a; b lies to its left)
+ *   4 bspline   poleCount x y ... knotCount k ...  (cubic; every inner knot joins two Bézier spans)
+ * `frame` is the plane: origin, x direction and normal (9 values).
+ */
+int extrudeProfile(const std::vector<double>& profile, const std::vector<double>& frame, double from, double to);
 int fillet(int bodyId, const std::vector<int>& edgeIndices, double radius);
 int chamfer(int bodyId, const std::vector<int>& edgeIndices, double distance);
 void release(int id);

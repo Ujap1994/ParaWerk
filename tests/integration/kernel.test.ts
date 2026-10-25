@@ -2,7 +2,9 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createKernel } from '../../src/kernel/create.ts';
 import type { BackendName, Kernel } from '../../src/kernel/kernel.ts';
 import type { RebuildRequest } from '../../src/kernel/protocol.ts';
-import type { BoxFeature, CylinderFeature, Feature, FilletFeature } from '../../src/shared/model/feature.ts';
+import type { BoxFeature, CylinderFeature, ExtrudeFeature, Feature, FilletFeature, SketchFeature } from '../../src/shared/model/feature.ts';
+import { frameOnPlane, type SketchEntity } from '../../src/shared/model/sketch.ts';
+import { splinePolyline, splineThrough } from '../../src/shared/model/spline.ts';
 
 describe.each(['parawerk', 'replicad'] as BackendName[])('%s backend', (backendName) => {
   let kernel: Kernel;
@@ -257,5 +259,105 @@ describe.each(['parawerk', 'replicad'] as BackendName[])('%s backend', (backendN
       expect(describe.sort()).toEqual(['-1 0 0 50', '0 -1 0 30', '0 0 -1 0', '0 0 1 20', '0 0 1 40', '0 1 0 30', '1 0 0 50'].sort());
       for (const { normal } of planes) expect(Math.hypot(...normal)).toBeCloseTo(1, 12);
     });
+  });
+});
+
+describe('extrude from sketches (parawerk backend)', () => {
+  let kernel: Kernel;
+
+  beforeAll(async () => {
+    kernel = await createKernel('parawerk');
+  });
+
+  afterAll(() => {
+    kernel[Symbol.dispose]();
+  });
+
+  const P = (id: string, x: number, y: number): SketchEntity => ({ id, type: 'point', x, y });
+  const L = (id: string, p1: string, p2: string): SketchEntity => ({ id, type: 'line', p1, p2 });
+  const rectangle = (x0: number, y0: number, x1: number, y1: number): SketchEntity[] => [
+    P('r1', x0, y0), P('r2', x1, y0), P('r3', x1, y1), P('r4', x0, y1),
+    L('ra', 'r1', 'r2'), L('rb', 'r2', 'r3'), L('rc', 'r3', 'r4'), L('rd', 'r4', 'r1'),
+  ];
+  const sketchFeature = (id: string, entities: SketchEntity[], plane: SketchFeature['plane'] = { kind: 'standard', plane: 'top' }): SketchFeature => ({
+    id, type: 'sketch', plane, sketch: { entities, constraints: [] },
+  });
+  const extrude = (overrides: Partial<ExtrudeFeature> = {}): ExtrudeFeature => ({ id: 'extrude', type: 'extrude', operation: 'add', sketch: 'sketch', depth: 10, direction: 'normal', ...overrides });
+
+  function build(features: Feature[]) {
+    const { result } = kernel.rebuild({ features, captures: [features.length - 1], knownMeshKeys: [], withProperties: true });
+    const state = result.captures[0];
+    if (!state) throw new Error('no capture');
+    return { result, state };
+  }
+
+  it('extrudes a plate with a hole to the exact volume', () => {
+    const plate = sketchFeature('sketch', [...rectangle(-20, -10, 20, 10), P('c', 0, 0), { id: 'hole', type: 'circle', center: 'c', radius: 5 }]);
+    const { state, result } = build([plate, extrude()]);
+    expect(result.features[1]?.status).toBe('ok');
+    expect(state.properties?.volume).toBeCloseTo((800 - 25 * Math.PI) * 10, 4);
+    expect(state.properties?.bboxMin[2]).toBeCloseTo(0, 6);
+    expect(state.properties?.bboxMax[2]).toBeCloseTo(10, 6);
+    // Outer sides, the hole wall, top and bottom.
+    expect(state.faceCount).toBe(4 + 1 + 2);
+  });
+
+  it('extrudes a slot of lines and arcs backwards and a profile around the mid-plane', () => {
+    const slot = sketchFeature('sketch', [
+      P('c1', 0, 0), P('c2', 40, 0), P('a', 0, -10), P('b', 40, -10), P('c', 40, 10), P('d', 0, 10),
+      L('bottom', 'a', 'b'), L('top', 'c', 'd'),
+      { id: 'right', type: 'arc', center: 'c2', start: 'b', end: 'c' },
+      { id: 'left', type: 'arc', center: 'c1', start: 'd', end: 'a' },
+    ]);
+    const reverse = build([slot, extrude({ direction: 'reverse', depth: 5 })]).state;
+    expect(reverse.properties?.volume).toBeCloseTo((800 + 100 * Math.PI) * 5, 4);
+    expect(reverse.properties?.bboxMin[2]).toBeCloseTo(-5, 6);
+    const both = build([slot, extrude({ direction: 'both', depth: 8 })]).state;
+    expect(both.properties?.bboxMin[2]).toBeCloseTo(-4, 6);
+    expect(both.properties?.bboxMax[2]).toBeCloseTo(4, 6);
+  });
+
+  it('extrudes splines exactly and ellipses as holes', () => {
+    const fit: [number, number][] = [[0, 0], [20, 15], [40, 5], [60, 0]];
+    const wave = sketchFeature('sketch', [
+      ...fit.map(([x, y], i) => P(`f${i}`, x, y)),
+      { id: 's', type: 'spline', points: ['f0', 'f1', 'f2', 'f3'] },
+      P('low', 60, -10), P('origin2', 0, -10), L('down', 'f3', 'low'), L('base', 'low', 'origin2'), L('up', 'origin2', 'f0'),
+      P('e', 30, -2), P('ea', 36, -2), P('eb', 30, 1), { id: 'ell', type: 'ellipse', center: 'e', major: 'ea', minor: 'eb' },
+    ]);
+    const spline = splineThrough(fit);
+    if (!spline) throw new Error('no spline');
+    // Area under the spline down to y = -10, from a very fine polygon, minus the ellipse.
+    const curve = splinePolyline(spline, 2000);
+    let area = 0;
+    const polygon: [number, number][] = [...curve.map(([x, y]): [number, number] => [x, y]), [60, -10], [0, -10]];
+    for (let i = 0; i < polygon.length; i++) {
+      const [a, b] = [polygon[i] as [number, number], polygon[(i + 1) % polygon.length] as [number, number]];
+      area += (a[0] * b[1] - b[0] * a[1]) / 2;
+    }
+    area = Math.abs(area) - Math.PI * 6 * 3;
+    const { state, result } = build([wave, extrude({ depth: 4 })]);
+    expect(result.features[1]?.status).toBe('ok');
+    expect((state.properties?.volume as number) / (area * 4)).toBeCloseTo(1, 6);
+    // The spline stays one smooth face (not one face per span).
+    expect(state.faceCount).toBe(4 + 1 + 2);
+  });
+
+  it('cuts into a body from a sketch on its top face, and follows sketch edits', () => {
+    const box: BoxFeature = { id: 'box', type: 'box', operation: 'add', width: 100, depth: 60, height: 40, position: [0, 0, 0] };
+    const onTop = (radius: number) =>
+      sketchFeature('sketch', [P('c', 10, 0), { id: 'hole', type: 'circle', center: 'c', radius }], { kind: 'face', face: 5, frame: frameOnPlane([0, 0, 40], [0, 0, 1]) });
+    const cut = extrude({ operation: 'cut', direction: 'reverse', depth: 25 });
+    expect(build([box, onTop(10), cut]).state.properties?.volume).toBeCloseTo(240_000 - Math.PI * 100 * 25, 4);
+    // Changing the sketch rebuilds the cut.
+    expect(build([box, onTop(5), cut]).state.properties?.volume).toBeCloseTo(240_000 - Math.PI * 25 * 25, 4);
+  });
+
+  it('explains missing sketches, crossing curves and sketches without outlines', () => {
+    const errorOf = (features: Feature[]) => kernel.rebuild({ features, captures: [], knownMeshKeys: [], withProperties: false }).result.features.at(-1)?.error?.code;
+    expect(errorOf([extrude({ sketch: 'nowhere' })])).toBe('sketch-missing');
+    const crossing = sketchFeature('sketch', [...rectangle(0, 0, 20, 20), P('x1', 10, -5), P('x2', 10, 25), L('x', 'x1', 'x2')]);
+    expect(errorOf([crossing, extrude()])).toBe('profile-crossing');
+    expect(errorOf([sketchFeature('sketch', [P('a', 0, 0), P('b', 10, 0), L('l', 'a', 'b')]), extrude()])).toBe('profile-empty');
   });
 });

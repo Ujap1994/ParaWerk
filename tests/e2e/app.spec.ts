@@ -248,3 +248,66 @@ test('variables drive feature parameters: a box follows the variable it is sized
   await page.click('[data-command="undo"]');
   await expect.poll(async () => (await features()).find((f) => f.type === 'box')?.width).toBe(80);
 });
+
+test('extrudes a sketch into a plate and cuts a pocket from a sketch on its top face', async () => {
+  launched = await launchApp();
+  const { page } = launched;
+  const features = async () => (await state(page)).history.features as unknown as { id: string; type: string; sketch?: unknown; operation?: string; direction?: string; depth?: number }[];
+
+  // Without a sketch there is nothing to extrude.
+  await page.click('[data-command="extrude"]');
+  await expect(page.locator('[data-testid="toast-info"]')).toContainText('sketch');
+  await expect(page.locator('[data-testid="extrude-depth"]')).toHaveCount(0);
+
+  // A 60 × 40 rectangle with a hole on the top plane, and a circle on the plate's top face (z = 15).
+  await page.evaluate(() => {
+    const P = (id: string, x: number, y: number) => ({ id, type: 'point', x, y });
+    const L = (id: string, p1: string, p2: string) => ({ id, type: 'line', p1, p2 });
+    const plate = {
+      id: 'plate', type: 'sketch', plane: { kind: 'standard', plane: 'top' },
+      sketch: {
+        entities: [P('a', -30, -20), P('b', 30, -20), P('c', 30, 20), P('d', -30, 20), L('ab', 'a', 'b'), L('bc', 'b', 'c'), L('cd', 'c', 'd'), L('da', 'd', 'a'), P('m', -15, 0), { id: 'hole', type: 'circle', center: 'm', radius: 6 }],
+        constraints: [],
+      },
+    };
+    const history = { features: [plate], past: [], future: [] };
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history, savedFeatures: history.features, dirty: false });
+  });
+  await idle(page);
+
+  // Extrude (Features tab): the sketch is chosen, the depth typed in.
+  await page.click('[data-command="extrude"]');
+  await expect(page.locator('[data-testid="extrude-sketch"]')).toHaveValue('plate');
+  await page.locator('[data-testid="extrude-depth"]').fill('15');
+  await page.locator('[data-testid="extrude-depth"]').press('Tab');
+  await page.click('[data-testid="panel-ok"]');
+  await expect.poll(async () => (await features()).map((f) => f.type)).toEqual(['sketch', 'extrude']);
+  expect(await volume(page)).toBeCloseTo((2400 - 36 * Math.PI) * 15, 2);
+  await expect(page.locator('.tree-item[data-feature-id]').nth(1)).toContainText('Extrude1');
+
+  // A sketch on the top face; the next extrusion takes it and cuts a pocket 10 mm deep into the plate.
+  await page.evaluate(() => {
+    const hooks = (window as unknown as { __parawerk: { setState(s: unknown): void; getState(): { history: { features: unknown[] } } } }).__parawerk;
+    const pocket = {
+      id: 'pocket', type: 'sketch',
+      plane: { kind: 'face', face: 0, frame: { origin: [0, 0, 15], xDir: [1, 0, 0], yDir: [0, 1, 0], normal: [0, 0, 1] } },
+      sketch: { entities: [{ id: 'c', type: 'point', x: 15, y: 0 }, { id: 'round', type: 'circle', center: 'c', radius: 8 }], constraints: [] },
+    };
+    const features = [...hooks.getState().history.features, pocket];
+    hooks.setState({ history: { features, past: [], future: [] } });
+  });
+  await idle(page);
+  await page.click('[data-command="extrude"]');
+  await expect(page.locator('[data-testid="extrude-sketch"]')).toHaveValue('pocket');
+  await page.getByRole('radio', { name: 'Remove material' }).click();
+  await page.getByRole('radio', { name: 'Reversed' }).click();
+  await page.locator('[data-testid="extrude-depth"]').fill('10');
+  await page.locator('[data-testid="extrude-depth"]').press('Tab');
+  await page.click('[data-testid="panel-ok"]');
+  await expect.poll(async () => (await features()).at(-1)).toMatchObject({ type: 'extrude', sketch: 'pocket', operation: 'cut', direction: 'reverse', depth: 10 });
+  expect(await volume(page)).toBeCloseTo((2400 - 36 * Math.PI) * 15 - 64 * Math.PI * 10, 2);
+
+  // Undo takes the pocket back.
+  await page.click('[data-command="undo"]');
+  expect(await volume(page)).toBeCloseTo((2400 - 36 * Math.PI) * 15, 2);
+});

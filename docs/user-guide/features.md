@@ -3,6 +3,33 @@
 A part is a list of features applied from top to bottom. Every feature can be edited later; the part is
 rebuilt automatically and only from the first changed feature onwards.
 
+## Extrude
+
+**Extrude** (in the *Features* tab) turns the closed outlines of a sketch into a solid, or cuts them out
+of the body with **Remove material**. Draw and close the outlines in a [sketch](sketches.md) first, then
+choose **Extrude**: it takes the newest sketch that no extrusion uses yet; *Sketch* in the side panel
+chooses another one.
+
+- *Depth* is how far the profile is extruded, in millimeters; like every parameter it takes a
+  calculation or a [variable](#variables-and-equations).
+- *Direction*: **Normal** extrudes along the normal of the sketch plane (out of the face for a sketch on a
+  face), **Reversed** the other way (into the body, as a pocket usually needs), **Mid-plane** half the
+  depth to each side.
+- Every closed outline of the sketch is extruded. An outline inside another one becomes a hole, an outline
+  inside that hole is material again. Construction geometry and open curves are ignored, and so are lines
+  that only divide an outline from within.
+- Curves that cross each other make the outlines ambiguous: the feature then reports where they cross, so
+  you can trim them. A sketch without a closed outline is reported too.
+- All sketch curves stay exact in the solid: lines, arcs, circles, ellipses and splines become exact B-Rep
+  edges and faces, and volumes and areas are computed exactly.
+
+Once an extrusion uses a sketch, the sketch is hidden in the 3D view; editing the extrusion shows it again,
+and editing the sketch (double-click it in the feature tree) rebuilds the extrusion.
+
+![Extruding a plate with two holes: the side panel with sketch, depth and direction](../images/screenshots/extrude-plate.png)
+
+![A pocket cut from a sketch on the top face of the plate](../images/screenshots/extrude-pocket.png)
+
 ## Box
 
 Adds or removes a box. *Width* (X), *Depth* (Y) and *Height* (Z) are in millimeters; *Position* is the

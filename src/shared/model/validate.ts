@@ -1,4 +1,4 @@
-import { EXPRESSION_FIELDS, type Axis, type BooleanOperation, type EdgeRef, type Feature, type FeatureType, type Variable, type Vec3 } from './feature.ts';
+import { EXPRESSION_FIELDS, EXTRUDE_DIRECTIONS, type Axis, type BooleanOperation, type EdgeRef, type ExtrudeDirection, type Feature, type FeatureType, type Variable, type Vec3 } from './feature.ts';
 import { parseSketchData, parsePlaneRef } from './validate-sketch.ts';
 
 export class ValidationError extends Error {
@@ -132,6 +132,19 @@ function parseFeatureFields(raw: Json, path: string): Feature {
         plane: parsePlaneRef(raw.plane, `${path}.plane`),
         sketch: parseSketchData(raw.sketch, `${path}.sketch`),
       };
+    case 'extrude': {
+      // An empty or unknown sketch id is kept: the rebuild reports the missing sketch at the feature.
+      if (typeof raw.sketch !== 'string' || raw.sketch.length > 200) throw new ValidationError('expected a sketch id', `${path}.sketch`);
+      if (!(EXTRUDE_DIRECTIONS as readonly unknown[]).includes(raw.direction)) throw new ValidationError('expected normal, reverse or both', `${path}.direction`);
+      return {
+        ...common,
+        type: 'extrude',
+        operation: operation(raw.operation, `${path}.operation`),
+        sketch: raw.sketch,
+        depth: positiveLength(raw.depth, `${path}.depth`),
+        direction: raw.direction as ExtrudeDirection,
+      };
+    }
     case 'box':
       return {
         ...common,

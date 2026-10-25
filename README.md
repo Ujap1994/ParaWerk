@@ -19,8 +19,8 @@
 
 > [!WARNING]
 > **ParaWerk is under active development.** The 2D sketcher (Phase 1) is complete; part modeling
-> (Phase 2) has started. It is a technical preview, not a usable CAD system yet: sketches cannot be
-> turned into solids before Phase 2 delivers extrude and revolve. Please read the
+> (Phase 2) has started with *Extrude*. It is a technical preview, not a usable CAD system yet: revolve,
+> holes, patterns and many other features are still missing. Please read the
 > [disclaimer](#disclaimer) first.
 
 ---
@@ -89,14 +89,16 @@ Preview 0.2 adds the complete 2D sketcher (Phase 1) to the foundation of Phase 0
 
 ![A fully defined bracket profile in sketch mode](docs/images/screenshots/sketch-bracket.png)
 
-- **Geometry kernel:** Open CASCADE Technology 8 (own WebAssembly build) in a background worker; box and cylinder (add or remove
-  material), fillet and chamfer; incremental rebuild that only recomputes from the first changed feature;
+- **Geometry kernel:** Open CASCADE Technology 8 (own WebAssembly build) in a background worker;
+  **extrude** sketches (add or remove material, also mid-plane), box and cylinder, fillet and chamfer; incremental rebuild that only recomputes from the first changed feature;
   exact volume and surface area.
 - **3D view:** shaded model with edges, view cube, standard views, orthographic and perspective
   projection, rotation around the point under the cursor, zoom towards the cursor, mouse and trackpad
   presets, hover and selection highlighting of faces and edges.
 - **Feature tree and property panels:** live preview while editing, rollback of later features,
   suppress, delete, undo and redo; clear error messages when a feature cannot be built.
+- **Extrude:** the closed outlines of a sketch become a solid or a cut; outlines inside others become
+  holes, and lines, arcs, circles, ellipses and splines stay exact.
 - **Variables and equations:** named values for the whole part, used by name in parameters and sketch
   dimensions; calculations with units in every number field.
 - **2D sketcher:** sketches on the front, top and right plane and on planar faces, with their own undo
@@ -123,6 +125,8 @@ Preview 0.2 adds the complete 2D sketcher (Phase 1) to the foundation of Phase 0
 | ![Drawing tools](docs/images/screenshots/sketch-tools.png) | ![Trim](docs/images/screenshots/sketch-trim.png) |
 | **Relation symbols: point at one to see its geometry** | **Conflicts are red and listed** |
 | ![Relation symbols](docs/images/screenshots/sketch-relation-symbols.png) | ![Over-defined sketch](docs/images/screenshots/sketch-conflict.png) |
+| **Extrude a sketch (live preview)** | **A pocket cut from a sketch on the top face** |
+| ![Extrude](docs/images/screenshots/extrude-plate.png) | ![Pocket](docs/images/screenshots/extrude-pocket.png) |
 | **Splines: cut exactly at a line, the rest is only hinted** | **Variables and equations** |
 | ![Cut spline](docs/images/screenshots/sketch-spline-cut.png) | ![Variables](docs/images/screenshots/variables.png) |
 | **Fillet with live preview** | **Dark theme, German interface** |

@@ -1,4 +1,5 @@
-import type { BoxFeature, CylinderFeature, EdgeFeature, SolidModelingFeature } from '../shared/model/feature.ts';
+import type { BoxFeature, CylinderFeature, EdgeFeature } from '../shared/model/feature.ts';
+import type { KernelFeature } from './backend.ts';
 import { axisDirection } from './feature-geometry.ts';
 import { Arena, describeError, type OC, type TopoDS_Shape } from './occt.ts';
 import { FeatureError } from './feature-error.ts';
@@ -78,7 +79,7 @@ function applyEdgeFeature(oc: OC, arena: Arena, body: TopoDS_Shape | null, featu
  *
  * The returned shape is owned by the caller; every temporary object is released.
  */
-export function applyFeature(oc: OC, body: TopoDS_Shape | null, feature: SolidModelingFeature): TopoDS_Shape {
+export function applyFeature(oc: OC, body: TopoDS_Shape | null, feature: KernelFeature): TopoDS_Shape {
   using arena = new Arena();
   try {
     let result: TopoDS_Shape;
@@ -93,6 +94,8 @@ export function applyFeature(oc: OC, body: TopoDS_Shape | null, feature: SolidMo
       case 'chamfer':
         result = applyEdgeFeature(oc, arena, body, feature);
         break;
+      case 'extrude':
+        throw new FeatureError('operation-failed', 'extrusions need the ParaWerk kernel');
     }
     return arena.keep(result);
   } catch (error) {

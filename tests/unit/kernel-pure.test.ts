@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { featureKeys, hashString } from '../../src/kernel/rebuild.ts';
 import { writeBinaryStl } from '../../src/kernel/stl.ts';
 import { displayQuality, exportQuality } from '../../src/kernel/mesh-quality.ts';
-import { defaultFeature, type BoxFeature } from '../../src/shared/model/feature.ts';
+import { defaultFeature, type BoxFeature, type ExtrudeFeature, type SketchFeature } from '../../src/shared/model/feature.ts';
 
 describe('binary STL writer', () => {
   it('writes header, count, normal and vertices', () => {
@@ -38,9 +38,20 @@ describe('rebuild keys', () => {
   });
 
   it('ignore sketch content, so sketch edits keep later features cached', () => {
-    const sketch = defaultFeature('sketch', 's');
+    const sketch = defaultFeature('sketch', 's') as SketchFeature;
     const edited = { ...sketch, sketch: { entities: [{ id: 'p', type: 'point' as const, x: 1, y: 2 }], constraints: [] } };
     expect(featureKeys([box, edited, fillet])).toEqual(featureKeys([box, sketch, fillet]));
+  });
+
+  it('include the sketch of an extrusion, so editing the sketch rebuilds it and what follows', () => {
+    const sketch = defaultFeature('sketch', 's') as SketchFeature;
+    const extrude: ExtrudeFeature = { id: 'e', type: 'extrude', operation: 'add', sketch: 's', depth: 5, direction: 'normal' };
+    const edited = { ...sketch, sketch: { entities: [{ id: 'p', type: 'point' as const, x: 1, y: 2 }], constraints: [] } };
+    const [before, after] = [featureKeys([box, sketch, extrude, fillet]), featureKeys([box, edited, extrude, fillet])];
+    expect(after.slice(0, 2)).toEqual(before.slice(0, 2));
+    expect(after[2]).not.toBe(before[2]);
+    expect(after[3]).not.toBe(before[3]);
+    expect(featureKeys([box, { ...sketch, suppressed: true }, extrude])[2]).not.toBe(before[2]);
   });
 
   it('hash strings deterministically', () => {

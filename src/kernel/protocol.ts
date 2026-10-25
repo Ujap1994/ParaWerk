@@ -55,6 +55,9 @@ export type FeatureErrorCode =
   | 'edge-missing'
   | 'empty-result'
   | 'first-must-add'
+  | 'sketch-missing'
+  | 'profile-empty'
+  | 'profile-crossing'
   | 'operation-failed'
   | 'unknown';
 
