@@ -22,6 +22,7 @@ interface EmbindModule {
   trimByPlane(_0: number, _1: any, _2: EmbindString): any;
   fillet(_0: number, _1: any, _2: number, _3: any, _4: EmbindString): any;
   chamfer(_0: number, _1: any, _2: number, _3: any, _4: EmbindString): any;
+  chamferUneven(_0: number, _1: any, _2: number, _3: number, _4: boolean, _5: boolean, _6: any, _7: EmbindString): any;
   naming(_0: number): any;
   faceGeometry(_0: number, _1: number): any;
   edgeGeometry(_0: number, _1: number): any;

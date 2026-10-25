@@ -1004,6 +1004,23 @@ int chamfer(int bodyId, const std::vector<int>& edgeIndices, double distance, co
   return finishEdgeFeature(maker, bodyId, edges, edgeNames, name, "chamfer", "chamfer could not be computed (distance too large?)");
 }
 
+int chamferUneven(int bodyId, const std::vector<int>& edgeIndices, double distance, double second, bool byAngle, bool flip,
+                  const std::vector<std::string>& edgeNames, const std::string& name) {
+  const TopoDS_Shape& body = store().get(bodyId);
+  BRepFilletAPI_MakeChamfer maker(body);
+  const std::vector<TopoDS_Edge> edges = selectEdges(body, edgeIndices);
+  AncestorMap edgeFaces;
+  TopExp::MapShapesAndAncestors(body, TopAbs_EDGE, TopAbs_FACE, edgeFaces);
+  for (const TopoDS_Edge& edge : edges) {
+    const auto& faces = edgeFaces.FindFromKey(edge);
+    if (faces.IsEmpty()) throw KernelError("operation-failed", "an edge to chamfer lies on no face");
+    const TopoDS_Face face = TopoDS::Face(flip ? faces.Last() : faces.First());
+    if (byAngle) maker.AddDA(distance, second, edge, face);
+    else maker.Add(distance, second, edge, face);
+  }
+  return finishEdgeFeature(maker, bodyId, edges, edgeNames, name, "chamfer", "chamfer could not be computed (distance too large?)");
+}
+
 void release(int id) { store().release(id); }
 
 int shapeCount() { return store().size(); }

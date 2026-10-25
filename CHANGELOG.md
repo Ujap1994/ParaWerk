@@ -8,6 +8,8 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### Added
+- Chamfers with two distances, or a distance and an angle, measured from one face of each edge (with a
+  switch to the other face).
 - STEP import as a feature: the solids of a STEP file become a body of their own or are cut out of the
   part; the file is kept in the part file (its own entry), and its faces are named, so later features
   stay on them. *Replace with another STEP file* exchanges it.

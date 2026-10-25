@@ -175,6 +175,13 @@ int combineCopies(int bodyId, int toolId, const std::vector<double>& transforms,
 int fillet(int bodyId, const std::vector<int>& edgeIndices, double radius, const std::vector<std::string>& edgeNames = {}, const std::string& name = "");
 /** Bevels the given edges; faces are named as for fillet. */
 int chamfer(int bodyId, const std::vector<int>& edgeIndices, double distance, const std::vector<std::string>& edgeNames = {}, const std::string& name = "");
+/**
+ * Bevels edges unevenly: `distance` along one of the two faces of each edge (the first one found, the other
+ * one with `flip`) and along the other face `second` (byAngle false) or as far as the angle `second`
+ * (radians, measured from the first face) reaches (byAngle true).
+ */
+int chamferUneven(int bodyId, const std::vector<int>& edgeIndices, double distance, double second, bool byAngle, bool flip,
+                  const std::vector<std::string>& edgeNames = {}, const std::string& name = "");
 void release(int id);
 int shapeCount();
 

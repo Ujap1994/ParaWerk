@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { formatQuantity } from '../format.ts';
-import { EXTRUDE_ENDS, hasReferenceSlots, isCopyFeature, type Axis, type BooleanOperation, type EdgeFeature, type ExtrudeDirection, type ExtrudeEnd, type ExtrudeFeature, type Feature, type Vec3 } from '../../../shared/model/feature.ts';
+import { CHAMFER_METHODS, EXTRUDE_ENDS, hasReferenceSlots, isCopyFeature, type Axis, type BooleanOperation, type ChamferFeature, type ChamferMethod, type EdgeFeature, type ExtrudeDirection, type ExtrudeEnd, type ExtrudeFeature, type Feature, type Vec3 } from '../../../shared/model/feature.ts';
 import type { GeometryRef } from '../../../shared/model/reference.ts';
 import { referenceRoles } from '../references.ts';
 import { resolveEdgeRefs } from '../../../shared/model/naming.ts';
@@ -283,7 +283,7 @@ function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
             {draft.type === 'fillet' ? (
               <NumberField label={t('panel.radius')} value={draft.radius} testId="fillet-radius" {...equation(draft, 'radius')} step={0.5} onChange={(radius) => commands.updateDraft({ radius })} />
             ) : (
-              <NumberField label={t('panel.distance')} value={draft.distance} testId="chamfer-distance" {...equation(draft, 'distance')} step={0.5} onChange={(distance) => commands.updateDraft({ distance })} />
+              <ChamferFields draft={draft} />
             )}
           </Section>
           <Section title={t('panel.edges')}>
@@ -299,6 +299,56 @@ function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
         </>
       );
   }
+}
+
+/** The size of a chamfer: one distance, two distances, or a distance and an angle. */
+function ChamferFields({ draft }: { draft: ChamferFeature }) {
+  const { t } = useTranslation();
+  const method = draft.method ?? 'equal';
+  return (
+    <>
+      <Segmented<ChamferMethod>
+        label={t('chamfer.method')}
+        value={method}
+        options={CHAMFER_METHODS.map((value) => ({ value, label: t(`chamfer.methods.${value}`) }))}
+        onChange={(next) =>
+          commands.updateDraft({
+            method: next,
+            ...(next === 'distances' && draft.distance2 === undefined ? { distance2: draft.distance } : {}),
+            ...(next === 'angle' && draft.angle === undefined ? { angle: 45 } : {}),
+          })
+        }
+      />
+      <NumberField
+        label={method === 'equal' ? t('panel.distance') : t('chamfer.distance1')}
+        value={draft.distance}
+        testId="chamfer-distance"
+        {...equation(draft, 'distance')}
+        step={0.5}
+        onChange={(distance) => commands.updateDraft({ distance })}
+      />
+      {method === 'distances' ? (
+        <NumberField label={t('chamfer.distance2')} value={draft.distance2 ?? draft.distance} testId="chamfer-distance2" {...equation(draft, 'distance2')} step={0.5} onChange={(distance2) => commands.updateDraft({ distance2 })} />
+      ) : null}
+      {method === 'angle' ? (
+        <NumberField
+          label={t('chamfer.angle')}
+          unit="°"
+          step={5}
+          value={draft.angle ?? 45}
+          testId="chamfer-angle"
+          {...equation(draft, 'angle')}
+          onChange={(angle) => commands.updateDraft({ angle: Math.min(89, Math.max(1, angle)) })}
+        />
+      ) : null}
+      {method !== 'equal' ? (
+        <label className="checkbox-field">
+          <input type="checkbox" checked={draft.flip ?? false} data-testid="chamfer-flip" onChange={(event) => commands.updateDraft({ flip: event.target.checked })} />
+          {t('chamfer.flip')}
+        </label>
+      ) : null}
+    </>
+  );
 }
 
 /** Edges of the draft that are gone from the body it modifies, with a button that removes them. */

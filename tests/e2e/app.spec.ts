@@ -130,6 +130,30 @@ test('creates a box, rounds edges picked in the 3D view and exports STEP and STL
   expect(threeMf.subarray(0, 2).toString()).toBe('PK');
 });
 
+test('chamfers an edge with two distances and with a distance and an angle', async () => {
+  launched = await launchApp({ width: 1440, height: 900 });
+  const { page } = launched;
+  await createBox(page);
+  await page.click('[data-command="chamfer"]');
+  await idle(page);
+  await clickWorldPoint(page, [0, -30, 40]);
+  await expect(page.locator('[data-testid="edge-count"]')).toContainText('1');
+  await page.getByRole('radio', { name: 'Two distances' }).click();
+  await page.locator('[data-testid="chamfer-distance"]').fill('4');
+  await page.locator('[data-testid="chamfer-distance2"]').fill('2');
+  await page.click('[data-testid="panel-ok"]');
+  expect(await volume(page)).toBeCloseTo(240_000 - 400, 3);
+
+  const chamferId = (await state(page)).history.features[1]?.id;
+  await page.dblclick(`[data-feature-id="${chamferId}"]`);
+  await page.getByRole('radio', { name: 'Distance and angle' }).click();
+  await page.locator('[data-testid="chamfer-angle"]').fill('30');
+  await page.locator('[data-testid="chamfer-flip"]').check();
+  await page.click('[data-testid="panel-ok"]');
+  expect(await volume(page)).toBeCloseTo(240_000 - 800 * Math.tan(Math.PI / 6), 3);
+  expect((await state(page)).history.features[1]).toMatchObject({ type: 'chamfer', method: 'angle', distance: 4, angle: 30, flip: true });
+});
+
 test('imports a STEP file as a body, keeps it in the part and cuts into it', async () => {
   // A STEP file of the 100 × 60 × 40 box, exported by ParaWerk itself.
   launched = await launchApp();

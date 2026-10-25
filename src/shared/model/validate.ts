@@ -1,4 +1,4 @@
-import { EXPRESSION_FIELDS, EXTRUDE_DIRECTIONS, EXTRUDE_ENDS, HOLE_ENDS, type Axis, type BooleanOperation, type EdgeRef, type ExtrudeDirection, type ExtrudeEnd, type Feature, type FeatureType, type HoleEnd, type Variable, type Vec3 } from './feature.ts';
+import { CHAMFER_METHODS, type ChamferMethod, EXPRESSION_FIELDS, EXTRUDE_DIRECTIONS, EXTRUDE_ENDS, HOLE_ENDS, type Axis, type BooleanOperation, type EdgeRef, type ExtrudeDirection, type ExtrudeEnd, type Feature, type FeatureType, type HoleEnd, type Variable, type Vec3 } from './feature.ts';
 import { HOLE_FITS, HOLE_KINDS } from './hole.ts';
 import { CUSTOM_MATERIAL, materialInfo, MAX_DENSITY, MIN_DENSITY, NO_PROPERTIES, type PartProperties } from './material.ts';
 import { MAX_PATTERN_COUNT } from './pattern.ts';
@@ -367,13 +367,28 @@ function parseFeatureFields(raw: Json, path: string): Feature {
         radius: positiveLength(raw.radius, `${path}.radius`),
         edges: edges(raw.edges, `${path}.edges`),
       };
-    case 'chamfer':
-      return {
+    case 'chamfer': {
+      const chamfer: Feature = {
         ...common,
         type: 'chamfer',
         distance: positiveLength(raw.distance, `${path}.distance`),
         edges: edges(raw.edges, `${path}.edges`),
       };
+      if (raw.method !== undefined) {
+        if (!CHAMFER_METHODS.includes(raw.method as ChamferMethod)) throw new ValidationError(`expected one of ${CHAMFER_METHODS.join(', ')}`, `${path}.method`);
+        chamfer.method = raw.method as ChamferMethod;
+      }
+      if (raw.distance2 !== undefined) chamfer.distance2 = positiveLength(raw.distance2, `${path}.distance2`);
+      if (raw.angle !== undefined) {
+        if (typeof raw.angle !== 'number' || !(raw.angle > 0 && raw.angle < 90)) throw new ValidationError('expected an angle between 0° and 90°', `${path}.angle`);
+        chamfer.angle = raw.angle;
+      }
+      if (raw.flip !== undefined) {
+        if (typeof raw.flip !== 'boolean') throw new ValidationError('expected true or false', `${path}.flip`);
+        chamfer.flip = raw.flip;
+      }
+      return chamfer;
+    }
     case 'shell': {
       if (!Array.isArray(raw.faces) || raw.faces.length > 1000) throw new ValidationError('expected a list of faces', `${path}.faces`);
       if (typeof raw.outward !== 'boolean') throw new ValidationError('expected true or false', `${path}.outward`);

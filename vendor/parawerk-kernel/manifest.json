@@ -1,15 +1,15 @@
 {
   "occt": "8.0.1",
   "emscripten": "6.0.12",
-  "built": "2026-10-25T21:21:47.906Z",
+  "built": "2026-10-25T21:33:29.576Z",
   "sources": {
-    "native/kernel/src/core.hpp": "62f9197490979078da2350d46718eadfbd8d69d6658ec60928c6ef40e5ac6f53",
-    "native/kernel/src/core.cpp": "16b1c905850fd2956fffac5f63d75451bb6891ebb60f59b3933b9711a9d4fb74",
-    "native/kernel/src/bindings.cpp": "423e5b7d4ab3ea9d53f2523ff6096571e413cbec3fdc39efad43c9f118aa80be",
+    "native/kernel/src/core.hpp": "9eb21aa3c938f708a15f70969a165998f5f9104c5053f4dee9be5813e5068723",
+    "native/kernel/src/core.cpp": "dfbeaf86ceeafdf84299ce17c812ce975ad4b5a65a98dfa69f266130ba5b383d",
+    "native/kernel/src/bindings.cpp": "baad5305112fef39faef9e402427cd4dabde9d746af7cbee04ded5804dac939e",
     "scripts/build-kernel.sh": "8377b5206254907580f096c40a3d9a371fe8aa1c996a687f2e69bc9b860f2c0b"
   },
   "files": {
-    "parawerk-kernel.js": "4069136807e25ea17a852ff2b87def8ede6e57993aaf257ca879b96e5d3e3089",
-    "parawerk-kernel.wasm": "bedecd2715f2a669154202470585483d5baf2a7700f4cc23745666cdaf0abe2a"
+    "parawerk-kernel.js": "4d0faad1ae6d29172511f5721fb7f556a33d703842ad1e94352fa6e7f1a4753a",
+    "parawerk-kernel.wasm": "ba376d92e040516e4869aa8a020709efd343883e20775848b37ee2450c33c150"
   }
 }

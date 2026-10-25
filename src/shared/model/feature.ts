@@ -71,7 +71,7 @@ export const EXPRESSION_FIELDS: Readonly<Record<FeatureType, readonly string[]>>
   cylinder: ['radius', 'height'],
   import: [],
   fillet: ['radius'],
-  chamfer: ['distance'],
+  chamfer: ['distance', 'distance2', 'angle'],
   shell: ['thickness'],
 };
 
@@ -129,10 +129,24 @@ export interface FilletFeature extends FeatureBase {
   edges: EdgeRef[];
 }
 
+/** How a chamfer is sized: the same distance on both faces, two distances, or a distance and an angle. */
+export type ChamferMethod = 'equal' | 'distances' | 'angle';
+
+export const CHAMFER_METHODS: readonly ChamferMethod[] = ['equal', 'distances', 'angle'];
+
 export interface ChamferFeature extends FeatureBase {
   type: 'chamfer';
+  /** Along both faces (equal), or along the first face of each edge (the other one with `flip`). */
   distance: number;
   edges: EdgeRef[];
+  /** Absent: equal. */
+  method?: ChamferMethod;
+  /** Two distances: along the other face. */
+  distance2?: number;
+  /** Distance and angle: degrees from the first face (45°: as far on both faces). */
+  angle?: number;
+  /** Measures `distance` on the other face of each edge. */
+  flip?: boolean;
 }
 
 /**

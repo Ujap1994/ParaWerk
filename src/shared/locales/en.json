@@ -872,5 +872,17 @@
     "hint": "The solids of the STEP file become a body of their own (or are cut out of the part). The file is kept in the part: changes to it later do not reach the part; replace it here.",
     "tooLarge": "the file is larger than 64 MB",
     "notStep": "this is not a STEP file (ISO 10303-21)"
+  },
+  "chamfer": {
+    "method": "Size",
+    "methods": {
+      "equal": "Distance",
+      "distances": "Two distances",
+      "angle": "Distance and angle"
+    },
+    "distance1": "Distance 1",
+    "distance2": "Distance 2",
+    "angle": "Angle",
+    "flip": "Measure distance 1 on the other face"
   }
 }

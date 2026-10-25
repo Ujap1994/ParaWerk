@@ -133,6 +133,10 @@ val fillet(int bodyId, val edgeIndices, double radius, val edgeNames, std::strin
   return guarded([&] { return idResult(parawerk::fillet(bodyId, toIntVector(edgeIndices), radius, toStringVector(edgeNames), name)); });
 }
 
+val chamferUneven(int bodyId, val edgeIndices, double distance, double second, bool byAngle, bool flip, val edgeNames, std::string name) {
+  return guarded([&] { return idResult(parawerk::chamferUneven(bodyId, toIntVector(edgeIndices), distance, second, byAngle, flip, toStringVector(edgeNames), name)); });
+}
+
 val chamfer(int bodyId, val edgeIndices, double distance, val edgeNames, std::string name) {
   return guarded([&] { return idResult(parawerk::chamfer(bodyId, toIntVector(edgeIndices), distance, toStringVector(edgeNames), name)); });
 }
@@ -263,7 +267,7 @@ val importStepText(const std::string& text, const std::string& name) {
   return guarded([&] { return idResult(parawerk::importStep(text, name)); });
 }
 
-std::string version() { return "parawerk-kernel 0.8 / OCCT " PARAWERK_OCCT_VERSION; }
+std::string version() { return "parawerk-kernel 0.9 / OCCT " PARAWERK_OCCT_VERSION; }
 
 }  // namespace
 
@@ -280,6 +284,7 @@ EMSCRIPTEN_BINDINGS(parawerk_kernel) {
   emscripten::function("trimByPlane", &trimByPlane);
   emscripten::function("fillet", &fillet);
   emscripten::function("chamfer", &chamfer);
+  emscripten::function("chamferUneven", &chamferUneven);
   emscripten::function("release", &parawerk::release);
   emscripten::function("shapeCount", &parawerk::shapeCount);
   emscripten::function("naming", &naming);

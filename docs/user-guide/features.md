@@ -138,7 +138,15 @@ so you can keep picking.
 
 ## Chamfer
 
-Bevels edges with an equal *Distance* on both faces. Edge selection works like for fillets.
+Bevels edges. Edge selection works like for fillets. *Size* decides the shape of the bevel:
+
+- **Distance:** the same distance on both faces of each edge (a 45° bevel).
+- **Two distances:** *Distance 1* along one face of the edge, *Distance 2* along the other.
+- **Distance and angle:** *Distance 1* along one face, and the bevel at the *Angle* to that face (45°
+  is the same as equal distances; smaller angles make a flatter bevel).
+
+For uneven chamfers, the preview shows which face *Distance 1* is measured on; *Measure distance 1 on
+the other face* swaps the faces.
 
 ## Shell
 

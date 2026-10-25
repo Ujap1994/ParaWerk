@@ -872,5 +872,17 @@
     "hint": "Die Volumenkörper der STEP-Datei werden ein eigener Körper (oder aus dem Teil herausgeschnitten). Die Datei wird im Teil gespeichert: spätere Änderungen an ihr erreichen das Teil nicht; ersetzen Sie sie hier.",
     "tooLarge": "die Datei ist größer als 64 MB",
     "notStep": "das ist keine STEP-Datei (ISO 10303-21)"
+  },
+  "chamfer": {
+    "method": "Größe",
+    "methods": {
+      "equal": "Abstand",
+      "distances": "Zwei Abstände",
+      "angle": "Abstand und Winkel"
+    },
+    "distance1": "Abstand 1",
+    "distance2": "Abstand 2",
+    "angle": "Winkel",
+    "flip": "Abstand 1 auf der anderen Fläche messen"
   }
 }
