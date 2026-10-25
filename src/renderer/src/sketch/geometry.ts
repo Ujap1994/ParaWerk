@@ -3,8 +3,8 @@
  * hit testing and deletion with dependents. All coordinates are sketch coordinates (mm).
  */
 
-import { ORIGIN_ID, type SketchConstraint, type SketchCurve, type SketchData, type SketchEntity } from '../../../shared/model/sketch.ts';
-import { closestOnSpline, segmentsPerSpan, splinePolyline, splineThrough, type Point2, type SplineGeometry } from '../../../shared/model/spline.ts';
+import { ORIGIN_ID, type SketchConstraint, type SketchCurve, type SketchData, type SketchEntity, type SketchSpline } from '../../../shared/model/sketch.ts';
+import { closestOnSpline, segmentsPerSpan, splineEnd, splinePolyline, splineThrough, type Point2, type SplineGeometry, type SplineRange } from '../../../shared/model/spline.ts';
 
 export type { Point2 };
 
@@ -35,7 +35,7 @@ export function curvePoints(curve: SketchCurve): string[] {
     case 'ellipse':
       return [curve.center, curve.major, curve.minor];
     case 'spline':
-      return [...curve.points];
+      return [...curve.points, ...(curve.start ? [curve.start] : []), ...(curve.end ? [curve.end] : [])];
   }
 }
 
@@ -133,6 +133,37 @@ export function splineOf(curve: { points: readonly string[] }, positions: Readon
   return points.every((p) => p !== undefined) ? splineThrough(points as Point2[]) : null;
 }
 
+/**
+ * The spline of a sketch entity with the stretch it shows: from its trim ends (where the solver keeps
+ * them on the curve), else from the first to the last fit point. Null if a point is missing.
+ */
+export function trimmedSplineOf(curve: SketchSpline, positions: ReadonlyMap<string, Point2>): { spline: SplineGeometry; range: SplineRange } | null {
+  const spline = splineOf(curve, positions);
+  if (!spline) return null;
+  const at = (id: string | undefined, fallback: number): number | null => {
+    if (id === undefined) return fallback;
+    const p = positions.get(id);
+    return p ? closestOnSpline(spline, p, true).s : null;
+  };
+  const from = at(curve.start, 0);
+  const to = at(curve.end, splineEnd(spline));
+  if (from === null || to === null) return null;
+  return { spline, range: from <= to ? [from, to] : [to, from] };
+}
+
+/** The parts of a trimmed spline that it does not show, between its fit points (for a faint hint). */
+export function hiddenSplinePolylines(curve: SketchSpline, positions: ReadonlyMap<string, Point2>, mmPerPixel: number): Point2[][] {
+  if (!curve.start && !curve.end) return [];
+  const trimmed = trimmedSplineOf(curve, positions);
+  if (!trimmed) return [];
+  const { spline, range } = trimmed;
+  const perSpan = segmentsPerSpan(spline, MAX_DEVIATION_PX * mmPerPixel);
+  const parts: SplineRange[] = [];
+  if (range[0] > 0) parts.push([0, Math.min(range[0], splineEnd(spline))]);
+  if (range[1] < splineEnd(spline)) parts.push([Math.max(range[1], 0), splineEnd(spline)]);
+  return parts.filter(([a, b]) => b > a).map((part) => splinePolyline(spline, perSpan, part));
+}
+
 /** The ellipse of a sketch entity, or null if a point is missing. */
 export function ellipseOf(curve: { center: string; major: string; minor: string }, positions: ReadonlyMap<string, Point2>): EllipseGeometry | null {
   const center = positions.get(curve.center);
@@ -158,8 +189,8 @@ export function curvePolyline(curve: SketchCurve, positions: ReadonlyMap<string,
     return p1 && p2 ? [p1, p2] : null;
   }
   if (curve.type === 'spline') {
-    const spline = splineOf(curve, positions);
-    return spline ? splinePolyline(spline, segmentsPerSpan(spline, MAX_DEVIATION_PX * mmPerPixel)) : null;
+    const trimmed = trimmedSplineOf(curve, positions);
+    return trimmed ? splinePolyline(trimmed.spline, segmentsPerSpan(trimmed.spline, MAX_DEVIATION_PX * mmPerPixel), trimmed.range) : null;
   }
   if (curve.type === 'ellipse') {
     const ellipse = ellipseOf(curve, positions);
@@ -208,8 +239,8 @@ export function distanceToCurve(curve: SketchCurve, positions: ReadonlyMap<strin
     return ellipse ? closestOnEllipse(ellipse, [u, v]).distance : Infinity;
   }
   if (curve.type === 'spline') {
-    const spline = splineOf(curve, positions);
-    return spline ? closestOnSpline(spline, [u, v]).distance : Infinity;
+    const trimmed = trimmedSplineOf(curve, positions);
+    return trimmed ? closestOnSpline(trimmed.spline, [u, v], false, trimmed.range).distance : Infinity;
   }
   const center = positions.get(curve.center);
   if (!center) return Infinity;

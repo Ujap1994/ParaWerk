@@ -985,6 +985,48 @@ test('rounds and bevels corners of a fully defined rectangle, keeping it fully d
   await expect(page.locator('[data-testid="sketch-status"]')).toHaveText('Fully defined');
 });
 
+test('cuts a spline at a crossing line: the rest keeps its fit points and its exact shape', async () => {
+  launched = await launchApp();
+  const { page } = launched;
+  await page.evaluate(() => {
+    const P = (id: string, x: number, y: number) => ({ id, type: 'point', x, y });
+    const sketch = {
+      entities: [
+        P('a', -40, 0), P('b', -15, 25), P('c', 10, 0), P('d', 40, 15), { id: 'curve', type: 'spline', points: ['a', 'b', 'c', 'd'] },
+        P('e', 0, -20), P('f', 0, 40), { id: 'cut', type: 'line', p1: 'e', p2: 'f' },
+      ],
+      constraints: [],
+    };
+    const features = [{ id: 's', type: 'sketch', plane: { kind: 'standard', plane: 'top' }, sketch }];
+    (window as unknown as { __parawerk: Hooks }).__parawerk.setState({ history: { features, past: [], future: [] }, savedFeatures: features, dirty: false });
+  });
+  await page.dblclick('.tree-item[data-feature-id="s"]');
+  await expectNormalView(page, [1, 0, 0], [0, 1, 0]);
+  const canvas = await page.locator('.viewport-canvas').boundingBox();
+  if (!canvas) throw new Error('viewport not visible');
+  const sketch = async () => (await state(page)).sketch?.draft.sketch;
+  const curve = splineThrough([[-40, 0], [-15, 25], [10, 0], [40, 15]]);
+  if (!curve) throw new Error('no spline');
+
+  // Trim (key T) the spline left of the line: the piece turns red, a click removes it.
+  await page.keyboard.press('t');
+  const left = splinePoint(curve, (curve.knots[1] as number) * 0.8);
+  const p = await project(page, [left[0], left[1], 0]);
+  await page.mouse.move(canvas.x + p.x, canvas.y + p.y, { steps: 3 });
+  await page.mouse.click(canvas.x + p.x, canvas.y + p.y);
+  await expect.poll(async () => ((await sketch())?.entities.find((e) => e.id === 'curve') as unknown as { start?: string })?.start).toBeTruthy();
+  const after = await sketch();
+  const trimmed = after?.entities.find((e) => e.id === 'curve') as unknown as { points: string[]; start: string };
+  expect(trimmed.points).toEqual(['a', 'b', 'c', 'd']);
+  const start = after?.entities.find((e) => e.id === trimmed.start);
+  expect(start?.x).toBeCloseTo(0, 6);
+  expect(closestOnSpline(curve, [start?.x ?? 0, start?.y ?? 0]).distance).toBeLessThan(1e-6);
+  // The fit points did not move: the shape is exactly the same.
+  expect(after?.entities.find((e) => e.id === 'b')).toMatchObject({ x: -15, y: 25 });
+  await page.click('[data-testid="sketch-ok"]');
+  expect((await state(page)).history.features).toHaveLength(1);
+});
+
 test('trims pieces between crossings and extends lines up to the next curve', async () => {
   launched = await launchApp();
   const { page } = launched;

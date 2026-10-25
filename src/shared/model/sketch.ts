@@ -59,11 +59,17 @@ export interface SketchEllipse {
 /**
  * Spline through its fit points (at least two): a natural cubic spline parameterized by chord length.
  * The points are ordinary sketch points; the curve follows them.
+ *
+ * A trimmed spline keeps all of its fit points, so its shape stays exactly the same, and shows only the
+ * stretch between `start` and `end`: points that the solver keeps on the curve (continued straight
+ * beyond the fit points). Without them it runs from the first to the last fit point.
  */
 export interface SketchSpline {
   id: string;
   type: 'spline';
   points: string[];
+  start?: string;
+  end?: string;
   construction?: boolean;
 }
 

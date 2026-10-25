@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { dragTarget } from '../../src/renderer/src/sketch/drag.ts';
 import { dxfToSketch, sketchToDxf } from '../../src/renderer/src/sketch/dxf.ts';
-import { curvePolyline, deleteEntities, hitTest, pointPositions, splineOf } from '../../src/renderer/src/sketch/geometry.ts';
+import { curvePolyline, deleteEntities, hiddenSplinePolylines, hitTest, pointPositions, splineOf } from '../../src/renderer/src/sketch/geometry.ts';
 import { snapCursor } from '../../src/renderer/src/sketch/snap.ts';
 import { boundaries } from '../../src/renderer/src/sketch/intersect.ts';
 import { applicableRelations } from '../../src/renderer/src/sketch/relations.ts';
@@ -318,10 +318,109 @@ describe('trimming and extending at splines', () => {
     expect(distanceToSpline(result.sketch, 'h2')).toBeLessThan(1e-9);
   });
 
-  it('removes a spline that nothing crosses, and refuses to cut a crossed one into pieces', () => {
+  it('removes a spline that nothing crosses', () => {
     const alone = trimAt(base, 's', [20, 15]);
     expect(alone.ok && alone.sketch.entities.some((e) => e.type === 'spline')).toBe(false);
-    expect(trimAt(crossed, 's', [10, 10])).toEqual({ ok: false, error: 'spline' });
+  });
+});
+
+describe('cutting splines', () => {
+  const crossed: SketchData = {
+    entities: [
+      ...base.entities,
+      point('v1', 30, -20), point('v2', 30, 30), { id: 'v', type: 'line', p1: 'v1', p2: 'v2' },
+      point('kc', 50, 5), { id: 'k', type: 'circle', center: 'kc', radius: 6 },
+    ],
+    constraints: [],
+  };
+  const spline = (sketch: SketchData, id = 's') => sketch.entities.find((e) => e.id === id) as SketchSpline;
+  const original = splineOf(base.entities[4] as SketchSpline, pointPositions(base));
+  if (!original) throw new Error('no spline');
+  const onOriginal = (sketch: SketchData, id: string) => closestOnSpline(original, pointPositions(sketch).get(id) as [number, number]).distance;
+
+  it('keeps all fit points and the exact shape, and shows only the rest', () => {
+    // The piece from the first fit point to the line goes.
+    const result = trimAt(crossed, 's', [10, 10]);
+    if (!result.ok) throw new Error(result.error);
+    const trimmed = spline(result.sketch);
+    expect(trimmed.points).toEqual(['a', 'b', 'c', 'd']);
+    expect(trimmed.start).toBeDefined();
+    expect(trimmed.end).toBeUndefined();
+    expect(onOriginal(result.sketch, trimmed.start as string)).toBeLessThan(1e-9);
+    // The new end is held on the line by a relation and on the spline by the spline itself.
+    expect(result.sketch.constraints).toEqual([expect.objectContaining({ type: 'pointOnLine', point: trimmed.start, line: 'v' })]);
+    const polyline = curvePolyline(trimmed, pointPositions(result.sketch), 0.01) ?? [];
+    expect(polyline[0]?.[0]).toBeCloseTo(30, 9);
+    expect(polyline.at(-1)).toEqual([60, 10]);
+    for (const p of polyline) expect(closestOnSpline(original, p).distance).toBeLessThan(1e-9);
+    // Picking ignores the part that is cut off; it is only hinted.
+    expect(hitTest(result.sketch, pointPositions(result.sketch), 10, 10.6, 1)).toBeNull();
+    expect(hiddenSplinePolylines(trimmed, pointPositions(result.sketch), 0.01)).toHaveLength(1);
+    expect(() => parseSketchData(JSON.parse(JSON.stringify(result.sketch)))).not.toThrow();
+  });
+
+  it('cuts a piece out of the middle: two splines through the same fit points', () => {
+    const between = boundaries(crossed, 's');
+    const middle = ((between[0]?.t as number) + (between[1]?.t as number)) / 2;
+    const shape = { at: splinePoint(original, middle * (original.knots.at(-1) as number)) };
+    const result = trimAt(crossed, 's', shape.at);
+    if (!result.ok) throw new Error(result.error);
+    const pieces = result.sketch.entities.filter((e): e is SketchSpline => e.type === 'spline');
+    expect(pieces).toHaveLength(2);
+    expect(pieces[1]?.points).toEqual(pieces[0]?.points);
+    const [first, second] = pieces as [SketchSpline, SketchSpline];
+    expect(first.start).toBeUndefined();
+    expect(second.end).toBeUndefined();
+    for (const id of [first.end, second.start]) expect(onOriginal(result.sketch, id as string)).toBeLessThan(1e-9);
+    expect(result.sketch.constraints.map((c) => c.type).sort()).toEqual(['pointOnCircle', 'pointOnLine']);
+    // Trimming the rest of the second piece at the circle again.
+    const again = trimAt(result.sketch, second.id, [58, 10]);
+    if (!again.ok) throw new Error(again.error);
+    const last = spline(again.sketch, second.id);
+    expect(last.start).toBe(second.start);
+    expect(last.end).toBeDefined();
+    expect(onOriginal(again.sketch, last.end as string)).toBeLessThan(1e-9);
+  });
+
+  it('holds trim ends on the curve while the fit points move, and they count for the definition', () => {
+    const result = trimAt(crossed, 's', [10, 10]);
+    if (!result.ok) throw new Error(result.error);
+    const trimmed = spline(result.sketch);
+    const fixed = ['a', 'b', 'c', 'd', 'v1', 'v2'].map((id) => ({ id: `f${id}`, type: 'fix' as const, point: id }));
+    const full = solveSketch({ ...result.sketch, constraints: [...result.sketch.constraints, ...fixed] });
+    expect(full.converged).toBe(true);
+    expect(full.status?.entities.s).toBe('full');
+    // Without the line, the trim end slides along the spline.
+    const free = solveSketch({ ...result.sketch, constraints: fixed.filter((c) => !c.point.startsWith('v')) });
+    expect(free.status?.entities.s).toBe('under');
+    // Moving a fit point keeps the trim end on the changed curve.
+    const moved = solveSketch({
+      ...result.sketch,
+      constraints: [...result.sketch.constraints, ...fixed.filter((c) => c.point !== 'b'), { id: 'hb', type: 'verticalDistance', a: 'a', b: 'b', value: 25, driving: true }],
+    });
+    expect(moved.converged).toBe(true);
+    const movedSpline = splineOf(spline(moved.sketch), pointPositions(moved.sketch));
+    if (!movedSpline) throw new Error('no spline');
+    expect(closestOnSpline(movedSpline, pointPositions(moved.sketch).get(trimmed.start as string) as [number, number], true).distance).toBeLessThan(1e-7);
+  });
+
+  it('are validated, copied with their trim ends and ignore crossings in the cut-off part', () => {
+    const result = trimAt(crossed, 's', [10, 10]);
+    if (!result.ok) throw new Error(result.error);
+    const trimmed = spline(result.sketch);
+    const invalid = (patch: Partial<SketchSpline>) => ({ ...result.sketch, entities: result.sketch.entities.map((e) => (e.id === 's' ? { ...e, ...patch } : e)) });
+    expect(() => parseSketchData(invalid({ start: 'b' }))).toThrow();
+    expect(() => parseSketchData(invalid({ end: trimmed.start as string }))).toThrow();
+    expect(() => parseSketchData(invalid({ start: 'zz' }))).toThrow();
+    const copy = linearPattern(result.sketch, ['s'], [0, 50], 2);
+    if (!copy.ok) throw new Error(copy.error);
+    const copied = copy.sketch.entities.filter((e): e is SketchSpline => e.type === 'spline');
+    expect(copied).toHaveLength(2);
+    expect(copied[1]?.start).toBeDefined();
+    expect(copied[1]?.start).not.toBe(trimmed.start);
+    // A line across the cut-off part does not split the trimmed spline.
+    const across: SketchData = { ...result.sketch, entities: [...result.sketch.entities, point('w1', 10, -20), point('w2', 10, 30), { id: 'w', type: 'line', p1: 'w1', p2: 'w2' }] };
+    expect(boundaries(across, 's').some((b) => b.curve === 'w')).toBe(false);
   });
 });
 

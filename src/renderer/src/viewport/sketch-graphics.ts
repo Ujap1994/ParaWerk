@@ -6,7 +6,7 @@ import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { isDimension, ORIGIN_ID, type SketchData, type SketchDimension, type SketchEntity, type SketchFrame } from '../../../shared/model/sketch.ts';
 import type { DefinitionStatus } from '../../../sketch/solver/index.ts';
 import { arrowStrokes, dimensionGraphic, displayValue } from '../sketch/dimensions.ts';
-import { constraintReferences, curvePointIds, curvePoints, curvePolyline, isCurve, pointPositions, type Point2 } from '../sketch/geometry.ts';
+import { constraintReferences, curvePointIds, curvePoints, curvePolyline, hiddenSplinePolylines, isCurve, pointPositions, type Point2 } from '../sketch/geometry.ts';
 import { RELATION_SYMBOLS, relationGlyphs, type RelationGlyph } from '../sketch/glyphs.ts';
 import type { RelationKind } from '../sketch/relations.ts';
 import type { ViewportPalette } from './palette.ts';
@@ -536,6 +536,15 @@ export class SketchGraphics {
         const start = highlight.length;
         segmentsOf(polyline, highlight);
         for (let i = start; i < highlight.length; i += 3) highlightColors.push(color.r, color.g, color.b);
+      }
+      // The trimmed-off parts of a spline: a faint dashed hint at the fit points that still shape it.
+      if (entity.type === 'spline' && this.look === 'active') {
+        const guide = this.materials.colors.guide;
+        for (const hidden of hiddenSplinePolylines(entity, positions, this.tessellatedAt)) {
+          const start = construction.length;
+          segmentsOf(hidden, construction);
+          for (let i = start; i < construction.length; i += 3) constructionColors.push(guide.r, guide.g, guide.b);
+        }
       }
     }
     setSegments(this.lines, lines, lineColors);

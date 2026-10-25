@@ -420,7 +420,6 @@
       "cornerStraight": "The two lines continue each other in a straight line; there is no corner.",
       "trimNotACurve": "Click on a line, circle, arc, ellipse or spline.",
       "trimEllipse": "An ellipse that other curves cross cannot be cut into pieces; trim the other curves, or delete the ellipse.",
-      "trimSpline": "A spline that other curves cross cannot be cut into pieces yet; trim the other curves, or delete the spline.",
       "extendNoTarget": "There is no curve to extend to in this direction.",
       "extendConnected": "This end is connected to other geometry and cannot be extended.",
       "extendConstrained": "Relations or dimensions hold this end in place; delete them to extend it.",

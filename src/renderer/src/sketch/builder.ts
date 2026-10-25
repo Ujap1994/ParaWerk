@@ -77,10 +77,11 @@ export class SketchBuilder {
     return id;
   }
 
-  /** Spline through its fit points. */
-  spline(points: readonly string[], construction = false): string {
+  /** Spline through its fit points, showing the stretch between its trim ends if it has them. */
+  spline(points: readonly string[], construction = false, ends: { start?: string | undefined; end?: string | undefined } = {}): string {
     const id = this.id('s');
-    this.entities.push({ id, type: 'spline', points: [...points], ...(construction ? { construction } : {}) });
+    const trim = { ...(ends.start ? { start: ends.start } : {}), ...(ends.end ? { end: ends.end } : {}) };
+    this.entities.push({ id, type: 'spline', points: [...points], ...trim, ...(construction ? { construction } : {}) });
     return id;
   }
 

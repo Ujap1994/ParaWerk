@@ -55,7 +55,16 @@ function parseEntity(raw: unknown, path: string): SketchEntity {
       if (!Array.isArray(raw.points) || raw.points.length < 2 || raw.points.length > MAX_SPLINE_POINTS) {
         throw new ValidationError(`expected 2 to ${MAX_SPLINE_POINTS} points`, `${path}.points`);
       }
-      return { id, type: 'spline', points: raw.points.map((point, i) => identifier(point, `${path}.points[${i}]`)), ...extra };
+      const points = raw.points.map((point, i) => identifier(point, `${path}.points[${i}]`));
+      const ends: { start?: string; end?: string } = {};
+      for (const field of ['start', 'end'] as const) {
+        if (raw[field] === undefined) continue;
+        const end = identifier(raw[field], `${path}.${field}`);
+        if (points.includes(end)) throw new ValidationError('a trim end cannot be a fit point', `${path}.${field}`);
+        ends[field] = end;
+      }
+      if (ends.start !== undefined && ends.start === ends.end) throw new ValidationError('the trim ends must differ', `${path}.end`);
+      return { id, type: 'spline', points, ...ends, ...extra };
     }
     case 'ellipse':
       return {
@@ -145,7 +154,7 @@ export function parseSketchData(raw: unknown, path = 'sketch'): SketchData {
     if (entity.type === 'circle') expectPoint(entity.center, where);
     if (entity.type === 'arc') [entity.center, entity.start, entity.end].forEach((id) => expectPoint(id, where));
     if (entity.type === 'ellipse') [entity.center, entity.major, entity.minor].forEach((id) => expectPoint(id, where));
-    if (entity.type === 'spline') entity.points.forEach((id) => expectPoint(id, where));
+    if (entity.type === 'spline') [...entity.points, ...(entity.start ? [entity.start] : []), ...(entity.end ? [entity.end] : [])].forEach((id) => expectPoint(id, where));
   });
   const ids = new Set(kinds.keys());
   constraints.forEach((constraint, i) => {

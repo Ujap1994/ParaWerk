@@ -4,7 +4,7 @@
  */
 
 import { isDimension, ORIGIN_ID, type SketchConstraint, type SketchData, type SketchRelation } from '../../../shared/model/sketch.ts';
-import { constraintReferences } from './geometry.ts';
+import { constraintReferences, curvePoints } from './geometry.ts';
 
 export type RelationKind =
   | 'horizontal'
@@ -124,10 +124,10 @@ export function applicableRelations(sketch: SketchData, ids: readonly string[]):
     if (pairOf(1, points) && lines.length === 0 && p0) add('onCurve', [{ type: 'pointOnCircle', point: p0, circle: e0 }]);
     if (pairOf(1, lines) && points.length === 0 && l0) add('tangent', [{ type: 'tangent', a: l0, b: e0 }]);
   }
-  // Splines: a point on them (not one of their own fit points, which lie on them anyway).
+  // Splines: a point on them (not one of their own fit points or trim ends, which lie on them anyway).
   if (pairOf(1, splines) && pairOf(1, points) && lines.length === 0 && rounds.length === 0 && ellipses.length === 0 && p0 && s0) {
     const spline = sketch.entities.find((entity) => entity.id === s0);
-    if (spline?.type === 'spline' && !spline.points.includes(p0)) add('onCurve', [{ type: 'pointOnCircle', point: p0, circle: s0 }]);
+    if (spline?.type === 'spline' && !curvePoints(spline).includes(p0)) add('onCurve', [{ type: 'pointOnCircle', point: p0, circle: s0 }]);
   }
   if (onlyLines && pairOf(2, lines) && l0 && l1) {
     add('parallel', [{ type: 'parallel', a: l0, b: l1 }]);

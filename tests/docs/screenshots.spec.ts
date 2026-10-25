@@ -428,7 +428,17 @@ test('README and user guide screenshots', async () => {
     await page.mouse.move(p.x, p.y, { steps: 3 });
     await page.waitForTimeout(300);
     await page.screenshot({ path: out('sketch-spline-trim.png') });
+
+    // Remove that piece, then cut the spline at the line: the part beyond the cut is only hinted.
+    await page.mouse.click(p.x, p.y);
+    const beyond = splinePoint(handle, splineRoots(handle, (q) => q[0] - 65)[0] as number);
+    const right = await at(beyond[0], beyond[1]);
+    await page.mouse.move(right.x, right.y, { steps: 3 });
+    await page.mouse.click(right.x, right.y);
     await page.keyboard.press('Escape');
+    if (canvas) await page.mouse.move(canvas.x + 40, canvas.y + canvas.height - 40);
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: out('sketch-spline-cut.png') });
   }
   await page.click('[data-testid="sketch-ok"]');
 

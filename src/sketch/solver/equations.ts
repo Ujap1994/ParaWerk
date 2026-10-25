@@ -10,7 +10,7 @@ import { closestOnSpline, splineThrough, type Point2 } from '../../shared/model/
  */
 
 export interface Equation {
-  /** Owning constraint id, or `arc:<id>` for the implicit rule of an arc. */
+  /** Owning constraint id, or `arc:<id>` (`ellipse:`, `spline:`) for the implicit rule of a curve. */
   owner: string;
   /** Global parameter indices used by `residual`, in order. */
   params: number[];
@@ -82,8 +82,8 @@ export function buildSystem(entities: readonly SketchEntity[], constraints: read
     else if (entity.type === 'line') entityParams.set(entity.id, [...(point(entity.p1) ?? []), ...(point(entity.p2) ?? [])]);
     else if (entity.type === 'circle') entityParams.set(entity.id, [...(point(entity.center) ?? []), radiusParam.get(entity.id) ?? -1]);
     else if (entity.type === 'ellipse') entityParams.set(entity.id, [...(point(entity.center) ?? []), ...(point(entity.major) ?? []), ...(point(entity.minor) ?? [])]);
-    // A spline has no parameters of its own: it follows its fit points.
-    else if (entity.type === 'spline') entityParams.set(entity.id, entity.points.flatMap((id) => point(id) ?? []));
+    // A spline has no parameters of its own: it follows its fit points (and shows the stretch between its trim ends).
+    else if (entity.type === 'spline') entityParams.set(entity.id, [...entity.points, ...(entity.start ? [entity.start] : []), ...(entity.end ? [entity.end] : [])].flatMap((id) => point(id) ?? []));
     else entityParams.set(entity.id, [...(point(entity.center) ?? []), ...(point(entity.start) ?? []), ...(point(entity.end) ?? [])]);
   }
 
@@ -185,6 +185,31 @@ export function buildSystem(entities: readonly SketchEntity[], constraints: read
       const re = lengthOf((v[4] as number) - (v[0] as number), (v[5] as number) - (v[1] as number));
       return rs - re;
     });
+  }
+
+  /** A point on a spline: its signed distance from the curve, continued straight beyond its ends (smooth there). */
+  const onSpline = (owner: string, fit: [number, number][], p: [number, number]) => {
+    const n = fit.length;
+    add(owner, [...fit.flat(), ...p], (v) => {
+      const points: Point2[] = [];
+      for (let i = 0; i < n; i++) points.push([v[2 * i] as number, v[2 * i + 1] as number]);
+      const target: Point2 = [v[2 * n] as number, v[2 * n + 1] as number];
+      const spline = splineThrough(points);
+      // All fit points in one place: the distance from there.
+      if (!spline) return lengthOf(target[0] - (points[0] as Point2)[0], target[1] - (points[0] as Point2)[1]);
+      return closestOnSpline(spline, target, true).signed;
+    });
+  };
+
+  // Implicit spline rule: the trim ends lie on the curve.
+  for (const entity of entities) {
+    if (entity.type !== 'spline') continue;
+    const fit = splineOf(entity.id);
+    if (!fit) continue;
+    for (const end of [entity.start, entity.end]) {
+      const p = end === undefined ? undefined : point(end);
+      if (p) onSpline(`spline:${entity.id}`, fit, p);
+    }
   }
 
   // Implicit ellipse rule: the two axes are perpendicular.
@@ -383,17 +408,7 @@ export function buildSystem(entities: readonly SketchEntity[], constraints: read
         const p = point(constraint.point);
         const fit = splineOf(constraint.circle);
         if (p && fit) {
-          // The signed distance from the spline, continued straight beyond its ends (smooth there).
-          const n = fit.length;
-          add(id, [...fit.flat(), ...p], (v) => {
-            const points: Point2[] = [];
-            for (let i = 0; i < n; i++) points.push([v[2 * i] as number, v[2 * i + 1] as number]);
-            const target: Point2 = [v[2 * n] as number, v[2 * n + 1] as number];
-            const spline = splineThrough(points);
-            // All fit points in one place: the distance from there.
-            if (!spline) return lengthOf(target[0] - (points[0] as Point2)[0], target[1] - (points[0] as Point2)[1]);
-            return closestOnSpline(spline, target, true).signed;
-          });
+          onSpline(id, fit, p);
           break;
         }
         const ellipse = ellipseOf(constraint.circle);

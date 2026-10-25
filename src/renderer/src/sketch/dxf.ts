@@ -7,7 +7,7 @@
 
 import type { SketchData } from '../../../shared/model/sketch.ts';
 import { SketchBuilder } from './builder.ts';
-import { arcGeometry, ellipseOf, ellipsePoint, pointPositions, splineOf, type Point2 } from './geometry.ts';
+import { arcGeometry, ellipseOf, ellipsePoint, pointPositions, trimmedSplineOf, type Point2 } from './geometry.ts';
 import { segmentsPerSpan, splinePolyline } from '../../../shared/model/spline.ts';
 
 /** Largest distance of an exported ellipse or spline polyline from the true curve, in millimeters. */
@@ -104,9 +104,9 @@ export function sketchToDxf(sketch: SketchData): { text: string; entities: numbe
       polyline(Array.from({ length: count }, (_, i) => ellipsePoint(ellipse, (2 * Math.PI * i) / count)), true);
       entities++;
     } else if (entity.type === 'spline') {
-      const spline = splineOf(entity, positions);
-      if (!spline) continue;
-      polyline(splinePolyline(spline, segmentsPerSpan(spline, CURVE_TOLERANCE)), false);
+      const trimmed = trimmedSplineOf(entity, positions);
+      if (!trimmed) continue;
+      polyline(splinePolyline(trimmed.spline, segmentsPerSpan(trimmed.spline, CURVE_TOLERANCE), trimmed.range), false);
       entities++;
     }
   }

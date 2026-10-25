@@ -118,6 +118,33 @@ export function splinePoint(spline: SplineGeometry, s: number): Point2 {
   return splineAt(spline, Math.max(0, Math.min(splineEnd(spline), s))).point;
 }
 
+/** A stretch of a spline by parameter, from ≤ to; it may reach beyond the ends (the straight continuations). */
+export type SplineRange = readonly [number, number];
+
+/** The whole spline, from its first to its last fit point. */
+export function fullRange(spline: SplineGeometry): SplineRange {
+  return [0, splineEnd(spline)];
+}
+
+/**
+ * Parameters from range[0] to range[1]: `perSpan` steps for every span (or straight continuation) the
+ * range covers, fewer for a part of a span; the fit points inside the range are hit exactly.
+ */
+function rangeParameters(spline: SplineGeometry, range: SplineRange, perSpan: number): number[] {
+  const [from, to] = range;
+  const breaks = [from, ...spline.knots.filter((knot) => knot > from && knot < to), to];
+  const end = splineEnd(spline);
+  const result = [from];
+  for (let i = 1; i < breaks.length; i++) {
+    const [a, b] = [breaks[i - 1] as number, breaks[i] as number];
+    // The span this piece lies in (straight continuations count as one span of their own length).
+    const span = a >= end || b <= 0 ? b - a : (spline.knots[spanAt(spline, (a + b) / 2) + 1] as number) - (spline.knots[spanAt(spline, (a + b) / 2)] as number);
+    const steps = Math.max(1, Math.ceil((perSpan * (b - a)) / Math.max(span, 1e-300)));
+    for (let k = 1; k <= steps; k++) result.push(k === steps ? b : a + ((b - a) * k) / steps);
+  }
+  return result;
+}
+
 /** Coarse samples per span when searching the spline. */
 const SEARCH_SAMPLES = 8;
 
@@ -131,22 +158,18 @@ export interface SplineProjection {
 }
 
 /**
- * The point of the spline nearest to p: coarse samples along every span, then Newton steps on the
- * parameter. With `extended`, the straight continuations beyond the ends count as part of the curve,
- * which keeps the signed distance smooth near the ends (the solver needs that).
+ * The point of the spline (or of the stretch `range`) nearest to p: coarse samples along every span, then
+ * Newton steps on the parameter. With `extended`, the straight continuations beyond the ends count as
+ * part of the curve, which keeps the signed distance smooth near the ends (the solver needs that).
  */
-export function closestOnSpline(spline: SplineGeometry, p: Point2, extended = false): SplineProjection {
+export function closestOnSpline(spline: SplineGeometry, p: Point2, extended = false, range: SplineRange = fullRange(spline)): SplineProjection {
   const end = splineEnd(spline);
   const squared = (q: Point2) => (q[0] - p[0]) ** 2 + (q[1] - p[1]) ** 2;
-  let s = 0;
+  let s = range[0];
   let best = Infinity;
-  for (let i = 0; i + 1 < spline.knots.length; i++) {
-    const [from, to] = [spline.knots[i] as number, spline.knots[i + 1] as number];
-    for (let k = i === 0 ? 0 : 1; k <= SEARCH_SAMPLES; k++) {
-      const candidate = from + ((to - from) * k) / SEARCH_SAMPLES;
-      const value = squared(evaluateSpan(spline, i, candidate).point);
-      if (value < best) [s, best] = [candidate, value];
-    }
+  for (const candidate of rangeParameters(spline, range, SEARCH_SAMPLES)) {
+    const value = squared(splineAt(spline, candidate).point);
+    if (value < best) [s, best] = [candidate, value];
   }
   if (extended) {
     // The straight continuations: exact projections onto the end tangents.
@@ -159,7 +182,7 @@ export function closestOnSpline(spline: SplineGeometry, p: Point2, extended = fa
       if (value < best) [s, best] = [candidate, value];
     }
   }
-  const limit = (value: number) => (extended ? value : Math.max(0, Math.min(end, value)));
+  const limit = (value: number) => (extended ? value : Math.max(range[0], Math.min(range[1], value)));
   for (let iteration = 0; iteration < 24; iteration++) {
     const { point, tangent, bend } = splineAt(spline, s);
     const [dx, dy] = [point[0] - p[0], point[1] - p[1]];
@@ -183,43 +206,35 @@ export function closestOnSpline(spline: SplineGeometry, p: Point2, extended = fa
 
 /**
  * Parameters where `signed` (evaluated at points of the spline) changes its sign, from samples along
- * every span refined by bisection; for crossings of the spline with other curves.
+ * every span (of `range`) refined by bisection; for crossings of the spline with other curves.
  */
-export function splineRoots(spline: SplineGeometry, signed: (p: Point2) => number, samplesPerSpan = 16): number[] {
+export function splineRoots(spline: SplineGeometry, signed: (p: Point2) => number, samplesPerSpan = 16, range: SplineRange = fullRange(spline)): number[] {
   const roots: number[] = [];
-  const valueAt = (s: number) => signed(splinePoint(spline, s));
-  let [previousS, previous] = [0, valueAt(0)];
-  if (previous === 0) roots.push(0);
-  for (let i = 0; i + 1 < spline.knots.length; i++) {
-    const [from, to] = [spline.knots[i] as number, spline.knots[i + 1] as number];
-    for (let k = 1; k <= samplesPerSpan; k++) {
-      const s = from + ((to - from) * k) / samplesPerSpan;
-      const value = valueAt(s);
-      if (value === 0) roots.push(s);
-      else if (previous !== 0 && Number.isFinite(value) && Number.isFinite(previous) && Math.sign(value) !== Math.sign(previous)) {
-        let [low, high, lowValue] = [previousS, s, previous];
-        for (let step = 0; step < 60; step++) {
-          const middle = (low + high) / 2;
-          const middleValue = valueAt(middle);
-          if (Math.sign(middleValue) === Math.sign(lowValue)) [low, lowValue] = [middle, middleValue];
-          else high = middle;
-        }
-        roots.push((low + high) / 2);
+  const valueAt = (s: number) => signed(splineAt(spline, s).point);
+  const [first, ...rest] = rangeParameters(spline, range, samplesPerSpan);
+  let [previousS, previous] = [first as number, valueAt(first as number)];
+  if (previous === 0) roots.push(previousS);
+  for (const s of rest) {
+    const value = valueAt(s);
+    if (value === 0) roots.push(s);
+    else if (previous !== 0 && Number.isFinite(value) && Number.isFinite(previous) && Math.sign(value) !== Math.sign(previous)) {
+      let [low, high, lowValue] = [previousS, s, previous];
+      for (let step = 0; step < 60; step++) {
+        const middle = (low + high) / 2;
+        const middleValue = valueAt(middle);
+        if (Math.sign(middleValue) === Math.sign(lowValue)) [low, lowValue] = [middle, middleValue];
+        else high = middle;
       }
-      [previousS, previous] = [s, value];
+      roots.push((low + high) / 2);
     }
+    [previousS, previous] = [s, value];
   }
   return roots;
 }
 
-/** The spline as a polyline with `perSpan` segments between neighboring fit points. */
-export function splinePolyline(spline: SplineGeometry, perSpan: number): Point2[] {
-  const result: Point2[] = [spline.points[0] as Point2];
-  for (let i = 1; i < spline.knots.length; i++) {
-    const [from, to] = [spline.knots[i - 1] as number, spline.knots[i] as number];
-    for (let k = 1; k <= perSpan; k++) result.push(k === perSpan ? (spline.points[i] as Point2) : splinePoint(spline, from + ((to - from) * k) / perSpan));
-  }
-  return result;
+/** The spline (or the stretch `range` of it) as a polyline with `perSpan` segments between neighboring fit points. */
+export function splinePolyline(spline: SplineGeometry, perSpan: number, range: SplineRange = fullRange(spline)): Point2[] {
+  return rangeParameters(spline, range, perSpan).map((s) => splineAt(spline, s).point);
 }
 
 /**
@@ -236,9 +251,9 @@ export function segmentsPerSpan(spline: SplineGeometry, tolerance: number): numb
   return Math.min(256, worst);
 }
 
-/** Length of the spline (from a fine polyline). */
-export function splineLength(spline: SplineGeometry): number {
-  const polyline = splinePolyline(spline, 32);
+/** Length of the spline or of the stretch `range` (from a fine polyline). */
+export function splineLength(spline: SplineGeometry, range: SplineRange = fullRange(spline)): number {
+  const polyline = splinePolyline(spline, 32, range);
   let length = 0;
   for (let i = 1; i < polyline.length; i++) length += Math.hypot((polyline[i] as Point2)[0] - (polyline[i - 1] as Point2)[0], (polyline[i] as Point2)[1] - (polyline[i - 1] as Point2)[1]);
   return length;

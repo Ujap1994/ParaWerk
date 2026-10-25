@@ -1243,7 +1243,6 @@ const TRIM_MESSAGES: Record<TrimError, string> = {
   connected: 'extendConnected',
   constrained: 'extendConstrained',
   ellipse: 'trimEllipse',
-  spline: 'trimSpline',
 };
 
 /** Trim: click the piece of a curve to remove; it ends at the neighboring crossings. */

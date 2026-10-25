@@ -23,8 +23,10 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
   also offered for a selected point and spline); they slide along the curve until a dimension holds
   them and follow when the fit points move.
 - Trimming and extending at splines: lines, arcs and circles are trimmed where a spline crosses them
-  and extended up to a spline (or an ellipse); their new ends stay on it. A spline that nothing crosses
-  is removed by *Trim*.
+  and extended up to a spline (or an ellipse); their new ends stay on it. Splines themselves are cut
+  exactly: they keep all of their fit points, so their shape does not change, and show only the rest
+  between their new ends, which the solver keeps on the curve; the cut-off part is hinted while the
+  sketch is open. Part files store the trim ends of splines (format version 3).
 - Global variables and equations: a list of named values (also as equations over each other, with
   cycles and unknown names explained), used by name in feature parameters and sketch dimensions; when a
   variable changes, every parameter and dimension that uses it follows and changed sketches are solved

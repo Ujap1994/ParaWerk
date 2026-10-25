@@ -5,8 +5,8 @@
  */
 
 import { ORIGIN_ID, type SketchData } from '../../../shared/model/sketch.ts';
-import { closestOnSpline, splinePoint, splineRoots } from '../../../shared/model/spline.ts';
-import { arcGeometry, closestOnEllipse, distanceToCurve, ellipseOf, isCurve, splineOf, type Point2 } from './geometry.ts';
+import { closestOnSpline, splineAt, splineRoots } from '../../../shared/model/spline.ts';
+import { arcGeometry, closestOnEllipse, distanceToCurve, ellipseOf, isCurve, trimmedSplineOf, type Point2 } from './geometry.ts';
 import { lineEllipse } from './intersect.ts';
 
 export type SnapTarget =
@@ -55,8 +55,8 @@ function projectOntoCurve(sketch: SketchData, positions: ReadonlyMap<string, Poi
     return [a[0] + t * dx, a[1] + t * dy];
   }
   if (curve.type === 'spline') {
-    const spline = splineOf(curve, positions);
-    return spline ? closestOnSpline(spline, [u, v]).at : null;
+    const trimmed = trimmedSplineOf(curve, positions);
+    return trimmed ? closestOnSpline(trimmed.spline, [u, v], false, trimmed.range).at : null;
   }
   if (curve.type === 'ellipse') {
     const ellipse = ellipseOf(curve, positions);
@@ -196,8 +196,9 @@ function crossCurve(sketch: SketchData, positions: ReadonlyMap<string, Point2>, 
   const nearest = (crossings: Point2[]) =>
     crossings.reduce<Point2 | null>((best, p) => (!best || Math.hypot(p[0] - u, p[1] - v) < Math.hypot(best[0] - u, best[1] - v) ? p : best), null);
   if (curve.type === 'spline') {
-    const spline = splineOf(curve, positions);
-    return spline ? nearest(splineRoots(spline, (p) => swap(p)[1] - level).map((s) => splinePoint(spline, s))) : null;
+    const trimmed = trimmedSplineOf(curve, positions);
+    if (!trimmed) return null;
+    return nearest(splineRoots(trimmed.spline, (p) => swap(p)[1] - level, 16, trimmed.range).map((s) => splineAt(trimmed.spline, s).point));
   }
   if (curve.type === 'ellipse') {
     const ellipse = ellipseOf(curve, positions);

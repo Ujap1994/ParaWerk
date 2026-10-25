@@ -1,15 +1,17 @@
 /**
  * Trim and extend: remove the piece of a curve between its neighboring crossings, or lengthen a
  * line or arc up to the next curve. New end points keep their connection to the crossing curve
- * with a relation (or share the existing point that lies there).
+ * with a relation (or share the existing point that lies there). Splines keep all of their fit points
+ * when trimmed, so their shape stays exactly the same; only their trim ends move.
  */
 
-import type { SketchArc, SketchCurve, SketchData, SketchLine } from '../../../shared/model/sketch.ts';
+import type { SketchArc, SketchCurve, SketchData, SketchLine, SketchSpline } from '../../../shared/model/sketch.ts';
+import { closestOnSpline } from '../../../shared/model/spline.ts';
 import { SketchBuilder } from './builder.ts';
-import { constraintReferences, curvePoints, deleteEntities, isCurve, pointPositions, type Point2 } from './geometry.ts';
+import { constraintReferences, curvePoints, deleteEntities, isCurve, pointPositions, splineOf, type Point2 } from './geometry.ts';
 import { boundaries, extensionTargets, parameterOf, pointAt, shapeOf, type Boundary, type CurveShape } from './intersect.ts';
 
-export type TrimError = 'not-a-curve' | 'no-target' | 'connected' | 'constrained' | 'ellipse' | 'spline';
+export type TrimError = 'not-a-curve' | 'no-target' | 'connected' | 'constrained' | 'ellipse';
 
 export type TrimResult = { ok: true; sketch: SketchData } | { ok: false; error: TrimError };
 
@@ -72,10 +74,62 @@ function dropLoosePoints(sketch: SketchData, candidates: readonly string[]): Ske
     if (entity.type === 'circle') used.add(entity.center);
     if (entity.type === 'arc') used.add(entity.center).add(entity.start).add(entity.end);
     if (entity.type === 'ellipse') used.add(entity.center).add(entity.major).add(entity.minor);
-    if (entity.type === 'spline') for (const point of entity.points) used.add(point);
+    if (entity.type === 'spline') for (const point of curvePoints(entity)) used.add(point);
   }
   const loose = candidates.filter((id) => !used.has(id));
   return loose.length > 0 ? deleteEntities(sketch, loose) : sketch;
+}
+
+/**
+ * Cuts a spline. It keeps all of its fit points and only gets new trim ends; a piece in the middle leaves
+ * two splines through the same fit points, so both parts keep exactly the original shape.
+ */
+function trimSpline(sketch: SketchData, curve: SketchSpline, piece: TrimPiece): SketchData {
+  const positions = pointPositions(sketch);
+  const spline = splineOf(curve, positions);
+  const parameter = (id: string | undefined, fallback: number) => {
+    const p = id === undefined ? undefined : positions.get(id);
+    return spline && p ? closestOnSpline(spline, p, true).s : fallback;
+  };
+  // The trim ends at the low and the high end of the shown stretch (dragging may have swapped them).
+  let [low, high] = [curve.start, curve.end];
+  if (parameter(low, 0) > parameter(high, Infinity)) [low, high] = [high, low];
+  const withEnds = (start: string | undefined, end: string | undefined): SketchSpline => {
+    const { start: _start, end: _end, ...rest } = curve;
+    return { ...rest, ...(start ? { start } : {}), ...(end ? { end } : {}) };
+  };
+  const builder = new SketchBuilder(sketch);
+  let loose: string[] = [];
+  if (!piece.start) {
+    builder.replace(curve.id, withEnds(endPointAt(sketch, builder, piece.end as Boundary), high));
+    loose = low ? [low] : [];
+  } else if (!piece.end) {
+    builder.replace(curve.id, withEnds(low, endPointAt(sketch, builder, piece.start)));
+    loose = high ? [high] : [];
+  } else {
+    builder.replace(curve.id, withEnds(low, endPointAt(sketch, builder, piece.start)));
+    builder.spline(curve.points, curve.construction === true, { start: endPointAt(sketch, builder, piece.end), end: high });
+  }
+  return withoutOwnOnCurve(dropLoosePoints(builder.build(), loose));
+}
+
+/** Drops on-curve relations of trim ends to their own spline (or to one through the same fit points): the spline holds them already. */
+function withoutOwnOnCurve(sketch: SketchData): SketchData {
+  const splines = sketch.entities.filter((entity): entity is SketchSpline => entity.type === 'spline');
+  const fitKey = (spline: SketchSpline) => spline.points.join(' ');
+  const endsByShape = new Map<string, Set<string>>();
+  for (const spline of splines) {
+    const ends = endsByShape.get(fitKey(spline)) ?? new Set<string>();
+    for (const end of [spline.start, spline.end]) if (end) ends.add(end);
+    endsByShape.set(fitKey(spline), ends);
+  }
+  const byId = new Map(splines.map((spline) => [spline.id, spline]));
+  const constraints = sketch.constraints.filter((constraint) => {
+    if (constraint.type !== 'pointOnCircle') return true;
+    const spline = byId.get(constraint.circle);
+    return !spline || !endsByShape.get(fitKey(spline))?.has(constraint.point);
+  });
+  return constraints.length === sketch.constraints.length ? sketch : { ...sketch, constraints };
 }
 
 /** Removes the piece of a curve between the crossings around `at` (the whole curve if nothing crosses it). */
@@ -86,7 +140,7 @@ export function trimAt(sketch: SketchData, curveId: string, at: Point2): TrimRes
   if (piece.whole) return { ok: true, sketch: deleteEntities(sketch, [curveId]) };
   // Pieces of an ellipse would be elliptical arcs, which sketches do not have.
   if (curve.type === 'ellipse') return { ok: false, error: 'ellipse' };
-  if (curve.type === 'spline') return { ok: false, error: 'spline' };
+  if (curve.type === 'spline') return { ok: true, sketch: trimSpline(sketch, curve, piece) };
 
   const builder = new SketchBuilder(sketch);
   if (curve.type === 'circle') {
