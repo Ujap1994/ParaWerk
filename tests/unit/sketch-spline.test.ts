@@ -3,7 +3,9 @@ import { dragTarget } from '../../src/renderer/src/sketch/drag.ts';
 import { dxfToSketch, sketchToDxf } from '../../src/renderer/src/sketch/dxf.ts';
 import { curvePolyline, deleteEntities, hitTest, pointPositions, splineOf } from '../../src/renderer/src/sketch/geometry.ts';
 import { snapCursor } from '../../src/renderer/src/sketch/snap.ts';
+import { boundaries } from '../../src/renderer/src/sketch/intersect.ts';
 import { applicableRelations } from '../../src/renderer/src/sketch/relations.ts';
+import { extendAt, trimAt } from '../../src/renderer/src/sketch/trim.ts';
 import { closestOnSpline, segmentsPerSpan, splineAt, splineEnd, splineLength, splinePoint, splinePolyline, splineRoots, splineThrough } from '../../src/shared/model/spline.ts';
 import { createTool, type ToolEvent } from '../../src/renderer/src/sketch/tools.ts';
 import { linearPattern } from '../../src/renderer/src/sketch/transform.ts';
@@ -247,6 +249,79 @@ describe('splines in sketches', () => {
     if (!result.ok) throw new Error(result.error);
     expect(result.sketch.entities.filter((entity) => entity.type === 'spline')).toHaveLength(2);
     expect(deleteEntities(base, ['c']).entities.some((entity) => entity.type === 'spline')).toBe(false);
+  });
+});
+
+describe('trimming and extending at splines', () => {
+  /** The spline `s` of base with a vertical line `v` through it at x = 30 and a circle `k` around (50, 5). */
+  const crossed: SketchData = {
+    entities: [
+      ...base.entities,
+      point('v1', 30, -20), point('v2', 30, 30), { id: 'v', type: 'line', p1: 'v1', p2: 'v2' },
+      point('kc', 50, 5), { id: 'k', type: 'circle', center: 'kc', radius: 6 },
+    ],
+    constraints: [],
+  };
+  const splineIn = (sketch: SketchData) => splineOf(sketch.entities.find((e) => e.id === 's') as SketchSpline, pointPositions(sketch));
+  const distanceToSpline = (sketch: SketchData, id: string) => {
+    const spline = splineIn(sketch);
+    if (!spline) throw new Error('no spline');
+    return closestOnSpline(spline, pointPositions(sketch).get(id) as [number, number]).distance;
+  };
+
+  it('finds where lines, circles and other splines cross a spline', () => {
+    const atLine = boundaries(crossed, 'v');
+    expect(atLine).toHaveLength(1);
+    expect(atLine[0]).toMatchObject({ curve: 's' });
+    expect(distanceToSpline({ ...crossed, entities: [...crossed.entities, point('x', ...(atLine[0]?.at as [number, number]))] }, 'x')).toBeLessThan(1e-9);
+    expect(boundaries(crossed, 'k')).toHaveLength(2);
+    // Along the spline: the line and both crossings with the circle, in order.
+    const along = boundaries(crossed, 's');
+    expect(along.map((b) => b.curve)).toEqual(['v', 'k', 'k']);
+    // Two splines crossing each other.
+    const two: SketchData = {
+      entities: [...base.entities, point('t1', 0, 10), point('t2', 30, 0), point('t3', 60, 15), { id: 't', type: 'spline', points: ['t1', 't2', 't3'] }],
+      constraints: [],
+    };
+    const both = boundaries(two, 't');
+    expect(both.length).toBeGreaterThan(0);
+    for (const crossing of both) {
+      const other = splineOf(base.entities[4] as SketchSpline, pointPositions(two));
+      if (!other) throw new Error('no spline');
+      expect(closestOnSpline(other, crossing.at).distance).toBeLessThan(1e-7);
+    }
+  });
+
+  it('trims a line and a circle at a spline; the new ends stay on it', () => {
+    const line = trimAt(crossed, 'v', [30, 25]);
+    if (!line.ok) throw new Error(line.error);
+    const end = line.sketch.entities.find((e) => e.id === 'v');
+    if (end?.type !== 'line') throw new Error('no line');
+    expect(line.sketch.constraints).toEqual([expect.objectContaining({ type: 'pointOnCircle', point: end.p2, circle: 's' })]);
+    expect(distanceToSpline(line.sketch, end.p2)).toBeLessThan(1e-9);
+    const solved = solveSketch(line.sketch);
+    expect(solved.converged).toBe(true);
+    expect(() => parseSketchData(JSON.parse(JSON.stringify(line.sketch)))).not.toThrow();
+
+    const circle = trimAt(crossed, 'k', [50, 11]);
+    if (!circle.ok) throw new Error(circle.error);
+    const arc = circle.sketch.entities.find((e) => e.id === 'k');
+    expect(arc?.type).toBe('arc');
+    if (arc?.type === 'arc') for (const id of [arc.start, arc.end]) expect(distanceToSpline(circle.sketch, id)).toBeLessThan(1e-9);
+  });
+
+  it('extends a line up to a spline', () => {
+    const sketch: SketchData = { entities: [...base.entities, point('h1', 30, 40), point('h2', 30, 30), { id: 'h', type: 'line', p1: 'h1', p2: 'h2' }], constraints: [] };
+    const result = extendAt(sketch, 'h', [30, 31]);
+    if (!result.ok) throw new Error(result.error);
+    expect(result.sketch.constraints).toEqual([expect.objectContaining({ type: 'pointOnCircle', point: 'h2', circle: 's' })]);
+    expect(distanceToSpline(result.sketch, 'h2')).toBeLessThan(1e-9);
+  });
+
+  it('removes a spline that nothing crosses, and refuses to cut a crossed one into pieces', () => {
+    const alone = trimAt(base, 's', [20, 15]);
+    expect(alone.ok && alone.sketch.entities.some((e) => e.type === 'spline')).toBe(false);
+    expect(trimAt(crossed, 's', [10, 10])).toEqual({ ok: false, error: 'spline' });
   });
 });
 

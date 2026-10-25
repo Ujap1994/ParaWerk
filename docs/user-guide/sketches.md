@@ -115,9 +115,11 @@ explains the active tool.
 crossings: move the cursor over a curve, and the piece a click would remove turns red. Ends at a crossing
 stay on the crossing curve (*on curve* relation); when the piece is in the middle of a line, the two
 remaining parts stay *collinear* (arcs keep an *equal* radius). A circle trimmed between two crossings
-becomes an arc, and a curve that nothing crosses is removed completely.
+becomes an arc, and a curve that nothing crosses is removed completely. Splines count as crossing
+curves like any other: lines, arcs and circles can be trimmed at a spline, and their new ends stay on it.
 
-**Extend** (in the menu next to *Trim*) lengthens a line or arc up to the next curve: move near the end you
+**Extend** (in the menu next to *Trim*) lengthens a line or arc up to the next curve (also an ellipse or a
+spline, which then holds the new end): move near the end you
 want to extend – a dashed preview shows how far it grows and highlights the curve it runs into – and click.
 Ends that are connected to other geometry or held by relations or dimensions are not moved; a message says
 why.
@@ -176,11 +178,15 @@ passes through every point, bends continuously (no kinks inside) and runs straig
   relation to a selected point and spline. Such a point can still slide along the spline until a
   dimension holds it, and it follows when the fit points move. Beyond its ends a spline counts as
   continued straight, like a line beyond its end points.
-- Other curves cannot be trimmed or extended up to a spline yet; splines can be moved, copied,
-  mirrored and patterned, but not trimmed or offset.
+- Lines, arcs and circles can be trimmed at a spline and extended up to it (see
+  [Trim and extend](#trim-and-extend)). A spline itself is removed by *Trim* only as a whole, when
+  nothing crosses it; cutting it into pieces is not possible yet.
+- Splines can be moved, copied, mirrored, patterned and scaled, but not offset.
 - DXF export writes splines as polylines within 0.005 mm; DXF import reads splines defined by fit points.
 
 ![A profile with a spline between two lines and a point held on it; pointing at the spline shows its points and length](../images/screenshots/sketch-spline.png)
+
+![Trim at a spline: the piece of the line above the spline turns red before it is removed](../images/screenshots/sketch-spline-trim.png)
 
 ### Converting model edges
 

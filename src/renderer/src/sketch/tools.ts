@@ -1243,6 +1243,7 @@ const TRIM_MESSAGES: Record<TrimError, string> = {
   connected: 'extendConnected',
   constrained: 'extendConstrained',
   ellipse: 'trimEllipse',
+  spline: 'trimSpline',
 };
 
 /** Trim: click the piece of a curve to remove; it ends at the neighboring crossings. */
@@ -1297,7 +1298,7 @@ export class ExtendTool implements SketchTool {
     }
     // The ring marks where the curve will end; the curve it runs into is highlighted.
     const into = sketch.entities.find((candidate) => candidate.id === target.curve);
-    const curveType = into?.type === 'circle' || into?.type === 'arc' ? into.type : 'line';
+    const curveType = into && into.type !== 'point' ? into.type : 'line';
     return { geometry: preview.build(), snap: { ...none, target: { kind: 'curve', curve: target.curve ?? '', curveType }, u: target.at[0], v: target.at[1] }, info: null };
   }
 

@@ -406,6 +406,30 @@ test('README and user guide screenshots', async () => {
   }
   await page.waitForTimeout(300);
   await page.screenshot({ path: out('sketch-spline.png') });
+
+  // Trim at a spline: a line across the handle; the piece above the spline turns red under the cursor.
+  {
+    const at = async (x: number, y: number) => {
+      const p = await page.evaluate(
+        ([x, y, z]) => (window as unknown as { __parawerk: { viewport: { project(x: number, y: number, z: number): { x: number; y: number } } } }).__parawerk.viewport.project(x, y, z),
+        [x, y, 0] as const,
+      );
+      return canvas ? { x: canvas.x + p.x, y: canvas.y + p.y } : { x: 0, y: 0 };
+    };
+    await page.keyboard.press('l');
+    for (const [x, y] of [[58, 4], [58, 34]] as const) {
+      const p = await at(x, y);
+      await page.mouse.move(p.x, p.y, { steps: 3 });
+      await page.mouse.click(p.x, p.y);
+    }
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('t');
+    const p = await at(58, 30);
+    await page.mouse.move(p.x, p.y, { steps: 3 });
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: out('sketch-spline-trim.png') });
+    await page.keyboard.press('Escape');
+  }
   await page.click('[data-testid="sketch-ok"]');
 
   // Convert entities: the outline of a box top and the circle of a boss, projected onto the top plane.

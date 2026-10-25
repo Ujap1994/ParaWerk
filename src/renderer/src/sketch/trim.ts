@@ -9,7 +9,7 @@ import { SketchBuilder } from './builder.ts';
 import { constraintReferences, curvePoints, deleteEntities, isCurve, pointPositions, type Point2 } from './geometry.ts';
 import { boundaries, extensionTargets, parameterOf, pointAt, shapeOf, type Boundary, type CurveShape } from './intersect.ts';
 
-export type TrimError = 'not-a-curve' | 'no-target' | 'connected' | 'constrained' | 'ellipse';
+export type TrimError = 'not-a-curve' | 'no-target' | 'connected' | 'constrained' | 'ellipse' | 'spline';
 
 export type TrimResult = { ok: true; sketch: SketchData } | { ok: false; error: TrimError };
 
@@ -60,7 +60,7 @@ function endPointAt(sketch: SketchData, builder: SketchBuilder, boundary: Bounda
   const id = builder.freePoint(...boundary.at);
   const other = boundary.curve ? sketch.entities.find((entity) => entity.id === boundary.curve) : undefined;
   if (other?.type === 'line') builder.relation({ type: 'pointOnLine', point: id, line: other.id });
-  else if (other?.type === 'circle' || other?.type === 'arc' || other?.type === 'ellipse') builder.relation({ type: 'pointOnCircle', point: id, circle: other.id });
+  else if (other && other.type !== 'point') builder.relation({ type: 'pointOnCircle', point: id, circle: other.id });
   return id;
 }
 
@@ -82,10 +82,11 @@ function dropLoosePoints(sketch: SketchData, candidates: readonly string[]): Ske
 export function trimAt(sketch: SketchData, curveId: string, at: Point2): TrimResult {
   const piece = trimPiece(sketch, curveId, at);
   const curve = sketch.entities.find((entity) => entity.id === curveId) as SketchCurve | undefined;
-  if (!piece || !curve || curve.type === 'spline') return { ok: false, error: 'not-a-curve' };
+  if (!piece || !curve) return { ok: false, error: 'not-a-curve' };
   if (piece.whole) return { ok: true, sketch: deleteEntities(sketch, [curveId]) };
   // Pieces of an ellipse would be elliptical arcs, which sketches do not have.
   if (curve.type === 'ellipse') return { ok: false, error: 'ellipse' };
+  if (curve.type === 'spline') return { ok: false, error: 'spline' };
 
   const builder = new SketchBuilder(sketch);
   if (curve.type === 'circle') {
@@ -149,6 +150,6 @@ export function extendAt(sketch: SketchData, curveId: string, at: Point2): TrimR
   builder.replace(pointId, { ...moved, x: target.at[0], y: target.at[1] });
   const other = sketch.entities.find((entity) => entity.id === target.curve);
   if (other?.type === 'line') builder.relation({ type: 'pointOnLine', point: pointId, line: other.id });
-  else if (other?.type === 'circle' || other?.type === 'arc') builder.relation({ type: 'pointOnCircle', point: pointId, circle: other.id });
+  else if (other && other.type !== 'point') builder.relation({ type: 'pointOnCircle', point: pointId, circle: other.id });
   return { ok: true, sketch: builder.build() };
 }

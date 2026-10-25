@@ -117,7 +117,7 @@ serves all platforms, and the kernel runs sandboxed). First preview released as
 | Exit check: drawing and fully defining a bracket profile (E2E test, 64 clicks and key presses) | ✅ done |
 | 3-point rectangle and parallelogram | ✅ done |
 | Ellipse | ✅ done |
-| Spline (fit points; points on splines; trimming at splines later) | ✅ done |
+| Spline (fit points; points on splines; other curves trimmed and extended at splines; cutting splines later) | ✅ done |
 | Scale of the selection | ✅ done |
 | Convert model edges into the sketch (fixed; associative later) | ✅ done |
 | Global variables and equations (basic) | ✅ done |

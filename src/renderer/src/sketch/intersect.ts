@@ -1,12 +1,13 @@
 /**
  * Where sketch curves cross or touch each other, as positions along a curve: the parameter t
- * runs from 0 to 1 along a line (p1 → p2) or an arc (start → end, counterclockwise), and around a
- * circle from angle 0 (t = 0) once counterclockwise (t = 1); around an ellipse from its major
- * axis point towards its minor axis point.
+ * runs from 0 to 1 along a line (p1 → p2), an arc (start → end, counterclockwise) or a spline (first
+ * to last fit point, by its own parameter), and around a circle from angle 0 (t = 0) once
+ * counterclockwise (t = 1); around an ellipse from its major axis point towards its minor axis point.
  */
 
 import type { SketchCurve, SketchData } from '../../../shared/model/sketch.ts';
-import { arcGeometry, ellipseOf, ellipseParameter, ellipsePoint, isCurve, pointPositions, type EllipseGeometry, type Point2 } from './geometry.ts';
+import { closestOnSpline, splineAt, splineEnd, splinePoint, splineRoots, type SplineGeometry } from '../../../shared/model/spline.ts';
+import { arcGeometry, ellipseOf, ellipseParameter, ellipsePoint, isCurve, pointPositions, splineOf, type EllipseGeometry, type Point2 } from './geometry.ts';
 
 type Positions = ReadonlyMap<string, Point2>;
 
@@ -14,7 +15,8 @@ type Positions = ReadonlyMap<string, Point2>;
 export type CurveShape =
   | { kind: 'segment'; a: Point2; b: Point2 }
   | { kind: 'circle'; center: Point2; radius: number; startAngle: number; sweep: number; closed: boolean }
-  | { kind: 'ellipse'; ellipse: EllipseGeometry; closed: true };
+  | { kind: 'ellipse'; ellipse: EllipseGeometry; closed: true }
+  | { kind: 'spline'; spline: SplineGeometry; closed: false };
 
 export function shapeOf(curve: SketchCurve, positions: Positions): CurveShape | null {
   if (curve.type === 'line') {
@@ -26,8 +28,10 @@ export function shapeOf(curve: SketchCurve, positions: Positions): CurveShape | 
     const ellipse = ellipseOf(curve, positions);
     return ellipse ? { kind: 'ellipse', ellipse, closed: true } : null;
   }
-  // Splines do not take part in crossings yet (a point cannot be kept on a spline).
-  if (curve.type === 'spline') return null;
+  if (curve.type === 'spline') {
+    const spline = splineOf(curve, positions);
+    return spline ? { kind: 'spline', spline, closed: false } : null;
+  }
   const center = positions.get(curve.center);
   if (!center) return null;
   if (curve.type === 'circle') return { kind: 'circle', center, radius: curve.radius, startAngle: 0, sweep: 2 * Math.PI, closed: true };
@@ -50,6 +54,8 @@ export function parameterOf(shape: CurveShape, point: Point2): number {
     const angle = ellipseParameter(shape.ellipse, point);
     return (angle < 0 ? angle + 2 * Math.PI : angle) / (2 * Math.PI);
   }
+  // Splines continue straight beyond their ends, like lines.
+  if (shape.kind === 'spline') return closestOnSpline(shape.spline, point, true).s / splineEnd(shape.spline);
   let angle = Math.atan2(point[1] - shape.center[1], point[0] - shape.center[0]) - shape.startAngle;
   while (angle < 0) angle += 2 * Math.PI;
   while (angle >= 2 * Math.PI) angle -= 2 * Math.PI;
@@ -59,6 +65,7 @@ export function parameterOf(shape: CurveShape, point: Point2): number {
 export function pointAt(shape: CurveShape, t: number): Point2 {
   if (shape.kind === 'segment') return [shape.a[0] + (shape.b[0] - shape.a[0]) * t, shape.a[1] + (shape.b[1] - shape.a[1]) * t];
   if (shape.kind === 'ellipse') return ellipsePoint(shape.ellipse, 2 * Math.PI * t);
+  if (shape.kind === 'spline') return splineAt(shape.spline, t * splineEnd(shape.spline)).point;
   const angle = shape.startAngle + shape.sweep * t;
   return [shape.center[0] + shape.radius * Math.cos(angle), shape.center[1] + shape.radius * Math.sin(angle)];
 }
@@ -119,8 +126,39 @@ function ellipseCurve(e: EllipseGeometry, other: CurveShape): Point2[] {
   return result;
 }
 
+/**
+ * Crossings of a spline (between its ends) with another curve: sign changes of the distance to the
+ * other curve along the spline. Another spline's sign also flips across its straight continuations,
+ * so those crossings must lie on the spline itself.
+ */
+function splineCurve(spline: SplineGeometry, other: CurveShape): Point2[] {
+  let signed: (p: Point2) => number;
+  if (other.kind === 'segment') {
+    const [dx, dy] = [other.b[0] - other.a[0], other.b[1] - other.a[1]];
+    const length = Math.hypot(dx, dy);
+    if (length === 0) return [];
+    signed = (p) => (dx * (p[1] - other.a[1]) - dy * (p[0] - other.a[0])) / length;
+  } else if (other.kind === 'circle') {
+    signed = (p) => Math.hypot(p[0] - other.center[0], p[1] - other.center[1]) - other.radius;
+  } else if (other.kind === 'ellipse') {
+    const o = other.ellipse;
+    signed = (p) => {
+      const [dx, dy] = [p[0] - o.center[0], p[1] - o.center[1]];
+      return Math.hypot((dx * o.axis[0] + dy * o.axis[1]) / o.a, (dx * o.normal[0] + dy * o.normal[1]) / o.b) - 1;
+    };
+  } else {
+    const size = Math.max(splineEnd(other.spline), 1);
+    return splineRoots(spline, (p) => closestOnSpline(other.spline, p).signed, 24)
+      .map((s) => splinePoint(spline, s))
+      .filter((p) => closestOnSpline(other.spline, p).distance <= 1e-7 * size);
+  }
+  return splineRoots(spline, signed, 24).map((s) => splinePoint(spline, s));
+}
+
 /** Crossing points of two shapes, treating segments as infinite lines and arcs as full circles. */
 function crossings(a: CurveShape, b: CurveShape): Point2[] {
+  if (a.kind === 'spline') return splineCurve(a.spline, b);
+  if (b.kind === 'spline') return splineCurve(b.spline, a);
   if (a.kind === 'ellipse' && b.kind === 'segment') return lineEllipse(b, a.ellipse);
   if (a.kind === 'segment' && b.kind === 'ellipse') return lineEllipse(a, b.ellipse);
   if (a.kind === 'ellipse') return ellipseCurve(a.ellipse, b);
@@ -191,10 +229,11 @@ export function boundaries(sketch: SketchData, curveId: string, options: { exten
   const shape = shapeOf(curve, positions);
   if (!shape) return [];
   const tolerance = toleranceOf(positions);
-  const ownPoints = new Set(curve.type === 'line' ? [curve.p1, curve.p2] : curve.type === 'arc' ? [curve.start, curve.end] : []);
+  // A spline's fit points define it; they do not split it.
+  const ownPoints = new Set(curve.type === 'line' ? [curve.p1, curve.p2] : curve.type === 'arc' ? [curve.start, curve.end] : curve.type === 'spline' ? curve.points : []);
   const result: Boundary[] = [];
   const onShape = (shapeToTest: CurveShape, point: Point2, extended: boolean): boolean => {
-    if (shapeToTest.kind === 'segment') {
+    if (shapeToTest.kind === 'segment' || shapeToTest.kind === 'spline') {
       if (extended) return true;
       const t = parameterOf(shapeToTest, point);
       return t >= -1e-9 && t <= 1 + 1e-9;
@@ -254,7 +293,7 @@ export function extensionTargets(sketch: SketchData, curveId: string, end: 'star
     for (const at of crossings(shape, otherShape)) {
       // Only real crossings with the other curve (not with its extension).
       const t = parameterOf(otherShape, at);
-      const onOther = otherShape.kind === 'segment' ? t >= -1e-9 && t <= 1 + 1e-9 : otherShape.closed || t <= 1 + 1e-9;
+      const onOther = otherShape.kind === 'segment' || otherShape.kind === 'spline' ? t >= -1e-9 && t <= 1 + 1e-9 : otherShape.closed || t <= 1 + 1e-9;
       if (!onOther) continue;
       if (shape.kind === 'segment') {
         const along = parameterOf(shape, at);
