@@ -1,7 +1,8 @@
 # ParaWerk user guide
 
 > [!CAUTION]
-> ParaWerk is under active development. This guide describes preview 0.2 (Phase 1: the 2D sketcher).
+> ParaWerk is under active development. This guide describes preview 0.2 with the complete 2D sketcher
+> of Phase 1.
 > Check every result before you manufacture anything.
 
 ![ParaWerk main window](../images/screenshots/main-window.png)
@@ -23,7 +24,7 @@
 | Area | Available now |
 |---|---|
 | Modeling | Box and cylinder (add or remove material), fillet and chamfer on edges picked in the 3D view |
-| Sketching | Sketches on the front, top and right plane and on planar faces, with their own undo history; lines, rectangles (corner, center, 3-point, parallelogram), circles, ellipses, arcs (center, 3-point, tangent), splines, slots, polygons and points, with snapping and automatic relations; relations checked by the solver and shown as symbols next to the geometry; smart dimensions with reference dimensions; status colors and conflict diagnosis; trim, extend, sketch fillet and chamfer, offset, mirror, patterns, move, copy and scale; converting model edges; dragging with live solving; DXF import and export |
+| Sketching | Sketches on the front, top and right plane and on planar faces, with their own undo history; lines, rectangles (corner, center, 3-point, parallelogram), circles, ellipses, arcs (center, 3-point, tangent), splines (with points on them, trimmed exactly), slots, polygons and points, with snapping and automatic relations; relations checked by the solver and shown as symbols next to the geometry; smart dimensions with reference dimensions; status colors and conflict diagnosis; trim, extend, sketch fillet and chamfer, offset, mirror, patterns, move, copy and scale; converting model edges; dragging with live solving; DXF import and export |
 | Feature tree | Edit, suppress and delete features; rollback while editing; undo and redo |
 | Variables | Named values and equations for the whole part, used by name in parameters and sketch dimensions; calculations in every number field |
 | Evaluation | Exact volume and surface area, face and edge information under the cursor |

@@ -34,7 +34,10 @@ rebuilds your part; your document is not affected. Please report the steps that 
 
 ## Known limitations of the preview
 
-- Only box, cylinder, fillet and chamfer; the sketcher arrives in Phase 1.
+- Solids come only from box, cylinder, fillet and chamfer: sketches cannot be extruded or revolved yet
+  (Phase 2).
+- Converted model edges are fixed copies; they do not follow later changes of the model yet.
+- Ellipses can only be trimmed as a whole, and *Offset* leaves ellipses and splines out.
 - Edge references are stored by topological index; editing an early feature can make a later fillet
   lose its edges (shown as an error). Robust references follow in Phase 2
   ([ADR 0002](../adr/0002-persistent-naming.md)).

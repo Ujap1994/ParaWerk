@@ -283,6 +283,8 @@ radius. They keep their distance on screen when you zoom.
 - **Click a symbol** to select the relation (**Shift**/**Ctrl**/**⌘**-click for more). The side panel
   lists the selected relations; **Delete** or the trash button removes them.
 - Pointing at a relation in the side panel's lists highlights its geometry, too.
+- A sketch point right under the cursor wins over a symbol, so points stay easy to grab and drag even
+  when symbols crowd around them in a zoomed-out view.
 - Symbols of conflicting relations are red, like the conflict itself.
 - The **relation symbols** button in the view toolbar (only in sketch mode), **View → Show sketch
   relations** or **Settings → Show relation symbols in sketches** hides and shows them.

@@ -99,6 +99,16 @@ GPU-synchronized frame.
 | 500 | 3.6 ms | 0.51 ms | 276 |
 | 2,000 | 4.5 ms | 1.27 ms | 220 |
 
+### Points on splines (solver only)
+
+A point held on a spline depends on all of its fit points, so dragging a fit point re-solves every
+point on the curve. Median solve per drag step (`npm run bench:solver`):
+
+| Spline | Points held on it | Drag step |
+|---|---|---|
+| 20 fit points | 10 | 3.3 ms |
+| 100 fit points | 20 | 18 ms |
+
 ## CI runners – Phase 0 baselines
 
 | Case | Linux (AMD EPYC 7763) | Windows (Intel Xeon 8573C) | macOS (Apple M1, virtual) |

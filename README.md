@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img alt="Status: pre-alpha" src="https://img.shields.io/badge/status-pre--alpha%20(Phase%201%3A%20sketcher)-orange">
+  <img alt="Status: pre-alpha" src="https://img.shields.io/badge/status-pre--alpha%20(Phase%202%3A%20part%20modeling)-orange">
   <a href="https://github.com/Ujap1994/ParaWerk/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Ujap1994/ParaWerk/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="Platforms" src="https://img.shields.io/badge/platforms-Windows%20%7C%20macOS%20%7C%20Linux-blue">
   <img alt="UI languages" src="https://img.shields.io/badge/UI-English%20%7C%20Deutsch-informational">
@@ -18,8 +18,9 @@
 </p>
 
 > [!WARNING]
-> **ParaWerk is under active development (Phase 1: the 2D sketcher).** It is a technical preview, not a
-> usable CAD system yet: sketches cannot be turned into solids before Phase 2. Please read the
+> **ParaWerk is under active development.** The 2D sketcher (Phase 1) is complete; part modeling
+> (Phase 2) has started. It is a technical preview, not a usable CAD system yet: sketches cannot be
+> turned into solids before Phase 2 delivers extrude and revolve. Please read the
 > [disclaimer](#disclaimer) first.
 
 ---
@@ -84,7 +85,7 @@ makers, students and small workshops that covers the everyday mechanical design 
 
 ## Available now
 
-Preview 0.2 adds the 2D sketcher (Phase 1) to the foundation of Phase 0:
+Preview 0.2 adds the complete 2D sketcher (Phase 1) to the foundation of Phase 0:
 
 ![A fully defined bracket profile in sketch mode](docs/images/screenshots/sketch-bracket.png)
 
@@ -109,6 +110,8 @@ Preview 0.2 adds the 2D sketcher (Phase 1) to the foundation of Phase 0:
   - *Definition status:* under-defined geometry is blue, fully defined dark, conflicts red and listed.
   - *Editing:* trim, extend, sketch fillet and chamfer, offset, mirror, linear and circular patterns,
     move, copy and scale; dragging with live constraint solving (about 7 ms per step at 2,000 entities).
+  - *Splines:* smooth curves through fit points; points can be held on them, other curves trimmed and
+    extended at them, and splines themselves are cut exactly, without changing their shape.
   - *Model edges:* convert edges of the part into the sketch.
   - *DXF:* import into a sketch and export for laser cutting and CNC.
 - **Files:** native `.pwpart` files, STEP and binary STL export.
@@ -120,6 +123,8 @@ Preview 0.2 adds the 2D sketcher (Phase 1) to the foundation of Phase 0:
 | ![Drawing tools](docs/images/screenshots/sketch-tools.png) | ![Trim](docs/images/screenshots/sketch-trim.png) |
 | **Relation symbols: point at one to see its geometry** | **Conflicts are red and listed** |
 | ![Relation symbols](docs/images/screenshots/sketch-relation-symbols.png) | ![Over-defined sketch](docs/images/screenshots/sketch-conflict.png) |
+| **Splines: cut exactly at a line, the rest is only hinted** | **Variables and equations** |
+| ![Cut spline](docs/images/screenshots/sketch-spline-cut.png) | ![Variables](docs/images/screenshots/variables.png) |
 | **Fillet with live preview** | **Dark theme, German interface** |
 | ![Fillet preview](docs/images/screenshots/fillet-preview.png) | ![Dark theme](docs/images/screenshots/dark-theme-german.png) |
 
@@ -128,9 +133,6 @@ See the [user guide](docs/user-guide/README.md) for details.
 ## Planned features
 
 > Everything below is **planned**. Each item moves to "Available now", with screenshots, once it ships.
-
-### 2D sketcher (rest of Phase 1)
-- Points on splines, trimming at splines
 
 ### Part modeling
 - Feature tree with rollback bar, suppress, reorder and edit-in-place
@@ -228,9 +230,9 @@ The architecture is explained in [ROADMAP.md](ROADMAP.md#architecture-overview);
 
 | Phase | Content | Milestone |
 |---|---|---|
-| 0 | Foundation and technical spikes: app shell, kernel, CI, packaging, test and benchmark harness | v0.1 – tech gate |
-| 1 | 2D sketcher and constraint solver | v0.2 |
-| 2 | Part modeling core, native files, STL / 3MF / STEP export | v0.3 – first real parts |
+| 0 ✅ | Foundation and technical spikes: app shell, kernel, CI, packaging, test and benchmark harness | v0.1 – tech gate |
+| 1 ✅ | 2D sketcher and constraint solver | v0.2 |
+| 2 ⏳ | Part modeling core, native files, STL / 3MF / STEP export (in progress) | v0.3 – first real parts |
 | 3 | Advanced features and configurations | v0.4 |
 | 4 | Assemblies and mate solver | v0.5 |
 | 5 | Standard parts library (ISO / DIN) | v0.6 |

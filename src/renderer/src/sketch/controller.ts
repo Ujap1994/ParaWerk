@@ -158,8 +158,10 @@ export class SketchController implements SketchInput, SketchToolControl {
     }
     const sketch = getState().sketch?.draft.sketch;
     const dimension = pointer ? this.engine.dimensionAt(pointer.x, pointer.y) : null;
-    const relation = pointer && !dimension ? this.engine.relationAt(pointer.x, pointer.y) : null;
-    const hit = dimension || relation ? null : pointer && sketch ? this.hitAt(sketch, pointer) : null;
+    const found = !dimension && pointer && sketch ? this.hitAt(sketch, pointer) : null;
+    // A point under the cursor wins over a relation symbol (which may cover it when zoomed out), a symbol over curves.
+    const relation = pointer && !dimension && found?.type !== 'point' ? this.engine.relationAt(pointer.x, pointer.y) : null;
+    const hit = relation ? null : found;
     this.setHover(dimension ?? relation ?? hit?.id ?? null);
     this.engine.setCursor(dimension ? 'move' : relation || hit ? 'pointer' : '');
   }
@@ -171,10 +173,11 @@ export class SketchController implements SketchInput, SketchToolControl {
     const labelId = tool ? null : this.engine.dimensionAt(pointer.x, pointer.y);
     const label = labelId ? sketch.constraints.find((constraint) => constraint.id === labelId) : undefined;
     const dimension = label && isDimension(label) ? label : null;
-    const relation = tool || dimension ? null : this.engine.relationAt(pointer.x, pointer.y);
+    const found = tool || dimension ? null : this.hitAt(sketch, pointer);
+    const relation = tool || dimension || found?.type === 'point' ? null : this.engine.relationAt(pointer.x, pointer.y);
     this.gesture = {
       start: pointer,
-      hit: tool || dimension || relation ? null : this.hitAt(sketch, pointer),
+      hit: relation ? null : found,
       base: sketch,
       session: null,
       // Converting model edges is click only; a drag would convert twice.

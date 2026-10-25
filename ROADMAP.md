@@ -95,7 +95,7 @@ serves all platforms, and the kernel runs sandboxed). First preview released as
 - GPU instancing keeps 10,000 components at about 30 fps on an Apple M3; level of detail is needed for the
   50,000-instance target (Phase 8, as planned).
 
-### Phase 1 – in progress
+### Phase 1 – completed on 2026-10-25
 
 | Item | Status |
 |---|---|
@@ -126,6 +126,31 @@ serves all platforms, and the kernel runs sandboxed). First preview released as
 | Status colors, conflict diagnosis | ✅ done |
 | Editing tools (trim, extend, offset, mirror, patterns, fillet, chamfer) | ✅ done |
 | DXF import and export; benchmarks at 50 → 500 → 2,000 entities | ✅ done |
+
+**Result:** the 2D sketcher is complete. A bracket profile is drawn and fully defined with mouse and
+keyboard in 64 actions (automated exit check), dragging stays at about 7 ms per step with 2,000 sketch
+entities, and every tool has user-guide text and screenshots. Released as
+[v0.2.0-alpha.0](https://github.com/Ujap1994/ParaWerk/releases/tag/v0.2.0-alpha.0) (sketcher preview) and
+[v0.2.0-alpha.1](https://github.com/Ujap1994/ParaWerk/releases/tag/v0.2.0-alpha.1) (Phase 1 complete).
+Marked complete for now: open points from hands-on testing are handled alongside Phase 2. Next: Phase 2.
+
+**Findings that changed the plan:**
+
+- ParaWerk's own sparse solver replaced PlaneGCS ([ADR 0005](docs/adr/0005-sketch-solver.md)): about
+  2.7 ms per drag step with 1,000 connected constraints, where PlaneGCS ran out of memory.
+- Per-entity items must not be DOM elements: relation symbols as HTML labels made a drag step at 2,000
+  entities take 114 ms instead of 7 ms; they are GPU sprites now.
+- The command bar is full at the smallest window width (960 px); new commands go into split buttons and
+  menus.
+- Splines are natural cubic splines through fit points, and trimming keeps all fit points, so trimmed
+  splines stay exact. Phase 2 converts them exactly into B-splines for the kernel.
+
+### Phase 2 – in progress
+
+| Item | Status |
+|---|---|
+| Extrude and cut from sketch profiles | ⏳ in progress |
+| Revolve and revolved cut | planned |
 
 ## 2. Guiding principles
 

@@ -903,15 +903,15 @@ test('draws tangent arcs, three-point circles, slots, polygons, angled rectangle
   await page.keyboard.press('Escape');
   const onCurve = ((await sketch())?.constraints ?? []).find((c) => (c as unknown as { type: string; circle?: string }).circle === spline.id) as unknown as { type: string; point: string };
   expect(onCurve.type).toBe('pointOnCircle');
-  // The last fit point: the relation symbol of the new point sits near the inner ones at this zoom.
-  const [fitX, fitY] = drawn.get(spline.points[3] as string) ?? [0, 0];
+  // An inner fit point, next to the symbol of the new relation at this zoom: the point under the cursor wins.
+  const [fitX, fitY] = drawn.get(spline.points[2] as string) ?? [0, 0];
   const fit = await project(page, [fitX, fitY, 0]);
   const moved = await project(page, [fitX, fitY - 8, 0]);
   await page.mouse.move(canvas.x + fit.x, canvas.y + fit.y);
   await page.mouse.down();
   await page.mouse.move(canvas.x + moved.x, canvas.y + moved.y, { steps: 12 });
   await page.mouse.up();
-  await expect.poll(async () => (await positionsNow()).get(spline.points[3] as string)?.[1] as number).toBeLessThan(fitY - 7);
+  await expect.poll(async () => (await positionsNow()).get(spline.points[2] as string)?.[1] as number).toBeLessThan(fitY - 7);
   const { curve: movedCurve, positions } = await curveNow();
   expect(closestOnSpline(movedCurve, positions.get(onCurve.point) ?? [0, 0]).distance).toBeLessThan(1e-6);
   await expect(page.locator('[data-testid="sketch-status"]')).toHaveText('Under defined');

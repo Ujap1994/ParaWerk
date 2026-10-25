@@ -7,18 +7,16 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
-### Added
+## [0.2.0-alpha.1] - 2026-10-25
+
+Completes the **2D sketcher** (Phase 1): splines with points on them and exact trimming, converting
+model edges, scaling, and variables and equations for the whole part. Turning sketches into solids
+(extrude, revolve) follows in Phase 2. Not ready for productive use; see the disclaimer in the README.
+
+### Added – sketcher
 - Splines (key S): smooth curves through fit points (natural cubic splines), drawn point by point with
   snapping; the fit points are ordinary sketch points that can be dragged, dimensioned and related;
   move, copy, mirror and patterns; DXF export as polylines and import of fit-point splines.
-- Scale the selection by a factor around the origin or a selected point, in place (dimensions within the
-  selection scale along) or as a scaled copy.
-- Convert entities: edges of the part become fixed sketch geometry on the sketch plane (lines, circles
-  and arcs; tilted circles become ellipses, other curves splines); touching edges stay connected. The
-  geometry kernel now reports the exact end points, centers and axes of edges.
-- Calculations in number fields and dimension values: + − × ÷, powers, brackets, π, sqrt, abs and
-  sin/cos/tan in degrees, and lengths with units (mm, cm, m, in); evaluated by an own parser, never as
-  code.
 - Points on splines: points snap onto a spline between its fit points and stay on it (*on curve*,
   also offered for a selected point and spline); they slide along the curve until a dimension holds
   them and follow when the fit points move.
@@ -27,13 +25,25 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
   exactly: they keep all of their fit points, so their shape does not change, and show only the rest
   between their new ends, which the solver keeps on the curve; the cut-off part is hinted while the
   sketch is open. Part files store the trim ends of splines (format version 3).
+- Scale the selection by a factor around the origin or a selected point, in place (dimensions within the
+  selection scale along) or as a scaled copy.
+- Convert entities: edges of the part become fixed sketch geometry on the sketch plane (lines, circles
+  and arcs; tilted circles become ellipses, other curves splines); touching edges stay connected. The
+  geometry kernel now reports the exact end points, centers and axes of edges.
+
+### Added – parameters
 - Global variables and equations: a list of named values (also as equations over each other, with
   cycles and unknown names explained), used by name in feature parameters and sketch dimensions; when a
   variable changes, every parameter and dimension that uses it follows and changed sketches are solved
   again, in one undo step. Part files that use variables, equations or splines are saved as format
   version 3.
+- Calculations in number fields and dimension values: + − × ÷, powers, brackets, π, sqrt, abs and
+  sin/cos/tan in degrees, and lengths with units (mm, cm, m, in); evaluated by an own parser, never as
+  code.
 
 ### Changed
+- A sketch point under the cursor now wins over a relation symbol, so points stay easy to grab when
+  symbols crowd around them in a zoomed-out view.
 - *Line* and *Centerline* share one button with a variant menu (**L** starts the last one used), which
   makes room for *Spline* in the command bar.
 
@@ -162,6 +172,7 @@ First technical preview (Phase 0). Not ready for productive use; see the disclai
 ### Removed
 - DWG from the planned formats, because it is a closed, proprietary format. DXF covers 2D exchange.
 
-[Unreleased]: https://github.com/Ujap1994/ParaWerk/compare/v0.2.0-alpha.0...HEAD
+[Unreleased]: https://github.com/Ujap1994/ParaWerk/compare/v0.2.0-alpha.1...HEAD
+[0.2.0-alpha.1]: https://github.com/Ujap1994/ParaWerk/compare/v0.2.0-alpha.0...v0.2.0-alpha.1
 [0.2.0-alpha.0]: https://github.com/Ujap1994/ParaWerk/compare/v0.1.0-alpha.0...v0.2.0-alpha.0
 [0.1.0-alpha.0]: https://github.com/Ujap1994/ParaWerk/releases/tag/v0.1.0-alpha.0
