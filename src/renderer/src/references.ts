@@ -114,7 +114,9 @@ export function referenceItems(state: AppState): ReferenceItem[] {
   const edit = state.activeEdit;
   const end = state.sketch?.index ?? edit?.index ?? features.length;
   const results = new Map(state.rebuild?.results.map((result) => [result.id, result]));
-  const referenced = new Set(edit && isReferenceFeature(edit.draft) ? referencePicks(edit.draft.references, state).filter((pick) => pick.kind === 'reference').map((pick) => pick.index) : []);
+  // What the edited feature is built on is highlighted: the references of reference geometry, the axis of a revolution.
+  const built = edit && isReferenceFeature(edit.draft) ? edit.draft.references : edit?.draft.type === 'revolve' && edit.draft.axisRef ? [edit.draft.axisRef] : [];
+  const referenced = new Set(referencePicks(built, state).filter((pick) => pick.kind === 'reference').map((pick) => pick.index));
   const selected = new Set(state.selection.filter((pick) => pick.kind === 'reference').map((pick) => pick.index));
   const hovered = state.hover?.kind === 'reference' ? state.hover.index : null;
   const items: ReferenceItem[] = [];

@@ -35,6 +35,8 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
   standard planes, the origin, each other and faces, edges and vertices of the part, follow the part when
   earlier features change, and carry sketches. Vertices can be picked in the 3D view. Part files with
   reference geometry are saved as format version 6.
+- Revolve around a reference axis: *Axis* also lists the part's reference axes; the axis must lie in the
+  sketch plane.
 - Lost edges: a fillet or chamfer whose edges are partly gone after an earlier change still rounds the
   others and shows a yellow warning in the tree instead of failing. Editing it lists the lost edges,
   marks where they were in the 3D view and removes them with one click.

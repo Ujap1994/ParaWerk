@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { isReferenceFeature, type Axis, type BooleanOperation, type EdgeFeature, type ExtrudeDirection, type ExtrudeEnd, type Feature, type Vec3 } from '../../../shared/model/feature.ts';
+import type { GeometryRef } from '../../../shared/model/reference.ts';
 import { referenceRoles } from '../references.ts';
 import { resolveEdgeRefs } from '../../../shared/model/naming.ts';
 import * as commands from '../commands.ts';
@@ -113,10 +114,16 @@ function SketchField({ value, index }: { value: string; index: number }) {
   );
 }
 
-/** The lines of the revolution's sketch, to choose the axis: centerlines first, numbered as they were drawn. */
-function AxisField({ sketch, value }: { sketch: string; value: string }) {
+/**
+ * The axis of a revolution: a line of its sketch (centerlines first, numbered as they were drawn) or a
+ * reference axis before the revolution.
+ */
+function AxisField({ sketch, value, axisRef, index }: { sketch: string; value: string; axisRef: GeometryRef | undefined; index: number }) {
   const { t } = useTranslation();
-  const data = useAppState((state) => state.history.features.find((feature) => feature.type === 'sketch' && feature.id === sketch));
+  const nameOf = useFeatureName();
+  const features = useAppState((state) => state.history.features);
+  const references = features.slice(0, index).flatMap((feature, i) => (feature.type === 'axis' && !feature.suppressed ? [{ id: `feature:${feature.id}`, label: nameOf(features, i) }] : []));
+  const data = features.find((feature) => feature.type === 'sketch' && feature.id === sketch);
   const lines = data?.type === 'sketch' ? data.sketch.entities.filter((entity) => entity.type === 'line') : [];
   const centerlines = lines.filter((line) => line.construction);
   const others = lines.filter((line) => !line.construction);
@@ -124,16 +131,29 @@ function AxisField({ sketch, value }: { sketch: string; value: string }) {
     ...centerlines.map((line, i) => ({ id: line.id, label: t('panel.centerline', { n: i + 1 }) })),
     ...others.map((line, i) => ({ id: line.id, label: t('panel.line', { n: i + 1 }) })),
   ];
+  const selected = axisRef?.kind === 'feature' ? `feature:${axisRef.feature}` : value;
+  const known = options.some((option) => option.id === selected) || references.some((option) => option.id === selected);
   return (
     <label className="field">
       <span className="field-label">{t('panel.axis')}</span>
-      <select className="field-select" value={value} data-testid="revolve-axis" onChange={(event) => commands.updateDraft({ axis: event.target.value })}>
-        {options.some((option) => option.id === value) ? null : <option value={value}>{t('panel.noAxis')}</option>}
-        {options.map((option) => (
-          <option key={option.id} value={option.id}>
-            {option.label}
-          </option>
-        ))}
+      <select className="field-select" value={selected} data-testid="revolve-axis" onChange={(event) => commands.chooseRevolveAxis(event.target.value)}>
+        {known ? null : <option value={selected}>{t('panel.noAxis')}</option>}
+        <optgroup label={t('panel.axisSketchLines')}>
+          {options.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.label}
+            </option>
+          ))}
+        </optgroup>
+        {references.length > 0 ? (
+          <optgroup label={t('panel.axisReferences')}>
+            {references.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.label}
+              </option>
+            ))}
+          </optgroup>
+        ) : null}
       </select>
     </label>
   );
@@ -180,7 +200,7 @@ function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
       return (
         <Section title={t('panel.parameters')}>
           <SketchField value={draft.sketch} index={index} />
-          <AxisField sketch={draft.sketch} value={draft.axis} />
+          <AxisField sketch={draft.sketch} value={draft.axis} axisRef={draft.axisRef} index={index} />
           <OperationField value={draft.operation} firstFeature={firstFeature} />
           <NumberField label={t('panel.angle')} unit="°" step={15} value={draft.angle} testId="revolve-angle" {...equation(draft, 'angle')} onChange={(angle) => commands.updateDraft({ angle })} />
           <Segmented<ExtrudeDirection>

@@ -1,11 +1,13 @@
-import { isEdgeFeature, type EdgeFeature, type EdgeRef, type Feature, type SketchFeature, type SolidModelingFeature } from '../shared/model/feature.ts';
+import { isEdgeFeature, type EdgeFeature, type EdgeRef, type Feature, type SketchFeature, type SolidModelingFeature, type Vec3 } from '../shared/model/feature.ts';
 import { edgeFaceNames, edgeRefOf, resolveEdgeRefs, resolveFacePlane, type BodyNaming } from '../shared/model/naming.ts';
 import { sketchProfile, type Profile } from '../shared/model/profile.ts';
-import type { ReferenceGeometry } from '../shared/model/reference.ts';
-import { frameOf, frameOnPlane, ORIGIN_ID, type SketchFrame, type SketchPlaneRef } from '../shared/model/sketch.ts';
+import type { GeometryRef, ReferenceGeometry } from '../shared/model/reference.ts';
+import { frameOf, frameOnPlane, ORIGIN_ID, toSketch, type SketchFrame, type SketchPlaneRef } from '../shared/model/sketch.ts';
+import type { Point2 } from '../shared/model/spline.ts';
 import { hashString } from '../shared/hash.ts';
 import type { KernelFeature, ResolvedEdgeFeature } from './backend.ts';
 import { FeatureError } from './feature-error.ts';
+import { axisOfReference, type ReferenceContext } from './reference.ts';
 
 const coordinate = (value: number) => String(Math.round(value * 100) / 100);
 
@@ -18,8 +20,8 @@ function profileOf(sketch: SketchFeature): Profile {
   return profile;
 }
 
-/** The axis line of a revolution in sketch coordinates; the outlines must stay on one side of it. */
-function axisOf(sketch: SketchFeature, axis: string, profile: Profile): [number, number, number, number] {
+/** The axis line of a revolution in sketch coordinates: a line of its sketch. */
+function sketchAxis(sketch: SketchFeature, axis: string): [Point2, Point2] {
   const line = sketch.sketch.entities.find((entity) => entity.id === axis);
   if (line?.type !== 'line') throw new FeatureError('axis-missing');
   const position = (id: string): [number, number] | null => {
@@ -29,6 +31,23 @@ function axisOf(sketch: SketchFeature, axis: string, profile: Profile): [number,
   };
   const [a, b] = [position(line.p1), position(line.p2)];
   if (!a || !b) throw new FeatureError('axis-missing');
+  return [a, b];
+}
+
+/** An axis outside the sketch in sketch coordinates; it must lie in the sketch plane. */
+function referenceAxis(ref: GeometryRef, frame: SketchFrame, context: ReferenceContext): [Point2, Point2] {
+  const axis = axisOfReference(ref, context);
+  const along = (v: Vec3, n: Vec3) => v[0] * n[0] + v[1] * n[1] + v[2] * n[2];
+  const offset = along([axis.point[0] - frame.origin[0], axis.point[1] - frame.origin[1], axis.point[2] - frame.origin[2]], frame.normal);
+  if (Math.abs(along(axis.direction, frame.normal)) > 1e-6 || Math.abs(offset) > 1e-6 * Math.max(1, Math.hypot(...axis.point))) {
+    throw new FeatureError('axis-not-in-plane');
+  }
+  const end: Vec3 = [axis.point[0] + axis.direction[0], axis.point[1] + axis.direction[1], axis.point[2] + axis.direction[2]];
+  return [toSketch(frame, axis.point), toSketch(frame, end)];
+}
+
+/** The axis line as x0 y0 x1 y1; the outlines must stay on one side of it (they may touch it). */
+function checkedAxis([a, b]: [Point2, Point2], profile: Profile): [number, number, number, number] {
   const [dx, dy] = [b[0] - a[0], b[1] - a[1]];
   const length = Math.hypot(dx, dy);
   if (length === 0) throw new FeatureError('axis-missing');
@@ -111,28 +130,28 @@ export function placeSketch(sketch: SketchFeature, body: (() => BodyNaming) | nu
   return { frame, healed: { kind: 'face', face: face.index, frame, ...(name ? { name } : {}) } };
 }
 
+/** What features are resolved against: the body before them, where sketches lie and where reference features lie. */
+export interface ResolveContext extends ReferenceContext {
+  frames: ReadonlyMap<string, SketchFrame>;
+}
+
 /**
  * Gives a feature what it needs from earlier features: extrusions and revolutions get the closed
  * outlines and the plane of their sketch (a revolution also its axis), fillets and chamfers the edges
- * of `body` (the body they modify, null when there is none) that their references mean. `frames` holds
- * where sketches lie now (see placeSketch). Throws FeatureError when the sketch is missing or has no
- * usable outline, or when an edge is gone.
+ * of the body they modify that their references mean. Throws FeatureError when the sketch is missing or
+ * has no usable outline, or when an edge or the axis is gone.
  */
-export function resolveFeature(
-  feature: SolidModelingFeature,
-  before: readonly Feature[],
-  body: (() => BodyNaming) | null,
-  frames: ReadonlyMap<string, SketchFrame> = new Map(),
-): KernelFeature {
+export function resolveFeature(feature: SolidModelingFeature, before: readonly Feature[], context: ResolveContext): KernelFeature {
   if (isEdgeFeature(feature)) {
-    if (!body) throw new FeatureError('no-body');
-    return resolveEdges(feature, body());
+    if (!context.body) throw new FeatureError('no-body');
+    return resolveEdges(feature, context.body.naming());
   }
   if (feature.type !== 'extrude' && feature.type !== 'revolve') return feature;
   const sketch = before.find((candidate): candidate is SketchFeature => candidate.type === 'sketch' && candidate.id === feature.sketch);
   if (!sketch || sketch.suppressed) throw new FeatureError('sketch-missing');
   const profile = profileOf(sketch);
-  const frame = frames.get(sketch.id) ?? frameOf(sketch.plane);
+  const frame = context.frames.get(sketch.id) ?? frameOf(sketch.plane);
   if (feature.type === 'extrude') return { ...feature, profile, frame };
-  return { ...feature, profile, frame, line: axisOf(sketch, feature.axis, profile) };
+  const axis = feature.axisRef ? referenceAxis(feature.axisRef, frame, context) : sketchAxis(sketch, feature.axis);
+  return { ...feature, profile, frame, line: checkedAxis(axis, profile) };
 }

@@ -248,6 +248,7 @@ function parseFeatureFields(raw: Json, path: string): Feature {
         operation: operation(raw.operation, `${path}.operation`),
         sketch: raw.sketch,
         axis: raw.axis,
+        ...(raw.axisRef === undefined ? {} : { axisRef: geometryRef(raw.axisRef, `${path}.axisRef`) }),
         angle: raw.angle,
         direction: raw.direction as ExtrudeDirection,
       };

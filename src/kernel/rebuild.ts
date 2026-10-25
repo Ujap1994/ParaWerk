@@ -199,7 +199,7 @@ export class Rebuilder implements Disposable {
       }
 
       try {
-        const resolved = resolveFeature(feature, features.slice(0, i), input ? () => naming(input) : null, frames);
+        const resolved = resolveFeature(feature, features.slice(0, i), { body: input ? query(input) : null, frames, references });
         const shape = this.backend.applyFeature(input, resolved);
         const healed = 'healedEdges' in resolved ? resolved.healedEdges : undefined;
         const missing = 'missingEdges' in resolved ? resolved.missingEdges : undefined;

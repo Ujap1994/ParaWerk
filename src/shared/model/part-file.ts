@@ -22,7 +22,8 @@ export const PART_FORMAT_VERSION = 6;
 
 /** The oldest format version that can hold the document, so older ParaWerk versions can still open it. */
 export function formatVersionOf(features: readonly Feature[]): number {
-  if (features.some((feature) => isReferenceFeature(feature) || (feature.type === 'sketch' && feature.plane.kind === 'feature'))) return 6;
+  const reference = (feature: Feature) => isReferenceFeature(feature) || (feature.type === 'sketch' && feature.plane.kind === 'feature') || (feature.type === 'revolve' && feature.axisRef !== undefined);
+  if (features.some(reference)) return 6;
   const named = features.some(
     (feature) =>
       (isEdgeFeature(feature) && feature.edges.some((ref) => ref.kind === 'edge')) || (feature.type === 'sketch' && feature.plane.kind === 'face' && feature.plane.name !== undefined),

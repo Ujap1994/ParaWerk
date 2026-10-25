@@ -240,7 +240,9 @@
     "revolveHint": "Jede geschlossene Kontur der Skizze wird um die Achse rotiert, eine Linie derselben Skizze (meist eine Mittellinie). Die Konturen müssen auf einer Seite der Achse bleiben; sie dürfen sie berühren.",
     "end": "Ende",
     "endBlind": "Tiefe",
-    "endThroughAll": "Durch alles"
+    "endThroughAll": "Durch alles",
+    "axisSketchLines": "Linien der Skizze",
+    "axisReferences": "Referenzachsen"
   },
   "status": {
     "kernelLoading": "Geometriekern wird gestartet…",
@@ -355,6 +357,7 @@
     "operation-failed": "Der Geometriekern konnte dieses Feature nicht erzeugen ({{detail}}).",
     "unknown": "Unerwarteter Fehler: {{detail}}",
     "axis-missing": "Die Achse dieser Rotation fehlt. Bearbeite das Feature und wähle eine Linie der Skizze als Achse.",
+    "axis-not-in-plane": "Die Achse muss in der Ebene der Skizze liegen. Wähle eine Achse in dieser Ebene oder eine Linie der Skizze.",
     "profile-crosses-axis": "Konturen der Skizze liegen auf beiden Seiten der Achse. Halte sie auf einer Seite; berühren dürfen sie die Achse.",
     "plane-missing": "Die Referenzebene, auf der diese Skizze gezeichnet wurde, existiert nicht mehr. Die Skizze bleibt, wo die Ebene war.",
     "reference-missing": "Referenz {{detail}} dieses Features fehlt: Sie wurde noch nicht gewählt, oder eine frühere Änderung hat sie entfernt. Bearbeite das Feature und wähle sie.",

@@ -24,7 +24,7 @@ interface Plane {
   normal: Vec3;
 }
 
-interface Line {
+export interface Line {
   point: Vec3;
   direction: Vec3;
 }
@@ -146,6 +146,13 @@ function aspectsOf(ref: GeometryRef | undefined, slot: number, context: Referenc
       return { aspects: { point, center: point }, ...(healed ? { healed } : {}) };
     }
   }
+}
+
+/** The axis a reference provides (a reference axis, a straight or circular edge, a cylindrical face). */
+export function axisOfReference(ref: GeometryRef, context: ReferenceContext): Line {
+  const axis = aspectsOf(ref, 0, context).aspects.axis;
+  if (!axis) throw new FeatureError('reference-kind', '1');
+  return axis;
 }
 
 /** The geometry a slot of the given role takes from what its reference provides. */

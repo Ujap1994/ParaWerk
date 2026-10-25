@@ -99,6 +99,7 @@ export type FeatureErrorCode =
   | 'profile-empty'
   | 'profile-crossing'
   | 'axis-missing'
+  | 'axis-not-in-plane'
   | 'profile-crosses-axis'
   | 'operation-failed'
   | 'unknown';

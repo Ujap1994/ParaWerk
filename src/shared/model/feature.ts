@@ -205,8 +205,10 @@ export interface RevolveFeature extends FeatureBase {
   operation: BooleanOperation;
   /** Id of the sketch feature (before this one) whose outlines are revolved. */
   sketch: string;
-  /** Id of the line (often a centerline) of that sketch that is the axis. */
+  /** Id of the line (often a centerline) of that sketch that is the axis (unused when `axisRef` is set). */
   axis: string;
+  /** An axis outside the sketch, such as a reference axis; it must lie in the sketch plane. */
+  axisRef?: GeometryRef;
   /** Degrees, up to 360. */
   angle: number;
   /** One way around the axis, the other way, or half the angle each way. */

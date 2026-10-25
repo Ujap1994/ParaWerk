@@ -41,7 +41,10 @@ it.
 
 - *Sketch* and *Axis*: Revolve takes the newest sketch that no extrusion or revolution uses yet and its
   first centerline. *Axis* lists the centerlines and the other lines of the sketch; the chosen one is shown
-  in orange. A line of the outline itself can be the axis too.
+  in orange. A line of the outline itself can be the axis too. Below them, *Axis* lists the
+  [reference axes](#reference-geometry) of the part: an axis outside the sketch, for example one along an
+  edge of the part, works as long as it lies in the sketch plane. A sketch without a centerline turns
+  around the newest reference axis.
 - *Angle* in degrees, up to 360 (a full turn, the default); like every parameter it takes a calculation or
   a variable.
 - *Direction*: **Normal** and **Reversed** turn one way or the other from the sketch plane, **Symmetric**

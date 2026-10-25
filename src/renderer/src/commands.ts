@@ -194,7 +194,14 @@ export function startFeature(type: FeatureType): void {
       return;
     }
     const operation = hasBodyBefore(features, index) ? draft.operation : 'add';
-    draft = draft.type === 'extrude' ? { ...draft, sketch: sketch.id, operation } : { ...draft, sketch: sketch.id, axis: defaultAxis(sketch), operation };
+    if (draft.type === 'extrude') {
+      draft = { ...draft, sketch: sketch.id, operation };
+    } else {
+      // Without a centerline in the sketch, the last reference axis is the axis.
+      const axis = defaultAxis(sketch);
+      const reference = features.findLast((feature) => feature.type === 'axis' && !feature.suppressed);
+      draft = axis || !reference ? { ...draft, sketch: sketch.id, axis, operation } : { ...draft, sketch: sketch.id, axis: '', axisRef: { kind: 'feature', feature: reference.id }, operation };
+    }
   } else if (isEdgeFeature(draft)) {
     // Edges selected before starting the command are taken over (select first, then act).
     const naming = getState().display.body?.naming;
@@ -225,6 +232,16 @@ function sketchToUse(features: readonly Feature[]): SketchFeature | null {
 /** The axis a revolution of a sketch starts with: its first centerline (none if it has no centerline). */
 function defaultAxis(sketch: SketchFeature): string {
   return sketch.sketch.entities.find((entity) => entity.type === 'line' && entity.construction)?.id ?? '';
+}
+
+/** Chooses the axis of the revolution being edited: a line id of its sketch, or `feature:<id>` for a reference axis. */
+export function chooseRevolveAxis(value: string): void {
+  const edit = getState().activeEdit;
+  if (edit?.draft.type !== 'revolve') return;
+  const { axisRef: _old, ...draft } = edit.draft;
+  const feature = value.startsWith('feature:') ? value.slice('feature:'.length) : null;
+  const next = feature ? { ...draft, axis: '', axisRef: { kind: 'feature' as const, feature } } : { ...draft, axis: value };
+  setState({ activeEdit: { ...edit, draft: next } });
 }
 
 /** Chooses the sketch of the extrusion or revolution being edited (a revolution also takes its centerline). */

@@ -178,3 +178,28 @@ describe('references found again by position', () => {
     expect(result.features[1]?.healedReferences).toEqual([{ kind: 'face', name: 'box:top', at: [10, 10, 40] }]);
   });
 });
+
+describe('revolving around a reference axis', () => {
+  const P = (id: string, x: number, y: number): SketchEntity => ({ id, type: 'point', x, y });
+  const L = (id: string, p1: string, p2: string): SketchEntity => ({ id, type: 'line', p1, p2 });
+  // A 10 × 10 square on the front plane, 10 mm beside the Z axis (sketch x is model x, sketch y is model z).
+  const section: SketchFeature = {
+    id: 's', type: 'sketch', plane: { kind: 'standard', plane: 'front' },
+    sketch: { entities: [P('a', 10, 0), P('b', 20, 0), P('c', 20, 10), P('d', 10, 10), L('ab', 'a', 'b'), L('bc', 'b', 'c'), L('cd', 'c', 'd'), L('da', 'd', 'a')], constraints: [] },
+  };
+  const revolve = (axisRef: GeometryRef) => ({ id: 'r', type: 'revolve', operation: 'add', sketch: 's', axis: '', axisRef, angle: 360, direction: 'normal' }) as const;
+
+  it('turns the outline around a reference axis in the sketch plane', () => {
+    const zAxis = axis('z', 'twoPlanes', [front, right]);
+    const result = build([zAxis, section, revolve({ kind: 'feature', feature: 'z' })]);
+    expect(result.features[2]?.status).toBe('ok');
+    // Pappus: the area times the way its center travels.
+    expect(result.captures[0]?.properties?.volume).toBeCloseTo(100 * 2 * Math.PI * 15, 4);
+  });
+
+  it('reports an axis that does not lie in the sketch plane', () => {
+    const yAxis = axis('y', 'twoPlanes', [top, right]);
+    expect(build([yAxis, section, revolve({ kind: 'feature', feature: 'y' })]).features[2]?.error?.code).toBe('axis-not-in-plane');
+    expect(build([section, revolve({ kind: 'feature', feature: 'gone' })]).features[1]?.error?.code).toBe('reference-missing');
+  });
+});

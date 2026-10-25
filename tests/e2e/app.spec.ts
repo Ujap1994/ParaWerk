@@ -542,3 +542,29 @@ test('picks vertices in the 3D view for a plane through three points', async () 
   expect(plane.references.map((ref) => ref.at.map((v) => Math.round(v) + 0))).toEqual([[-50, -30, 40], [50, -30, 40], [50, 30, 0]]);
   expect((await state(page)).rebuild?.results.map((result) => result.status)).toEqual(['ok', 'ok']);
 });
+
+test('revolves a sketch around a reference axis', async () => {
+  launched = await launchApp();
+  const { page } = launched;
+  // A reference axis where the front and right plane meet (the Z axis), and a square beside it on the front plane.
+  await page.evaluate(() => {
+    const P = (id: string, x: number, y: number) => ({ id, type: 'point', x, y });
+    const L = (id: string, p1: string, p2: string) => ({ id, type: 'line', p1, p2 });
+    const features = [
+      { id: 'z', type: 'axis', method: 'twoPlanes', references: [{ kind: 'standard-plane', plane: 'front' }, { kind: 'standard-plane', plane: 'right' }] },
+      {
+        id: 'section', type: 'sketch', plane: { kind: 'standard', plane: 'front' },
+        sketch: { entities: [P('a', 10, 0), P('b', 20, 0), P('c', 20, 10), P('d', 10, 10), L('ab', 'a', 'b'), L('bc', 'b', 'c'), L('cd', 'c', 'd'), L('da', 'd', 'a')], constraints: [] },
+      },
+    ];
+    const history = { features, past: [], future: [] };
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history, savedFeatures: features, dirty: false });
+  });
+  await idle(page);
+  // The sketch has no centerline, so the reference axis is the axis.
+  await page.click('[data-command="revolve"]');
+  await expect(page.locator('[data-testid="revolve-axis"] option:checked')).toHaveText('Axis1');
+  await page.click('[data-testid="panel-ok"]');
+  expect(await volume(page)).toBeCloseTo(100 * 2 * Math.PI * 15, 2);
+  expect((await state(page)).history.features[2]).toMatchObject({ type: 'revolve', axis: '', axisRef: { kind: 'feature', feature: 'z' } });
+});

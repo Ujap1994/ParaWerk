@@ -46,4 +46,6 @@ of the session that created them.
 - Editing a reference feature changes its rebuild key and so rebuilds the features after it, like any
   other edit; reference features themselves are cheap (one naming query and a few geometry queries).
 - Part files with reference geometry are format version 6.
-- Revolve, patterns and mirror can take reference axes and planes as their next step.
+- Revolve takes a reference axis (`RevolveFeature.axisRef`) besides a line of its sketch; the axis must
+  lie in the sketch plane (`axis-not-in-plane`). Patterns and mirror will take reference axes and planes
+  the same way.
