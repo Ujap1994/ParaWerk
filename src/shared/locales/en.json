@@ -182,6 +182,7 @@
     "delete": "Delete",
     "moreActions": "More actions",
     "statusError": "Rebuild error",
+    "statusWarning": "Rebuild warning",
     "statusSuppressed": "Suppressed",
     "rolledBack": "Not part of the current edit",
     "sketchUnder": "Sketch is under defined",
@@ -208,6 +209,9 @@
     "edgesCount_one": "{{count}} edge selected",
     "edgesCount_other": "{{count}} edges selected",
     "clearEdges": "Clear",
+    "edgesMissing_one": "{{count}} edge no longer exists. Its place is marked in the 3D view.",
+    "edgesMissing_other": "{{count}} edges no longer exist. Their places are marked in the 3D view.",
+    "removeMissingEdges": "Remove",
     "invalidNumber": "Enter a positive number.",
     "firstMustAdd": "The first feature must add material.",
     "sketch": "Sketch",
@@ -341,6 +345,10 @@
     "unknown": "Unexpected error: {{detail}}",
     "axis-missing": "The axis of this revolution is missing. Edit the feature and choose a line of the sketch as the axis.",
     "profile-crosses-axis": "Outlines of the sketch lie on both sides of the axis. Keep them on one side; they may touch it."
+  },
+  "warnings": {
+    "edge-missing_one": "{{count}} selected edge no longer exists and is left out. Edit the feature to remove it or pick another edge.",
+    "edge-missing_other": "{{count}} selected edges no longer exist and are left out. Edit the feature to remove them or pick other edges."
   },
   "fileErrors": {
     "not-a-zip": "This is not a ParaWerk part file.",

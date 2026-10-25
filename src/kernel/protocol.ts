@@ -72,6 +72,8 @@ export interface FeatureResult {
   id: string;
   status: 'ok' | 'error' | 'suppressed';
   error?: { code: FeatureErrorCode; detail?: string };
+  /** The feature was built, but not completely (for example a fillet without edges that are gone). */
+  warning?: { code: FeatureErrorCode; detail?: string };
   /** Time spent on this feature in the last rebuild (0 when it came from the cache). */
   timeMs: number;
   cached: boolean;

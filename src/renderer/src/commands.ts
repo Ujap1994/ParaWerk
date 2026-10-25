@@ -314,6 +314,15 @@ export function toggleDraftEdge(index: number): void {
   updateDraft({ edges: added ? [...kept, added] : kept });
 }
 
+/** Removes the edges of the edited fillet or chamfer that no longer exist in the body it modifies. */
+export function removeMissingEdges(): void {
+  const { activeEdit: edit, display } = getState();
+  const naming = display.body?.naming;
+  if (!edit || !isEdgeFeature(edit.draft) || !naming) return;
+  const matches = resolveEdgeRefs(edit.draft.edges, naming);
+  updateDraft({ edges: edit.draft.edges.filter((_, i) => matches[i] !== null) });
+}
+
 export function commitEdit(): void {
   const state = getState();
   const edit = state.activeEdit;

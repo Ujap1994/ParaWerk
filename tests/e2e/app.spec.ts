@@ -34,6 +34,16 @@ async function clickWorldPoint(page: Page, point: [number, number, number]): Pro
   await idle(page);
 }
 
+/** Changes the feature being edited in the side panel directly (fields the panel offers as several controls). */
+async function updateDraft(page: Page, patch: object): Promise<void> {
+  await page.evaluate((p) => (window as unknown as { __parawerk: { commands: { updateDraft(patch: object): void } } }).__parawerk.commands.updateDraft(p), patch);
+}
+
+/** How many places of lost references the 3D view marks. */
+async function lostMarkers(page: Page): Promise<number> {
+  return page.evaluate(() => (window as unknown as { __parawerk: { viewport: { lostMarkers(): number } } }).__parawerk.viewport.lostMarkers());
+}
+
 async function createBox(page: Page): Promise<void> {
   await page.click('[data-command="box"]');
   await page.click('[data-testid="panel-ok"]');
@@ -118,14 +128,7 @@ test('keeps a fillet on its edge when an earlier feature changes the topology', 
   await createBox(page);
   // A hole through the box: more faces and edges, numbered differently than in the plain box.
   await page.click('[data-command="cylinder"]');
-  await page.evaluate(() =>
-    (window as unknown as { __parawerk: { commands: { updateDraft(patch: object): void } } }).__parawerk.commands.updateDraft({
-      operation: 'cut',
-      radius: 8,
-      height: 60,
-      position: [0, 0, -10],
-    }),
-  );
+  await updateDraft(page, { operation: 'cut', radius: 8, height: 60, position: [0, 0, -10] });
   await page.click('[data-testid="panel-ok"]');
   await idle(page);
 
@@ -147,6 +150,47 @@ test('keeps a fillet on its edge when an earlier feature changes the topology', 
   await page.locator(`[data-feature-id="${hole?.id}"] .tree-actions button`).nth(1).click();
   expect(await volume(page)).toBeCloseTo(240_000 - loss, 1);
   expect((await state(page)).rebuild?.results.map((result) => result.status)).toEqual(['ok', 'suppressed', 'ok']);
+});
+
+test('marks fillet edges that an earlier change removed and lets them be removed', async () => {
+  launched = await launchApp({ width: 1440, height: 900 });
+  const { page } = launched;
+  await createBox(page);
+  await page.click('[data-command="cylinder"]');
+  await updateDraft(page, { operation: 'cut', radius: 8, height: 60, position: [0, 0, -10] });
+  await page.click('[data-testid="panel-ok"]');
+  await idle(page);
+
+  // Round the top front edge and the upper rim of the hole.
+  await page.click('[data-command="fillet"]');
+  await idle(page);
+  await clickWorldPoint(page, [0, -30, 40]);
+  await clickWorldPoint(page, [0, -8, 40]);
+  await expect(page.locator('[data-testid="edge-count"]')).toContainText('2');
+  await page.locator('[data-testid="fillet-radius"]').fill('2');
+  await page.click('[data-testid="panel-ok"]');
+  await idle(page);
+
+  // Without the hole its rim is gone: the fillet rounds the other edge and warns.
+  const [, hole, fillet] = (await state(page)).history.features;
+  await page.locator(`[data-feature-id="${hole?.id}"]`).hover();
+  await page.locator(`[data-feature-id="${hole?.id}"] .tree-actions button`).nth(1).click();
+  await idle(page);
+  await expect(page.locator(`[data-feature-id="${fillet?.id}"] [data-testid="tree-warning"]`)).toBeVisible();
+  expect(await volume(page)).toBeCloseTo(240_000 - 4 * (1 - Math.PI / 4) * 100, 1);
+
+  // Editing it shows what is missing and where it was; Remove drops it and the warning goes away.
+  await page.locator(`[data-feature-id="${fillet?.id}"]`).dblclick();
+  await idle(page);
+  await expect(page.locator('[data-testid="edges-missing"]')).toContainText('1 edge no longer exists');
+  await expect.poll(() => lostMarkers(page)).toBe(1);
+  await page.click('[data-testid="remove-missing-edges"]');
+  await expect(page.locator('[data-testid="edge-count"]')).toContainText('1');
+  await expect(page.locator('[data-testid="edges-missing"]')).toHaveCount(0);
+  await expect.poll(() => lostMarkers(page)).toBe(0);
+  await page.click('[data-testid="panel-ok"]');
+  await idle(page);
+  await expect(page.locator('[data-testid="tree-warning"]')).toHaveCount(0);
 });
 
 test('picks whole B-Rep faces and shows their exact geometry', async () => {

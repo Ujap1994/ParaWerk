@@ -82,10 +82,23 @@ feature that made it, and keeps its name when later features cut, add or round t
 change an earlier feature – make a sketch wider, add a hole to it, insert or suppress a cut – the fillet
 stays on the edge you picked, even though the body now has more or fewer edges.
 
-If the edge is really gone, for example because a corner of the sketch was rounded and the two side
-faces no longer meet, the fillet is marked in red and explains that an edge no longer exists. Edit it
-and pick the edges again. When a face was only made anew (a sketch line deleted and drawn again in the
-same place), ParaWerk finds the edge by its position and updates what the feature remembers.
+When a face was only made anew (a sketch line deleted and drawn again in the same place), ParaWerk
+finds the edge by its position and updates what the feature remembers.
+
+### When edges are gone
+
+If an edge is really gone – a cut that made it was suppressed, or a corner of the sketch was rounded so
+the two side faces no longer meet – the fillet or chamfer leaves it out and still rounds the other
+edges. The feature gets a yellow warning sign in the tree; hovering over it tells how many edges are
+missing. Only when none of its edges exist any more does the feature fail (red).
+
+![A fillet whose slot edges are gone after the slot was suppressed: it still rounds the plate corner and shows a warning](../images/screenshots/fillet-warning.png)
+
+Edit the feature to fix it: the side panel says how many edges no longer exist, and the 3D view marks
+with a red ⊗ where each of them was, so you can see what was meant. Pick the edges that should be
+rounded now, and click **Remove** to drop the lost ones. With **✓** the warning goes away.
+
+![Editing the fillet: the panel reports the lost edges, the 3D view marks where they were](../images/screenshots/fillet-missing-edges.png)
 
 ## Variables and equations
 

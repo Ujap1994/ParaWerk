@@ -479,6 +479,11 @@ input {
   font-size: 16px;
 }
 
+.tree-status.is-warning {
+  color: var(--warning);
+  font-size: 16px;
+}
+
 .tree-actions {
   display: flex;
   gap: 1px;
@@ -847,6 +852,28 @@ input {
   background: var(--danger-soft);
   color: var(--danger);
   font-size: 12px;
+}
+
+.panel-warning {
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--warning-soft);
+  color: var(--warning);
+  font-size: 12px;
+}
+
+.panel-warning.edge-missing {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin: 6px 0;
+}
+
+.panel-warning .text-button {
+  flex: none;
+  color: inherit;
+  font-weight: 600;
 }
 
 .panel-section {

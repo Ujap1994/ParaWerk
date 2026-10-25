@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { isEdgeFeature, isSketchBased } from '../../../shared/model/feature.ts';
+import { isEdgeFeature, isSketchBased, type Vec3 } from '../../../shared/model/feature.ts';
 import { resolveEdgeRefs } from '../../../shared/model/naming.ts';
 import { frameOf, STANDARD_PLANES } from '../../../shared/model/sketch.ts';
 import * as commands from '../commands.ts';
@@ -33,6 +33,15 @@ function visibleSelection(state: AppState): Pick[] {
     return resolveEdgeRefs(edit.draft.edges, naming).flatMap((match) => (match ? [{ kind: 'edge' as const, index: match.index }] : []));
   }
   return state.selection;
+}
+
+/** Where the edges of the edited fillet or chamfer were that no longer exist in the shown body. */
+function lostEdgePoints(state: AppState): Vec3[] {
+  const edit = state.activeEdit;
+  const naming = state.display.body?.naming;
+  if (!edit || !isEdgeFeature(edit.draft) || !naming) return [];
+  const matches = resolveEdgeRefs(edit.draft.edges, naming);
+  return edit.draft.edges.flatMap((ref, i) => (matches[i] === null && ref.kind === 'edge' ? [ref.at] : []));
 }
 
 function pickFilter(state: AppState): PickFilter {
@@ -116,6 +125,7 @@ export function Viewport() {
         state.sketch !== previous.sketch
       ) {
         engine.setSelection(visibleSelection(state));
+        engine.setLostMarkers(lostEdgePoints(state));
         engine.setPickFilter(pickFilter(state));
       }
       if (

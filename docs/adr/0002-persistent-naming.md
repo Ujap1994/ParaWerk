@@ -1,7 +1,7 @@
 # 0002 – Persistent naming of faces and edges
 
 **Status:** accepted. Phase 0 used edge indices; Phase 2 implements face names, named edge references and
-sketches that follow their face (see *Implementation*). The repair dialog comes next.
+sketches that follow their face, and the repair of lost references (see *Implementation*).
 
 ## Context
 
@@ -77,6 +77,14 @@ edge references. The frame is left out of the rebuild keys of the sketch and the
 body before the sketch is in the keys already), so taking it over does not rebuild the part again. When
 the face is gone, the sketch reports `face-missing` and stays at its stored plane, so the features built
 from it keep working.
+
+**Lost references.** A fillet or chamfer whose edges are partly gone is built from the remaining edges
+and reports a warning (`FeatureResult.warning`, code `edge-missing`, detail = number of lost edges);
+only when all are gone does it fail. While it is edited, the renderer resolves the references against
+the shown input body: the side panel counts the lost ones and offers to remove them, and the 3D view
+marks their stored positions (`at`) with screen-sized markers (`viewport/lost-markers.ts`). This is the
+repair dialog of the target design, kept inside the feature's own side panel: the user sees where the
+old edge was and picks the replacement in the same place where edges are always picked.
 
 **Cost.** Naming adds no measurable time to booleans and fillets (kernel benchmarks before and after are
 within noise); resolving the 104 upper hole edges of the 100-hole plate takes 0.24 ms

@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import type { Axis, BooleanOperation, ExtrudeDirection, ExtrudeEnd, Feature, Vec3 } from '../../../shared/model/feature.ts';
+import type { Axis, BooleanOperation, EdgeFeature, ExtrudeDirection, ExtrudeEnd, Feature, Vec3 } from '../../../shared/model/feature.ts';
+import { resolveEdgeRefs } from '../../../shared/model/naming.ts';
 import * as commands from '../commands.ts';
 import { hasBodyBefore } from '../state/document.ts';
 import { useAppState } from '../state/store.ts';
@@ -253,11 +254,28 @@ function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
                 {t('panel.clearEdges')}
               </button>
             </div>
+            <MissingEdges draft={draft} />
             <p className="panel-hint">{t('panel.edgesHint')}</p>
           </Section>
         </>
       );
   }
+}
+
+/** Edges of the draft that are gone from the body it modifies, with a button that removes them. */
+function MissingEdges({ draft }: { draft: EdgeFeature }) {
+  const { t } = useTranslation();
+  const naming = useAppState((state) => state.display.body?.naming);
+  const missing = naming ? resolveEdgeRefs(draft.edges, naming).filter((match) => match === null).length : 0;
+  if (missing === 0) return null;
+  return (
+    <div className="panel-warning edge-missing" role="status" data-testid="edges-missing">
+      <span>{t('panel.edgesMissing', { count: missing })}</span>
+      <button type="button" className="text-button" data-testid="remove-missing-edges" onClick={commands.removeMissingEdges}>
+        {t('panel.removeMissingEdges')}
+      </button>
+    </div>
+  );
 }
 
 /** Props that let a parameter field take an equation over the part's variables. */

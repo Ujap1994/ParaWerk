@@ -134,6 +134,21 @@ describe('edits of earlier features', () => {
     expect(result.features[2]?.error?.code).toBe('edge-missing');
   });
 
+  it('leaves out an edge that is gone and still rounds the others, with a warning', () => {
+    const before = [sketch(rectangle(0, 0, 20, 10)), extrude];
+    const corner = pick(before, 1, 'extrude:side:rb', 'extrude:side:rc');
+    const top = pick(before, 1, 'extrude:side:ra', 'extrude:end');
+    const fillet: FilletFeature = { id: 'fillet', type: 'fillet', radius: 1, edges: [corner, top] };
+    const rounded = sketch([
+      P('r1', 0, 0), P('r2', 20, 0), P('t1', 20, 7), P('t2', 17, 10), P('m', 17, 7), P('r4', 0, 10),
+      L('ra', 'r1', 'r2'), L('rb', 'r2', 't1'), { id: 'arc', type: 'arc', center: 'm', start: 't1', end: 't2' }, L('rc', 't2', 'r4'), L('rd', 'r4', 'r1'),
+    ]);
+    const result = build([rounded, extrude, fillet]);
+    expect(result.features[2]).toMatchObject({ status: 'ok', warning: { code: 'edge-missing', detail: '1' } });
+    // Only the 20 mm edge along the bottom line on the top face is rounded.
+    expect(result.captures[0]?.properties?.volume).toBeCloseTo((200 - (9 - (9 * Math.PI) / 4)) * 10 - filletLoss(1, 20), 3);
+  });
+
   it('finds an edge again by position when its face was renamed, and heals the reference', () => {
     const before = [sketch(rectangle(0, 0, 20, 10)), extrude];
     const fillet: FilletFeature = { id: 'fillet', type: 'fillet', radius: 1, edges: [pick(before, 1, 'extrude:side:rc', 'extrude:end')] };

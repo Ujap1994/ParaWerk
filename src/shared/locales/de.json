@@ -182,6 +182,7 @@
     "delete": "Löschen",
     "moreActions": "Weitere Aktionen",
     "statusError": "Fehler beim Neuaufbau",
+    "statusWarning": "Warnung beim Neuaufbau",
     "statusSuppressed": "Unterdrückt",
     "rolledBack": "Nicht Teil der aktuellen Bearbeitung",
     "sketchUnder": "Skizze ist unterbestimmt",
@@ -208,6 +209,9 @@
     "edgesCount_one": "{{count}} Kante ausgewählt",
     "edgesCount_other": "{{count}} Kanten ausgewählt",
     "clearEdges": "Leeren",
+    "edgesMissing_one": "{{count}} Kante existiert nicht mehr. Ihre Stelle ist in der 3D-Ansicht markiert.",
+    "edgesMissing_other": "{{count}} Kanten existieren nicht mehr. Ihre Stellen sind in der 3D-Ansicht markiert.",
+    "removeMissingEdges": "Entfernen",
     "invalidNumber": "Bitte eine positive Zahl eingeben.",
     "firstMustAdd": "Das erste Feature muss Material hinzufügen.",
     "sketch": "Skizze",
@@ -341,6 +345,10 @@
     "unknown": "Unerwarteter Fehler: {{detail}}",
     "axis-missing": "Die Achse dieser Rotation fehlt. Bearbeite das Feature und wähle eine Linie der Skizze als Achse.",
     "profile-crosses-axis": "Konturen der Skizze liegen auf beiden Seiten der Achse. Halte sie auf einer Seite; berühren dürfen sie die Achse."
+  },
+  "warnings": {
+    "edge-missing_one": "{{count}} ausgewählte Kante existiert nicht mehr und wird ausgelassen. Bearbeite das Feature, um sie zu entfernen oder eine andere Kante zu wählen.",
+    "edge-missing_other": "{{count}} ausgewählte Kanten existieren nicht mehr und werden ausgelassen. Bearbeite das Feature, um sie zu entfernen oder andere Kanten zu wählen."
   },
   "fileErrors": {
     "not-a-zip": "Das ist keine ParaWerk-Teiledatei.",

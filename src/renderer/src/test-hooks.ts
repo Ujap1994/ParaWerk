@@ -25,6 +25,7 @@ export function installTestHooks(): void {
       project: (x: number, y: number, z: number) => viewport()?.project(new Vector3(x, y, z)),
       relationGlyphs: () => viewport()?.relationGlyphsOnScreen() ?? [],
       zoomToFit: () => viewport()?.zoomToFit(false),
+      lostMarkers: () => viewport()?.lostMarkerCount ?? 0,
     },
     sketch: {
       /**

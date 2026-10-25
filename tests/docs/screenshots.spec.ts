@@ -598,3 +598,44 @@ test('README and user guide screenshots', async () => {
   await page.screenshot({ path: out('dark-theme-german.png') });
   await app.close();
 });
+
+test('lost references screenshots', async () => {
+  const { app, page } = await launchApp({ width: 1440, height: 900 });
+  await buildDemoPart(page);
+  await page.evaluate(() => (window as unknown as { __parawerk: { viewport: { zoomToFit(): void } } }).__parawerk.viewport.zoomToFit());
+  await page.waitForTimeout(600);
+  const canvas = await page.locator('.viewport-canvas').boundingBox();
+  const click = async (point: readonly [number, number, number]) => {
+    const screen = await page.evaluate(
+      ([x, y, z]) => (window as unknown as { __parawerk: { viewport: { project(x: number, y: number, z: number): { x: number; y: number } } } }).__parawerk.viewport.project(x, y, z),
+      point,
+    );
+    if (canvas) await page.mouse.click(canvas.x + screen.x, canvas.y + screen.y);
+    await idle(page);
+  };
+
+  // A fillet on a corner of the base plate and on both upper long edges of the slot.
+  await page.click('[data-command="fillet"]');
+  await idle(page);
+  for (const point of [[60, -40, 10], [-38, -7, 20], [-38, 7, 20]] as const) await click(point);
+  await page.locator('[data-testid="fillet-radius"]').fill('3');
+  await page.click('[data-testid="panel-ok"]');
+  await idle(page);
+
+  // Suppressing the slot removes its edges: the fillet keeps the corner and warns.
+  const slot = page.locator('[data-feature-id="slot"]');
+  await slot.hover();
+  await slot.locator('.tree-actions button').nth(1).click();
+  await idle(page);
+  const fillet = page.locator('.tree-item[data-feature-id]').last();
+  await fillet.hover();
+  await page.waitForTimeout(600);
+  await page.screenshot({ path: out('fillet-warning.png') });
+
+  await fillet.dblclick();
+  await idle(page);
+  await page.waitForTimeout(600);
+  if (canvas) await page.mouse.move(canvas.x + 20, canvas.y + canvas.height - 20);
+  await page.screenshot({ path: out('fillet-missing-edges.png') });
+  await app.close();
+});

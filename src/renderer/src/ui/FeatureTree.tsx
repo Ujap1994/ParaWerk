@@ -87,9 +87,10 @@ export function FeatureTree() {
           const Icon = FEATURE_ICONS[feature.type];
           const result = !activeEdit ? results?.find((r) => r.id === feature.id) : undefined;
           const error = result?.status === 'error' ? result.error : undefined;
+          const warning = result?.status === 'ok' ? result.warning : undefined;
           const rolledBack = activeEdit !== null && (index > activeEdit.index || (activeEdit.mode === 'create' && index >= activeEdit.index));
           const editing = activeEdit?.mode === 'edit' && activeEdit.index === index;
-          const classes = ['tree-item', feature.suppressed ? 'is-suppressed' : '', rolledBack ? 'is-rolled-back' : '', editing ? 'is-editing' : '', error ? 'has-error' : '']
+          const classes = ['tree-item', feature.suppressed ? 'is-suppressed' : '', rolledBack ? 'is-rolled-back' : '', editing ? 'is-editing' : '', error ? 'has-error' : '', warning ? 'has-warning' : '']
             .filter(Boolean)
             .join(' ');
           return (
@@ -99,12 +100,21 @@ export function FeatureTree() {
               role="treeitem"
               aria-selected={editing}
               data-feature-id={feature.id}
-              title={rolledBack ? t('tree.rolledBack') : error ? t(`errors.${error.code}`, { detail: error.detail ?? '' }) : undefined}
+              title={
+                rolledBack
+                  ? t('tree.rolledBack')
+                  : error
+                    ? t(`errors.${error.code}`, { detail: error.detail ?? '' })
+                    : warning
+                      ? t(`warnings.${warning.code}`, { count: Number(warning.detail) || 0 })
+                      : undefined
+              }
               onDoubleClick={() => commands.editFeature(feature.id)}
             >
               <Icon className="tree-icon" />
               <span className="tree-name">{nameOf(features, index)}</span>
               {error ? <AlertIcon className="tree-status is-error" aria-label={t('tree.statusError')} /> : null}
+              {warning ? <AlertIcon className="tree-status is-warning" aria-label={t('tree.statusWarning')} data-testid="tree-warning" /> : null}
               {feature.type === 'sketch' && sketchStatuses[feature.id] === 'under' ? (
                 <span className="tree-sketch-status is-under" title={t('tree.sketchUnder')} aria-label={t('tree.sketchUnder')} data-sketch-status="under" />
               ) : null}

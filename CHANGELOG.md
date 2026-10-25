@@ -28,6 +28,9 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 - Sketches on faces follow their face: when an earlier feature moves or turns the face (a thicker
   plate), the sketch and the features built from it move along. A sketch whose face is gone is marked
   and stays where the face was.
+- Lost edges: a fillet or chamfer whose edges are partly gone after an earlier change still rounds the
+  others and shows a yellow warning in the tree instead of failing. Editing it lists the lost edges,
+  marks where they were in the 3D view and removes them with one click.
 
 ### Fixed
 - The labels of choice fields in the side panel had no space above them.

@@ -157,12 +157,20 @@ export class Rebuilder implements Disposable {
         const resolved = resolveFeature(feature, features.slice(0, i), input ? () => this.backend.naming(input) : null, frames);
         const shape = this.backend.applyFeature(input, resolved);
         const healed = 'healedEdges' in resolved ? resolved.healedEdges : undefined;
+        const missing = 'missingEdges' in resolved ? resolved.missingEdges : undefined;
         this.entries.push({
           key,
           shapeKey: key,
           shape,
           ownsShape: true,
-          result: { id: feature.id, status: 'ok', timeMs: performance.now() - start, cached: false, ...(healed ? { healedEdges: healed } : {}) },
+          result: {
+            id: feature.id,
+            status: 'ok',
+            timeMs: performance.now() - start,
+            cached: false,
+            ...(healed ? { healedEdges: healed } : {}),
+            ...(missing ? { warning: { code: 'edge-missing' as const, detail: String(missing) } } : {}),
+          },
         });
       } catch (error) {
         const failure =

@@ -27,6 +27,8 @@ export type ResolvedEdgeFeature = EdgeFeature & {
   edgeNames: string[];
   /** The references the document should take over (older index references, edges found again by position). */
   healedEdges?: EdgeRef[];
+  /** How many referenced edges are gone and left out. */
+  missingEdges?: number;
 };
 
 /** A feature as a backend builds it, with its references to earlier features resolved. */

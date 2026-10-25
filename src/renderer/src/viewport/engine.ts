@@ -27,12 +27,14 @@ import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 import type { LineSegments2 } from 'three/addons/lines/LineSegments2.js';
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
 import type { MeshPayload } from '../../../kernel/protocol.ts';
+import type { Vec3 } from '../../../shared/model/feature.ts';
 import { toSketch, type SketchData, type SketchFrame } from '../../../shared/model/sketch.ts';
 import type { NavigationPreset, Projection } from '../../../shared/settings.ts';
 import type { FrameStats, Pick } from '../state/store.ts';
 import { CameraController } from './camera-controller.ts';
 import { AxisTriad } from './axis-triad.ts';
 import { palettes, type ViewportPalette } from './palette.ts';
+import { LostMarkers } from './lost-markers.ts';
 import { disposeOverlay, PartModel } from './part-model.ts';
 import { ReferencePlanes, type PlaneDisplay } from './reference-planes.ts';
 import {
@@ -152,6 +154,7 @@ export class ViewportEngine {
   private sketchInput: SketchInput | null = null;
   private lastSketchPointer: SketchPointer | null = null;
   private readonly pivotMarker: Mesh<SphereGeometry, MeshBasicMaterial>;
+  private readonly lostMarkers = new LostMarkers();
   private palette: ViewportPalette = palettes.light;
   private readonly materials: {
     face: MeshStandardMaterial;
@@ -242,7 +245,7 @@ export class ViewportEngine {
     this.pivotMarker = new Mesh(new SphereGeometry(1, 16, 12), new MeshBasicMaterial({ depthTest: false }));
     this.pivotMarker.renderOrder = 10;
     this.pivotMarker.visible = false;
-    this.scene.add(this.pivotMarker);
+    this.scene.add(this.pivotMarker, this.lostMarkers.group);
 
     this.viewCube = new ViewCube(this.palette, labels);
     this.setTheme('light');
@@ -310,6 +313,16 @@ export class ViewportEngine {
     this.body.mesh.visible = !previewing;
     this.body.edges.material = previewing ? this.materials.referenceEdge : this.materials.edge;
     this.body.edges.renderOrder = previewing ? 4 : 1;
+  }
+
+  /** Marks where lost references were (see LostMarkers). */
+  setLostMarkers(points: readonly Vec3[]): void {
+    this.lostMarkers.set(points);
+    this.requestRender();
+  }
+
+  get lostMarkerCount(): number {
+    return this.lostMarkers.count;
   }
 
   setSelection(picks: Pick[]): void {
@@ -485,6 +498,7 @@ export class ViewportEngine {
     this.materials.selectedEdge.color.setHex(p.selected);
     this.materials.referenceEdge.color.setHex(p.referenceEdge);
     this.pivotMarker.material.color.setHex(p.pivot);
+    this.lostMarkers.setColor(p.lost);
     this.referencePlanes.setPalette(p);
     this.sketchLayer.setPalette(p);
     this.sketchMaterials.setPalette(p);
@@ -670,6 +684,7 @@ export class ViewportEngine {
     this.updatePivotMarkerScale();
     const mmPerPixel = this.mmPerPixel();
     this.sketchMaterials.setZoom(mmPerPixel);
+    this.lostMarkers.setZoom(mmPerPixel);
     for (const graphics of this.inactiveSketches.values()) graphics.ensureResolution(mmPerPixel);
     if (this.sketchLayer.active) {
       const { target, height } = this.controller.state;
@@ -1087,6 +1102,7 @@ export class ViewportEngine {
     this.viewCube.dispose();
     this.triad.dispose();
     this.referencePlanes.dispose();
+    this.lostMarkers.dispose();
     this.sketchLayer.dispose();
     for (const graphics of this.inactiveSketches.values()) graphics.dispose();
     this.sketchMaterials.dispose();

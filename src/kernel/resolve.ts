@@ -46,14 +46,15 @@ function axisOf(sketch: SketchFeature, axis: string, profile: Profile): [number,
 }
 
 /**
- * The edges a fillet or chamfer means in the body it modifies. The faces made for an edge are named
- * after the faces it lies between, so they keep their names when other edges join or leave the feature.
+ * The edges a fillet or chamfer means in the body it modifies. Edges that are gone are left out (and
+ * counted); when all are gone, the feature fails. The faces made for an edge are named after the faces
+ * it lies between, so they keep their names when other edges join or leave the feature.
  */
 function resolveEdges(feature: EdgeFeature, naming: BodyNaming): ResolvedEdgeFeature {
   if (feature.edges.length === 0) throw new FeatureError('no-edges');
   const matches = resolveEdgeRefs(feature.edges, naming);
   const missing = matches.filter((match) => match === null).length;
-  if (missing > 0) throw new FeatureError('edge-missing', `${missing}/${matches.length}`);
+  if (missing === matches.length) throw new FeatureError('edge-missing', String(missing));
   const edgeIndices: number[] = [];
   const edgeNames: string[] = [];
   let healed = false;
@@ -71,7 +72,7 @@ function resolveEdges(feature: EdgeFeature, naming: BodyNaming): ResolvedEdgeFea
     healed = true;
     return current;
   });
-  return { ...feature, edgeIndices, edgeNames, ...(healed ? { healedEdges } : {}) };
+  return { ...feature, edgeIndices, edgeNames, ...(healed ? { healedEdges } : {}), ...(missing > 0 ? { missingEdges: missing } : {}) };
 }
 
 function sameFrame(a: SketchFrame, b: SketchFrame): boolean {
