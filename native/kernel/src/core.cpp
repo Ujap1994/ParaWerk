@@ -23,6 +23,7 @@
 #include <BRepOffsetAPI_MakeThickSolid.hxx>
 #include <BRepExtrema_DistShapeShape.hxx>
 #include <BRepGProp.hxx>
+#include <BRepOffsetAPI_DraftAngle.hxx>
 #include <BRep_Builder.hxx>
 #include <TopoDS_Compound.hxx>
 #include <BRepLib.hxx>
@@ -659,6 +660,39 @@ int extrudeProfile(const std::vector<double>& profile, const std::vector<double>
   }
   StoredShape result = joinRegions(solids, "extruded");
   return store().add(result.shape, std::move(result.names));
+}
+
+int draftSides(int toolId, const std::vector<double>& frame, double angle, const std::string& name) {
+  const StoredShape& tool = store().entry(toolId);
+  const occ::handle<Geom_Plane> plane = framePlane(frame);
+  const gp_Pln neutral = plane->Pln();
+  const gp_Dir pull = neutral.Axis().Direction();
+  BRepOffsetAPI_DraftAngle draft(tool.shape);
+  ShapeMap faces;
+  TopExp::MapShapes(tool.shape, TopAbs_FACE, faces);
+  const std::string side = faceName(name, "side:");
+  for (int f = 1; f <= faces.Extent(); ++f) {
+    const std::string& faceName = f <= static_cast<int>(tool.names.size()) ? tool.names[static_cast<size_t>(f - 1)] : std::string();
+    if (faceName.rfind(side, 0) != 0) continue;
+    draft.Add(TopoDS::Face(faces(f)), pull, angle, neutral);
+    if (!draft.AddDone()) throw KernelError("operation-failed", "the draft angle does not fit a side face (too steep?)");
+  }
+  draft.Build();
+  if (!draft.IsDone()) throw KernelError("operation-failed", "the draft could not be computed");
+  FaceNamer namer(draft.Shape());
+  // The drafted faces are not reported by Modified(), only by ModifiedShape().
+  for (int f = 1; f <= faces.Extent(); ++f) {
+    const std::string& faceName = f <= static_cast<int>(tool.names.size()) ? tool.names[static_cast<size_t>(f - 1)] : std::string();
+    const NCollection_List<TopoDS_Shape>& modified = draft.Modified(faces(f));
+    if (!modified.IsEmpty()) {
+      for (const TopoDS_Shape& piece : modified) namer.assign(piece, faceName);
+    } else {
+      const TopoDS_Shape& moved = draft.ModifiedShape(faces(f));
+      namer.assign(moved.IsNull() ? faces(f) : moved, faceName);
+    }
+  }
+  namer.rest(faceName(name, "other"));
+  return store().add(draft.Shape(), namer.take());
 }
 
 namespace {

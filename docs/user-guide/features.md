@@ -22,9 +22,14 @@ chooses another one.
   the extrusion. Both up-to ends go one way (**Normal** or **Reversed**).
 - *Direction*: **Normal** extrudes along the normal of the sketch plane (out of the face for a sketch on a
   face), **Reversed** the other way (into the body, as a pocket usually needs), **Mid-plane** half the
-  depth to each side. For a sketch on a face, **Remove material** turns the direction into the part
-  (**Reversed**) and **Add material** back out of it. A cut that does not touch the part removes nothing;
-  it is built anyway and marked with a yellow warning that suggests the other direction.
+  depth to each side, **Two directions** the *Depth* along the normal and *Depth 2* against it. For a
+  sketch on a face, **Remove material** turns the direction into the part (**Reversed**) and **Add
+  material** back out of it. A cut that does not touch the part removes nothing; it is built anyway and
+  marked with a yellow warning that suggests the other direction.
+- **Draft while extruding** tapers the side faces by the *Draft angle* (up to 60°) towards the far end, as
+  cast and molded parts need; **Draft outward** widens them instead. An extrusion to both sides tapers each
+  half towards its own end. Fillets and other features on the drafted faces stay on them when the angle
+  changes.
 - Every closed outline of the sketch is extruded. An outline inside another one becomes a hole, an outline
   inside that hole is material again. Construction geometry and open curves are ignored, and so are lines
   that only divide an outline from within.

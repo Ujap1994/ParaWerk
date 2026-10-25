@@ -262,12 +262,16 @@ val importStep(val bytes) {
   });
 }
 
+val draftSides(int toolId, val frame, double angle, std::string name) {
+  return guarded([&] { return idResult(parawerk::draftSides(toolId, emscripten::convertJSArrayToNumberVector<double>(frame), angle, name)); });
+}
+
 /** A STEP file as text (ISO 10303-21 is ASCII), with the name its faces are named after. */
 val importStepText(const std::string& text, const std::string& name) {
   return guarded([&] { return idResult(parawerk::importStep(text, name)); });
 }
 
-std::string version() { return "parawerk-kernel 0.9 / OCCT " PARAWERK_OCCT_VERSION; }
+std::string version() { return "parawerk-kernel 0.10 / OCCT " PARAWERK_OCCT_VERSION; }
 
 }  // namespace
 
@@ -299,4 +303,5 @@ EMSCRIPTEN_BINDINGS(parawerk_kernel) {
   emscripten::function("exportStep", &exportStep);
   emscripten::function("importStep", &importStep);
   emscripten::function("importStepText", &importStepText);
+  emscripten::function("draftSides", &draftSides);
 }

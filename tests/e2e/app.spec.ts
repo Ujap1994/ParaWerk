@@ -130,6 +130,39 @@ test('creates a box, rounds edges picked in the 3D view and exports STEP and STL
   expect(threeMf.subarray(0, 2).toString()).toBe('PK');
 });
 
+test('extrudes in two directions and with a draft angle', async () => {
+  launched = await launchApp({ width: 1440, height: 900 });
+  const { page } = launched;
+  // A 40 × 20 rectangle on the top plane.
+  await page.evaluate(() => {
+    const P = (id: string, x: number, y: number) => ({ id, type: 'point', x, y });
+    const sketch = {
+      entities: [P('a', -20, -10), P('b', 20, -10), P('c', 20, 10), P('d', -20, 10), { id: 'l1', type: 'line', p1: 'a', p2: 'b' }, { id: 'l2', type: 'line', p1: 'b', p2: 'c' }, { id: 'l3', type: 'line', p1: 'c', p2: 'd' }, { id: 'l4', type: 'line', p1: 'd', p2: 'a' }],
+      constraints: [],
+    };
+    const features = [{ id: 's', type: 'sketch', plane: { kind: 'standard', plane: 'top' }, sketch }];
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features, past: [], future: [] }, savedFeatures: features });
+  });
+  await idle(page);
+  await page.click('[data-command="extrude"]');
+  await page.locator('[data-testid="extrude-depth"]').fill('10');
+  await page.getByRole('radio', { name: 'Two directions' }).click();
+  await page.locator('[data-testid="extrude-depth2"]').fill('4');
+  await page.click('[data-testid="panel-ok"]');
+  expect(await volume(page)).toBeCloseTo(40 * 20 * 14, 3);
+
+  const extrudeId = (await state(page)).history.features[1]?.id;
+  await page.dblclick(`[data-feature-id="${extrudeId}"]`);
+  await page.getByRole('radio', { name: 'Normal', exact: true }).click();
+  await page.locator('[data-testid="extrude-draft-on"]').check();
+  await page.locator('[data-testid="extrude-draft"]').fill('5');
+  await page.click('[data-testid="panel-ok"]');
+  // ∫ (40 − 2kz)(20 − 2kz) dz over 10 mm with k = tan 5°.
+  const k = Math.tan((5 * Math.PI) / 180);
+  expect(await volume(page)).toBeCloseTo(800 * 10 - k * 60 * 100 + (4 / 3) * k * k * 1000, 2);
+  expect((await state(page)).history.features[1]).toMatchObject({ direction: 'normal', draft: 5 });
+});
+
 test('chamfers an edge with two distances and with a distance and an angle', async () => {
   launched = await launchApp({ width: 1440, height: 900 });
   const { page } = launched;

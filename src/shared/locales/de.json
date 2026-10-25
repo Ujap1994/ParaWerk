@@ -292,7 +292,12 @@
     "endSurface": "Bis (Ebene oder ebene Fläche)",
     "endVertex": "Bis (Eckpunkt oder Punkt)",
     "endOffset": "Abstand",
-    "endBeyond": "Über die Fläche hinaus"
+    "endBeyond": "Über die Fläche hinaus",
+    "directionTwo": "Zwei Richtungen",
+    "depth2": "Tiefe 2 (andere Seite)",
+    "draft": "Formschräge beim Extrudieren",
+    "draftAngle": "Schrägenwinkel",
+    "draftOutward": "Schräge nach außen"
   },
   "status": {
     "kernelLoading": "Geometriekern wird gestartet…",

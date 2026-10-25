@@ -62,7 +62,7 @@ export const EXPRESSION_FIELDS: Readonly<Record<FeatureType, readonly string[]>>
   plane: ['distance', 'angle'],
   axis: [],
   point: ['x', 'y', 'z'],
-  extrude: ['depth', 'endOffset'],
+  extrude: ['depth', 'depth2', 'draft', 'endOffset'],
   revolve: ['angle'],
   hole: ['diameter', 'depth', 'counterboreDiameter', 'counterboreDepth', 'countersinkDiameter', 'countersinkAngle', 'threadDepth'],
   pattern: ['spacing', 'angle'],
@@ -204,9 +204,21 @@ export function isReferenceFeature(feature: Feature): feature is ReferenceFeatur
 }
 
 /** Which way an extrusion goes from its sketch plane: along the plane normal, against it, or half each way. */
-export type ExtrudeDirection = 'normal' | 'reverse' | 'both';
+/**
+ * Which way an extrusion goes from its sketch plane: along the plane normal, against it, half each way
+ * (mid-plane), or `depth` along it and `depth2` against it (two directions).
+ */
+export type ExtrudeDirection = 'normal' | 'reverse' | 'both' | 'two';
 
-export const EXTRUDE_DIRECTIONS: readonly ExtrudeDirection[] = ['normal', 'reverse', 'both'];
+export const EXTRUDE_DIRECTIONS: readonly ExtrudeDirection[] = ['normal', 'reverse', 'both', 'two'];
+
+/** Which way a revolution turns: one way, the other way, or half the angle each way. */
+export type RevolveDirection = 'normal' | 'reverse' | 'both';
+
+export const REVOLVE_DIRECTIONS: readonly RevolveDirection[] = ['normal', 'reverse', 'both'];
+
+/** Steepest draft angle while extruding, in degrees. */
+export const MAX_DRAFT_ANGLE = 60;
 
 /** How deep a hole goes: a given depth, or through the whole body. */
 export type HoleEnd = 'blind' | 'throughAll';
@@ -230,6 +242,12 @@ export interface ExtrudeFeature extends FeatureBase {
   /** Used when `end` is blind. */
   depth: number;
   direction: ExtrudeDirection;
+  /** Two directions: the depth against the normal. */
+  depth2?: number;
+  /** Draft angle of the side faces in degrees (absent or 0: straight); they taper towards the far end. */
+  draft?: number;
+  /** The side faces widen towards the far end instead. */
+  draftOutward?: boolean;
   end: ExtrudeEnd;
   /** Up to surface: the plane; up to vertex: the point. */
   endRef?: GeometryRef;
@@ -242,7 +260,7 @@ export interface ExtrudeFeature extends FeatureBase {
  * Where an extrusion starts and ends along the sketch plane normal. Through all needs `extent`, how far
  * the body reaches along the normal (from the sketch plane); the extrusion then passes it with a margin.
  */
-export function extrudeRange(feature: Pick<ExtrudeFeature, 'depth' | 'direction' | 'end'>, extent?: readonly [number, number]): [number, number] {
+export function extrudeRange(feature: Pick<ExtrudeFeature, 'depth' | 'depth2' | 'direction' | 'end'>, extent?: readonly [number, number]): [number, number] {
   if (feature.end === 'throughAll' && extent) {
     const margin = 1 + 0.01 * (extent[1] - extent[0]);
     const [below, above] = [Math.min(extent[0], 0) - margin, Math.max(extent[1], 0) + margin];
@@ -255,6 +273,8 @@ export function extrudeRange(feature: Pick<ExtrudeFeature, 'depth' | 'direction'
       return [-feature.depth, 0];
     case 'both':
       return [-feature.depth / 2, feature.depth / 2];
+    case 'two':
+      return [-(feature.depth2 ?? feature.depth), feature.depth];
   }
 }
 
@@ -271,7 +291,7 @@ export interface RevolveFeature extends FeatureBase {
   /** Degrees, up to 360. */
   angle: number;
   /** One way around the axis, the other way, or half the angle each way. */
-  direction: ExtrudeDirection;
+  direction: RevolveDirection;
 }
 
 /** Where a revolution starts and ends around its axis, in radians. */

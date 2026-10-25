@@ -215,6 +215,13 @@ std::string exportStep(int id);
  */
 int importStep(const std::string& data, const std::string& name = "");
 
+/**
+ * Tapers the side faces of an extrusion (faces named "<name>:side:...") by `angle` radians about the
+ * sketch plane (`frame`, 9 values), pulling along its normal; positive angles make the extrusion
+ * narrower away from the plane. The faces keep their names.
+ */
+int draftSides(int toolId, const std::vector<double>& frame, double angle, const std::string& name);
+
 /** Whether the last cut left the body as it was (its tool missed the body); reading it clears it. */
 bool takeCutMissed();
 

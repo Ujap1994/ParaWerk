@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { formatQuantity } from '../format.ts';
-import { CHAMFER_METHODS, EXTRUDE_ENDS, hasReferenceSlots, isCopyFeature, type Axis, type BooleanOperation, type ChamferFeature, type ChamferMethod, type EdgeFeature, type ExtrudeDirection, type ExtrudeEnd, type ExtrudeFeature, type Feature, type Vec3 } from '../../../shared/model/feature.ts';
+import { CHAMFER_METHODS, EXTRUDE_ENDS, MAX_DRAFT_ANGLE, type RevolveDirection, hasReferenceSlots, isCopyFeature, type Axis, type BooleanOperation, type ChamferFeature, type ChamferMethod, type EdgeFeature, type ExtrudeDirection, type ExtrudeEnd, type ExtrudeFeature, type Feature, type Vec3 } from '../../../shared/model/feature.ts';
 import type { GeometryRef } from '../../../shared/model/reference.ts';
 import { referenceRoles } from '../references.ts';
 import { resolveEdgeRefs } from '../../../shared/model/naming.ts';
@@ -163,10 +163,44 @@ function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
               { value: 'normal', label: t('panel.directionNormal') },
               { value: 'reverse', label: t('panel.directionReverse') },
               // Up to a surface or vertex goes one way.
-              ...(draft.end === 'upToSurface' || draft.end === 'upToVertex' ? [] : [{ value: 'both' as const, label: t('panel.directionBoth') }]),
+              ...(draft.end === 'upToSurface' || draft.end === 'upToVertex'
+                ? []
+                : [
+                    { value: 'both' as const, label: t('panel.directionBoth') },
+                    { value: 'two' as const, label: t('panel.directionTwo') },
+                  ]),
             ]}
-            onChange={(direction) => commands.updateDraft({ direction })}
+            onChange={(direction) => commands.updateDraft({ direction, ...(direction === 'two' && draft.depth2 === undefined ? { depth2: draft.depth } : {}) })}
           />
+          {draft.direction === 'two' && draft.end === 'blind' ? (
+            <NumberField label={t('panel.depth2')} value={draft.depth2 ?? draft.depth} testId="extrude-depth2" {...equation(draft, 'depth2')} onChange={(depth2) => commands.updateDraft({ depth2 })} />
+          ) : null}
+          <label className="checkbox-field">
+            <input
+              type="checkbox"
+              checked={(draft.draft ?? 0) > 0}
+              data-testid="extrude-draft-on"
+              onChange={(event) => commands.updateDraft({ draft: event.target.checked ? 5 : 0 })}
+            />
+            {t('panel.draft')}
+          </label>
+          {(draft.draft ?? 0) > 0 ? (
+            <>
+              <NumberField
+                label={t('panel.draftAngle')}
+                unit="°"
+                step={1}
+                value={draft.draft ?? 0}
+                testId="extrude-draft"
+                {...equation(draft, 'draft')}
+                onChange={(angle) => commands.updateDraft({ draft: Math.min(MAX_DRAFT_ANGLE, Math.max(0.01, angle)) })}
+              />
+              <label className="checkbox-field">
+                <input type="checkbox" checked={draft.draftOutward ?? false} data-testid="extrude-draft-outward" onChange={(event) => commands.updateDraft({ draftOutward: event.target.checked })} />
+                {t('panel.draftOutward')}
+              </label>
+            </>
+          ) : null}
           <p className="panel-hint">{t('panel.extrudeHint')}</p>
         </Section>
       );
@@ -177,7 +211,7 @@ function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
           <AxisField sketch={draft.sketch} value={draft.axis} axisRef={draft.axisRef} index={index} />
           <OperationField value={draft.operation} firstFeature={firstFeature} />
           <NumberField label={t('panel.angle')} unit="°" step={15} value={draft.angle} testId="revolve-angle" {...equation(draft, 'angle')} onChange={(angle) => commands.updateDraft({ angle })} />
-          <Segmented<ExtrudeDirection>
+          <Segmented<RevolveDirection>
             label={t('panel.direction')}
             value={draft.direction}
             options={[

@@ -1,4 +1,4 @@
-import { CHAMFER_METHODS, type ChamferMethod, EXPRESSION_FIELDS, EXTRUDE_DIRECTIONS, EXTRUDE_ENDS, HOLE_ENDS, type Axis, type BooleanOperation, type EdgeRef, type ExtrudeDirection, type ExtrudeEnd, type Feature, type FeatureType, type HoleEnd, type Variable, type Vec3 } from './feature.ts';
+import { CHAMFER_METHODS, type ChamferMethod, EXPRESSION_FIELDS, EXTRUDE_DIRECTIONS, MAX_DRAFT_ANGLE, REVOLVE_DIRECTIONS, type RevolveDirection, EXTRUDE_ENDS, HOLE_ENDS, type Axis, type BooleanOperation, type EdgeRef, type ExtrudeDirection, type ExtrudeEnd, type Feature, type FeatureType, type HoleEnd, type Variable, type Vec3 } from './feature.ts';
 import { HOLE_FITS, HOLE_KINDS } from './hole.ts';
 import { CUSTOM_MATERIAL, materialInfo, MAX_DENSITY, MIN_DENSITY, NO_PROPERTIES, type PartProperties } from './material.ts';
 import { MAX_PATTERN_COUNT } from './pattern.ts';
@@ -252,7 +252,10 @@ function parseFeatureFields(raw: Json, path: string): Feature {
     case 'extrude': {
       // An empty or unknown sketch id is kept: the rebuild reports the missing sketch at the feature.
       if (typeof raw.sketch !== 'string' || raw.sketch.length > 200) throw new ValidationError('expected a sketch id', `${path}.sketch`);
-      if (!(EXTRUDE_DIRECTIONS as readonly unknown[]).includes(raw.direction)) throw new ValidationError('expected normal, reverse or both', `${path}.direction`);
+      if (!(EXTRUDE_DIRECTIONS as readonly unknown[]).includes(raw.direction)) throw new ValidationError('expected normal, reverse, both or two', `${path}.direction`);
+      if (raw.draft !== undefined && (typeof raw.draft !== 'number' || !(raw.draft >= 0 && raw.draft <= MAX_DRAFT_ANGLE))) {
+        throw new ValidationError(`expected a draft angle from 0° to ${MAX_DRAFT_ANGLE}°`, `${path}.draft`);
+      }
       return {
         ...common,
         type: 'extrude',
@@ -264,13 +267,16 @@ function parseFeatureFields(raw: Json, path: string): Feature {
         ...(raw.endRef === undefined ? {} : { endRef: geometryRef(raw.endRef, `${path}.endRef`) }),
         ...(raw.endOffset === undefined ? {} : { endOffset: nonNegative(raw.endOffset, `${path}.endOffset`) }),
         ...(raw.endBeyond === undefined ? {} : { endBeyond: flag(raw.endBeyond, `${path}.endBeyond`) }),
+        ...(raw.depth2 === undefined ? {} : { depth2: positiveLength(raw.depth2, `${path}.depth2`) }),
+        ...(raw.draft === undefined ? {} : { draft: raw.draft as number }),
+        ...(raw.draftOutward === undefined ? {} : { draftOutward: flag(raw.draftOutward, `${path}.draftOutward`) }),
       };
     }
     case 'revolve': {
       // Empty or unknown references are kept: the rebuild reports them at the feature.
       if (typeof raw.sketch !== 'string' || raw.sketch.length > 200) throw new ValidationError('expected a sketch id', `${path}.sketch`);
       if (typeof raw.axis !== 'string' || raw.axis.length > 200) throw new ValidationError('expected a line id', `${path}.axis`);
-      if (!(EXTRUDE_DIRECTIONS as readonly unknown[]).includes(raw.direction)) throw new ValidationError('expected normal, reverse or both', `${path}.direction`);
+      if (!(REVOLVE_DIRECTIONS as readonly unknown[]).includes(raw.direction)) throw new ValidationError('expected normal, reverse or both', `${path}.direction`);
       if (typeof raw.angle !== 'number' || !(raw.angle > 0 && raw.angle <= 360)) throw new ValidationError('expected an angle above 0 and up to 360 degrees', `${path}.angle`);
       return {
         ...common,
@@ -280,7 +286,7 @@ function parseFeatureFields(raw: Json, path: string): Feature {
         axis: raw.axis,
         ...(raw.axisRef === undefined ? {} : { axisRef: geometryRef(raw.axisRef, `${path}.axisRef`) }),
         angle: raw.angle,
-        direction: raw.direction as ExtrudeDirection,
+        direction: raw.direction as RevolveDirection,
       };
     }
     case 'hole': {

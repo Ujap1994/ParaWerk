@@ -292,7 +292,12 @@
     "endSurface": "Up to (plane or planar face)",
     "endVertex": "Up to (vertex or point)",
     "endOffset": "Offset",
-    "endBeyond": "Past the surface"
+    "endBeyond": "Past the surface",
+    "directionTwo": "Two directions",
+    "depth2": "Depth 2 (other side)",
+    "draft": "Draft while extruding",
+    "draftAngle": "Draft angle",
+    "draftOutward": "Draft outward"
   },
   "status": {
     "kernelLoading": "Starting geometry kernel…",

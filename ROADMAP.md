@@ -167,7 +167,8 @@ Marked complete for now: open points from hands-on testing are handled alongside
 | Autosave of recovery copies and crash recovery | ✅ done |
 | 3MF export (with material and color), STEP import as a body | ✅ done |
 | Chamfer with two distances and with distance and angle | ✅ done |
-| Extrude up to next, up to curved surfaces, draft while extruding | open |
+| Extrude in two directions, draft while extruding | ✅ done |
+| Extrude up to next, up to curved surfaces, thin feature | open |
 
 ## 2. Guiding principles
 

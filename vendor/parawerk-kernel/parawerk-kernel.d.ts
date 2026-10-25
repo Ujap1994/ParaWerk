@@ -35,6 +35,7 @@ interface EmbindModule {
   exportStep(_0: number): any;
   importStep(_0: any): any;
   importStepText(_0: EmbindString, _1: EmbindString): any;
+  draftSides(_0: number, _1: any, _2: number, _3: EmbindString): any;
 }
 
 export type MainModule = WasmModule & typeof RuntimeExports & EmbindModule;

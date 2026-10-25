@@ -575,7 +575,7 @@ export function setOperation(operation: BooleanOperation): void {
   const edit = getState().activeEdit;
   if (!edit || !('operation' in edit.draft)) return;
   const draft = edit.draft;
-  if (draft.type === 'extrude' && draft.direction !== 'both') {
+  if (draft.type === 'extrude' && draft.direction !== 'both' && draft.direction !== 'two') {
     const sketch = getState().history.features.find((feature) => feature.type === 'sketch' && feature.id === draft.sketch);
     if (sketch?.type === 'sketch' && sketch.plane.kind === 'face') {
       updateDraft({ operation, direction: operation === 'cut' ? 'reverse' : 'normal' });
@@ -619,7 +619,7 @@ export function toggleDraftEdge(index: number): void {
 export function setExtrudeEnd(end: ExtrudeEnd): void {
   const edit = getState().activeEdit;
   if (edit?.draft.type !== 'extrude') return;
-  const oneWay = (end === 'upToSurface' || end === 'upToVertex') && edit.draft.direction === 'both';
+  const oneWay = (end === 'upToSurface' || end === 'upToVertex') && (edit.draft.direction === 'both' || edit.draft.direction === 'two');
   // A plane does not fit an up-to-vertex end (and the other way round).
   const { endRef: _ref, ...rest } = edit.draft;
   const keep = edit.draft.endRef && referenceFits(edit.draft.endRef, end === 'upToVertex' ? 'point' : 'plane', getState());

@@ -8,6 +8,8 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### Added
+- Extrude in two directions with their own depths, and draft while extruding (inward or outward, each
+  side of a two-way extrusion towards its own end); drafted faces keep their names.
 - Chamfers with two distances, or a distance and an angle, measured from one face of each edge (with a
   switch to the other face).
 - STEP import as a feature: the solids of a STEP file become a body of their own or are cut out of the

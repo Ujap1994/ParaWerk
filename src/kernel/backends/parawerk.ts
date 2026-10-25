@@ -3,7 +3,7 @@ import { extrudeRange, revolveRange, type BooleanOperation, type Vec3 } from '..
 import { holeProfile, throughDepth } from '../../shared/model/hole.ts';
 import { transformDirection, transformPoint } from '../../shared/model/pattern.ts';
 import type { MeasuredDistance, MeasureTarget } from '../measure.ts';
-import type { GeometryBackend, KernelFeature, ResolvedCopy, ResolvedHole, ShapeHandle } from '../backend.ts';
+import type { GeometryBackend, KernelFeature, ResolvedExtrude, ResolvedCopy, ResolvedHole, ShapeHandle } from '../backend.ts';
 import { FeatureError } from '../feature-error.ts';
 import { axisDirection } from '../feature-geometry.ts';
 import type { MeshQuality } from '../mesh-quality.ts';
@@ -124,6 +124,19 @@ export class ParaWerkBackend implements GeometryBackend {
     }
   }
 
+  /**
+   * Tapers the side faces of an extrusion that goes `side` (1: along the sketch normal, −1: against it)
+   * towards its far end, or widens them with draftOutward; releases the straight prism.
+   */
+  private drafted(straight: ShapeHandle, plane: number[], side: 1 | -1, feature: ResolvedExtrude): ShapeHandle {
+    const angle = (side * (feature.draftOutward ? -1 : 1) * (feature.draft ?? 0) * Math.PI) / 180;
+    try {
+      return this.handle(this.kernel.draftSides(this.id(straight), plane, angle, feature.id));
+    } finally {
+      this.release(straight);
+    }
+  }
+
   /** The solid a box, cylinder, extrusion or revolution adds or cuts; the caller releases it. */
   private tool(body: ShapeHandle | null, feature: Extract<KernelFeature, { type: 'box' | 'cylinder' | 'extrude' | 'revolve' }>): ShapeHandle {
     const k = this.kernel;
@@ -151,7 +164,23 @@ export class ParaWerkBackend implements GeometryBackend {
           extent = [Math.min(...along), Math.max(...along)];
         }
         const [from, to] = feature.range ?? extrudeRange(feature, extent);
-        const tool = this.handle(k.extrudeProfile(encodeProfile(feature.profile), [...origin, ...xDir, ...normal], from, to, profileEdgeNames(feature.profile), feature.id));
+        const plane = [...origin, ...xDir, ...normal];
+        const prism = (a: number, b: number) => this.handle(k.extrudeProfile(encodeProfile(feature.profile), plane, a, b, profileEdgeNames(feature.profile), feature.id));
+        let tool: ShapeHandle;
+        if (!feature.draft) {
+          tool = prism(from, to);
+        } else if (from < 0 && to > 0) {
+          // Both ways from the sketch plane: each half tapers towards its own far end.
+          const [below, above] = [this.drafted(prism(from, 0), plane, -1, feature), this.drafted(prism(0, to), plane, 1, feature)];
+          try {
+            tool = this.handle(k.booleanOperation(this.id(below), this.id(above), 0));
+          } finally {
+            this.release(below);
+            this.release(above);
+          }
+        } else {
+          tool = this.drafted(prism(from, to), plane, to > 0 ? 1 : -1, feature);
+        }
         if (!feature.trim) return tool;
         // Up to a plane at an angle: cut the extrusion off at the plane.
         try {
