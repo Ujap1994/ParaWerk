@@ -1,6 +1,6 @@
 # 0009 – Sketch-based features: profiles and exact geometry
 
-**Status:** accepted (2026-10-25), first used by *Extrude* in Phase 2.
+**Status:** accepted (2026-10-25), used by *Extrude* and *Revolve* in Phase 2.
 
 ## Context
 
@@ -11,8 +11,9 @@ existed when the feature was created.
 
 ## Decision
 
-- **The feature stores a reference, not geometry.** An `extrude` feature holds the id of its sketch
-  feature, which comes before it. The rebuild resolves the reference (`src/kernel/resolve.ts`): it reads
+- **The feature stores a reference, not geometry.** An `extrude` or `revolve` feature holds the id of
+  its sketch feature, which comes before it; a revolution also the id of the line of that sketch that is
+  its axis. The outlines must stay on one side of the axis (they may touch it). The rebuild resolves the reference (`src/kernel/resolve.ts`): it reads
   the solved sketch from the document, computes the profile and passes outlines and plane to the backend.
   The sketch's plane and entities are part of the extrusion's rebuild key, so editing the sketch rebuilds
   the extrusion and everything after it, while unrelated sketches keep the cache.

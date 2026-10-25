@@ -1,7 +1,7 @@
 import { resolveLanguage } from '../../shared/i18n.ts';
 import type { MenuCommand } from '../../shared/ipc.ts';
 import { PART_FILE_EXTENSION } from '../../shared/app-info.ts';
-import { defaultFeature, isEdgeFeature, type EdgeRef, type Feature, type FeatureType, type SketchFeature } from '../../shared/model/feature.ts';
+import { defaultFeature, isEdgeFeature, isSketchBased, type EdgeRef, type Feature, type FeatureType, type SketchFeature } from '../../shared/model/feature.ts';
 import { decodePartFile, encodePartFile, PartFileError } from '../../shared/model/part-file.ts';
 import { frameOf, frameOnPlane, isDimension, ORIGIN_ID, STANDARD_PLANES, type SketchData, type SketchDimension, type SketchPlaneRef } from '../../shared/model/sketch.ts';
 import type { Settings } from '../../shared/settings.ts';
@@ -184,13 +184,14 @@ export function startFeature(type: FeatureType): void {
   const features = getState().history.features;
   const index = features.length;
   let draft: Feature = defaultFeature(type);
-  if (draft.type === 'extrude') {
-    const sketch = sketchToExtrude(features);
+  if (draft.type === 'extrude' || draft.type === 'revolve') {
+    const sketch = sketchToUse(features);
     if (!sketch) {
       showToast('info', t('toasts.noSketchToExtrude'));
       return;
     }
-    draft = { ...draft, sketch, operation: hasBodyBefore(features, index) ? draft.operation : 'add' };
+    const operation = hasBodyBefore(features, index) ? draft.operation : 'add';
+    draft = draft.type === 'extrude' ? { ...draft, sketch: sketch.id, operation } : { ...draft, sketch: sketch.id, axis: defaultAxis(sketch), operation };
   } else if (isEdgeFeature(draft)) {
     // Edges selected before starting the command are taken over (select first, then act).
     const edges: EdgeRef[] = getState()
@@ -203,11 +204,25 @@ export function startFeature(type: FeatureType): void {
   setState({ activeEdit: { mode: 'create', index, draft }, selection: [] });
 }
 
-/** The sketch a new extrusion uses: the last one no extrusion uses yet, else the last one. */
-function sketchToExtrude(features: readonly Feature[]): string | null {
-  const used = new Set(features.flatMap((feature) => (feature.type === 'extrude' ? [feature.sketch] : [])));
+/** The sketch a new extrusion or revolution uses: the last one no such feature uses yet, else the last one. */
+function sketchToUse(features: readonly Feature[]): SketchFeature | null {
+  const used = new Set(features.flatMap((feature) => (isSketchBased(feature) ? [feature.sketch] : [])));
   const sketches = features.filter((feature): feature is SketchFeature => feature.type === 'sketch' && !feature.suppressed);
-  return (sketches.findLast((sketch) => !used.has(sketch.id)) ?? sketches.at(-1))?.id ?? null;
+  return sketches.findLast((sketch) => !used.has(sketch.id)) ?? sketches.at(-1) ?? null;
+}
+
+/** The axis a revolution of a sketch starts with: its first centerline (none if it has no centerline). */
+function defaultAxis(sketch: SketchFeature): string {
+  return sketch.sketch.entities.find((entity) => entity.type === 'line' && entity.construction)?.id ?? '';
+}
+
+/** Chooses the sketch of the extrusion or revolution being edited (a revolution also takes its centerline). */
+export function chooseFeatureSketch(id: string): void {
+  const draft = getState().activeEdit?.draft;
+  if (draft?.type === 'extrude') updateDraft({ sketch: id });
+  if (draft?.type !== 'revolve') return;
+  const sketch = getState().history.features.find((feature): feature is SketchFeature => feature.type === 'sketch' && feature.id === id);
+  updateDraft({ sketch: id, axis: sketch ? defaultAxis(sketch) : '' });
 }
 
 export function editFeature(id: string): void {

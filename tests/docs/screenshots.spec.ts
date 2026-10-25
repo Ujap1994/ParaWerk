@@ -558,6 +558,36 @@ test('README and user guide screenshots', async () => {
   await page.waitForTimeout(600);
   await page.screenshot({ path: out('extrude-pocket.png') });
 
+  // Revolve: the half section of a flanged bush around its centerline, three quarters of a turn.
+  await page.evaluate(() => {
+    const P = (id: string, x: number, y: number) => ({ id, type: 'point', x, y });
+    const L = (id: string, p1: string, p2: string, construction = false) => ({ id, type: 'line', p1, p2, ...(construction ? { construction } : {}) });
+    const section = {
+      id: 'bush', type: 'sketch', plane: { kind: 'standard', plane: 'front' },
+      sketch: {
+        entities: [
+          P('a', 6, 0), P('b', 20, 0), P('c', 20, 6), P('d', 10, 6), P('e', 10, 30), P('f', 6, 30), P('g', 0, -6), P('h', 0, 36),
+          L('l1', 'a', 'b'), L('l2', 'b', 'c'), L('l3', 'c', 'd'), L('l4', 'd', 'e'), L('l5', 'e', 'f'), L('l6', 'f', 'a'), L('axis', 'g', 'h', true),
+        ],
+        constraints: [],
+      },
+    };
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features: [section], past: [], future: [] } });
+  });
+  await idle(page);
+  await page.click('[data-command="revolve"]');
+  await page.locator('[data-testid="revolve-angle"]').fill('270');
+  await page.locator('[data-testid="revolve-angle"]').press('Tab');
+  await idle(page);
+  await page.evaluate(() => (window as unknown as { __parawerk: { commands: { setView(v: string): void } } }).__parawerk.commands.setView('isometric'));
+  await page.waitForTimeout(700);
+  await page.click('[data-testid="zoom-to-fit"]');
+  await page.waitForTimeout(700);
+  if (canvas) await page.mouse.move(canvas.x + 20, canvas.y + canvas.height - 20);
+  await page.screenshot({ path: out('revolve-bush.png') });
+  await page.click('[data-testid="panel-ok"]');
+  await idle(page);
+
   await page.click('[data-command="settings"]');
   await page.waitForTimeout(300);
   await page.screenshot({ path: out('settings-dialog.png') });

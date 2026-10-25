@@ -115,6 +115,7 @@ point on the curve. Median solve per drag step (`npm run bench:solver`):
 |---|---|
 | Plate with 100 holes as one sketch and one extrusion, full rebuild | 138 ms (101 box and cylinder features: 1,174 ms) |
 | Spline profile with 100 fit points, extrusion with exact volume | 6 ms |
+| The same outline revolved a full turn, with exact volume | 68 ms |
 | Exact mass properties of the 100-hole plate (fast path for planes and circles) | 22 ms |
 
 ## CI runners – Phase 0 baselines

@@ -9,7 +9,7 @@ import type { SketchData, SketchPlaneRef } from './sketch.ts';
 
 export type Vec3 = [number, number, number];
 
-export type FeatureType = 'variables' | 'sketch' | 'extrude' | 'box' | 'cylinder' | 'fillet' | 'chamfer';
+export type FeatureType = 'variables' | 'sketch' | 'extrude' | 'revolve' | 'box' | 'cylinder' | 'fillet' | 'chamfer';
 
 /** How a solid-creating feature combines with the existing body. */
 export type BooleanOperation = 'add' | 'cut';
@@ -47,6 +47,7 @@ export const EXPRESSION_FIELDS: Readonly<Record<FeatureType, readonly string[]>>
   variables: [],
   sketch: [],
   extrude: ['depth'],
+  revolve: ['angle'],
   box: ['width', 'depth', 'height'],
   cylinder: ['radius', 'height'],
   fillet: ['radius'],
@@ -131,7 +132,41 @@ export function extrudeRange(feature: Pick<ExtrudeFeature, 'depth' | 'direction'
   }
 }
 
-export type Feature = VariablesFeature | SketchFeature | ExtrudeFeature | BoxFeature | CylinderFeature | FilletFeature | ChamferFeature;
+/** Revolves the closed outlines of a sketch around a line of the same sketch (adding material) or cuts them out. */
+export interface RevolveFeature extends FeatureBase {
+  type: 'revolve';
+  operation: BooleanOperation;
+  /** Id of the sketch feature (before this one) whose outlines are revolved. */
+  sketch: string;
+  /** Id of the line (often a centerline) of that sketch that is the axis. */
+  axis: string;
+  /** Degrees, up to 360. */
+  angle: number;
+  /** One way around the axis, the other way, or half the angle each way. */
+  direction: ExtrudeDirection;
+}
+
+/** Where a revolution starts and ends around its axis, in radians. */
+export function revolveRange(feature: Pick<RevolveFeature, 'angle' | 'direction'>): [number, number] {
+  const angle = (feature.angle * Math.PI) / 180;
+  switch (feature.direction) {
+    case 'normal':
+      return [0, angle];
+    case 'reverse':
+      return [-angle, 0];
+    case 'both':
+      return [-angle / 2, angle / 2];
+  }
+}
+
+/** Features that turn the outlines of a sketch into a solid. */
+export type SketchBasedFeature = ExtrudeFeature | RevolveFeature;
+
+export function isSketchBased(feature: Feature): feature is SketchBasedFeature {
+  return feature.type === 'extrude' || feature.type === 'revolve';
+}
+
+export type Feature = VariablesFeature | SketchFeature | ExtrudeFeature | RevolveFeature | BoxFeature | CylinderFeature | FilletFeature | ChamferFeature;
 
 /** Features that build or modify the solid body (everything except variables and sketches). */
 export type SolidModelingFeature = Exclude<Feature, SketchFeature | VariablesFeature>;
@@ -146,7 +181,7 @@ export function isSolidFeature(feature: Feature): feature is BoxFeature | Cylind
   return feature.type === 'box' || feature.type === 'cylinder';
 }
 
-export const FEATURE_TYPES: readonly FeatureType[] = ['variables', 'sketch', 'extrude', 'box', 'cylinder', 'fillet', 'chamfer'];
+export const FEATURE_TYPES: readonly FeatureType[] = ['variables', 'sketch', 'extrude', 'revolve', 'box', 'cylinder', 'fillet', 'chamfer'];
 
 let idCounter = 0;
 
@@ -165,6 +200,8 @@ export function defaultFeature(type: FeatureType, id: string = createFeatureId()
       return { id, type, plane: { kind: 'standard', plane: 'top' }, sketch: { entities: [], constraints: [] } };
     case 'extrude':
       return { id, type, operation: 'add', sketch: '', depth: 20, direction: 'normal' };
+    case 'revolve':
+      return { id, type, operation: 'add', sketch: '', axis: '', angle: 360, direction: 'normal' };
     case 'box':
       return { id, type, operation: 'add', width: 100, depth: 60, height: 40, position: [0, 0, 0] };
     case 'cylinder':

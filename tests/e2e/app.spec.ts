@@ -277,7 +277,7 @@ test('extrudes a sketch into a plate and cuts a pocket from a sketch on its top 
 
   // Extrude (Features tab): the sketch is chosen, the depth typed in.
   await page.click('[data-command="extrude"]');
-  await expect(page.locator('[data-testid="extrude-sketch"]')).toHaveValue('plate');
+  await expect(page.locator('[data-testid="feature-sketch"]')).toHaveValue('plate');
   await page.locator('[data-testid="extrude-depth"]').fill('15');
   await page.locator('[data-testid="extrude-depth"]').press('Tab');
   await page.click('[data-testid="panel-ok"]');
@@ -298,7 +298,7 @@ test('extrudes a sketch into a plate and cuts a pocket from a sketch on its top 
   });
   await idle(page);
   await page.click('[data-command="extrude"]');
-  await expect(page.locator('[data-testid="extrude-sketch"]')).toHaveValue('pocket');
+  await expect(page.locator('[data-testid="feature-sketch"]')).toHaveValue('pocket');
   await page.getByRole('radio', { name: 'Remove material' }).click();
   await page.getByRole('radio', { name: 'Reversed' }).click();
   await page.locator('[data-testid="extrude-depth"]').fill('10');
@@ -310,4 +310,47 @@ test('extrudes a sketch into a plate and cuts a pocket from a sketch on its top 
   // Undo takes the pocket back.
   await page.click('[data-command="undo"]');
   expect(await volume(page)).toBeCloseTo((2400 - 36 * Math.PI) * 15, 2);
+});
+
+test('revolves a half section around its centerline into a shaft and edits the angle', async () => {
+  launched = await launchApp();
+  const { page } = launched;
+  const features = async () => (await state(page)).history.features as unknown as { id: string; type: string; axis?: string; angle?: number }[];
+
+  // A stepped half section on the front plane (radius 10 over 40 mm, radius 16 over 10 mm) and a centerline.
+  await page.evaluate(() => {
+    const P = (id: string, x: number, y: number) => ({ id, type: 'point', x, y });
+    const L = (id: string, p1: string, p2: string, construction = false) => ({ id, type: 'line', p1, p2, ...(construction ? { construction } : {}) });
+    const section = {
+      id: 'section', type: 'sketch', plane: { kind: 'standard', plane: 'front' },
+      sketch: {
+        entities: [
+          P('a', 0, 0), P('b', 16, 0), P('c', 16, 10), P('d', 10, 10), P('e', 10, 50), P('f', 0, 50), P('g', 0, -10), P('h', 0, 60),
+          L('l1', 'a', 'b'), L('l2', 'b', 'c'), L('l3', 'c', 'd'), L('l4', 'd', 'e'), L('l5', 'e', 'f'), L('l6', 'f', 'a'), L('axis', 'g', 'h', true),
+        ],
+        constraints: [],
+      },
+    };
+    const history = { features: [section], past: [], future: [] };
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history, savedFeatures: history.features, dirty: false });
+  });
+  await idle(page);
+
+  // Revolve: the sketch and its centerline are chosen, the full turn is the default.
+  await page.click('[data-command="revolve"]');
+  await expect(page.locator('[data-testid="feature-sketch"]')).toHaveValue('section');
+  await expect(page.locator('[data-testid="revolve-axis"]')).toHaveValue('axis');
+  await expect(page.locator('[data-testid="revolve-axis"] option:checked')).toHaveText('Centerline 1');
+  await page.click('[data-testid="panel-ok"]');
+  await expect.poll(async () => (await features()).map((f) => f.type)).toEqual(['sketch', 'revolve']);
+  const full = Math.PI * 16 * 16 * 10 + Math.PI * 10 * 10 * 40;
+  expect(await volume(page)).toBeCloseTo(full, 2);
+
+  // Half a turn after editing the feature.
+  await page.locator('.tree-item[data-feature-id]').nth(1).dblclick();
+  await page.locator('[data-testid="revolve-angle"]').fill('180');
+  await page.locator('[data-testid="revolve-angle"]').press('Tab');
+  await page.click('[data-testid="panel-ok"]');
+  await expect.poll(async () => (await features()).at(-1)?.angle).toBe(180);
+  expect(await volume(page)).toBeCloseTo(full / 2, 2);
 });

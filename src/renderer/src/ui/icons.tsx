@@ -473,10 +473,21 @@ export const ExtrudeIcon = (p: P) => (
   </Icon>
 );
 
+/** Revolve: a profile beside a dashed axis and an arrow turning around it. */
+export const RevolveIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="M12 2.5v19" strokeDasharray="2.2 2" opacity="0.55" />
+    <path d="M13.5 6h4v10h-4" />
+    <path d="M7.5 9.2c-2.3.6-3.8 1.6-3.8 2.8 0 2 4.1 3.6 9.3 3.6" />
+    <path d="m11.2 13.4 2.1 2.2-2.1 2.2" />
+  </Icon>
+);
+
 export const FEATURE_ICONS = {
   variables: VariablesIcon,
   sketch: SketchIcon,
   extrude: ExtrudeIcon,
+  revolve: RevolveIcon,
   box: BoxIcon,
   cylinder: CylinderIcon,
   fillet: FilletIcon,

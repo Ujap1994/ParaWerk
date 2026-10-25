@@ -94,7 +94,8 @@
       "importDxf": "Add the lines, circles and arcs of a DXF file to the sketch",
       "exportDxf": "Save the sketch as DXF, e.g. for laser cutting (without construction geometry)",
       "variables": "Named values and equations: use them in dimensions and feature parameters",
-      "extrude": "Extrude the closed outlines of a sketch, or cut them out of the body"
+      "extrude": "Extrude the closed outlines of a sketch, or cut them out of the body",
+      "revolve": "Revolve the closed outlines of a sketch around a line of the sketch, or cut them out of the body"
     },
     "tabs": {
       "label": "Command tabs",
@@ -157,7 +158,8 @@
     "importDxf": "Import",
     "exportDxf": "Export",
     "variables": "Variables",
-    "extrude": "Extrude"
+    "extrude": "Extrude",
+    "revolve": "Revolve"
   },
   "features": {
     "sketch": "Sketch",
@@ -167,7 +169,8 @@
     "chamfer": "Chamfer",
     "origin": "Origin",
     "variables": "Variables",
-    "extrude": "Extrude"
+    "extrude": "Extrude",
+    "revolve": "Revolve"
   },
   "tree": {
     "title": "Feature tree",
@@ -214,7 +217,13 @@
     "directionNormal": "Normal",
     "directionReverse": "Reversed",
     "directionBoth": "Mid-plane",
-    "extrudeHint": "Every closed outline of the sketch is extruded; outlines inside others become holes. Normal goes along the normal of the sketch plane, Mid-plane goes half the depth each way."
+    "extrudeHint": "Every closed outline of the sketch is extruded; outlines inside others become holes. Normal goes along the normal of the sketch plane, Mid-plane goes half the depth each way.",
+    "angle": "Angle",
+    "directionSymmetric": "Symmetric",
+    "centerline": "Centerline {{n}}",
+    "line": "Line {{n}}",
+    "noAxis": "(choose an axis)",
+    "revolveHint": "Every closed outline of the sketch is revolved around the axis, a line of the same sketch (usually a centerline). The outlines must stay on one side of it; they may touch it."
   },
   "status": {
     "kernelLoading": "Starting geometry kernel…",
@@ -325,7 +334,9 @@
     "profile-empty": "The sketch has no closed outline. Close its outlines, or choose another sketch.",
     "profile-crossing": "Curves of the sketch cross each other near ({{detail}}) mm. Trim them so the outlines are clear.",
     "operation-failed": "The geometry kernel could not build this feature ({{detail}}).",
-    "unknown": "Unexpected error: {{detail}}"
+    "unknown": "Unexpected error: {{detail}}",
+    "axis-missing": "The axis of this revolution is missing. Edit the feature and choose a line of the sketch as the axis.",
+    "profile-crosses-axis": "Outlines of the sketch lie on both sides of the axis. Keep them on one side; they may touch it."
   },
   "fileErrors": {
     "not-a-zip": "This is not a ParaWerk part file.",

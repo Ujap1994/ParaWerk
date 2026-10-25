@@ -1,4 +1,4 @@
-import type { ExtrudeFeature, SolidModelingFeature, Vec3 } from '../shared/model/feature.ts';
+import type { ExtrudeFeature, RevolveFeature, SolidModelingFeature, Vec3 } from '../shared/model/feature.ts';
 import type { Profile } from '../shared/model/profile.ts';
 import type { SketchFrame } from '../shared/model/sketch.ts';
 import type { MassProperties, MeshPayload } from './protocol.ts';
@@ -10,8 +10,16 @@ export interface ResolvedExtrude extends ExtrudeFeature {
   frame: SketchFrame;
 }
 
+/** A revolution with the outlines and plane of its sketch and its axis in sketch coordinates. */
+export interface ResolvedRevolve extends RevolveFeature {
+  profile: Profile;
+  frame: SketchFrame;
+  /** Start and end point of the axis line: x0, y0, x1, y1. */
+  line: [number, number, number, number];
+}
+
 /** A feature as a backend builds it, with its references to earlier features resolved. */
-export type KernelFeature = Exclude<SolidModelingFeature, ExtrudeFeature> | ResolvedExtrude;
+export type KernelFeature = Exclude<SolidModelingFeature, ExtrudeFeature | RevolveFeature> | ResolvedExtrude | ResolvedRevolve;
 
 /** Opaque reference to a shape owned by a backend. */
 export type ShapeHandle = { readonly __shape: unique symbol };

@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createKernel } from '../../src/kernel/create.ts';
 import type { BackendName, Kernel } from '../../src/kernel/kernel.ts';
 import type { RebuildRequest } from '../../src/kernel/protocol.ts';
-import type { BoxFeature, CylinderFeature, ExtrudeFeature, Feature, FilletFeature, SketchFeature } from '../../src/shared/model/feature.ts';
+import type { BoxFeature, CylinderFeature, ExtrudeFeature, Feature, FilletFeature, RevolveFeature, SketchFeature } from '../../src/shared/model/feature.ts';
 import { frameOnPlane, type SketchEntity } from '../../src/shared/model/sketch.ts';
 import { splinePolyline, splineThrough } from '../../src/shared/model/spline.ts';
 
@@ -359,5 +359,63 @@ describe('extrude from sketches (parawerk backend)', () => {
     const crossing = sketchFeature('sketch', [...rectangle(0, 0, 20, 20), P('x1', 10, -5), P('x2', 10, 25), L('x', 'x1', 'x2')]);
     expect(errorOf([crossing, extrude()])).toBe('profile-crossing');
     expect(errorOf([sketchFeature('sketch', [P('a', 0, 0), P('b', 10, 0), L('l', 'a', 'b')]), extrude()])).toBe('profile-empty');
+  });
+});
+
+describe('revolve from sketches (parawerk backend)', () => {
+  let kernel: Kernel;
+
+  beforeAll(async () => {
+    kernel = await createKernel('parawerk');
+  });
+
+  afterAll(() => {
+    kernel[Symbol.dispose]();
+  });
+
+  const P = (id: string, x: number, y: number): SketchEntity => ({ id, type: 'point', x, y });
+  const L = (id: string, p1: string, p2: string, construction = false): SketchEntity => ({ id, type: 'line', p1, p2, ...(construction ? { construction } : {}) });
+  /** A rectangle x0..x1 × y0..y1 and a centerline on the y axis of the front plane. */
+  const section = (x0: number, x1: number, y0: number, y1: number): SketchEntity[] => [
+    P('r1', x0, y0), P('r2', x1, y0), P('r3', x1, y1), P('r4', x0, y1),
+    L('ra', 'r1', 'r2'), L('rb', 'r2', 'r3'), L('rc', 'r3', 'r4'), L('rd', 'r4', 'r1'),
+    P('a1', 0, -10), P('a2', 0, 50), L('axis', 'a1', 'a2', true),
+  ];
+  const sketchFeature = (entities: SketchEntity[]): SketchFeature => ({ id: 'sketch', type: 'sketch', plane: { kind: 'standard', plane: 'front' }, sketch: { entities, constraints: [] } });
+  const revolve = (overrides: Partial<RevolveFeature> = {}): RevolveFeature => ({ id: 'revolve', type: 'revolve', operation: 'add', sketch: 'sketch', axis: 'axis', angle: 360, direction: 'normal', ...overrides });
+
+  function build(features: Feature[]) {
+    const { result } = kernel.rebuild({ features, captures: [features.length - 1], knownMeshKeys: [], withProperties: true });
+    const state = result.captures[0];
+    if (!state) throw new Error('no capture');
+    return { result, state };
+  }
+
+  it('turns a rectangle beside the axis into a tube and a quarter of it', () => {
+    const tube = build([sketchFeature(section(10, 20, 0, 30)), revolve()]);
+    expect(tube.result.features[1]?.status).toBe('ok');
+    expect(tube.state.properties?.volume).toBeCloseTo(Math.PI * (400 - 100) * 30, 3);
+    const quarter = build([sketchFeature(section(10, 20, 0, 30)), revolve({ angle: 90 })]).state;
+    expect(quarter.properties?.volume).toBeCloseTo((Math.PI * (400 - 100) * 30) / 4, 3);
+    const symmetric = build([sketchFeature(section(10, 20, 0, 30)), revolve({ angle: 90, direction: 'both' })]).state;
+    expect(symmetric.properties?.volume).toBeCloseTo((Math.PI * (400 - 100) * 30) / 4, 3);
+  });
+
+  it('revolves a half section that lies on the axis into a solid cylinder, and a circle into a torus', () => {
+    // The left edge of the rectangle is the axis itself (a normal line).
+    const cylinder = build([sketchFeature(section(0, 10, 0, 20)), revolve({ axis: 'rd' })]).state;
+    expect(cylinder.properties?.volume).toBeCloseTo(Math.PI * 100 * 20, 3);
+    const ring = sketchFeature([P('c', 30, 10), { id: 'tube', type: 'circle', center: 'c', radius: 5 }, P('a1', 0, -10), P('a2', 0, 50), L('axis', 'a1', 'a2', true)]);
+    expect(build([ring, revolve()]).state.properties?.volume).toBeCloseTo(2 * Math.PI ** 2 * 30 * 25, 2);
+  });
+
+  it('cuts a groove into a body and explains a missing axis or outlines on both sides', () => {
+    const shaft: CylinderFeature = { id: 'shaft', type: 'cylinder', operation: 'add', radius: 20, height: 60, axis: 'z', position: [0, 0, 0] };
+    // A 4 × 6 groove at radius 16..20 (front plane: sketch y is model z, the axis is the model z axis).
+    const groove = build([shaft, sketchFeature(section(16, 22, 20, 26)), revolve({ operation: 'cut' })]).state;
+    expect(groove.properties?.volume).toBeCloseTo(Math.PI * 400 * 60 - Math.PI * (400 - 256) * 6, 3);
+    const errorOf = (features: Feature[]) => kernel.rebuild({ features, captures: [], knownMeshKeys: [], withProperties: false }).result.features.at(-1)?.error?.code;
+    expect(errorOf([sketchFeature(section(10, 20, 0, 30)), revolve({ axis: 'nowhere' })])).toBe('axis-missing');
+    expect(errorOf([sketchFeature(section(-10, 20, 0, 30)), revolve()])).toBe('profile-crosses-axis');
   });
 });

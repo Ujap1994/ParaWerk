@@ -1,4 +1,4 @@
-import type { Feature, SketchFeature } from '../shared/model/feature.ts';
+import { isSketchBased, type Feature, type SketchFeature } from '../shared/model/feature.ts';
 import type { GeometryBackend, ShapeHandle } from './backend.ts';
 import { FeatureError } from './feature-error.ts';
 import type { FeatureResult } from './protocol.ts';
@@ -47,8 +47,8 @@ function featureSignature(feature: Feature, sketches: ReadonlyMap<string, Sketch
   // after them (variables reach the body through the values of the features that use them).
   if (feature.type === 'sketch' || feature.type === 'variables') return `${feature.type}:${feature.id}`;
   const { name: _name, expressions: _expressions, ...geometry } = feature;
-  if (feature.type === 'extrude') {
-    // An extrusion follows its sketch: the sketch's plane and geometry belong to its signature.
+  if (isSketchBased(feature)) {
+    // Extrusions and revolutions follow their sketch: its plane and geometry belong to their signature.
     const sketch = sketches.get(feature.sketch);
     return stableStringify({ ...geometry, from: sketch && !sketch.suppressed ? { plane: sketch.plane, entities: sketch.sketch.entities } : null });
   }

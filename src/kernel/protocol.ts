@@ -58,6 +58,8 @@ export type FeatureErrorCode =
   | 'sketch-missing'
   | 'profile-empty'
   | 'profile-crossing'
+  | 'axis-missing'
+  | 'profile-crosses-axis'
   | 'operation-failed'
   | 'unknown';
 

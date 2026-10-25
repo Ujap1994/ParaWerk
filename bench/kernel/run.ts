@@ -120,6 +120,20 @@ if (backendName === 'parawerk') {
     ];
   };
   cases['extrude.spline100.rebuildWithProperties'] = measure((i) => kernel.rebuild(request(wave(100 + (i % 2)), true)), { iterations: 5, warmup: 1 });
+  // The same spline outline (on the front plane, beside the z axis) revolved a full turn: a vase.
+  const vase = (points: number): Feature[] => {
+    const [sketch] = wave(points) as [Extract<Feature, { type: 'sketch' }>];
+    const entities = [
+      ...sketch.sketch.entities.map((entity) => (entity.type === 'point' ? { ...entity, x: entity.y + 5, y: entity.x } : entity)),
+      { id: 'a1', type: 'point' as const, x: 0, y: -5 }, { id: 'a2', type: 'point' as const, x: 0, y: 5 },
+      { id: 'axis', type: 'line' as const, p1: 'a1', p2: 'a2', construction: true },
+    ];
+    return [
+      { ...sketch, plane: { kind: 'standard', plane: 'front' }, sketch: { entities, constraints: [] } },
+      { id: 'revolve', type: 'revolve', operation: 'add', sketch: 'sketch', axis: 'axis', angle: 360, direction: 'normal' },
+    ];
+  };
+  cases['revolve.spline100.rebuildWithProperties'] = measure((i) => kernel.rebuild(request(vase(100 + (i % 2)), true)), { iterations: 5, warmup: 1 });
 }
 
 cases['plate.100holes.exportStep'] = measure(() => kernel.exportModel({ features: big, format: 'step' }), { iterations: 5, warmup: 1 });

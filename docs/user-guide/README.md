@@ -14,7 +14,7 @@
 3. [Navigating the 3D view](navigation.md): rotate, pan, zoom, view cube and standard views
 4. [Sketches](sketches.md): planes, sketch mode, drawing and editing tools, snapping, relations,
    dimensions, definition status, DXF, and a step-by-step example
-5. [Modeling features](features.md): extrude, box, cylinder, fillet, chamfer, variables, editing and undo
+5. [Modeling features](features.md): extrude, revolve, box, cylinder, fillet, chamfer, variables, editing and undo
 6. [Files, import and export](files.md): `.pwpart` files, STEP and STL, sketches as DXF
 7. [Settings](settings.md): language, theme, navigation and projection
 8. [Troubleshooting](troubleshooting.md): self-test, logs and known limitations
@@ -23,7 +23,7 @@
 
 | Area | Available now |
 |---|---|
-| Modeling | Extrude sketches (add or remove material, also mid-plane), box and cylinder, fillet and chamfer on edges picked in the 3D view |
+| Modeling | Extrude and revolve sketches (add or remove material), box and cylinder, fillet and chamfer on edges picked in the 3D view |
 | Sketching | Sketches on the front, top and right plane and on planar faces, with their own undo history; lines, rectangles (corner, center, 3-point, parallelogram), circles, ellipses, arcs (center, 3-point, tangent), splines (with points on them, trimmed exactly), slots, polygons and points, with snapping and automatic relations; relations checked by the solver and shown as symbols next to the geometry; smart dimensions with reference dimensions; status colors and conflict diagnosis; trim, extend, sketch fillet and chamfer, offset, mirror, patterns, move, copy and scale; converting model edges; dragging with live solving; DXF import and export |
 | Feature tree | Edit, suppress and delete features; rollback while editing; undo and redo |
 | Variables | Named values and equations for the whole part, used by name in parameters and sketch dimensions; calculations in every number field |
@@ -31,4 +31,4 @@
 | Files | Save and open `.pwpart`, export STEP (AP214) and binary STL |
 | Interface | English and German, light and dark theme, mouse and trackpad navigation |
 
-Revolve and the other sketch-based features follow in Phase 2. See the [roadmap](../../ROADMAP.md).
+More sketch-based features (sweep, loft, holes) and patterns follow in Phase 2. See the [roadmap](../../ROADMAP.md).

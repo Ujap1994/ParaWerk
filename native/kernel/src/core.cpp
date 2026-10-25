@@ -22,6 +22,7 @@
 #include <BRepPrimAPI_MakeBox.hxx>
 #include <BRepPrimAPI_MakeCylinder.hxx>
 #include <BRepPrimAPI_MakePrism.hxx>
+#include <BRepPrimAPI_MakeRevol.hxx>
 #include <BRep_Tool.hxx>
 #include <Bnd_Box.hxx>
 #include <GCPnts_TangentialDeflection.hxx>
@@ -61,6 +62,8 @@
 #include <gp_Pnt.hxx>
 #include <gp_Sphere.hxx>
 
+#include <algorithm>
+#include <cmath>
 #include <limits>
 #include <sstream>
 #include <unordered_map>
@@ -443,19 +446,23 @@ TopoDS_Wire readLoop(ProfileReader& in, const occ::handle<Geom_Plane>& plane) {
 
 }  // namespace
 
-int extrudeProfile(const std::vector<double>& profile, const std::vector<double>& frame, double from, double to) {
+namespace {
+
+/** The sketch plane of a frame (origin, x direction, normal): u along x, v along normal × x. */
+occ::handle<Geom_Plane> framePlane(const std::vector<double>& frame) {
   if (frame.size() != 9) throw KernelError("operation-failed", "a plane needs 9 values");
-  if (!(std::abs(to - from) > 1e-9)) throw KernelError("operation-failed", "the extrusion has no depth");
   const gp_Pnt origin(frame[0], frame[1], frame[2]);
   const gp_Dir xDir(frame[3], frame[4], frame[5]);
   const gp_Dir normal(frame[6], frame[7], frame[8]);
-  // u along xDir, v along normal × xDir: the sketch coordinates.
-  const occ::handle<Geom_Plane> plane = new Geom_Plane(gp_Ax3(origin, normal, xDir));
+  return new Geom_Plane(gp_Ax3(origin, normal, xDir));
+}
 
+/** One planar face per profile region (see extrudeProfile in core.hpp for the encoding). */
+std::vector<TopoDS_Face> readFaces(const std::vector<double>& profile, const occ::handle<Geom_Plane>& plane) {
   ProfileReader in(profile);
   const int regionCount = in.count(1 << 20);
   if (regionCount == 0) throw KernelError("operation-failed", "the sketch has no closed outline");
-  TopoDS_Shape result;
+  std::vector<TopoDS_Face> faces;
   for (int r = 0; r < regionCount; ++r) {
     const int loopCount = in.count(1 << 20);
     if (loopCount == 0) throw KernelError("operation-failed", "a profile region has no outline");
@@ -463,26 +470,71 @@ int extrudeProfile(const std::vector<double>& profile, const std::vector<double>
     BRepBuilderAPI_MakeFace faceMaker(plane, readLoop(in, plane), Precision::Confusion());
     for (int l = 1; l < loopCount; ++l) faceMaker.Add(readLoop(in, plane));
     if (!faceMaker.IsDone()) throw KernelError("operation-failed", "a face could not be built from the profile");
-    TopoDS_Shape face = faceMaker.Face();
+    faces.push_back(faceMaker.Face());
+  }
+  return faces;
+}
+
+/** Joins the solids made from the regions of one profile. */
+TopoDS_Shape joinRegions(const std::vector<TopoDS_Shape>& solids, const char* what) {
+  TopoDS_Shape result;
+  for (const TopoDS_Shape& solid : solids) {
+    if (result.IsNull()) {
+      result = solid;
+      continue;
+    }
+    BRepAlgoAPI_Fuse fuse;
+    configure(fuse, result, solid);
+    if (fuse.HasErrors()) throw KernelError("operation-failed", std::string("the ") + what + " regions could not be joined");
+    fuse.SimplifyResult(true, true, 1e-6);
+    result = fuse.Shape();
+  }
+  if (countSolids(result) == 0) throw KernelError("operation-failed", std::string("the ") + what + " is not a solid");
+  return result;
+}
+
+}  // namespace
+
+int extrudeProfile(const std::vector<double>& profile, const std::vector<double>& frame, double from, double to) {
+  if (!(std::abs(to - from) > 1e-9)) throw KernelError("operation-failed", "the extrusion has no depth");
+  const occ::handle<Geom_Plane> plane = framePlane(frame);
+  const gp_Vec normal(plane->Position().Direction());
+  std::vector<TopoDS_Shape> solids;
+  for (TopoDS_Shape face : readFaces(profile, plane)) {
     if (from != 0) {
       gp_Trsf shift;
-      shift.SetTranslation(gp_Vec(normal) * from);
+      shift.SetTranslation(normal * from);
       face = BRepBuilderAPI_Transform(face, shift, true).Shape();
     }
-    BRepPrimAPI_MakePrism prism(face, gp_Vec(normal) * (to - from));
+    BRepPrimAPI_MakePrism prism(face, normal * (to - from));
     if (!prism.IsDone()) throw KernelError("operation-failed", "the profile could not be extruded");
-    if (result.IsNull()) {
-      result = prism.Shape();
-    } else {
-      BRepAlgoAPI_Fuse fuse;
-      configure(fuse, result, prism.Shape());
-      if (fuse.HasErrors()) throw KernelError("operation-failed", "the extruded regions could not be joined");
-      fuse.SimplifyResult(true, true, 1e-6);
-      result = fuse.Shape();
-    }
+    solids.push_back(prism.Shape());
   }
-  if (countSolids(result) == 0) throw KernelError("operation-failed", "the extrusion is not a solid");
-  return store().add(result);
+  return store().add(joinRegions(solids, "extruded"));
+}
+
+int revolveProfile(const std::vector<double>& profile, const std::vector<double>& frame, const std::vector<double>& axis, double from, double to) {
+  if (axis.size() != 4) throw KernelError("operation-failed", "an axis needs 4 values");
+  if (!(to - from > 1e-9 && to - from <= 2 * M_PI + 1e-9)) throw KernelError("operation-failed", "the angle must be above 0 and up to 360 degrees");
+  const occ::handle<Geom_Plane> plane = framePlane(frame);
+  const gp_Pnt start = plane->Value(axis[0], axis[1]);
+  const gp_Pnt end = plane->Value(axis[2], axis[3]);
+  if (start.Distance(end) <= Precision::Confusion()) throw KernelError("operation-failed", "the axis has no length");
+  const gp_Ax1 line(start, gp_Dir(gp_Vec(start, end)));
+  // A full turn is exactly 2π, so the solid closes on itself.
+  const double sweep = std::min(to - from, 2 * M_PI);
+  std::vector<TopoDS_Shape> solids;
+  for (TopoDS_Shape face : readFaces(profile, plane)) {
+    if (from != 0) {
+      gp_Trsf turn;
+      turn.SetRotation(line, from);
+      face = BRepBuilderAPI_Transform(face, turn, true).Shape();
+    }
+    BRepPrimAPI_MakeRevol revolution(face, line, sweep);
+    if (!revolution.IsDone()) throw KernelError("operation-failed", "the profile could not be revolved");
+    solids.push_back(revolution.Shape());
+  }
+  return store().add(joinRegions(solids, "revolved"));
 }
 
 void setParallel(bool enabled) { parallel = enabled; }

@@ -7,7 +7,7 @@ rebuilt automatically and only from the first changed feature onwards.
 
 **Extrude** (in the *Features* tab) turns the closed outlines of a sketch into a solid, or cuts them out
 of the body with **Remove material**. Draw and close the outlines in a [sketch](sketches.md) first, then
-choose **Extrude**: it takes the newest sketch that no extrusion uses yet; *Sketch* in the side panel
+choose **Extrude**: it takes the newest sketch that no extrusion or revolution uses yet; *Sketch* in the side panel
 chooses another one.
 
 - *Depth* is how far the profile is extruded, in millimeters; like every parameter it takes a
@@ -29,6 +29,25 @@ and editing the sketch (double-click it in the feature tree) rebuilds the extrus
 ![Extruding a plate with two holes: the side panel with sketch, depth and direction](../images/screenshots/extrude-plate.png)
 
 ![A pocket cut from a sketch on the top face of the plate](../images/screenshots/extrude-pocket.png)
+
+## Revolve
+
+**Revolve** turns the closed outlines of a sketch around an axis into a solid – shafts, bushes, pulleys,
+knobs – or cuts them out of the body (grooves, recesses) with **Remove material**. Draw a half section and
+a **centerline** as the axis in the sketch; the outlines may touch the axis but must stay on one side of
+it.
+
+- *Sketch* and *Axis*: Revolve takes the newest sketch that no extrusion or revolution uses yet and its
+  first centerline. *Axis* lists the centerlines and the other lines of the sketch; the chosen one is shown
+  in orange. A line of the outline itself can be the axis too.
+- *Angle* in degrees, up to 360 (a full turn, the default); like every parameter it takes a calculation or
+  a variable.
+- *Direction*: **Normal** and **Reversed** turn one way or the other from the sketch plane, **Symmetric**
+  half the angle to each side.
+- Outlines inside others become holes, as for extrusions, and every sketch curve stays exact: lines become
+  planes, cylinders and cones, arcs become spheres and tori, splines become exact surfaces of revolution.
+
+![A flanged bush revolved three quarters of a turn around the orange centerline](../images/screenshots/revolve-bush.png)
 
 ## Box
 

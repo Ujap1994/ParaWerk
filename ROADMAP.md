@@ -150,7 +150,7 @@ Marked complete for now: open points from hands-on testing are handled alongside
 | Item | Status |
 |---|---|
 | Extrude and cut from sketch profiles (blind, reversed, mid-plane; exact splines and ellipses) | ✅ done ([ADR 0009](docs/adr/0009-sketch-based-features.md)) |
-| Revolve and revolved cut | planned |
+| Revolve and revolved cut (axis from the sketch, up to 360°, symmetric) | ✅ done |
 
 ## 2. Guiding principles
 

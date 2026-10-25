@@ -6,7 +6,7 @@ import * as commands from '../commands.ts';
 import type { SketchToolName } from '../sketch/tools.ts';
 import { useAppState, type CommandTab } from '../state/store.ts';
 import {
-  BoxIcon, ExtrudeIcon,
+  BoxIcon, ExtrudeIcon, RevolveIcon,
   CenterArcIcon,
   CenterlineIcon,
   CenterRectangleIcon,
@@ -117,6 +117,7 @@ function Group({ label, children }: { label: string; children: React.ReactNode }
 const FEATURE_BUTTONS: { type: FeatureType; icon: IconType }[] = [
   { type: 'sketch', icon: SketchIcon },
   { type: 'extrude', icon: ExtrudeIcon },
+  { type: 'revolve', icon: RevolveIcon },
   { type: 'box', icon: BoxIcon },
   { type: 'cylinder', icon: CylinderIcon },
   { type: 'fillet', icon: FilletIcon },

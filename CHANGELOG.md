@@ -15,8 +15,13 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
   extrusion is hidden in the 3D view. Editing the sketch rebuilds the extrusion
   ([ADR 0009](docs/adr/0009-sketch-based-features.md)). Part files with extrusions are saved as format
   version 4.
+- Revolve: the closed outlines of a sketch turn around a line of the sketch (usually a centerline) into a
+  solid or a cut; angle up to 360° (also as an equation), one way, the other way or symmetric. The axis is
+  chosen in the side panel and shown in orange; outlines on both sides of the axis are reported. Shafts,
+  bushes, grooves and tori come out with exact volumes.
 
 ### Fixed
+- The labels of choice fields in the side panel had no space above them.
 - Volume and surface area of bodies with ellipses or splines are now exact; OCCT's default integration
   was off by up to 1e-4 on such faces.
 

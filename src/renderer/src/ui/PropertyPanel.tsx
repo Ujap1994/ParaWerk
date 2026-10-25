@@ -98,11 +98,37 @@ function SketchField({ value, index }: { value: string; index: number }) {
   return (
     <label className="field">
       <span className="field-label">{t('panel.sketch')}</span>
-      <select className="field-select" value={value} data-testid="extrude-sketch" onChange={(event) => commands.updateDraft({ sketch: event.target.value })}>
+      <select className="field-select" value={value} data-testid="feature-sketch" onChange={(event) => commands.chooseFeatureSketch(event.target.value)}>
         {sketches.some((sketch) => sketch.id === value) ? null : <option value={value}>{t('panel.noSketch')}</option>}
         {sketches.map((sketch) => (
           <option key={sketch.id} value={sketch.id}>
             {sketch.name}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+/** The lines of the revolution's sketch, to choose the axis: centerlines first, numbered as they were drawn. */
+function AxisField({ sketch, value }: { sketch: string; value: string }) {
+  const { t } = useTranslation();
+  const data = useAppState((state) => state.history.features.find((feature) => feature.type === 'sketch' && feature.id === sketch));
+  const lines = data?.type === 'sketch' ? data.sketch.entities.filter((entity) => entity.type === 'line') : [];
+  const centerlines = lines.filter((line) => line.construction);
+  const others = lines.filter((line) => !line.construction);
+  const options = [
+    ...centerlines.map((line, i) => ({ id: line.id, label: t('panel.centerline', { n: i + 1 }) })),
+    ...others.map((line, i) => ({ id: line.id, label: t('panel.line', { n: i + 1 }) })),
+  ];
+  return (
+    <label className="field">
+      <span className="field-label">{t('panel.axis')}</span>
+      <select className="field-select" value={value} data-testid="revolve-axis" onChange={(event) => commands.updateDraft({ axis: event.target.value })}>
+        {options.some((option) => option.id === value) ? null : <option value={value}>{t('panel.noAxis')}</option>}
+        {options.map((option) => (
+          <option key={option.id} value={option.id}>
+            {option.label}
           </option>
         ))}
       </select>
@@ -133,6 +159,26 @@ function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
             onChange={(direction) => commands.updateDraft({ direction })}
           />
           <p className="panel-hint">{t('panel.extrudeHint')}</p>
+        </Section>
+      );
+    case 'revolve':
+      return (
+        <Section title={t('panel.parameters')}>
+          <SketchField value={draft.sketch} index={index} />
+          <AxisField sketch={draft.sketch} value={draft.axis} />
+          <OperationField value={draft.operation} firstFeature={firstFeature} />
+          <NumberField label={t('panel.angle')} unit="°" step={15} value={draft.angle} testId="revolve-angle" {...equation(draft, 'angle')} onChange={(angle) => commands.updateDraft({ angle })} />
+          <Segmented<ExtrudeDirection>
+            label={t('panel.direction')}
+            value={draft.direction}
+            options={[
+              { value: 'normal', label: t('panel.directionNormal') },
+              { value: 'reverse', label: t('panel.directionReverse') },
+              { value: 'both', label: t('panel.directionSymmetric') },
+            ]}
+            onChange={(direction) => commands.updateDraft({ direction })}
+          />
+          <p className="panel-hint">{t('panel.revolveHint')}</p>
         </Section>
       );
     case 'box':

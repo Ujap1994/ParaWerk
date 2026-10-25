@@ -1,5 +1,5 @@
 import createParaWerkKernel from '../../../vendor/parawerk-kernel/parawerk-kernel.js';
-import { extrudeRange, type BooleanOperation, type Vec3 } from '../../shared/model/feature.ts';
+import { extrudeRange, revolveRange, type BooleanOperation, type Vec3 } from '../../shared/model/feature.ts';
 import type { GeometryBackend, KernelFeature, ShapeHandle } from '../backend.ts';
 import { FeatureError } from '../feature-error.ts';
 import { axisDirection } from '../feature-geometry.ts';
@@ -34,7 +34,10 @@ interface RawMesh {
 const SURFACE_KINDS: SurfaceKind[] = ['plane', 'cylinder', 'cone', 'sphere', 'torus', 'bspline', 'revolution', 'extrusion', 'other'];
 const CURVE_KINDS: CurveKind[] = ['line', 'circle', 'ellipse', 'bspline', 'other'];
 
-const FEATURE_ERROR_CODES = new Set<FeatureErrorCode>(['no-body', 'no-edges', 'edge-missing', 'empty-result', 'first-must-add', 'sketch-missing', 'profile-empty', 'profile-crossing', 'operation-failed', 'unknown']);
+const FEATURE_ERROR_CODES = new Set<FeatureErrorCode>([
+  'no-body', 'no-edges', 'edge-missing', 'empty-result', 'first-must-add', 'sketch-missing', 'profile-empty', 'profile-crossing', 'axis-missing', 'profile-crosses-axis',
+  'operation-failed', 'unknown',
+]);
 
 class KernelCallError extends Error {
   constructor(message: string) {
@@ -121,6 +124,12 @@ export class ParaWerkBackend implements GeometryBackend {
         const [from, to] = extrudeRange(feature);
         const { origin, xDir, normal } = feature.frame;
         const tool = this.handle(k.extrudeProfile(encodeProfile(feature.profile), [...origin, ...xDir, ...normal], from, to));
+        return this.combine(body, tool, feature.operation);
+      }
+      case 'revolve': {
+        const [from, to] = revolveRange(feature);
+        const { origin, xDir, normal } = feature.frame;
+        const tool = this.handle(k.revolveProfile(encodeProfile(feature.profile), [...origin, ...xDir, ...normal], feature.line, from, to));
         return this.combine(body, tool, feature.operation);
       }
       case 'fillet':

@@ -145,6 +145,22 @@ function parseFeatureFields(raw: Json, path: string): Feature {
         direction: raw.direction as ExtrudeDirection,
       };
     }
+    case 'revolve': {
+      // Empty or unknown references are kept: the rebuild reports them at the feature.
+      if (typeof raw.sketch !== 'string' || raw.sketch.length > 200) throw new ValidationError('expected a sketch id', `${path}.sketch`);
+      if (typeof raw.axis !== 'string' || raw.axis.length > 200) throw new ValidationError('expected a line id', `${path}.axis`);
+      if (!(EXTRUDE_DIRECTIONS as readonly unknown[]).includes(raw.direction)) throw new ValidationError('expected normal, reverse or both', `${path}.direction`);
+      if (typeof raw.angle !== 'number' || !(raw.angle > 0 && raw.angle <= 360)) throw new ValidationError('expected an angle above 0 and up to 360 degrees', `${path}.angle`);
+      return {
+        ...common,
+        type: 'revolve',
+        operation: operation(raw.operation, `${path}.operation`),
+        sketch: raw.sketch,
+        axis: raw.axis,
+        angle: raw.angle,
+        direction: raw.direction as ExtrudeDirection,
+      };
+    }
     case 'box':
       return {
         ...common,

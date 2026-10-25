@@ -95,7 +95,8 @@ export function applyFeature(oc: OC, body: TopoDS_Shape | null, feature: KernelF
         result = applyEdgeFeature(oc, arena, body, feature);
         break;
       case 'extrude':
-        throw new FeatureError('operation-failed', 'extrusions need the ParaWerk kernel');
+      case 'revolve':
+        throw new FeatureError('operation-failed', 'sketch-based features need the ParaWerk kernel');
     }
     return arena.keep(result);
   } catch (error) {

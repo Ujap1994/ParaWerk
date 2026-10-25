@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { isEdgeFeature } from '../../../shared/model/feature.ts';
+import { isEdgeFeature, isSketchBased } from '../../../shared/model/feature.ts';
 import { frameOf, STANDARD_PLANES } from '../../../shared/model/sketch.ts';
 import * as commands from '../commands.ts';
 import { SketchController, sketchHighlight, statusColors } from '../sketch/controller.ts';
@@ -41,11 +41,15 @@ function pickFilter(state: AppState): PickFilter {
 function inactiveSketches(state: AppState): InactiveSketch[] {
   const features = state.history.features;
   const end = state.sketch?.index ?? state.activeEdit?.index ?? features.length;
-  // Sketches that an extrusion has turned into a solid are hidden (editing the extrusion shows its sketch).
-  const used = new Set(features.slice(0, end).flatMap((feature) => (feature.type === 'extrude' && !feature.suppressed ? [feature.sketch] : [])));
+  // Sketches that an extrusion or revolution has turned into a solid are hidden (editing that feature shows its sketch).
+  const used = new Set(features.slice(0, end).flatMap((feature) => (isSketchBased(feature) && !feature.suppressed ? [feature.sketch] : [])));
+  // The axis of the revolution being edited is highlighted in its sketch.
+  const draft = state.activeEdit?.draft;
+  const axis = draft?.type === 'revolve' ? { sketch: draft.sketch, line: draft.axis } : null;
   const sketches: InactiveSketch[] = [];
   for (const feature of features.slice(0, end)) {
-    if (feature.type === 'sketch' && !feature.suppressed && !used.has(feature.id)) sketches.push({ id: feature.id, frame: frameOf(feature.plane), data: feature.sketch });
+    if (feature.type !== 'sketch' || feature.suppressed || used.has(feature.id)) continue;
+    sketches.push({ id: feature.id, frame: frameOf(feature.plane), data: feature.sketch, ...(axis?.sketch === feature.id ? { highlighted: [axis.line] } : {}) });
   }
   return sketches;
 }

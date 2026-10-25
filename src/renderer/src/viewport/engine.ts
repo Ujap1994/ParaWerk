@@ -75,6 +75,8 @@ export interface InactiveSketch {
   id: string;
   frame: SketchFrame;
   data: SketchData;
+  /** Entities shown highlighted, e.g. the axis of the revolution being edited. */
+  highlighted?: readonly string[];
 }
 
 export interface ViewportCallbacks {
@@ -145,6 +147,7 @@ export class ViewportEngine {
   private readonly sketchMaterials = new SketchMaterials();
   private readonly sketchLayer = new SketchLayer(this.sketchMaterials);
   private readonly inactiveSketches = new Map<string, SketchGraphics>();
+  private readonly inactiveHighlights = new Map<string, string>();
   private readonly inactiveSketchGroup = new Group();
   private sketchInput: SketchInput | null = null;
   private lastSketchPointer: SketchPointer | null = null;
@@ -364,13 +367,18 @@ export class ViewportEngine {
         this.inactiveSketchGroup.add(graphics.group);
       }
       graphics.setFrame(sketch.frame);
-      if (graphics.data !== sketch.data) graphics.update(sketch.data, NO_HIGHLIGHT, this.mmPerPixel());
+      const highlightKey = (sketch.highlighted ?? []).join(' ');
+      if (graphics.data !== sketch.data || this.inactiveHighlights.get(sketch.id) !== highlightKey) {
+        graphics.update(sketch.data, highlightKey ? { hovered: null, selected: sketch.highlighted ?? [] } : NO_HIGHLIGHT, this.mmPerPixel());
+        this.inactiveHighlights.set(sketch.id, highlightKey);
+      }
     }
     for (const [id, graphics] of this.inactiveSketches) {
       if (shown.has(id)) continue;
       this.inactiveSketchGroup.remove(graphics.group);
       graphics.dispose();
       this.inactiveSketches.delete(id);
+      this.inactiveHighlights.delete(id);
     }
     this.updateBounds();
     this.requestRender();

@@ -19,8 +19,8 @@
 
 > [!WARNING]
 > **ParaWerk is under active development.** The 2D sketcher (Phase 1) is complete; part modeling
-> (Phase 2) has started with *Extrude*. It is a technical preview, not a usable CAD system yet: revolve,
-> holes, patterns and many other features are still missing. Please read the
+> (Phase 2) has started with *Extrude* and *Revolve*. It is a technical preview, not a usable CAD system
+> yet: holes, patterns, reference geometry and many other features are still missing. Please read the
 > [disclaimer](#disclaimer) first.
 
 ---
@@ -90,15 +90,16 @@ Preview 0.2 adds the complete 2D sketcher (Phase 1) to the foundation of Phase 0
 ![A fully defined bracket profile in sketch mode](docs/images/screenshots/sketch-bracket.png)
 
 - **Geometry kernel:** Open CASCADE Technology 8 (own WebAssembly build) in a background worker;
-  **extrude** sketches (add or remove material, also mid-plane), box and cylinder, fillet and chamfer; incremental rebuild that only recomputes from the first changed feature;
+  **extrude** and **revolve** sketches (add or remove material), box and cylinder, fillet and chamfer; incremental rebuild that only recomputes from the first changed feature;
   exact volume and surface area.
 - **3D view:** shaded model with edges, view cube, standard views, orthographic and perspective
   projection, rotation around the point under the cursor, zoom towards the cursor, mouse and trackpad
   presets, hover and selection highlighting of faces and edges.
 - **Feature tree and property panels:** live preview while editing, rollback of later features,
   suppress, delete, undo and redo; clear error messages when a feature cannot be built.
-- **Extrude:** the closed outlines of a sketch become a solid or a cut; outlines inside others become
-  holes, and lines, arcs, circles, ellipses and splines stay exact.
+- **Extrude and revolve:** the closed outlines of a sketch become a solid or a cut, straight or around a
+  centerline; outlines inside others become holes, and lines, arcs, circles, ellipses and splines stay
+  exact.
 - **Variables and equations:** named values for the whole part, used by name in parameters and sketch
   dimensions; calculations with units in every number field.
 - **2D sketcher:** sketches on the front, top and right plane and on planar faces, with their own undo
@@ -127,8 +128,10 @@ Preview 0.2 adds the complete 2D sketcher (Phase 1) to the foundation of Phase 0
 | ![Relation symbols](docs/images/screenshots/sketch-relation-symbols.png) | ![Over-defined sketch](docs/images/screenshots/sketch-conflict.png) |
 | **Extrude a sketch (live preview)** | **A pocket cut from a sketch on the top face** |
 | ![Extrude](docs/images/screenshots/extrude-plate.png) | ![Pocket](docs/images/screenshots/extrude-pocket.png) |
-| **Splines: cut exactly at a line, the rest is only hinted** | **Variables and equations** |
-| ![Cut spline](docs/images/screenshots/sketch-spline-cut.png) | ![Variables](docs/images/screenshots/variables.png) |
+| **Revolve a half section around its centerline** | **Variables and equations** |
+| ![Revolve](docs/images/screenshots/revolve-bush.png) | ![Variables](docs/images/screenshots/variables.png) |
+| **Splines: cut exactly at a line, the rest is only hinted** | **Splines with a point held on them** |
+| ![Cut spline](docs/images/screenshots/sketch-spline-cut.png) | ![Spline](docs/images/screenshots/sketch-spline.png) |
 | **Fillet with live preview** | **Dark theme, German interface** |
 | ![Fillet preview](docs/images/screenshots/fillet-preview.png) | ![Dark theme](docs/images/screenshots/dark-theme-german.png) |
 

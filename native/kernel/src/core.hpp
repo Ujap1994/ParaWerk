@@ -82,6 +82,12 @@ int booleanOperation(int bodyId, int toolId, int op);
  * `frame` is the plane: origin, x direction and normal (9 values).
  */
 int extrudeProfile(const std::vector<double>& profile, const std::vector<double>& frame, double from, double to);
+
+/**
+ * The solid swept by the regions of `profile` (encoded as for extrudeProfile) around `axis`, a line in
+ * plane coordinates (x0 y0 x1 y1), from angle `from` to `to` in radians (at most a full turn).
+ */
+int revolveProfile(const std::vector<double>& profile, const std::vector<double>& frame, const std::vector<double>& axis, double from, double to);
 int fillet(int bodyId, const std::vector<int>& edgeIndices, double radius);
 int chamfer(int bodyId, const std::vector<int>& edgeIndices, double distance);
 void release(int id);

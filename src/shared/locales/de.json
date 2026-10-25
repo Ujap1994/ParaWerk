@@ -94,7 +94,8 @@
       "importDxf": "Linien, Kreise und Bögen einer DXF-Datei zur Skizze hinzufügen",
       "exportDxf": "Skizze als DXF speichern, z. B. zum Laserschneiden (ohne Konstruktionsgeometrie)",
       "variables": "Benannte Werte und Gleichungen: in Bemaßungen und Feature-Parametern verwenden",
-      "extrude": "Die geschlossenen Konturen einer Skizze extrudieren oder aus dem Körper schneiden"
+      "extrude": "Die geschlossenen Konturen einer Skizze extrudieren oder aus dem Körper schneiden",
+      "revolve": "Die geschlossenen Konturen einer Skizze um eine Linie der Skizze rotieren oder aus dem Körper schneiden"
     },
     "tabs": {
       "label": "Befehlsregister",
@@ -157,7 +158,8 @@
     "importDxf": "Import",
     "exportDxf": "Export",
     "variables": "Variablen",
-    "extrude": "Extrudieren"
+    "extrude": "Extrudieren",
+    "revolve": "Rotieren"
   },
   "features": {
     "sketch": "Skizze",
@@ -167,7 +169,8 @@
     "chamfer": "Fase",
     "origin": "Ursprung",
     "variables": "Variablen",
-    "extrude": "Extrusion"
+    "extrude": "Extrusion",
+    "revolve": "Rotation"
   },
   "tree": {
     "title": "Featurebaum",
@@ -214,7 +217,13 @@
     "directionNormal": "Normal",
     "directionReverse": "Umgekehrt",
     "directionBoth": "Mittelebene",
-    "extrudeHint": "Jede geschlossene Kontur der Skizze wird extrudiert; Konturen in anderen werden zu Löchern. Normal geht entlang der Normalen der Skizzenebene, Mittelebene je zur Hälfte in beide Richtungen."
+    "extrudeHint": "Jede geschlossene Kontur der Skizze wird extrudiert; Konturen in anderen werden zu Löchern. Normal geht entlang der Normalen der Skizzenebene, Mittelebene je zur Hälfte in beide Richtungen.",
+    "angle": "Winkel",
+    "directionSymmetric": "Symmetrisch",
+    "centerline": "Mittellinie {{n}}",
+    "line": "Linie {{n}}",
+    "noAxis": "(Achse wählen)",
+    "revolveHint": "Jede geschlossene Kontur der Skizze wird um die Achse rotiert, eine Linie derselben Skizze (meist eine Mittellinie). Die Konturen müssen auf einer Seite der Achse bleiben; sie dürfen sie berühren."
   },
   "status": {
     "kernelLoading": "Geometriekern wird gestartet…",
@@ -325,7 +334,9 @@
     "profile-empty": "Die Skizze hat keine geschlossene Kontur. Schließe ihre Konturen oder wähle eine andere Skizze.",
     "profile-crossing": "Kurven der Skizze kreuzen sich bei ({{detail}}) mm. Trimme sie, damit die Konturen eindeutig sind.",
     "operation-failed": "Der Geometriekern konnte dieses Feature nicht erzeugen ({{detail}}).",
-    "unknown": "Unerwarteter Fehler: {{detail}}"
+    "unknown": "Unerwarteter Fehler: {{detail}}",
+    "axis-missing": "Die Achse dieser Rotation fehlt. Bearbeite das Feature und wähle eine Linie der Skizze als Achse.",
+    "profile-crosses-axis": "Konturen der Skizze liegen auf beiden Seiten der Achse. Halte sie auf einer Seite; berühren dürfen sie die Achse."
   },
   "fileErrors": {
     "not-a-zip": "Das ist keine ParaWerk-Teiledatei.",

@@ -35,6 +35,8 @@ export interface ProfileLoop {
   curves: string[];
   /** Signed area (positive for counterclockwise), from a fine polyline. */
   area: number;
+  /** The fine polyline the area comes from, in the direction of the loop. */
+  polygon: Point2[];
 }
 
 export interface ProfileRegion {
@@ -438,13 +440,14 @@ export function sketchProfile(sketch: SketchData): Profile {
     outlines.push({
       polygon,
       area,
-      loop: (ccw) => (ccw ? { edges: forwardEdges, curves, area } : { edges: backwardEdges, curves: [...curves].reverse(), area: -area }),
+      loop: (ccw) =>
+        ccw ? { edges: forwardEdges, curves, area, polygon } : { edges: backwardEdges, curves: [...curves].reverse(), area: -area, polygon: [...polygon].reverse() },
     });
   }
   for (const curve of closed) {
     const area = Math.abs(polygonArea(curve.polyline));
     const polygon = polygonArea(curve.polyline) > 0 ? curve.polyline : [...curve.polyline].reverse();
-    outlines.push({ polygon, area, loop: (ccw) => ({ edges: [curve.edge(ccw)], curves: [curve.id], area: ccw ? area : -area }) });
+    outlines.push({ polygon, area, loop: (ccw) => ({ edges: [curve.edge(ccw)], curves: [curve.id], area: ccw ? area : -area, polygon: ccw ? polygon : [...polygon].reverse() }) });
   }
 
   // Even-odd nesting: the smallest outline around each one is its parent.
