@@ -99,6 +99,7 @@ export function applyFeature(oc: OC, body: TopoDS_Shape | null, feature: KernelF
       case 'hole':
       case 'pattern':
       case 'mirror':
+      case 'shell':
         throw new FeatureError('operation-failed', 'this feature needs the ParaWerk kernel');
     }
     return arena.keep(result);

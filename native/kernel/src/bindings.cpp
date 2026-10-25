@@ -112,6 +112,10 @@ val cutHoles(int bodyId, val profile, val placements, val edgeNames, std::string
   });
 }
 
+val shell(int bodyId, val openFaces, double thickness, bool outward, std::string name) {
+  return guarded([&] { return idResult(parawerk::shell(bodyId, toIntVector(openFaces), thickness, outward, name)); });
+}
+
 val combineCopies(int bodyId, int toolId, val transforms, int op, std::string name) {
   return guarded([&] {
     const std::vector<double> matrices = emscripten::convertJSArrayToNumberVector<double>(transforms);
@@ -247,6 +251,7 @@ EMSCRIPTEN_BINDINGS(parawerk_kernel) {
   emscripten::function("revolveProfile", &revolveProfile);
   emscripten::function("cutHoles", &cutHoles);
   emscripten::function("combineCopies", &combineCopies);
+  emscripten::function("shell", &shell);
   emscripten::function("fillet", &fillet);
   emscripten::function("chamfer", &chamfer);
   emscripten::function("release", &parawerk::release);

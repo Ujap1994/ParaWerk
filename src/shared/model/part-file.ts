@@ -16,7 +16,7 @@ export const PART_FORMAT = 'parawerk-part';
  * 2: sketch features. 3: variables, parameter and dimension expressions, splines. 4: extrusions and
  * revolutions. 5: edges and sketch faces referenced by persistent names (docs/adr/0002-persistent-naming.md).
  * 6: reference planes, axes and points, sketches on reference planes, revolutions around reference axes, holes,
- * patterns and mirror images.
+ * patterns and mirror images, shells.
  * Older versions are read unchanged.
  */
 export const PART_FORMAT_VERSION = 6;
@@ -27,6 +27,7 @@ export function formatVersionOf(features: readonly Feature[]): number {
     isReferenceFeature(feature) ||
     isCopyFeature(feature) ||
     feature.type === 'hole' ||
+    feature.type === 'shell' ||
     (feature.type === 'sketch' && feature.plane.kind === 'feature') ||
     (feature.type === 'revolve' && feature.axisRef !== undefined);
   if (features.some(reference)) return 6;

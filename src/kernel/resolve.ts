@@ -1,13 +1,13 @@
-import { COPYABLE_TYPES, isCopyFeature, isEdgeFeature, type CopyFeature, type EdgeFeature, type EdgeRef, type Feature, type HoleFeature, type SketchFeature, type SolidModelingFeature, type Vec3 } from '../shared/model/feature.ts';
+import { COPYABLE_TYPES, isCopyFeature, isEdgeFeature, type CopyFeature, type EdgeFeature, type EdgeRef, type Feature, type HoleFeature, type ShellFeature, type SketchFeature, type SolidModelingFeature, type Vec3 } from '../shared/model/feature.ts';
 import { circularTransforms, linearTransforms, mirrorTransform, type Transform } from '../shared/model/pattern.ts';
 import { holePositions, holeProblem } from '../shared/model/hole.ts';
-import { edgeFaceNames, edgeRefOf, resolveEdgeRefs, resolveFacePlane, type BodyNaming } from '../shared/model/naming.ts';
+import { edgeFaceNames, edgeRefOf, faceRefOf, resolveEdgeRefs, resolveFaceRef, resolveFacePlane, type BodyNaming } from '../shared/model/naming.ts';
 import { sketchProfile, type Profile } from '../shared/model/profile.ts';
 import type { GeometryRef, ReferenceGeometry } from '../shared/model/reference.ts';
 import { frameOf, frameOnPlane, ORIGIN_ID, toModel, toSketch, type SketchFrame, type SketchPlaneRef } from '../shared/model/sketch.ts';
 import type { Point2 } from '../shared/model/spline.ts';
 import { hashString } from '../shared/hash.ts';
-import type { KernelFeature, ResolvedCopy, ResolvedEdgeFeature, ResolvedHole } from './backend.ts';
+import type { KernelFeature, ResolvedCopy, ResolvedEdgeFeature, ResolvedHole, ResolvedShell } from './backend.ts';
 import { FeatureError } from './feature-error.ts';
 import { axisOfReference, referenceValue, type ReferenceContext } from './reference.ts';
 
@@ -174,6 +174,35 @@ function resolveCopy(feature: CopyFeature, before: readonly Feature[], context: 
   return { ...feature, seeds, transforms: transforms.flat() };
 }
 
+/**
+ * The open faces of a shell in the body it hollows out. Faces that are gone are left out (and counted);
+ * when all are gone, the shell fails. Faces found only by position are brought up to date.
+ */
+function resolveShell(feature: ShellFeature, context: ResolveContext): ResolvedShell {
+  const body = context.body;
+  if (!body) throw new FeatureError('no-body');
+  const naming = body.naming();
+  const faceIndices: number[] = [];
+  let missing = 0;
+  let healed = false;
+  const healedFaces = feature.faces.map((ref) => {
+    const match = resolveFaceRef(ref, naming, (face, point) => {
+      const center = body.face(face).center;
+      return Math.hypot(center[0] - point[0], center[1] - point[1], center[2] - point[2]);
+    });
+    if (!match) {
+      missing++;
+      return ref;
+    }
+    if (!faceIndices.includes(match.index)) faceIndices.push(match.index);
+    if (match.kind === 'name') return ref;
+    healed = true;
+    return faceRefOf(naming, match.index, ref.at) ?? ref;
+  });
+  if (missing > 0 && missing === feature.faces.length) throw new FeatureError('shell-face-missing', String(missing));
+  return { ...feature, faceIndices, ...(missing > 0 ? { missingFaces: missing } : {}), ...(healed ? { healedFaces } : {}) };
+}
+
 /** What features are resolved against: the body before them, where sketches lie and where reference features lie. */
 export interface ResolveContext extends ReferenceContext {
   frames: ReadonlyMap<string, SketchFrame>;
@@ -187,6 +216,7 @@ export interface ResolveContext extends ReferenceContext {
  */
 export function resolveFeature(feature: SolidModelingFeature, before: readonly Feature[], context: ResolveContext): KernelFeature {
   if (isCopyFeature(feature)) return resolveCopy(feature, before, context);
+  if (feature.type === 'shell') return resolveShell(feature, context);
   if (isEdgeFeature(feature)) {
     if (!context.body) throw new FeatureError('no-body');
     return resolveEdges(feature, context.body.naming());

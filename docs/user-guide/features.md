@@ -132,6 +132,20 @@ so you can keep picking.
 
 Bevels edges with an equal *Distance* on both faces. Edge selection works like for fillets.
 
+## Shell
+
+**Shell** hollows the part out to walls of one *Wall thickness* – enclosures, cups, covers. Click the
+faces where it should be open (click again to close one); without any open face the part gets a closed
+cavity inside. **Walls outside the part** puts the walls around the part instead, so the part's own size
+becomes the inside size. While you edit, the 3D view previews the shell; rounded and sloped faces get
+walls that follow them.
+
+![An enclosure with rounded corners, shelled to 2.5 mm walls and open at the top](../images/screenshots/shell.png)
+
+If the walls are too thick for the part – thicker than half its narrowest place – the shell cannot be
+made and is marked in red. Open faces are remembered like edges: when an earlier change removes one, the
+shell leaves it out and warns.
+
 ## How features remember their edges
 
 A fillet or chamfer remembers each edge by the two faces it lies between – for example "the top face of

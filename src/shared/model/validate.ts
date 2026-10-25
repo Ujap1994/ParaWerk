@@ -349,6 +349,16 @@ function parseFeatureFields(raw: Json, path: string): Feature {
         distance: positiveLength(raw.distance, `${path}.distance`),
         edges: edges(raw.edges, `${path}.edges`),
       };
+    case 'shell': {
+      if (!Array.isArray(raw.faces) || raw.faces.length > 1000) throw new ValidationError('expected a list of faces', `${path}.faces`);
+      if (typeof raw.outward !== 'boolean') throw new ValidationError('expected true or false', `${path}.outward`);
+      const faces = raw.faces.map((face, i) => {
+        const ref = geometryRef(face, `${path}.faces[${i}]`);
+        if (ref.kind !== 'face') throw new ValidationError('expected a face', `${path}.faces[${i}]`);
+        return ref;
+      });
+      return { ...common, type: 'shell', thickness: positiveLength(raw.thickness, `${path}.thickness`), faces, outward: raw.outward };
+    }
     default:
       throw new ValidationError(`unknown feature type ${JSON.stringify(raw.type)}`, `${path}.type`);
   }

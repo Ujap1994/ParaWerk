@@ -50,6 +50,7 @@ import {
   ReferencePlaneIcon,
   ReferencePointIcon,
   SettingsIcon,
+  ShellIcon,
   SketchIcon,
   ThreePointArcIcon,
   TrashIcon,
@@ -129,6 +130,7 @@ const FEATURE_BUTTONS: { type: FeatureType; icon: IconType }[] = [
   { type: 'cylinder', icon: CylinderIcon },
   { type: 'fillet', icon: FilletIcon },
   { type: 'chamfer', icon: ChamferIcon },
+  { type: 'shell', icon: ShellIcon },
   { type: 'variables', icon: VariablesIcon },
 ];
 
@@ -245,7 +247,7 @@ function FeaturesTab() {
           label={t(`commands.${type}`)}
           tooltip={t(`commands.tooltips.${type}`)}
           active={activeType === type}
-          disabled={(sketching && type !== 'sketch') || ((type === 'fillet' || type === 'chamfer' || type === 'hole') && !hasFeatures)}
+          disabled={(sketching && type !== 'sketch') || ((type === 'fillet' || type === 'chamfer' || type === 'hole' || type === 'shell') && !hasFeatures)}
           onClick={() => commands.startFeature(type)}
         />
       ))}

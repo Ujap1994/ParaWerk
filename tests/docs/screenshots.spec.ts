@@ -782,3 +782,33 @@ test('pattern screenshots', async () => {
   await page.click('[data-testid="panel-ok"]');
   await app.close();
 });
+
+test('shell screenshots', async () => {
+  const { app, page } = await launchApp({ width: 1440, height: 900 });
+  // An enclosure: a box with rounded vertical edges.
+  await page.evaluate(() => {
+    const features = [
+      { id: 'body', type: 'box', operation: 'add', width: 120, depth: 80, height: 45, position: [0, 0, 0] },
+      { id: 'round', type: 'fillet', radius: 8, edges: [0, 2, 4, 6].map((index) => ({ kind: 'edge-index', index })) },
+    ];
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features, past: [], future: [] }, savedFeatures: features, fileName: 'Enclosure' });
+  });
+  await idle(page);
+  await page.evaluate(() => (window as unknown as { __parawerk: { viewport: { zoomToFit(): void } } }).__parawerk.viewport.zoomToFit());
+  await page.waitForTimeout(600);
+  const canvas = await page.locator('.viewport-canvas').boundingBox();
+
+  // Shell: open at the top face, 2.5 mm walls.
+  await page.click('[data-command="shell"]');
+  await idle(page);
+  const top = await page.evaluate(() => (window as unknown as { __parawerk: { viewport: { project(x: number, y: number, z: number): { x: number; y: number } } } }).__parawerk.viewport.project(0, 0, 45));
+  if (canvas) await page.mouse.click(canvas.x + top.x, canvas.y + top.y);
+  await page.locator('[data-testid="shell-thickness"]').fill('2.5');
+  await page.locator('[data-testid="shell-thickness"]').press('Tab');
+  await idle(page);
+  await page.waitForTimeout(600);
+  if (canvas) await page.mouse.move(canvas.x + 20, canvas.y + canvas.height - 20);
+  await page.screenshot({ path: out('shell.png') });
+  await page.click('[data-testid="panel-ok"]');
+  await app.close();
+});

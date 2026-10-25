@@ -74,11 +74,18 @@ function threadsOf(hole: ResolvedHole, box: { min: Vec3; max: Vec3 }): CosmeticT
  * its frame out, so its cached result would otherwise report the same plane again and again.
  */
 function withoutTakenOver(result: FeatureResult, feature: Feature | undefined): FeatureResult {
-  const { healedEdges, healedPlane, healedReferences, ...rest } = result;
+  const { healedEdges, healedPlane, healedReferences, healedFaces, ...rest } = result;
   const edgesNew = healedEdges && !(feature && isEdgeFeature(feature) && stableStringify(feature.edges) === stableStringify(healedEdges));
   const planeNew = healedPlane && !(feature?.type === 'sketch' && stableStringify(feature.plane) === stableStringify(healedPlane));
   const referencesNew = healedReferences && !(feature && isReferenceFeature(feature) && stableStringify(feature.references) === stableStringify(healedReferences));
-  return { ...rest, ...(edgesNew ? { healedEdges } : {}), ...(planeNew ? { healedPlane } : {}), ...(referencesNew ? { healedReferences } : {}) };
+  const facesNew = healedFaces && !(feature?.type === 'shell' && stableStringify(feature.faces) === stableStringify(healedFaces));
+  return {
+    ...rest,
+    ...(edgesNew ? { healedEdges } : {}),
+    ...(planeNew ? { healedPlane } : {}),
+    ...(referencesNew ? { healedReferences } : {}),
+    ...(facesNew ? { healedFaces } : {}),
+  };
 }
 
 export function featureKeys(features: readonly Feature[]): string[] {
@@ -209,7 +216,9 @@ export class Rebuilder implements Disposable {
         const resolved = resolveFeature(feature, features.slice(0, i), { body: input ? query(input) : null, frames, references });
         const shape = this.backend.applyFeature(input, resolved);
         const healed = 'healedEdges' in resolved ? resolved.healedEdges : undefined;
+        const healedFaces = 'healedFaces' in resolved ? resolved.healedFaces : undefined;
         const missing = 'missingEdges' in resolved ? resolved.missingEdges : undefined;
+        const missingFaces = 'missingFaces' in resolved ? resolved.missingFaces : undefined;
         const threads = resolved.type === 'hole' && input ? threadsOf(resolved, this.backend.boundingBox(input)) : [];
         this.entries.push({
           key,
@@ -223,6 +232,8 @@ export class Rebuilder implements Disposable {
             cached: false,
             ...(healed ? { healedEdges: healed } : {}),
             ...(missing ? { warning: { code: 'edge-missing' as const, detail: String(missing) } } : {}),
+            ...(healedFaces ? { healedFaces } : {}),
+            ...(missingFaces ? { warning: { code: 'shell-face-missing' as const, detail: String(missingFaces) } } : {}),
             ...(threads.length > 0 ? { threads } : {}),
           },
         });

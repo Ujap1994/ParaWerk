@@ -147,6 +147,13 @@ int cutHoles(int bodyId, const std::vector<double>& profile, const std::vector<d
              const std::string& name = "");
 
 /**
+ * Hollows a body out to walls of `thickness`, inside the body or (`outward`) around it. The faces in
+ * `openFaces` are removed so the shell is open there; without any, the body gets a closed cavity. The
+ * wall faces made from face f are named "<name>:<name of f>", faces along the openings "<name>:rim".
+ */
+int shell(int bodyId, const std::vector<int>& openFaces, double thickness, bool outward, const std::string& name = "");
+
+/**
  * Adds (op 0) or cuts (op 1) copies of a stored tool: one per transformation, 12 values each (the rows
  * of a 3 × 4 matrix: rotation or mirror, then translation). All copies are combined with the body in one
  * operation. The faces of copy k are named "<name>:<k>:<face name in the tool>".

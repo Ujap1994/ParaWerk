@@ -102,7 +102,8 @@
       "hole": "Bohrungen für metrische Schrauben an den Punkten einer Skizze: Durchgangsloch, Senkung zylindrisch oder kegelig, Gewinde",
       "pattern": "Features in einer Reihe entlang einer Richtung kopieren",
       "circularPattern": "Features um eine Achse kopieren",
-      "mirror": "Features an einer Ebene spiegeln"
+      "mirror": "Features an einer Ebene spiegeln",
+      "shell": "Das Teil zu dünnen Wänden aushöhlen, offen an den gewählten Flächen"
     },
     "tabs": {
       "label": "Befehlsregister",
@@ -175,7 +176,8 @@
     "pattern": "Muster",
     "circularPattern": "Kreismuster",
     "mirror": "Spiegeln",
-    "copyGeometry": "Muster und Spiegeln"
+    "copyGeometry": "Muster und Spiegeln",
+    "shell": "Schale"
   },
   "features": {
     "plane": "Ebene",
@@ -192,7 +194,8 @@
     "revolve": "Rotation",
     "hole": "Bohrung",
     "pattern": "Muster",
-    "mirror": "Spiegelung"
+    "mirror": "Spiegelung",
+    "shell": "Schale"
   },
   "tree": {
     "title": "Featurebaum",
@@ -376,6 +379,7 @@
     "pattern-empty": "Wähle die zu kopierenden Features: im Featurebaum anklicken oder eine ihrer Flächen in der 3D-Ansicht.",
     "pattern-seed-missing": "Ein zu kopierendes Feature fehlt oder ist unterdrückt. Bearbeite das Feature und wähle die Features neu.",
     "pattern-unsupported": "Nur Features, die Material hinzufügen oder wegnehmen, lassen sich kopieren: Extrusionen, Rotationen, Bohrungen, Quader und Zylinder.",
+    "shell-face-missing": "Die zu öffnenden Flächen existieren nicht mehr, eine frühere Änderung hat sie entfernt. Bearbeite die Schale und wähle die Flächen neu.",
     "profile-crosses-axis": "Konturen der Skizze liegen auf beiden Seiten der Achse. Halte sie auf einer Seite; berühren dürfen sie die Achse.",
     "plane-missing": "Die Referenzebene, auf der diese Skizze gezeichnet wurde, existiert nicht mehr. Die Skizze bleibt, wo die Ebene war.",
     "reference-missing": "Referenz {{detail}} dieses Features fehlt: Sie wurde noch nicht gewählt, oder eine frühere Änderung hat sie entfernt. Bearbeite das Feature und wähle sie.",
@@ -386,7 +390,9 @@
   },
   "warnings": {
     "edge-missing_one": "{{count}} ausgewählte Kante existiert nicht mehr und wird ausgelassen. Bearbeite das Feature, um sie zu entfernen oder eine andere Kante zu wählen.",
-    "edge-missing_other": "{{count}} ausgewählte Kanten existieren nicht mehr und werden ausgelassen. Bearbeite das Feature, um sie zu entfernen oder andere Kanten zu wählen."
+    "edge-missing_other": "{{count}} ausgewählte Kanten existieren nicht mehr und werden ausgelassen. Bearbeite das Feature, um sie zu entfernen oder andere Kanten zu wählen.",
+    "shell-face-missing_one": "{{count}} zu öffnende Fläche existiert nicht mehr und wird ausgelassen. Bearbeite die Schale, um eine andere Fläche zu wählen.",
+    "shell-face-missing_other": "{{count}} zu öffnende Flächen existieren nicht mehr und werden ausgelassen. Bearbeite die Schale, um andere Flächen zu wählen."
   },
   "fileErrors": {
     "not-a-zip": "Das ist keine ParaWerk-Teiledatei.",
@@ -689,5 +695,14 @@
     "flipCircular": "Andere Drehrichtung",
     "linearHint": "Die Anzahl zählt das Original mit. Die Kopien folgen im Abstand entlang der Richtung.",
     "circularHint": "Die Anzahl zählt das Original mit. 360° verteilt sie gleichmäßig rundum; ein kleinerer Winkel setzt die letzte Kopie an sein Ende."
+  },
+  "shell": {
+    "thickness": "Wandstärke",
+    "outward": "Wände außerhalb des Teils",
+    "faces_one": "{{count}} Fläche offen",
+    "faces_other": "{{count}} Flächen offen",
+    "none": "Geschlossen: Das Teil bekommt einen Hohlraum",
+    "clear": "Alle schließen",
+    "hint": "Flächen in der 3D-Ansicht anklicken, um die Schale dort zu öffnen. Erneutes Klicken schließt sie."
   }
 }

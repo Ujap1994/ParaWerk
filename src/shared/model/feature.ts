@@ -5,12 +5,12 @@
  * (see docs/adr/0004-coordinate-system-and-units.md).
  */
 
-import type { AxisMethod, GeometryRef, PlaneMethod, PointMethod } from './reference.ts';
+import type { AxisMethod, FaceNameRef, GeometryRef, PlaneMethod, PointMethod } from './reference.ts';
 import type { SketchData, SketchPlaneRef } from './sketch.ts';
 
 export type Vec3 = [number, number, number];
 
-export type FeatureType = 'variables' | 'sketch' | 'plane' | 'axis' | 'point' | 'extrude' | 'revolve' | 'hole' | 'pattern' | 'mirror' | 'box' | 'cylinder' | 'fillet' | 'chamfer';
+export type FeatureType = 'variables' | 'sketch' | 'plane' | 'axis' | 'point' | 'extrude' | 'revolve' | 'hole' | 'pattern' | 'mirror' | 'box' | 'cylinder' | 'fillet' | 'chamfer' | 'shell';
 
 /** How a solid-creating feature combines with the existing body. */
 export type BooleanOperation = 'add' | 'cut';
@@ -71,6 +71,7 @@ export const EXPRESSION_FIELDS: Readonly<Record<FeatureType, readonly string[]>>
   cylinder: ['radius', 'height'],
   fillet: ['radius'],
   chamfer: ['distance'],
+  shell: ['thickness'],
 };
 
 /** A named value of the part; its expression may use other variables. */
@@ -115,6 +116,17 @@ export interface ChamferFeature extends FeatureBase {
   type: 'chamfer';
   distance: number;
   edges: EdgeRef[];
+}
+
+/**
+ * Hollows the body out to walls of `thickness`, inside it or (`outward`) around it. The faces in `faces`
+ * are removed, so the shell is open there; without any, the body gets a closed cavity.
+ */
+export interface ShellFeature extends FeatureBase {
+  type: 'shell';
+  thickness: number;
+  faces: FaceNameRef[];
+  outward: boolean;
 }
 
 /** A 2D sketch on a plane; it does not change the body by itself (extrudes use it later). */
@@ -330,7 +342,8 @@ export type Feature =
   | BoxFeature
   | CylinderFeature
   | FilletFeature
-  | ChamferFeature;
+  | ChamferFeature
+  | ShellFeature;
 
 /** Features that build or modify the solid body (everything except variables, sketches and reference geometry). */
 export type SolidModelingFeature = Exclude<Feature, SketchFeature | VariablesFeature | ReferenceFeature>;
@@ -345,7 +358,7 @@ export function isSolidFeature(feature: Feature): feature is BoxFeature | Cylind
   return feature.type === 'box' || feature.type === 'cylinder';
 }
 
-export const FEATURE_TYPES: readonly FeatureType[] = ['variables', 'sketch', 'plane', 'axis', 'point', 'extrude', 'revolve', 'hole', 'pattern', 'mirror', 'box', 'cylinder', 'fillet', 'chamfer'];
+export const FEATURE_TYPES: readonly FeatureType[] = ['variables', 'sketch', 'plane', 'axis', 'point', 'extrude', 'revolve', 'hole', 'pattern', 'mirror', 'box', 'cylinder', 'fillet', 'chamfer', 'shell'];
 
 let idCounter = 0;
 
@@ -402,5 +415,7 @@ export function defaultFeature(type: FeatureType, id: string = createFeatureId()
       return { id, type, radius: 5, edges: [] };
     case 'chamfer':
       return { id, type, distance: 3, edges: [] };
+    case 'shell':
+      return { id, type, thickness: 2, faces: [], outward: false };
   }
 }

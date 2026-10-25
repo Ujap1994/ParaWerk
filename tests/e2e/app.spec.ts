@@ -650,3 +650,20 @@ test('patterns a boss along a plane normal and around an axis, and mirrors it', 
   expect(await volume(page)).toBeCloseTo(PLATE + 2 * BOSS, 2);
   expect((await state(page)).history.features.map((f) => f.type)).toEqual(['box', 'cylinder', 'mirror']);
 });
+
+test('hollows a box out to a shell open at a picked face', async () => {
+  launched = await launchApp({ width: 1440, height: 900 });
+  const { page } = launched;
+  await createBox(page);
+  await page.click('[data-command="shell"]');
+  await expect(page.locator('[data-testid="shell-faces"]')).toContainText('Closed');
+  await idle(page);
+  // The top face is opened by clicking it; the walls get 3 mm thick.
+  await clickWorldPoint(page, [10, 10, 40]);
+  await expect(page.locator('[data-testid="shell-faces"]')).toContainText('1 face open');
+  await page.locator('[data-testid="shell-thickness"]').fill('3');
+  await page.locator('[data-testid="shell-thickness"]').press('Tab');
+  await page.click('[data-testid="panel-ok"]');
+  expect(await volume(page)).toBeCloseTo(240_000 - 94 * 54 * 37, 2);
+  expect((await state(page)).history.features[1]).toMatchObject({ type: 'shell', thickness: 3, faces: [{ kind: 'face', name: expect.stringMatching(/:top$/) }] });
+});

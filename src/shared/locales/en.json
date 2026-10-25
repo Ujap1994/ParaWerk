@@ -102,7 +102,8 @@
       "hole": "Drill holes for metric screws at the points of a sketch: clearance, counterbore, countersink or tapped",
       "pattern": "Copy features in a row along a direction",
       "circularPattern": "Copy features around an axis",
-      "mirror": "Mirror features through a plane"
+      "mirror": "Mirror features through a plane",
+      "shell": "Hollow the part out to thin walls, open at the faces you pick"
     },
     "tabs": {
       "label": "Command tabs",
@@ -175,7 +176,8 @@
     "pattern": "Pattern",
     "circularPattern": "Circular pattern",
     "mirror": "Mirror",
-    "copyGeometry": "Patterns and mirror"
+    "copyGeometry": "Patterns and mirror",
+    "shell": "Shell"
   },
   "features": {
     "plane": "Plane",
@@ -192,7 +194,8 @@
     "revolve": "Revolve",
     "hole": "Hole",
     "pattern": "Pattern",
-    "mirror": "Mirror"
+    "mirror": "Mirror",
+    "shell": "Shell"
   },
   "tree": {
     "title": "Feature tree",
@@ -376,6 +379,7 @@
     "pattern-empty": "Choose the features to copy: click them in the feature tree or one of their faces in the 3D view.",
     "pattern-seed-missing": "A feature to copy is missing or suppressed. Edit the feature and choose the features again.",
     "pattern-unsupported": "Only features that add or cut material can be copied: extrusions, revolutions, holes, boxes and cylinders.",
+    "shell-face-missing": "The faces to open no longer exist: an earlier change removed them. Edit the shell and pick the faces again.",
     "profile-crosses-axis": "Outlines of the sketch lie on both sides of the axis. Keep them on one side; they may touch it.",
     "plane-missing": "The reference plane this sketch was drawn on no longer exists. The sketch stays where the plane was.",
     "reference-missing": "Reference {{detail}} of this feature is missing: it was not chosen yet, or an earlier change removed it. Edit the feature and choose it.",
@@ -386,7 +390,9 @@
   },
   "warnings": {
     "edge-missing_one": "{{count}} selected edge no longer exists and is left out. Edit the feature to remove it or pick another edge.",
-    "edge-missing_other": "{{count}} selected edges no longer exist and are left out. Edit the feature to remove them or pick other edges."
+    "edge-missing_other": "{{count}} selected edges no longer exist and are left out. Edit the feature to remove them or pick other edges.",
+    "shell-face-missing_one": "{{count}} face to open no longer exists and is left out. Edit the shell to pick another face.",
+    "shell-face-missing_other": "{{count}} faces to open no longer exist and are left out. Edit the shell to pick other faces."
   },
   "fileErrors": {
     "not-a-zip": "This is not a ParaWerk part file.",
@@ -689,5 +695,14 @@
     "flipCircular": "Other way round",
     "linearHint": "Count includes the original. The copies follow each other at the spacing along the direction.",
     "circularHint": "Count includes the original. 360° spreads them evenly all round; a smaller angle puts the last copy at its end."
+  },
+  "shell": {
+    "thickness": "Wall thickness",
+    "outward": "Walls outside the part",
+    "faces_one": "{{count}} face open",
+    "faces_other": "{{count}} faces open",
+    "none": "Closed: the part gets a cavity inside",
+    "clear": "Close all",
+    "hint": "Click faces in the 3D view to open the shell there. Click again to close them."
   }
 }

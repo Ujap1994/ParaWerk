@@ -4,8 +4,8 @@ import { PART_FILE_EXTENSION } from '../../shared/app-info.ts';
 import { COPYABLE_TYPES, defaultFeature, hasReferenceSlots, isCopyFeature, isEdgeFeature, isReferenceFeature, isSketchBased, type EdgeRef, type Feature, type FeatureType, type HoleFeature, type ReferenceFeature, type SketchFeature, type SlotFeature } from '../../shared/model/feature.ts';
 import { holePositions, metricSize, sizesFor, standardHoleDimensions } from '../../shared/model/hole.ts';
 import { AXIS_METHODS, PLANE_METHODS, POINT_METHODS, REFERENCE_ROLES, type GeometryRef, type ReferenceRole } from '../../shared/model/reference.ts';
-import { referenceFits, referenceGeometry, referenceOfPick, referenceRoles } from './references.ts';
-import { edgeRefOf, resolveEdgeRefs } from '../../shared/model/naming.ts';
+import { referenceFits, referenceGeometry, referenceOfPick, referencePicks, referenceRoles } from './references.ts';
+import { edgeRefOf, faceRefOf, resolveEdgeRefs } from '../../shared/model/naming.ts';
 import { decodePartFile, encodePartFile, PartFileError } from '../../shared/model/part-file.ts';
 import { frameOf, frameOnPlane, isDimension, ORIGIN_ID, STANDARD_PLANES, type SketchData, type SketchDimension, type SketchPlaneRef } from '../../shared/model/sketch.ts';
 import type { Settings } from '../../shared/settings.ts';
@@ -223,6 +223,16 @@ export function startFeature(type: FeatureType): void {
   } else if (isReferenceFeature(draft)) {
     // What was selected before starting becomes the references, and decides the method (select first, then act).
     draft = withSelectedReferences(draft, getState().selection);
+  } else if (draft.type === 'shell') {
+    // Faces selected before starting are opened (select first, then act).
+    const naming = getState().display.body?.naming;
+    const faces = naming
+      ? getState().selection.flatMap((pick) => {
+          const ref = pick.kind === 'face' && pick.at ? faceRefOf(naming, pick.index, pick.at) : null;
+          return ref ? [ref] : [];
+        })
+      : [];
+    draft = { ...draft, faces };
   } else if (isCopyFeature(draft)) {
     // Faces selected before starting name the features to copy.
     const seeds = getState().selection.flatMap((pick) => (pick.kind === 'face' ? [seedOfFace(pick.index)] : [])).filter((id): id is string => id !== null);
@@ -512,6 +522,22 @@ export function toggleDraftEdge(index: number): void {
   });
   const added = exists ? null : edgeRefOf(naming, index);
   updateDraft({ edges: added ? [...kept, added] : kept });
+}
+
+/** Opens the edited shell at a face of the shown body (the body it hollows out), or closes it there again. */
+export function toggleShellFace(pick: Pick): void {
+  const { activeEdit: edit, display } = getState();
+  const naming = display.body?.naming;
+  if (edit?.draft.type !== 'shell' || !naming || pick.kind !== 'face' || !pick.at) return;
+  // One entry per reference (also for faces that are gone), so the positions match the list.
+  const open = edit.draft.faces.map((ref) => referencePicks([ref], getState())[0]?.index);
+  const at = open.indexOf(pick.index);
+  if (at >= 0) {
+    updateDraft({ faces: edit.draft.faces.filter((_, i) => i !== at) });
+    return;
+  }
+  const ref = faceRefOf(naming, pick.index, pick.at);
+  if (ref) updateDraft({ faces: [...edit.draft.faces, ref] });
 }
 
 /** Removes the edges of the edited fillet or chamfer that no longer exist in the body it modifies. */
@@ -1083,6 +1109,10 @@ export function handlePick(pick: Pick | null, additive: boolean): void {
   }
   if (edit && isCopyFeature(edit.draft)) {
     if (pick) pickForCopy(pick);
+    return;
+  }
+  if (edit?.draft.type === 'shell') {
+    if (pick) toggleShellFace(pick);
     return;
   }
   if (edit && isReferenceFeature(edit.draft)) {

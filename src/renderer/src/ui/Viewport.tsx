@@ -31,6 +31,8 @@ function cubeLabels(t: (key: string) => string): Record<CubeFace, string> {
  */
 function visibleSelection(state: AppState): Pick[] {
   const edit = state.activeEdit;
+  // The preview of a shell shows its openings; highlighting the open faces would cover them.
+  if (edit?.draft.type === 'shell') return state.display.preview ? [] : referencePicks(edit.draft.faces, state);
   if (edit && hasReferenceSlots(edit.draft)) {
     const picks = referencePicks(edit.draft.references, state).filter((pick) => pick.kind === 'face' || pick.kind === 'edge' || pick.kind === 'vertex');
     // The faces of the features a pattern or mirror copies are highlighted (faces are named after their feature).
@@ -65,6 +67,7 @@ function pickFilter(state: AppState): PickFilter {
   if (state.sketch) return 'none';
   const edit = state.activeEdit;
   if (!edit) return 'all';
+  if (edit.draft.type === 'shell') return 'faces';
   return isEdgeFeature(edit.draft) ? 'edges' : hasReferenceSlots(edit.draft) ? 'references' : 'none';
 }
 

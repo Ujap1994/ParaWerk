@@ -547,6 +547,15 @@ export const MirrorIcon = (p: P) => (
   </Icon>
 );
 
+/** Shell: a box hollowed out to thin walls, open at the top. */
+export const ShellIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="M3 9.5 12 5l9 4.5v8L12 22l-9-4.5z" />
+    <path d="M6 10.3 12 7.3l6 3v6l-6 3-6-3z" strokeDasharray="2 1.6" opacity="0.7" />
+    <path d="M3 9.5l3 0.8M21 9.5l-3 0.8M12 22v-2.7" opacity="0.7" />
+  </Icon>
+);
+
 export const FEATURE_ICONS = {
   variables: VariablesIcon,
   sketch: SketchIcon,
@@ -562,4 +571,5 @@ export const FEATURE_ICONS = {
   cylinder: CylinderIcon,
   fillet: FilletIcon,
   chamfer: ChamferIcon,
+  shell: ShellIcon,
 } as const;

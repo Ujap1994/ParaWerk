@@ -16,6 +16,9 @@
 #include <BRepCheck_Analyzer.hxx>
 #include <BRepFilletAPI_MakeChamfer.hxx>
 #include <BRepFilletAPI_MakeFillet.hxx>
+#include <BRepBuilderAPI_MakeSolid.hxx>
+#include <BRepOffsetAPI_MakeOffsetShape.hxx>
+#include <BRepOffsetAPI_MakeThickSolid.hxx>
 #include <BRepGProp.hxx>
 #include <BRepLib.hxx>
 #include <BRepLib_ToolTriangulatedShape.hxx>
@@ -689,6 +692,78 @@ int cutHoles(int bodyId, const std::vector<double>& profile, const std::vector<d
   FaceNamer namer(result);
   namer.inherit(algorithm, body.shape, body.names);
   for (const StoredShape& copy : placed) namer.inherit(algorithm, copy.shape, copy.names);
+  return store().add(result, namer.take());
+}
+
+int shell(int bodyId, const std::vector<int>& openFaces, double thickness, bool outward, const std::string& name) {
+  if (!(thickness > 0)) throw KernelError("operation-failed", "the wall thickness must be above 0");
+  const StoredShape& body = store().entry(bodyId);
+  ShapeMap faces;
+  TopExp::MapShapes(body.shape, TopAbs_FACE, faces);
+  NCollection_List<TopoDS_Shape> closing;
+  for (const int index : openFaces) {
+    if (index < 0 || index >= faces.Extent()) throw KernelError("operation-failed", "face " + std::to_string(index) + " does not exist");
+    closing.Append(faces(index + 1));
+  }
+  const double offset = outward ? thickness : -thickness;
+  const char* failure = "the shell could not be made (wall too thick for the part?)";
+  // OCCT returns the body unchanged (or a cavity of nothing) when the walls meet: a real shell removes
+  // material inside, or reaches beyond the body outside.
+  const auto requireShelled = [&](const TopoDS_Shape& result) {
+    GProp_GProps before, after;
+    BRepGProp::VolumeProperties(body.shape, before);
+    BRepGProp::VolumeProperties(result, after);
+    Bnd_Box inner, outer;
+    BRepBndLib::Add(body.shape, inner, false);
+    BRepBndLib::Add(result, outer, false);
+    const double grown = outer.CornerMax().Distance(inner.CornerMax()) + outer.CornerMin().Distance(inner.CornerMin());
+    const bool shelled = outward ? grown > 1e-6 && after.Mass() > 0 : after.Mass() < before.Mass() * (1 - 1e-9);
+    if (!shelled) throw KernelError("operation-failed", failure);
+  };
+  // The wall faces made from face f are named "<name>:<name of f>"; faces along the openings "<name>:rim".
+  const auto wallName = [&](int f) {
+    const std::string& original = f <= static_cast<int>(body.names.size()) ? body.names[static_cast<size_t>(f - 1)] : std::string();
+    return faceName(name, original.empty() ? "wall" : original);
+  };
+  if (!closing.IsEmpty()) {
+    BRepOffsetAPI_MakeThickSolid maker;
+    maker.MakeThickSolidByJoin(body.shape, closing, offset, 1e-3, BRepOffset_Skin, false, false, GeomAbs_Intersection);
+    maker.Build();
+    if (!maker.IsDone()) throw KernelError("operation-failed", failure);
+    const TopoDS_Shape result = maker.Shape();
+    requireValidSolid(result, "shell");
+    requireShelled(result);
+    FaceNamer namer(result);
+    for (int f = 1; f <= faces.Extent(); ++f) namer.generated(maker, faces(f), wallName(f));
+    namer.inherit(maker, body.shape, body.names);
+    namer.rest(faceName(name, "rim"));
+    return store().add(result, namer.take());
+  }
+  // A closed hollow body: the surface moved inwards (or outwards) bounds the cavity (or the new outside).
+  BRepOffsetAPI_MakeOffsetShape surface;
+  surface.PerformByJoin(body.shape, offset, 1e-3, BRepOffset_Skin, false, false, GeomAbs_Intersection);
+  if (!surface.IsDone()) throw KernelError("operation-failed", failure);
+  ShapeMap shells;
+  TopExp::MapShapes(surface.Shape(), TopAbs_SHELL, shells);
+  if (shells.Extent() != 1) throw KernelError("operation-failed", failure);
+  BRepBuilderAPI_MakeSolid solidMaker(TopoDS::Shell(shells(1)));
+  if (!solidMaker.IsDone()) throw KernelError("operation-failed", failure);
+  TopoDS_Shape offsetSolid = solidMaker.Solid();
+  BRepLib::OrientClosedSolid(TopoDS::Solid(offsetSolid));
+  FaceNamer offsetNamer(offsetSolid);
+  for (int f = 1; f <= faces.Extent(); ++f) offsetNamer.generated(surface, faces(f), wallName(f));
+  offsetNamer.rest(faceName(name, "wall"));
+  const FaceNames offsetNames = offsetNamer.take();
+  // Inwards: cut the cavity out of the body; outwards: the body becomes the cavity of the bigger solid.
+  BRepAlgoAPI_Cut cut;
+  configure(cut, outward ? offsetSolid : body.shape, outward ? body.shape : offsetSolid);
+  if (cut.HasErrors()) throw KernelError("operation-failed", failure);
+  const TopoDS_Shape result = cut.Shape();
+  if (countSolids(result) == 0) throw KernelError("operation-failed", failure);
+  requireShelled(result);
+  FaceNamer namer(result);
+  namer.inherit(cut, body.shape, body.names);
+  namer.inherit(cut, offsetSolid, offsetNames);
   return store().add(result, namer.take());
 }
 

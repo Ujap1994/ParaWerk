@@ -38,7 +38,7 @@ const SURFACE_KINDS: SurfaceKind[] = ['plane', 'cylinder', 'cone', 'sphere', 'to
 const CURVE_KINDS: CurveKind[] = ['line', 'circle', 'ellipse', 'bspline', 'other'];
 
 const FEATURE_ERROR_CODES = new Set<FeatureErrorCode>([
-  'no-body', 'no-edges', 'edge-missing', 'face-missing', 'plane-missing', 'reference-missing', 'reference-kind', 'reference-parallel', 'reference-not-parallel', 'reference-collinear', 'empty-result', 'first-must-add', 'sketch-missing', 'profile-empty', 'profile-crossing', 'axis-missing', 'axis-not-in-plane', 'hole-no-points', 'hole-invalid', 'pattern-empty', 'pattern-seed-missing', 'pattern-unsupported', 'profile-crosses-axis',
+  'no-body', 'no-edges', 'edge-missing', 'face-missing', 'plane-missing', 'reference-missing', 'reference-kind', 'reference-parallel', 'reference-not-parallel', 'reference-collinear', 'empty-result', 'first-must-add', 'sketch-missing', 'profile-empty', 'profile-crossing', 'axis-missing', 'axis-not-in-plane', 'hole-no-points', 'hole-invalid', 'pattern-empty', 'pattern-seed-missing', 'pattern-unsupported', 'shell-face-missing', 'profile-crosses-axis',
   'operation-failed', 'unknown',
 ]);
 
@@ -213,6 +213,9 @@ export class ParaWerkBackend implements GeometryBackend {
       case 'mirror':
         if (body === null) throw new FeatureError('no-body');
         return this.copies(body, feature);
+      case 'shell':
+        if (body === null) throw new FeatureError('no-body');
+        return this.handle(k.shell(this.id(body), feature.faceIndices, feature.thickness, feature.outward, feature.id));
       case 'fillet':
       case 'chamfer': {
         if (body === null) throw new FeatureError('no-body');

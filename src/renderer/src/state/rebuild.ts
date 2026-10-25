@@ -126,7 +126,8 @@ function applyResult(
     display = { body: meshes.get(last) ?? null, preview: null, pickable: false };
   } else if (!activeEdit) {
     display = { body: meshes.get(last) ?? null, preview: null, pickable: true };
-  } else if (isEdgeFeature(activeEdit.draft)) {
+  } else if (isEdgeFeature(activeEdit.draft) || activeEdit.draft.type === 'shell') {
+    // Edges and faces are picked on the body before the feature; its result is shown as a preview.
     display = { body: meshes.get(activeEdit.index - 1) ?? null, preview: meshes.get(activeEdit.index) ?? null, pickable: true };
   } else if (isReferenceFeature(activeEdit.draft)) {
     // Reference geometry is built on faces, edges and vertices of the body before it (which it does not change).
@@ -163,7 +164,9 @@ function applyResult(
  * saved stays saved: its geometry is the same.
  */
 function takeOverHealedEdges(plan: RebuildPlan, results: FeatureResult[]): void {
-  const healed = new Map(results.flatMap((result) => (result.healedEdges || result.healedPlane || result.healedReferences ? [[result.id, result] as const] : [])));
+  const healed = new Map(
+    results.flatMap((result) => (result.healedEdges || result.healedPlane || result.healedReferences || result.healedFaces ? [[result.id, result] as const] : [])),
+  );
   if (healed.size === 0) return;
   const state = getState();
   // Only the document as it is: while a feature or sketch is edited, the plan is not the whole part.
@@ -179,6 +182,10 @@ function takeOverHealedEdges(plan: RebuildPlan, results: FeatureResult[]): void 
     if (result?.healedPlane && feature.type === 'sketch' && JSON.stringify(result.healedPlane) !== JSON.stringify(feature.plane)) {
       changed = true;
       return { ...feature, plane: result.healedPlane };
+    }
+    if (result?.healedFaces && feature.type === 'shell' && JSON.stringify(result.healedFaces) !== JSON.stringify(feature.faces)) {
+      changed = true;
+      return { ...feature, faces: result.healedFaces };
     }
     if (result?.healedReferences && isReferenceFeature(feature) && JSON.stringify(result.healedReferences) !== JSON.stringify(feature.references)) {
       changed = true;

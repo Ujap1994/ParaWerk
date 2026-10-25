@@ -234,6 +234,23 @@ function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
     case 'pattern':
     case 'mirror':
       return <CopyFields draft={draft} />;
+    case 'shell':
+      return (
+        <Section title={t('panel.parameters')}>
+          <NumberField label={t('shell.thickness')} value={draft.thickness} step={0.5} testId="shell-thickness" {...equation(draft, 'thickness')} onChange={(thickness) => commands.updateDraft({ thickness })} />
+          <label className="checkbox-field">
+            <input type="checkbox" checked={draft.outward} data-testid="shell-outward" onChange={(event) => commands.updateDraft({ outward: event.target.checked })} />
+            {t('shell.outward')}
+          </label>
+          <div className="edge-summary">
+            <span data-testid="shell-faces">{draft.faces.length > 0 ? t('shell.faces', { count: draft.faces.length }) : t('shell.none')}</span>
+            <button type="button" className="text-button" disabled={draft.faces.length === 0} onClick={() => commands.updateDraft({ faces: [] })}>
+              {t('shell.clear')}
+            </button>
+          </div>
+          <p className="panel-hint">{t('shell.hint')}</p>
+        </Section>
+      );
     case 'variables':
       return <VariablesEditor draft={draft} />;
     case 'fillet':

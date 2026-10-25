@@ -57,8 +57,8 @@ import { ViewCube, type CubeFace } from './view-cube.ts';
 import { VIEW_DIRECTIONS, viewQuaternion, type StandardView } from './views.ts';
 
 /** What a click can pick: everything, only edges (fillet, chamfer), planes and planar faces (choosing a sketch plane) or nothing. */
-/** What a click can pick: anything, only edges (fillets), only planes (sketch planes), references (reference geometry) or nothing. */
-export type PickFilter = 'all' | 'edges' | 'planes' | 'references' | 'none';
+/** What a click can pick: anything, only edges (fillets), only faces (shells), only planes (sketch planes), references (reference geometry) or nothing. */
+export type PickFilter = 'all' | 'edges' | 'faces' | 'planes' | 'references' | 'none';
 
 /** Pointer position in sketch mode: CSS pixels on the canvas and sketch coordinates on the sketch plane. */
 export interface SketchPointer {
@@ -855,10 +855,10 @@ export class ViewportEngine {
     body?.ensureBvh();
     // Faces always occlude what lies behind them, even when they cannot be picked themselves.
     const faceHit = body ? this.raycaster.intersectObject(body.mesh, false)[0] : undefined;
-    const edgeHit = body && this.pickFilter !== 'planes' ? this.raycaster.intersectObject(body.edges, false)[0] : undefined;
-    const planeHit = this.pickFilter === 'edges' ? null : this.referencePlanes.intersect(this.raycaster);
+    const edgeHit = body && this.pickFilter !== 'planes' && this.pickFilter !== 'faces' ? this.raycaster.intersectObject(body.edges, false)[0] : undefined;
+    const planeHit = this.pickFilter === 'edges' || this.pickFilter === 'faces' ? null : this.referencePlanes.intersect(this.raycaster);
     // Choosing a sketch plane takes reference planes, not axes or points.
-    const referenceHit = this.pickFilter === 'edges' ? null : this.referenceGeometry.intersect(this.raycaster, this.pickFilter === 'planes' ? 'plane' : undefined);
+    const referenceHit = this.pickFilter === 'edges' || this.pickFilter === 'faces' ? null : this.referenceGeometry.intersect(this.raycaster, this.pickFilter === 'planes' ? 'plane' : undefined);
     const worldPerPixel = this.controller.state.height / this.height;
     const tolerance = worldPerPixel * 8;
     const at = (point: Vector3): Vec3 => [point.x, point.y, point.z];
@@ -879,7 +879,7 @@ export class ViewportEngine {
     // and planes stay pickable where they extend beyond the part (and in the feature tree).
     if (body && faceHit && faceHit.faceIndex !== undefined && faceHit.faceIndex !== null) {
       const face = body.faceOfTriangle(faceHit.faceIndex);
-      if (this.pickFilter === 'all' || this.pickFilter === 'references' || (this.pickFilter === 'planes' && body.isPlanarFace(face))) {
+      if (this.pickFilter === 'all' || this.pickFilter === 'references' || this.pickFilter === 'faces' || (this.pickFilter === 'planes' && body.isPlanarFace(face))) {
         return { kind: 'face', index: face, at: at(faceHit.point) };
       }
     }

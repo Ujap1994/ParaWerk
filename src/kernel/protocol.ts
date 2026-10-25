@@ -1,7 +1,7 @@
 import type { EdgeRef, Feature, Vec3 } from '../shared/model/feature.ts';
 import type { CosmeticThread } from '../shared/model/hole.ts';
 import type { BodyNaming } from '../shared/model/naming.ts';
-import type { GeometryRef, ReferenceGeometry } from '../shared/model/reference.ts';
+import type { FaceNameRef, GeometryRef, ReferenceGeometry } from '../shared/model/reference.ts';
 import type { SketchPlaneRef } from '../shared/model/sketch.ts';
 
 export type SurfaceKind = 'plane' | 'cylinder' | 'cone' | 'sphere' | 'torus' | 'bspline' | 'revolution' | 'extrusion' | 'other';
@@ -106,6 +106,7 @@ export type FeatureErrorCode =
   | 'pattern-empty'
   | 'pattern-seed-missing'
   | 'pattern-unsupported'
+  | 'shell-face-missing'
   | 'profile-crosses-axis'
   | 'operation-failed'
   | 'unknown';
@@ -124,6 +125,8 @@ export interface FeatureResult {
    * the up-to-date references, for the document to take over (docs/adr/0002-persistent-naming.md).
    */
   healedEdges?: EdgeRef[];
+  /** Shells whose open faces were found only by position: the up-to-date references, for the document to take over. */
+  healedFaces?: FaceNameRef[];
   /** Sketches on faces: where the face is now (or the plane of an older file with its face's name), for the document to take over. */
   healedPlane?: SketchPlaneRef;
   /** Tapped holes: their threads, shown as circles. */

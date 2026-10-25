@@ -1,4 +1,5 @@
-import type { CopyFeature, EdgeFeature, EdgeRef, ExtrudeFeature, HoleFeature, RevolveFeature, SolidModelingFeature, Vec3 } from '../shared/model/feature.ts';
+import type { CopyFeature, EdgeFeature, EdgeRef, ExtrudeFeature, HoleFeature, RevolveFeature, ShellFeature, SolidModelingFeature, Vec3 } from '../shared/model/feature.ts';
+import type { FaceNameRef } from '../shared/model/reference.ts';
 import type { BodyNaming } from '../shared/model/naming.ts';
 import type { Profile } from '../shared/model/profile.ts';
 import type { SketchFrame } from '../shared/model/sketch.ts';
@@ -31,6 +32,15 @@ export type ResolvedCopy = CopyFeature & {
   transforms: number[];
 };
 
+/** A shell with its open faces resolved in the body it hollows out. */
+export interface ResolvedShell extends ShellFeature {
+  faceIndices: number[];
+  /** How many open faces are gone and left out. */
+  missingFaces?: number;
+  /** The face references the document should take over (faces found again by position). */
+  healedFaces?: FaceNameRef[];
+}
+
 /** A fillet or chamfer with its edge references resolved in the body it modifies. */
 export type ResolvedEdgeFeature = EdgeFeature & {
   /** Topological indices of the edges, without duplicates. */
@@ -45,11 +55,12 @@ export type ResolvedEdgeFeature = EdgeFeature & {
 
 /** A feature as a backend builds it, with its references to earlier features resolved. */
 export type KernelFeature =
-  | Exclude<SolidModelingFeature, ExtrudeFeature | RevolveFeature | EdgeFeature | HoleFeature | CopyFeature>
+  | Exclude<SolidModelingFeature, ExtrudeFeature | RevolveFeature | EdgeFeature | HoleFeature | CopyFeature | ShellFeature>
   | ResolvedExtrude
   | ResolvedRevolve
   | ResolvedHole
   | ResolvedCopy
+  | ResolvedShell
   | ResolvedEdgeFeature;
 
 /** Opaque reference to a shape owned by a backend. */
