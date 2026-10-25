@@ -43,8 +43,7 @@ export class SketchBuilder {
     const id = this.id('p');
     this.entities.push({ id, type: 'point', x: placed.u, y: placed.v });
     if (placed.target.kind === 'midpoint') this.relation({ type: 'midpoint', point: id, line: placed.target.line });
-    // Splines cannot hold points on them yet (snapping never targets them).
-    if (placed.target.kind === 'curve' && placed.target.curveType !== 'spline') {
+    if (placed.target.kind === 'curve') {
       this.relation(
         placed.target.curveType === 'line'
           ? { type: 'pointOnLine', point: id, line: placed.target.curve }

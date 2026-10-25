@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { mkdtemp, readdir, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { closestOnSpline, splinePoint, splineThrough } from '../../src/shared/model/spline.ts';
 import { idle, launchApp, type LaunchedApp } from './harness.ts';
 
 interface SketchState {
@@ -884,8 +885,35 @@ test('draws tangent arcs, three-point circles, slots, polygons, angled rectangle
   await clickAt(-30, 46);
   await page.keyboard.press('Escape');
   expect(await count('spline')).toBe(1);
-  const spline = (await sketch())?.entities.find((e) => e.type === 'spline') as unknown as { points: string[] };
+  const spline = (await sketch())?.entities.find((e) => e.type === 'spline') as unknown as { id: string; points: string[] };
   expect(spline.points).toHaveLength(4);
+
+  // A point (key P) on the spline between its fit points stays on the curve when a fit point is dragged.
+  const positionsNow = async () => new Map(((await sketch())?.entities ?? []).flatMap((e) => (e.type === 'point' ? [[e.id, [e.x ?? 0, e.y ?? 0] as const]] : [])));
+  const curveNow = async () => {
+    const positions = await positionsNow();
+    const curve = splineThrough(spline.points.map((id) => positions.get(id) ?? [0, 0]));
+    if (!curve) throw new Error('no spline');
+    return { curve, positions };
+  };
+  const { curve, positions: drawn } = await curveNow();
+  const on = splinePoint(curve, ((curve.knots[1] as number) + (curve.knots[2] as number)) / 2);
+  await page.keyboard.press('p');
+  await clickAt(on[0] + 0.2, on[1] + 0.2);
+  await page.keyboard.press('Escape');
+  const onCurve = ((await sketch())?.constraints ?? []).find((c) => (c as unknown as { type: string; circle?: string }).circle === spline.id) as unknown as { type: string; point: string };
+  expect(onCurve.type).toBe('pointOnCircle');
+  // The last fit point: the relation symbol of the new point sits near the inner ones at this zoom.
+  const [fitX, fitY] = drawn.get(spline.points[3] as string) ?? [0, 0];
+  const fit = await project(page, [fitX, fitY, 0]);
+  const moved = await project(page, [fitX, fitY - 8, 0]);
+  await page.mouse.move(canvas.x + fit.x, canvas.y + fit.y);
+  await page.mouse.down();
+  await page.mouse.move(canvas.x + moved.x, canvas.y + moved.y, { steps: 12 });
+  await page.mouse.up();
+  await expect.poll(async () => (await positionsNow()).get(spline.points[3] as string)?.[1] as number).toBeLessThan(fitY - 7);
+  const { curve: movedCurve, positions } = await curveNow();
+  expect(closestOnSpline(movedCurve, positions.get(onCurve.point) ?? [0, 0]).distance).toBeLessThan(1e-6);
   await expect(page.locator('[data-testid="sketch-status"]')).toHaveText('Under defined');
   await page.click('[data-testid="sketch-ok"]');
   expect((await state(page)).history.features).toHaveLength(1);

@@ -4,7 +4,7 @@ import type { MeshPayload } from '../../../kernel/protocol.ts';
 import { ORIGIN_ID, STANDARD_PLANES, type SketchData } from '../../../shared/model/sketch.ts';
 import { formatNumber, formatQuantity } from '../format.ts';
 import { arcGeometry, ellipseOf, pointPositions, splineOf } from '../sketch/geometry.ts';
-import { splineLength } from '../sketch/spline.ts';
+import { splineLength } from '../../../shared/model/spline.ts';
 import { relationKindOf } from '../sketch/relations.ts';
 import { useAppState, type Pick } from '../state/store.ts';
 

@@ -1,11 +1,12 @@
 import { isDimension, ORIGIN_ID, type SketchConstraint, type SketchEntity } from '../../shared/model/sketch.ts';
+import { closestOnSpline, splineThrough, type Point2 } from '../../shared/model/spline.ts';
 
 /**
  * Translates a sketch into parameters and equations.
  *
  * Parameters: x/y of every point, the radius of every circle (arcs derive their radius
  * from center and start point). Each equation is a residual over at most a handful of
- * parameters that is zero when its constraint holds.
+ * parameters (a point on a spline: all of its fit points) that is zero when its constraint holds.
  */
 
 export interface Equation {
@@ -130,6 +131,14 @@ export function buildSystem(entities: readonly SketchEntity[], constraints: read
     const major = point(entity.major);
     const minor = point(entity.minor);
     return c && major && minor ? [c, major, minor] : null;
+  };
+
+  /** Fit points of a spline, as parameter pairs. */
+  const splineOf = (id: string): [number, number][] | null => {
+    const entity = byId.get(id);
+    if (entity?.type !== 'spline') return null;
+    const points = entity.points.map(point);
+    return points.every((p) => p !== undefined) ? (points as [number, number][]) : null;
   };
 
   /** End points of lines and arcs (circles have none). */
@@ -372,6 +381,21 @@ export function buildSystem(entities: readonly SketchEntity[], constraints: read
       }
       case 'pointOnCircle': {
         const p = point(constraint.point);
+        const fit = splineOf(constraint.circle);
+        if (p && fit) {
+          // The signed distance from the spline, continued straight beyond its ends (smooth there).
+          const n = fit.length;
+          add(id, [...fit.flat(), ...p], (v) => {
+            const points: Point2[] = [];
+            for (let i = 0; i < n; i++) points.push([v[2 * i] as number, v[2 * i + 1] as number]);
+            const target: Point2 = [v[2 * n] as number, v[2 * n + 1] as number];
+            const spline = splineThrough(points);
+            // All fit points in one place: the distance from there.
+            if (!spline) return lengthOf(target[0] - (points[0] as Point2)[0], target[1] - (points[0] as Point2)[1]);
+            return closestOnSpline(spline, target, true).signed;
+          });
+          break;
+        }
         const ellipse = ellipseOf(constraint.circle);
         if (p && ellipse) {
           // How far the point is from the ellipse along the ray from the center (in mm).

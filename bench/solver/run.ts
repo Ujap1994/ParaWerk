@@ -5,7 +5,7 @@
 import { GcsWrapper, init_planegcs_module } from '@salusoft89/planegcs';
 import { solveSketch } from '../../src/sketch/solver/index.ts';
 import { calibration, measure, meta, printReport, summarize, writeReport, type BenchReport, type CaseResult } from '../lib.ts';
-import { rectangleChain } from './parawerk.ts';
+import { rectangleChain, splineWithPoints } from './parawerk.ts';
 
 type Primitive = Record<string, unknown> & { id: string; type: string };
 
@@ -87,6 +87,17 @@ if (last?.type === 'point') {
   }, { iterations: 20, warmup: 2 });
 }
 cases['parawerk.analyze.1000constraints'] = measure(() => solveSketch(solved, { analyze: true }), { iterations: 5, warmup: 1 });
+
+// Dragging a fit point of a spline that holds points on it (every such point depends on all fit points).
+for (const [fitPoints, onCurve] of [[20, 10], [100, 20]] as const) {
+  const { sketch: wave, dragged } = splineWithPoints(fitPoints, onCurve);
+  const start = solveSketch(wave, { analyze: false }).sketch;
+  const point = start.entities.find((e) => e.id === dragged);
+  if (point?.type !== 'point') continue;
+  cases[`parawerk.drag.spline${fitPoints}x${onCurve}`] = measure((i) => {
+    solveSketch(start, { drag: { kind: 'point', id: dragged, x: point.x, y: point.y + 1 + (i % 5) }, analyze: false });
+  }, { iterations: 15, warmup: 2 });
+}
 
 const report: BenchReport = { suite: 'solver', meta: meta(), cases };
 printReport(report);

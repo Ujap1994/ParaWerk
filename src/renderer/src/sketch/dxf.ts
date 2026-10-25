@@ -8,7 +8,7 @@
 import type { SketchData } from '../../../shared/model/sketch.ts';
 import { SketchBuilder } from './builder.ts';
 import { arcGeometry, ellipseOf, ellipsePoint, pointPositions, splineOf, type Point2 } from './geometry.ts';
-import { segmentsPerSpan, splinePolyline } from './spline.ts';
+import { segmentsPerSpan, splinePolyline } from '../../../shared/model/spline.ts';
 
 /** Largest distance of an exported ellipse or spline polyline from the true curve, in millimeters. */
 const CURVE_TOLERANCE = 0.005;

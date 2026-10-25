@@ -183,8 +183,8 @@ function snapRelations(snap: SnapResult, withAlignment: boolean): ToolRelation[]
   return relations;
 }
 
-function snapAt(sketch: SketchData, event: ToolEvent, anchor: Point2 | null = null): SnapResult {
-  return snapCursor(sketch, pointPositions(sketch), event.u, event.v, { tolerance: event.tolerance, alignTolerance: event.alignTolerance, anchor });
+function snapAt(sketch: SketchData, event: ToolEvent, anchor: Point2 | null = null, exclude?: ReadonlySet<string>): SnapResult {
+  return snapCursor(sketch, pointPositions(sketch), event.u, event.v, { tolerance: event.tolerance, alignTolerance: event.alignTolerance, anchor, ...(exclude ? { exclude } : {}) });
 }
 
 /** Lines drawn as a connected chain; a click on the start point closes it, Esc or a second click on the same spot ends it. */
@@ -395,8 +395,13 @@ export class SplineTool implements SketchTool {
     return entity?.type === 'spline' ? entity : null;
   }
 
+  /** Snapping, except onto the spline being drawn: its own fit points cannot lie on it by relation. */
+  private snap(sketch: SketchData, event: ToolEvent): SnapResult {
+    return snapAt(sketch, event, this.last, this.spline ? new Set([this.spline]) : undefined);
+  }
+
   hover(sketch: SketchData, event: ToolEvent): ToolPreview {
-    const snap = snapAt(sketch, event, this.last);
+    const snap = this.snap(sketch, event);
     const last = this.last;
     if (!last) return { geometry: EMPTY, snap, info: { relations: snapRelations(snap, false) } };
     const positions = pointPositions(sketch);
@@ -408,7 +413,7 @@ export class SplineTool implements SketchTool {
   }
 
   click(sketch: SketchData, event: ToolEvent): ToolStep {
-    const snap = snapAt(sketch, event, this.last);
+    const snap = this.snap(sketch, event);
     let spline = this.current(sketch);
     if (this.spline && !spline) this.cancel();
     if (!this.last) {

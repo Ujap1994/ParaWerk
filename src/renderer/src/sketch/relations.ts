@@ -66,33 +66,37 @@ interface Classified {
   lines: string[];
   rounds: string[];
   ellipses: string[];
+  splines: string[];
 }
 
 function classify(sketch: SketchData, ids: readonly string[]): Classified {
   const types = new Map(sketch.entities.map((entity) => [entity.id, entity.type]));
   types.set(ORIGIN_ID, 'point');
-  const result: Classified = { points: [], lines: [], rounds: [], ellipses: [] };
+  const result: Classified = { points: [], lines: [], rounds: [], ellipses: [], splines: [] };
   for (const id of ids) {
     const type = types.get(id);
     if (type === 'point') result.points.push(id);
     else if (type === 'line') result.lines.push(id);
     else if (type === 'circle' || type === 'arc') result.rounds.push(id);
     else if (type === 'ellipse') result.ellipses.push(id);
+    else if (type === 'spline') result.splines.push(id);
   }
   return result;
 }
 
 /** The relations that make sense for the selected entities, in a stable order. */
 export function applicableRelations(sketch: SketchData, ids: readonly string[]): RelationOption[] {
-  const { points, lines, rounds, ellipses } = classify(sketch, ids);
+  const { points, lines, rounds, ellipses, splines } = classify(sketch, ids);
   const [p0, p1] = points as [string | undefined, string | undefined];
   const [l0, l1] = lines as [string | undefined, string | undefined];
   const [r0, r1] = rounds as [string | undefined, string | undefined];
   const [e0] = ellipses as [string | undefined];
-  const noEllipse = ellipses.length === 0;
-  const onlyLines = lines.length > 0 && points.length === 0 && rounds.length === 0 && noEllipse;
-  const onlyPoints = points.length > 0 && lines.length === 0 && rounds.length === 0 && noEllipse;
-  const onlyRounds = rounds.length > 0 && points.length === 0 && lines.length === 0 && noEllipse;
+  const [s0] = splines as [string | undefined];
+  // Ellipses and splines take only a few relations; with one of them selected, the others do not apply.
+  const onlyBasic = ellipses.length === 0 && splines.length === 0;
+  const onlyLines = lines.length > 0 && points.length === 0 && rounds.length === 0 && onlyBasic;
+  const onlyPoints = points.length > 0 && lines.length === 0 && rounds.length === 0 && onlyBasic;
+  const onlyRounds = rounds.length > 0 && points.length === 0 && lines.length === 0 && onlyBasic;
   const pairOf = (n: number, list: string[]) => list.length === n;
   const options: RelationOption[] = [];
   const add = (kind: RelationKind, relations: RelationInput[]) => {
@@ -108,17 +112,22 @@ export function applicableRelations(sketch: SketchData, ids: readonly string[]):
     add('vertical', [{ type: 'verticalPoints', a: p0, b: p1 }]);
     add('coincident', [{ type: 'coincident', a: p0, b: p1 }]);
   }
-  if (pairOf(1, points) && pairOf(1, lines) && rounds.length === 0 && p0 && l0) {
+  if (pairOf(1, points) && pairOf(1, lines) && rounds.length === 0 && onlyBasic && p0 && l0) {
     add('onCurve', [{ type: 'pointOnLine', point: p0, line: l0 }]);
     add('midpoint', [{ type: 'midpoint', point: p0, line: l0 }]);
   }
-  if (pairOf(1, points) && pairOf(1, rounds) && lines.length === 0 && noEllipse && p0 && r0) {
+  if (pairOf(1, points) && pairOf(1, rounds) && lines.length === 0 && onlyBasic && p0 && r0) {
     add('onCurve', [{ type: 'pointOnCircle', point: p0, circle: r0 }]);
   }
   // Ellipses: a point on them, a line tangent to them.
-  if (pairOf(1, ellipses) && rounds.length === 0 && e0) {
+  if (pairOf(1, ellipses) && rounds.length === 0 && splines.length === 0 && e0) {
     if (pairOf(1, points) && lines.length === 0 && p0) add('onCurve', [{ type: 'pointOnCircle', point: p0, circle: e0 }]);
     if (pairOf(1, lines) && points.length === 0 && l0) add('tangent', [{ type: 'tangent', a: l0, b: e0 }]);
+  }
+  // Splines: a point on them (not one of their own fit points, which lie on them anyway).
+  if (pairOf(1, splines) && pairOf(1, points) && lines.length === 0 && rounds.length === 0 && ellipses.length === 0 && p0 && s0) {
+    const spline = sketch.entities.find((entity) => entity.id === s0);
+    if (spline?.type === 'spline' && !spline.points.includes(p0)) add('onCurve', [{ type: 'pointOnCircle', point: p0, circle: s0 }]);
   }
   if (onlyLines && pairOf(2, lines) && l0 && l1) {
     add('parallel', [{ type: 'parallel', a: l0, b: l1 }]);
@@ -127,13 +136,13 @@ export function applicableRelations(sketch: SketchData, ids: readonly string[]):
   }
   if (onlyLines && lines.length >= 2 && l0) add('equal', lines.slice(1).map((line) => ({ type: 'equal', a: l0, b: line })));
   if (onlyRounds && rounds.length >= 2 && r0) add('equal', rounds.slice(1).map((round) => ({ type: 'equal', a: r0, b: round })));
-  if (points.length === 0 && noEllipse && ((pairOf(1, lines) && pairOf(1, rounds)) || (lines.length === 0 && pairOf(2, rounds)))) {
+  if (points.length === 0 && onlyBasic && ((pairOf(1, lines) && pairOf(1, rounds)) || (lines.length === 0 && pairOf(2, rounds)))) {
     const a = (l0 ?? r0) as string;
     const b = (l0 ? r0 : r1) as string;
     add('tangent', [{ type: 'tangent', a, b }]);
   }
   if (onlyRounds && pairOf(2, rounds) && r0 && r1) add('concentric', [{ type: 'concentric', a: r0, b: r1 }]);
-  if (pairOf(2, points) && pairOf(1, lines) && rounds.length === 0 && noEllipse && p0 && p1 && l0) add('symmetric', [{ type: 'symmetric', a: p0, b: p1, line: l0 }]);
+  if (pairOf(2, points) && pairOf(1, lines) && rounds.length === 0 && onlyBasic && p0 && p1 && l0) add('symmetric', [{ type: 'symmetric', a: p0, b: p1, line: l0 }]);
   if (onlyPoints) add('fix', points.filter((point) => point !== ORIGIN_ID).map((point) => ({ type: 'fix', point })));
   return options;
 }

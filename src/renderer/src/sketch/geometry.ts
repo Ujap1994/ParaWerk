@@ -4,9 +4,9 @@
  */
 
 import { ORIGIN_ID, type SketchConstraint, type SketchCurve, type SketchData, type SketchEntity } from '../../../shared/model/sketch.ts';
-import { segmentsPerSpan, splinePolyline, splineThrough, type SplineGeometry } from './spline.ts';
+import { closestOnSpline, segmentsPerSpan, splinePolyline, splineThrough, type Point2, type SplineGeometry } from '../../../shared/model/spline.ts';
 
-export type Point2 = readonly [number, number];
+export type { Point2 };
 
 /** Display deviation of tessellated circles and arcs from the true curve, in pixels. */
 const MAX_DEVIATION_PX = 0.2;
@@ -209,11 +209,7 @@ export function distanceToCurve(curve: SketchCurve, positions: ReadonlyMap<strin
   }
   if (curve.type === 'spline') {
     const spline = splineOf(curve, positions);
-    if (!spline) return Infinity;
-    const polyline = splinePolyline(spline, 24);
-    let best = Infinity;
-    for (let i = 1; i < polyline.length; i++) best = Math.min(best, distanceToSegment(u, v, polyline[i - 1] as Point2, polyline[i] as Point2));
-    return best;
+    return spline ? closestOnSpline(spline, [u, v]).distance : Infinity;
   }
   const center = positions.get(curve.center);
   if (!center) return Infinity;

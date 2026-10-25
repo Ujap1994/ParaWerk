@@ -1,5 +1,6 @@
 import { test, type Page } from '@playwright/test';
 import path from 'node:path';
+import { splinePoint, splineRoots, splineThrough } from '../../src/shared/model/spline.ts';
 import { idle, launchApp, repoRoot } from '../e2e/harness.ts';
 
 /**
@@ -361,8 +362,12 @@ test('README and user guide screenshots', async () => {
   await page.screenshot({ path: out('sketch-ellipse.png') });
   await page.click('[data-testid="sketch-ok"]');
 
-  // A spline between two lines: a handle profile whose fit points are dimensioned like any points.
-  await page.evaluate(() => {
+  // A spline between two lines: a handle profile whose fit points are dimensioned like any points, and
+  // a point held on the spline (for a later hole) placed by a dimension.
+  const handle = splineThrough([[70, 12], [50, 22], [30, 14], [12, 26], [0, 18]]);
+  if (!handle) throw new Error('no spline');
+  const onHandle = splinePoint(handle, splineRoots(handle, (p) => p[0] - 22)[0] as number);
+  await page.evaluate((onHandle) => {
     const P = (id: string, x: number, y: number) => ({ id, type: 'point', x, y });
     const sketch = {
       entities: [
@@ -371,6 +376,7 @@ test('README and user guide screenshots', async () => {
         P('s1', 50, 22), P('s2', 30, 14), P('s3', 12, 26), P('c', 0, 18),
         { id: 'curve', type: 'spline', points: ['b', 's1', 's2', 's3', 'c'] },
         { id: 'start', type: 'line', p1: 'c', p2: 'origin' },
+        P('q', onHandle[0], onHandle[1]),
       ],
       constraints: [
         { id: 'h', type: 'horizontal', line: 'base' }, { id: 'v1', type: 'vertical', line: 'end' }, { id: 'v2', type: 'vertical', line: 'start' },
@@ -378,11 +384,13 @@ test('README and user guide screenshots', async () => {
         { id: 'r', type: 'distance', a: 'a', b: 'b', value: 12, driving: true, offset: [8, 0] },
         { id: 'l', type: 'distance', a: 'c', b: 'origin', value: 18, driving: true, offset: [-8, 0] },
         { id: 'top', type: 'verticalDistance', a: 'origin', b: 's1', value: 22, driving: true, offset: [40, 0] },
+        { id: 'on', type: 'pointOnCircle', point: 'q', circle: 'curve' },
+        { id: 'qx', type: 'horizontalDistance', a: 'origin', b: 'q', value: 22, driving: true, offset: [0, 14] },
       ],
     };
     const features = [{ id: 'handle', type: 'sketch', plane: { kind: 'standard', plane: 'top' }, sketch }];
     (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features, past: [], future: [] } });
-  });
+  }, onHandle);
   await idle(page);
   await page.dblclick('.tree-item[data-feature-id="handle"]');
   await idle(page);

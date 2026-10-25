@@ -32,3 +32,31 @@ export function rectangleChain(rectangles: number, seed: number): { sketch: Sket
   }
   return { sketch: { entities, constraints }, constraints: constraints.length };
 }
+
+/**
+ * A spline through `fitPoints` points along a wave with `onCurve` points held on it, each placed by a
+ * horizontal dimension from the origin. All fit points but the middle one are fixed, so dragging the
+ * middle one re-solves every point on the curve (each depends on all fit points).
+ */
+export function splineWithPoints(fitPoints: number, onCurve: number): { sketch: SketchData; dragged: string } {
+  const entities: SketchEntity[] = [];
+  const constraints: SketchConstraint[] = [];
+  const ids: string[] = [];
+  for (let i = 0; i < fitPoints; i++) {
+    entities.push({ id: `f${i}`, type: 'point', x: i * 10, y: 8 * Math.sin(i * 0.7) });
+    ids.push(`f${i}`);
+  }
+  entities.push({ id: 's', type: 'spline', points: ids });
+  const middle = Math.floor(fitPoints / 2);
+  for (let i = 0; i < fitPoints; i++) if (i !== middle) constraints.push({ id: `fix${i}`, type: 'fix', point: `f${i}` });
+  const span = (fitPoints - 1) * 10;
+  for (let k = 0; k < onCurve; k++) {
+    const x = ((k + 0.5) * span) / onCurve;
+    entities.push({ id: `q${k}`, type: 'point', x, y: 8 * Math.sin((x / 10) * 0.7) });
+    constraints.push(
+      { id: `on${k}`, type: 'pointOnCircle', point: `q${k}`, circle: 's' },
+      { id: `dx${k}`, type: 'horizontalDistance', a: ORIGIN_ID, b: `q${k}`, value: x, driving: true },
+    );
+  }
+  return { sketch: { entities, constraints }, dragged: `f${middle}` };
+}

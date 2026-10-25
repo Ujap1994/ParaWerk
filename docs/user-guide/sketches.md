@@ -172,12 +172,15 @@ passes through every point, bends continuously (no kinks inside) and runs straig
 - The fit points are ordinary sketch points: they snap while you draw (so a spline can start at the end
   of a line), and you can drag, dimension and relate them like any point. The curve follows.
 - The spline is fully defined when all of its points are.
-- Points do not snap onto the curve between the fit points yet, and other curves cannot be trimmed or
-  extended up to a spline; splines can be moved, copied, mirrored and patterned, but not trimmed or
-  offset.
+- Points snap onto the curve between the fit points and stay on it (*on curve*); you can also add the
+  relation to a selected point and spline. Such a point can still slide along the spline until a
+  dimension holds it, and it follows when the fit points move. Beyond its ends a spline counts as
+  continued straight, like a line beyond its end points.
+- Other curves cannot be trimmed or extended up to a spline yet; splines can be moved, copied,
+  mirrored and patterned, but not trimmed or offset.
 - DXF export writes splines as polylines within 0.005 mm; DXF import reads splines defined by fit points.
 
-![A profile with a spline between two lines; pointing at it shows its points and length](../images/screenshots/sketch-spline.png)
+![A profile with a spline between two lines and a point held on it; pointing at the spline shows its points and length](../images/screenshots/sketch-spline.png)
 
 ### Converting model edges
 
@@ -217,7 +220,7 @@ your intent is kept when you later change dimensions:
 |---|---|---|
 | An end point, a center or the sketch origin | filled orange dot | the point is shared (*coincident*) |
 | The midpoint of a line | orange ring | *midpoint* |
-| A line, circle or arc | orange ring | *on curve* |
+| A line, circle, arc, ellipse or spline | orange ring | *on curve* |
 | Horizontal or vertical from the previous point | dashed line | the new line is *horizontal* or *vertical* |
 | Level with or above another point | dashed line | none – it only helps to line things up |
 
@@ -244,7 +247,7 @@ relations are added automatically while you draw; others you add yourself:
 | Two lines | Parallel, perpendicular, collinear, equal length |
 | Two points | Horizontal, vertical (aligned with each other), coincident, fix |
 | A point and a line | On curve (on the line or its extension), midpoint |
-| A point and a circle, arc or ellipse | On curve |
+| A point and a circle, arc, ellipse or spline | On curve (not for the spline's own fit points) |
 | Two circles or arcs | Equal radius, tangent, concentric |
 | A line and a circle, arc or ellipse | Tangent |
 | Two points and a line | Symmetric about the line |

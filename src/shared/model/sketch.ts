@@ -92,7 +92,7 @@ export type SketchRelation =
   | (ConstraintBase & { type: 'concentric'; a: string; b: string })
   | (ConstraintBase & { type: 'midpoint'; point: string; line: string })
   | (ConstraintBase & { type: 'pointOnLine'; point: string; line: string })
-  /** A point on a circle, arc or ellipse. */
+  /** A point on a circle, arc, ellipse or spline (arcs count as full circles, splines run on straight beyond their ends). */
   | (ConstraintBase & { type: 'pointOnCircle'; point: string; circle: string })
   | (ConstraintBase & { type: 'symmetric'; a: string; b: string; line: string })
   | (ConstraintBase & { type: 'fix'; point: string });

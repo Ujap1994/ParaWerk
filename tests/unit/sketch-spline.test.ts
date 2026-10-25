@@ -3,7 +3,8 @@ import { dragTarget } from '../../src/renderer/src/sketch/drag.ts';
 import { dxfToSketch, sketchToDxf } from '../../src/renderer/src/sketch/dxf.ts';
 import { curvePolyline, deleteEntities, hitTest, pointPositions, splineOf } from '../../src/renderer/src/sketch/geometry.ts';
 import { snapCursor } from '../../src/renderer/src/sketch/snap.ts';
-import { segmentsPerSpan, splineLength, splinePoint, splinePolyline, splineThrough } from '../../src/renderer/src/sketch/spline.ts';
+import { applicableRelations } from '../../src/renderer/src/sketch/relations.ts';
+import { closestOnSpline, segmentsPerSpan, splineAt, splineEnd, splineLength, splinePoint, splinePolyline, splineRoots, splineThrough } from '../../src/shared/model/spline.ts';
 import { createTool, type ToolEvent } from '../../src/renderer/src/sketch/tools.ts';
 import { linearPattern } from '../../src/renderer/src/sketch/transform.ts';
 import type { SketchData, SketchSpline } from '../../src/shared/model/sketch.ts';
@@ -11,6 +12,11 @@ import { parseSketchData } from '../../src/shared/model/validate-sketch.ts';
 import { solveSketch } from '../../src/sketch/solver/index.ts';
 
 const point = (id: string, x: number, y: number) => ({ id, type: 'point' as const, x, y });
+const pointAt = (sketch: SketchData, id: string) => {
+  const entity = sketch.entities.find((candidate) => candidate.id === id);
+  if (entity?.type !== 'point') throw new Error(`no point ${id}`);
+  return { x: entity.x, y: entity.y };
+};
 const EMPTY: SketchData = { entities: [], constraints: [] };
 
 const base: SketchData = {
@@ -67,6 +73,52 @@ describe('spline math', () => {
   });
 });
 
+describe('nearest points and crossings', () => {
+  const spline = splineThrough([[0, 0], [20, 15], [40, 0], [60, 10]]);
+  if (!spline) throw new Error('no spline');
+
+  it('has derivatives that match the curve and runs on straight beyond its ends', () => {
+    for (const s of [3, 17.5, 40, 61]) {
+      const e = 1e-5;
+      const { tangent, bend } = splineAt(spline, s);
+      const [before, after] = [splineAt(spline, s - e), splineAt(spline, s + e)];
+      expect(tangent[0]).toBeCloseTo((after.point[0] - before.point[0]) / (2 * e), 5);
+      expect(tangent[1]).toBeCloseTo((after.point[1] - before.point[1]) / (2 * e), 5);
+      expect(bend[1]).toBeCloseTo((after.tangent[1] - before.tangent[1]) / (2 * e), 4);
+    }
+    const end = splineEnd(spline);
+    const { point, tangent } = splineAt(spline, end);
+    expect(splineAt(spline, end + 10).point).toEqual([expect.closeTo(point[0] + 10 * tangent[0], 9), expect.closeTo(point[1] + 10 * tangent[1], 9)]);
+    expect(splineAt(spline, end + 10).bend).toEqual([0, 0]);
+    // splinePoint stays on the curve.
+    expect(splinePoint(spline, end + 10)).toEqual(point);
+  });
+
+  it('finds the nearest point: perpendicular foot, signed by side, also on the continuation', () => {
+    const on = splinePoint(spline, 30);
+    const { tangent } = splineAt(spline, 30);
+    const length = Math.hypot(...tangent);
+    const normal = [-tangent[1] / length, tangent[0] / length] as const;
+    const left = closestOnSpline(spline, [on[0] + 0.5 * normal[0], on[1] + 0.5 * normal[1]]);
+    expect(left.s).toBeCloseTo(30, 6);
+    expect(left.signed).toBeCloseTo(0.5, 9);
+    expect(closestOnSpline(spline, [on[0] - 0.5 * normal[0], on[1] - 0.5 * normal[1]]).signed).toBeCloseTo(-0.5, 9);
+    // Beyond the start: the end point, or the straight continuation when extended.
+    const start = splineAt(spline, 0);
+    const beyond: [number, number] = [-5 * start.tangent[0], -5 * start.tangent[1] + 1];
+    expect(closestOnSpline(spline, beyond).s).toBe(0);
+    const extended = closestOnSpline(spline, beyond, true);
+    expect(extended.s).toBeLessThan(0);
+    expect(extended.distance).toBeLessThan(closestOnSpline(spline, beyond).distance);
+  });
+
+  it('finds where a function changes its sign along the spline', () => {
+    const roots = splineRoots(spline, (p) => p[1] - 5);
+    expect(roots).toHaveLength(3);
+    for (const s of roots) expect(splinePoint(spline, s)[1]).toBeCloseTo(5, 9);
+  });
+});
+
 describe('splines in sketches', () => {
   it('are valid in files, need at least two points and are drawn through their points', () => {
     expect(() => parseSketchData(JSON.parse(JSON.stringify(base)))).not.toThrow();
@@ -90,13 +142,78 @@ describe('splines in sketches', () => {
     expect(full.status?.entities.s).toBe('full');
   });
 
-  it('snap only at their fit points (no relation keeps a point on a spline yet)', () => {
+  it('snap onto the curve between their fit points and keep points there by a relation', () => {
     const positions = pointPositions(base);
     const spline = splineOf(base.entities[4] as SketchSpline, positions);
     if (!spline) throw new Error('no spline');
     const on = splinePoint(spline, ((spline.knots[1] as number) + (spline.knots[2] as number)) / 2);
-    expect(snapCursor(base, positions, on[0], on[1], { tolerance: 1, alignTolerance: 0.1 }).target.kind).not.toBe('curve');
+    const snap = snapCursor(base, positions, on[0] + 0.3, on[1] + 0.3, { tolerance: 1, alignTolerance: 0.1 });
+    expect(snap.target).toEqual({ kind: 'curve', curve: 's', curveType: 'spline' });
+    expect(closestOnSpline(spline, [snap.u, snap.v]).distance).toBeLessThan(1e-9);
     expect(snapCursor(base, positions, 20.3, 15.2, { tolerance: 1, alignTolerance: 0.1 }).target).toEqual({ kind: 'point', id: 'b' });
+    // Aligned with the anchor: the crossing of the alignment with the spline.
+    const crossing = splinePoint(spline, splineRoots(spline, (p) => p[1] - 5)[1] as number);
+    const aligned = snapCursor(base, positions, crossing[0] + 0.3, 5.3, { tolerance: 1, alignTolerance: 0.5, anchor: [100, 5] });
+    expect(aligned.target.kind).toBe('curve');
+    expect(aligned.v).toBeCloseTo(5, 9);
+    expect(closestOnSpline(spline, [aligned.u, aligned.v]).distance).toBeLessThan(1e-9);
+
+    // The point tool places a point on the spline with an on-curve relation.
+    const tool = createTool('point');
+    const step = tool.click(base, { u: on[0] + 0.3, v: on[1] + 0.3, tolerance: 1, alignTolerance: 0.1 });
+    const sketch = step.commit as SketchData;
+    expect(sketch.constraints).toEqual([expect.objectContaining({ type: 'pointOnCircle', circle: 's' })]);
+    expect(() => parseSketchData(JSON.parse(JSON.stringify(sketch)))).not.toThrow();
+  });
+
+  it('keep a point on them while their fit points move, with one degree of freedom along the curve', () => {
+    const fixed = ['a', 'b', 'c', 'd'].map((id) => ({ id: `f${id}`, type: 'fix' as const, point: id }));
+    const sketch: SketchData = {
+      entities: [...base.entities, point('p', 30, 9)],
+      constraints: [{ id: 'on', type: 'pointOnCircle', point: 'p', circle: 's' }],
+    };
+    const solved = solveSketch({ ...sketch, constraints: [...sketch.constraints, ...fixed] });
+    expect(solved.converged).toBe(true);
+    const positions = pointPositions(solved.sketch);
+    const spline = splineOf(base.entities[4] as SketchSpline, positions);
+    if (!spline) throw new Error('no spline');
+    expect(closestOnSpline(spline, positions.get('p') as [number, number]).distance).toBeLessThan(1e-7);
+    // The point can still slide along the spline ...
+    expect(solved.status?.entities.p).toBe('under');
+    // ... until a dimension holds it.
+    const held = solveSketch({ ...sketch, constraints: [...sketch.constraints, ...fixed, { id: 'dx', type: 'horizontalDistance', a: 'origin', b: 'p', value: 30, driving: true }] });
+    expect(held.converged).toBe(true);
+    expect(held.status?.entities.p).toBe('full');
+    expect(held.status?.sketch).toBe('full');
+
+    // Moving a fit point takes the point along.
+    const moved = solveSketch({
+      ...sketch,
+      constraints: [...sketch.constraints, { id: 'fa', type: 'fix', point: 'a' }, { id: 'fc', type: 'fix', point: 'c' }, { id: 'fd', type: 'fix', point: 'd' }, { id: 'hb', type: 'verticalDistance', a: 'a', b: 'b', value: 25, driving: true }, { id: 'dx', type: 'horizontalDistance', a: 'origin', b: 'p', value: 30, driving: true }],
+    });
+    expect(moved.converged).toBe(true);
+    const movedSpline = splineOf(base.entities[4] as SketchSpline, pointPositions(moved.sketch));
+    if (!movedSpline) throw new Error('no spline');
+    expect(pointAt(moved.sketch, 'b').y).toBeCloseTo(25, 6);
+    expect(closestOnSpline(movedSpline, pointPositions(moved.sketch).get('p') as [number, number]).distance).toBeLessThan(1e-7);
+  });
+
+  it('take the on-curve relation for a point, but not for their own fit points', () => {
+    const sketch: SketchData = { entities: [...base.entities, point('p', 30, 9)], constraints: [] };
+    expect(applicableRelations(sketch, ['p', 's']).map((option) => option.kind)).toEqual(['onCurve']);
+    expect(applicableRelations(sketch, ['b', 's'])).toEqual([]);
+    // A spline among the selection does not turn point relations into something else.
+    expect(applicableRelations(sketch, ['p', 'b', 's'])).toEqual([]);
+  });
+
+  it('are not snapped onto while they are drawn', () => {
+    const event = (u: number, v: number): ToolEvent => ({ u, v, tolerance: 1, alignTolerance: 0.1 });
+    const tool = createTool('spline');
+    let sketch = EMPTY;
+    for (const [u, v] of [[0, 0], [20, 15], [40, 0]] as const) sketch = tool.click(sketch, event(u, v)).commit ?? sketch;
+    // Back near the spline drawn so far: a free point, no relation to the spline itself.
+    const step = tool.click(sketch, event(10, 9.5));
+    expect(step.commit?.constraints ?? []).toEqual([]);
   });
 
   it('are drawn point by point, each point one undo step, and ended by a second click', () => {

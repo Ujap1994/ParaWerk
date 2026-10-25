@@ -19,6 +19,9 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 - Calculations in number fields and dimension values: + − × ÷, powers, brackets, π, sqrt, abs and
   sin/cos/tan in degrees, and lengths with units (mm, cm, m, in); evaluated by an own parser, never as
   code.
+- Points on splines: points snap onto a spline between its fit points and stay on it (*on curve*,
+  also offered for a selected point and spline); they slide along the curve until a dimension holds
+  them and follow when the fit points move.
 - Global variables and equations: a list of named values (also as equations over each other, with
   cycles and unknown names explained), used by name in feature parameters and sketch dimensions; when a
   variable changes, every parameter and dimension that uses it follows and changed sketches are solved
