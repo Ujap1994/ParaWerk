@@ -12,6 +12,8 @@ export interface Settings {
   showFrameStats: boolean;
   /** Relation symbols (H, V, ∥, ...) next to the geometry of the open sketch. */
   showSketchRelations: boolean;
+  /** Recovery copies of unsaved work, restored after a crash. */
+  autoRecover: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -21,6 +23,7 @@ export const DEFAULT_SETTINGS: Settings = {
   projection: 'orthographic',
   showFrameStats: false,
   showSketchRelations: true,
+  autoRecover: true,
 };
 
 function pick<T extends string>(value: unknown, allowed: readonly T[], fallback: T): T {
@@ -37,5 +40,6 @@ export function sanitizeSettings(input: unknown, base: Settings = DEFAULT_SETTIN
     projection: pick(raw.projection, ['orthographic', 'perspective'], base.projection),
     showFrameStats: typeof raw.showFrameStats === 'boolean' ? raw.showFrameStats : base.showFrameStats,
     showSketchRelations: typeof raw.showSketchRelations === 'boolean' ? raw.showSketchRelations : base.showSketchRelations,
+    autoRecover: typeof raw.autoRecover === 'boolean' ? raw.autoRecover : base.autoRecover,
   };
 }

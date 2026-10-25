@@ -12,6 +12,7 @@ Open **Settings** from the command bar (or Ctrl/⌘ + ,).
 | **Projection** | Orthographic or perspective |
 | **Show frame statistics** | Shows frames per second and render time in the status bar |
 | **Show relation symbols in sketches** | Symbols of the relations (H, V, ∥, …) next to the geometry of the open sketch |
+| **Keep recovery copies of unsaved work** | On by default; see [recovery](files.md#recovery-after-a-crash) |
 
 ![Dark theme in German](../images/screenshots/dark-theme-german.png)
 

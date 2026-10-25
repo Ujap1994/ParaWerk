@@ -346,7 +346,9 @@
     "projectionPerspective": "Perspektivisch",
     "frameStats": "Bildstatistik anzeigen",
     "sketchRelations": "Beziehungssymbole in Skizzen anzeigen",
-    "close": "Schließen"
+    "close": "Schließen",
+    "autoRecover": "Wiederherstellungskopien ungesicherter Arbeit anlegen",
+    "autoRecoverHelp": "Eine Kopie wird 15 Sekunden nach einer Änderung geschrieben und nach einem Absturz angeboten; Speichern oder normales Schließen entfernt sie."
   },
   "about": {
     "title": "Über ParaWerk",
@@ -839,5 +841,17 @@
     "offset": "Abstand",
     "flip": "Andere Seite zeigen",
     "hint": "Nur eine Ansicht: Teil, Masse und Exporte ändern sich nicht."
+  },
+  "recovery": {
+    "title": "Ungesicherte Arbeit wiederherstellen",
+    "message": "ParaWerk wurde beim letzten Mal nicht ordnungsgemäß beendet. Diese Dokumente hatten ungesicherte Änderungen:",
+    "savedAt": "Kopie vom {{time}}",
+    "restore": "Wiederherstellen",
+    "discard": "Verwerfen",
+    "later": "Später",
+    "restored": "{{name}} wurde wiederhergestellt. Speichern Sie es, um es zu behalten.",
+    "failed": "Die Kopie konnte nicht wiederhergestellt werden: {{message}}",
+    "missing": "die Kopie ist nicht mehr vorhanden",
+    "hint": "Kopien, die Sie jetzt weder wiederherstellen noch verwerfen, werden beim nächsten Start erneut angeboten."
   }
 }

@@ -935,3 +935,23 @@ test('section view screenshots', async () => {
   await page.screenshot({ path: out('section-view.png') });
   await app.close();
 });
+
+test('recovery screenshots', async () => {
+  // A session with unsaved work ends abnormally; the next start offers the copy.
+  const first = await launchApp({ width: 1440, height: 900 });
+  await first.page.evaluate(() => {
+    const features = [
+      { id: 'plate', type: 'box', operation: 'add', width: 100, depth: 70, height: 15, position: [0, 0, 0] },
+      { id: 'boss', type: 'cylinder', operation: 'add', radius: 22, height: 30, axis: 'z', position: [0, 0, 15] },
+    ];
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features, past: [], future: [] }, savedFeatures: [], dirty: true, fileName: 'Flange', filePath: '/Users/me/Parts/Flange.pwpart' });
+  });
+  await idle(first.page);
+  await first.page.evaluate(() => (window as unknown as { __parawerk: { recovery: { flush(): Promise<void> } } }).__parawerk.recovery.flush());
+  first.app.process().kill('SIGKILL');
+  const { app, page } = await launchApp({ width: 1440, height: 900, userData: first.userData });
+  await page.locator('[data-testid="recovery-dialog"]').waitFor();
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: out('recovery.png') });
+  await app.close();
+});

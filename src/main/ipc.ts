@@ -8,11 +8,13 @@ import {
   type DocumentState,
   type OpenFileRequest,
   type OpenFileResult,
+  type RecoveryWrite,
   type SaveFileRequest,
   type SaveFileResult,
 } from '../shared/ipc.ts';
 import type { Settings } from '../shared/settings.ts';
 import type { MainWindow } from './window.ts';
+import { isValidSession, type RecoveryStore } from './recovery.ts';
 import type { SettingsStore } from './settings-store.ts';
 
 /** Largest file the app opens (part files are small; this guards against mistakes). */
@@ -21,6 +23,9 @@ const MAX_OPEN_BYTES = 512 * 1024 * 1024;
 export interface IpcContext {
   main: MainWindow;
   settings: SettingsStore;
+  recovery: RecoveryStore;
+  /** Remembers the session whose copy a clean close removes. */
+  onRecoverySession(session: string): void;
   testMode: boolean;
   selfTest: boolean;
   isTrustedUrl(url: string): boolean;
@@ -133,6 +138,28 @@ export function registerIpc(context: IpcContext): void {
       return;
     }
     if (typeof state?.title === 'string' && typeof state.dirty === 'boolean') main.setDocumentState(state);
+  });
+
+  ipcMain.handle(IpcChannel.recoveryWrite, async (event, request: RecoveryWrite) => {
+    trusted(event);
+    if (!isValidSession(request?.session)) throw new Error('invalid recovery session');
+    context.onRecoverySession(request.session);
+    await context.recovery.write(request.session, request.name, request.path ?? null, request.data);
+  });
+
+  ipcMain.handle(IpcChannel.recoveryList, async (event) => {
+    trusted(event);
+    return context.recovery.list();
+  });
+
+  ipcMain.handle(IpcChannel.recoveryRead, async (event, session: unknown) => {
+    trusted(event);
+    return isValidSession(session) ? context.recovery.read(session) : null;
+  });
+
+  ipcMain.handle(IpcChannel.recoveryDiscard, async (event, session: unknown) => {
+    trusted(event);
+    if (isValidSession(session)) await context.recovery.discard(session);
   });
 
   ipcMain.handle(IpcChannel.openExternal, async (event, url: string) => {

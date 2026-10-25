@@ -1,5 +1,6 @@
 import { Vector3 } from 'three';
 import * as commands from './commands.ts';
+import { writeRecoveryNow } from './state/recovery.ts';
 import { sketchHighlight } from './sketch/controller.ts';
 import { sketchSolver } from './sketch/solver.ts';
 import { kernel, whenIdle } from './state/rebuild.ts';
@@ -15,6 +16,7 @@ export function installTestHooks(): void {
     getState,
     setState,
     commands,
+    recovery: { flush: writeRecoveryNow },
     whenIdle,
     memory: () => kernel().memory(),
     viewport: {

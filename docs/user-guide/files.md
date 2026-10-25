@@ -11,6 +11,24 @@ the existing window.
 
 The format is documented in [ADR 0003](../adr/0003-native-file-format.md).
 
+## Recovery after a crash
+
+While a part has unsaved changes, ParaWerk writes a recovery copy of it 15 seconds after a change,
+including a sketch that is still open. Saving the part, or closing ParaWerk normally (also when you
+choose to discard the changes), removes the copy. If ParaWerk ends any other way – a crash, a power cut,
+a killed process – the copy stays, and the next start offers it:
+
+![Recovering unsaved work after a crash](../images/screenshots/recovery.png)
+
+- **Restore** opens the copy as an unsaved part with its name; save it to keep it. A part that had been
+  saved before keeps its file name, but *Save* asks where to save it.
+- **Discard** deletes the copy.
+- **Later** (or closing the dialog) keeps the copies; they are offered again at the next start.
+
+If the 3D window itself crashes, ParaWerk reloads it right away and offers the copy. Recovery copies are
+kept in the `recovery` folder of the application data folder (see [settings](settings.md)). They can be
+turned off in the settings (*Keep recovery copies of unsaved work*).
+
 ## Export
 
 | Format | Use | Details |

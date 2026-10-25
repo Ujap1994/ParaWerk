@@ -26,6 +26,10 @@ const api: ParaWerkApi = {
   },
   rendererReady: () => ipcRenderer.send(IpcChannel.rendererReady),
   reportSelfTest: (result) => ipcRenderer.send(IpcChannel.selfTestResult, result),
+  writeRecovery: (request) => ipcRenderer.invoke(IpcChannel.recoveryWrite, request),
+  listRecovery: () => ipcRenderer.invoke(IpcChannel.recoveryList),
+  readRecovery: (session) => ipcRenderer.invoke(IpcChannel.recoveryRead, session),
+  discardRecovery: (session) => ipcRenderer.invoke(IpcChannel.recoveryDiscard, session),
 };
 
 contextBridge.exposeInMainWorld('parawerk', api);

@@ -164,6 +164,7 @@ Marked complete for now: open points from hands-on testing are handled alongside
 | Materials (library and custom density), part color, mass properties with moments of inertia | ✅ done |
 | Measure tool: distances, angles, center distances, lengths, areas | ✅ done |
 | Section view (standard planes, faces and reference planes, offset, filled cut faces) | ✅ done |
+| Autosave of recovery copies and crash recovery | ✅ done |
 | Extrude up to next, up to curved surfaces, draft while extruding | open |
 
 ## 2. Guiding principles

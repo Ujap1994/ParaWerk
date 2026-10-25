@@ -21,6 +21,7 @@
     "src/shared/**/*",
     "src/renderer/src/**/*",
     "src/main/protocol-path.ts",
+    "src/main/recovery.ts",
     "src/sketch/**/*"
   ]
 }

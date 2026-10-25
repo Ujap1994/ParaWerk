@@ -8,6 +8,10 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### Added
+- Crash recovery: while a part has unsaved changes, a recovery copy (with an open sketch) is written
+  15 seconds after a change; saving or a normal close removes it. After a crash, power cut or killed
+  process the next start offers to restore or discard it, and a crashed 3D window is reloaded right away.
+  Can be turned off in the settings.
 - Section view: cuts the part open along the front, top or right plane or a selected planar face or
   plane, with an offset and either side shown; cut faces are filled (stencil caps), and cut-away faces and
   edges cannot be picked. A view only: part, mass and exports do not change.

@@ -1,7 +1,7 @@
 import { useStore } from 'zustand';
 import { createStore } from 'zustand/vanilla';
 import type { Language } from '../../../shared/i18n.ts';
-import type { AppInfo } from '../../../shared/ipc.ts';
+import type { AppInfo, RecoveryEntry } from '../../../shared/ipc.ts';
 import type { Feature, Vec3 } from '../../../shared/model/feature.ts';
 import { NO_PROPERTIES, type PartProperties } from '../../../shared/model/material.ts';
 import { DEFAULT_SETTINGS, type Settings } from '../../../shared/settings.ts';
@@ -114,6 +114,8 @@ export interface AppState {
   dialogs: { settings: boolean; about: boolean; material: boolean };
   /** The mass properties panel over the 3D view. */
   showMassProperties: boolean;
+  /** Recovery copies offered at the start (see state/recovery.ts). */
+  recovery: RecoveryEntry[];
   /** The section view (null: the whole part is shown). */
   section: SectionSettings | null;
   /** The measure tool: clicks pick up to two faces, edges or vertices, which are measured. */
@@ -157,6 +159,7 @@ export const initialState: AppState = {
   commandTab: 'features',
   dialogs: { settings: false, about: false, material: false },
   showMassProperties: false,
+  recovery: [],
   section: null,
   measuring: false,
   measurement: null,

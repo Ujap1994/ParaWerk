@@ -8,6 +8,7 @@ import { resolveLanguage } from '../shared/i18n.ts';
 import { IpcChannel, type MenuCommand, type SelfTestResult } from '../shared/ipc.ts';
 import type { Settings } from '../shared/settings.ts';
 import { isAllowedExternalUrl, registerIpc } from './ipc.ts';
+import { RecoveryStore } from './recovery.ts';
 import { buildMenu } from './menu.ts';
 import { registerAppProtocol, registerAppScheme } from './protocol.ts';
 import { SettingsStore } from './settings-store.ts';
@@ -139,7 +140,23 @@ if (!app.requestSingleInstanceLock()) {
     };
     applyMenu(settings.get());
 
-    registerIpc({ main, settings, testMode, selfTest, isTrustedUrl, systemLocale, onSettingsChanged: applyMenu });
+    // Recovery copies of unsaved work; a clean close removes the copy of the current session.
+    const recovery = new RecoveryStore(path.join(app.getPath('userData'), 'recovery'));
+    const sessions = new Set<string>();
+    window.on('closed', () => {
+      for (const session of sessions) void recovery.discard(session);
+    });
+    registerIpc({
+      main,
+      settings,
+      recovery,
+      onRecoverySession: (session) => sessions.add(session),
+      testMode,
+      selfTest,
+      isTrustedUrl,
+      systemLocale,
+      onSettingsChanged: applyMenu,
+    });
 
     if (selfTest) {
       ipcMain.on(IpcChannel.selfTestResult, (event, result: SelfTestResult) => {
@@ -158,6 +175,12 @@ if (!app.requestSingleInstanceLock()) {
         pendingFile = undefined;
         void sendOpenPath(file);
       }
+    });
+    // A renderer that crashed is started again; its recovery copy is offered then.
+    window.webContents.on('render-process-gone', (_event, details) => {
+      if (details.reason === 'clean-exit' || window.isDestroyed()) return;
+      console.error(`The renderer ended (${details.reason}); reloading`);
+      window.webContents.reload();
     });
     // A reload starts a fresh renderer that has to announce itself again.
     window.webContents.on('did-start-navigation', (details) => {

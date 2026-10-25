@@ -1938,3 +1938,46 @@ kbd {
   width: 100%;
   accent-color: var(--accent);
 }
+
+/* ------------------------------------------------------------ recovery */
+
+.recovery-list {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.recovery-entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+}
+
+.recovery-entry-text {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
+.recovery-entry-name {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recovery-entry-time {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+}

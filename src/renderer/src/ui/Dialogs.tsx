@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { REPOSITORY_URL } from '../../../shared/app-info.ts';
 import type { LanguageSetting, NavigationPreset, Projection, ThemeSetting } from '../../../shared/settings.ts';
 import * as commands from '../commands.ts';
-import { dismissToast, useAppState } from '../state/store.ts';
+import { discardRecovery, restoreRecovery } from '../state/recovery.ts';
+import { dismissToast, setState, useAppState } from '../state/store.ts';
 import { CloseIcon } from './icons.tsx';
 
 function Modal({ open, title, onClose, children, testId }: { open: boolean; title: string; onClose(): void; children: ReactNode; testId: string }) {
@@ -112,6 +113,11 @@ export function SettingsDialog() {
         />
         <span>{t('settings.sketchRelations')}</span>
       </label>
+      <label className="setting checkbox-setting">
+        <input type="checkbox" checked={settings.autoRecover} data-testid="setting-auto-recover" onChange={(event) => void commands.updateSettings({ autoRecover: event.target.checked })} />
+        <span>{t('settings.autoRecover')}</span>
+      </label>
+      <p className="setting-help">{t('settings.autoRecoverHelp')}</p>
     </Modal>
   );
 }
@@ -138,6 +144,41 @@ export function AboutDialog() {
       <button type="button" className="text-button" onClick={() => void window.parawerk.openExternal(REPOSITORY_URL)}>
         {t('about.website')}
       </button>
+    </Modal>
+  );
+}
+
+/** Offers the recovery copies of documents whose session ended abnormally (see state/recovery.ts). */
+export function RecoveryDialog() {
+  const { t } = useTranslation();
+  const entries = useAppState((state) => state.recovery);
+  const language = useAppState((state) => state.language);
+  const time = (iso: string) => new Intl.DateTimeFormat(language, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso));
+  return (
+    <Modal open={entries.length > 0} title={t('recovery.title')} onClose={() => setState({ recovery: [] })} testId="recovery-dialog">
+      <p>{t('recovery.message')}</p>
+      <ul className="recovery-list">
+        {entries.map((entry) => (
+          <li key={entry.session} className="recovery-entry" data-session={entry.session}>
+            <div className="recovery-entry-text">
+              <span className="recovery-entry-name">{entry.name}</span>
+              <span className="recovery-entry-time">{t('recovery.savedAt', { time: time(entry.savedAt) })}</span>
+            </div>
+            <button type="button" className="button" data-testid="recovery-discard" onClick={() => void discardRecovery(entry)}>
+              {t('recovery.discard')}
+            </button>
+            <button type="button" className="button is-primary" data-testid="recovery-restore" onClick={() => void restoreRecovery(entry)}>
+              {t('recovery.restore')}
+            </button>
+          </li>
+        ))}
+      </ul>
+      <p className="setting-help">{t('recovery.hint')}</p>
+      <div className="modal-actions">
+        <button type="button" className="button" data-testid="recovery-later" onClick={() => setState({ recovery: [] })}>
+          {t('recovery.later')}
+        </button>
+      </div>
     </Modal>
   );
 }

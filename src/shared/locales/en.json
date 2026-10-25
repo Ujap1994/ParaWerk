@@ -346,7 +346,9 @@
     "projectionPerspective": "Perspective",
     "frameStats": "Show frame statistics",
     "sketchRelations": "Show relation symbols in sketches",
-    "close": "Close"
+    "close": "Close",
+    "autoRecover": "Keep recovery copies of unsaved work",
+    "autoRecoverHelp": "A copy is written 15 seconds after a change and offered after a crash; saving or closing normally removes it."
   },
   "about": {
     "title": "About ParaWerk",
@@ -839,5 +841,17 @@
     "offset": "Offset",
     "flip": "Show the other side",
     "hint": "A view only: the part, its mass and its exports do not change."
+  },
+  "recovery": {
+    "title": "Recover unsaved work",
+    "message": "ParaWerk was not closed properly last time. These documents had unsaved changes:",
+    "savedAt": "Copy from {{time}}",
+    "restore": "Restore",
+    "discard": "Discard",
+    "later": "Later",
+    "restored": "{{name}} was restored. Save it to keep it.",
+    "failed": "The copy could not be restored: {{message}}",
+    "missing": "the copy is gone",
+    "hint": "Copies you do not restore or discard now are offered again at the next start."
   }
 }

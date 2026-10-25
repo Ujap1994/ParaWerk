@@ -14,6 +14,10 @@ export const IpcChannel = {
   openPath: 'file:open-path',
   rendererReady: 'app:renderer-ready',
   selfTestResult: 'app:self-test-result',
+  recoveryWrite: 'recovery:write',
+  recoveryList: 'recovery:list',
+  recoveryRead: 'recovery:read',
+  recoveryDiscard: 'recovery:discard',
 } as const;
 
 export type MenuCommand =
@@ -105,6 +109,26 @@ export interface SelfTestResult {
   checks: SelfTestCheck[];
 }
 
+/** A recovery copy of an unsaved document (see src/main/recovery.ts). */
+export interface RecoveryWrite {
+  /** The renderer session the copy belongs to. */
+  session: string;
+  /** The document's name (file name, or "Untitled"). */
+  name: string;
+  /** Where the document was saved, if it was. */
+  path: string | null;
+  data: Uint8Array;
+}
+
+export interface RecoveryEntry {
+  session: string;
+  name: string;
+  path: string | null;
+  /** ISO time of the last recovery copy. */
+  savedAt: string;
+  size: number;
+}
+
 /** API exposed to the renderer as `window.parawerk`. */
 export interface ParaWerkApi {
   getAppInfo(): Promise<AppInfo>;
@@ -123,4 +147,10 @@ export interface ParaWerkApi {
   rendererReady(): void;
   /** Reports the result of --self-test; the app then quits with a matching exit code. */
   reportSelfTest(result: SelfTestResult): void;
+  /** Keeps a recovery copy of the unsaved document; a clean close removes it. */
+  writeRecovery(request: RecoveryWrite): Promise<void>;
+  /** Recovery copies that sessions which ended abnormally left behind, newest first. */
+  listRecovery(): Promise<RecoveryEntry[]>;
+  readRecovery(session: string): Promise<Uint8Array | null>;
+  discardRecovery(session: string): Promise<void>;
 }

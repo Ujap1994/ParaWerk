@@ -6,6 +6,7 @@ import * as commands from './commands.ts';
 import { initI18n, t } from './i18n.ts';
 import { startKernel } from './state/rebuild.ts';
 import { startMeasuring } from './state/measure.ts';
+import { offerRecovery, startRecovery } from './state/recovery.ts';
 import { startSketchStatus } from './state/sketch-status.ts';
 import { getState, setState, store } from './state/store.ts';
 import { runSelfTest } from './self-test.ts';
@@ -52,6 +53,8 @@ async function bootstrap(): Promise<void> {
   startKernel();
   startSketchStatus();
   startMeasuring();
+  startRecovery();
+  if (!appInfo.selfTest) void offerRecovery();
   if (appInfo.testMode) installTestHooks();
 
   const root = document.getElementById('root');

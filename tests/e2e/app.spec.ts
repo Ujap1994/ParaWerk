@@ -386,6 +386,39 @@ test('cuts the part open in a section view that picks only what is shown', async
   expect((await sectionState()).selection).toMatchObject([{ kind: 'face' }]);
 });
 
+test('offers unsaved work after a crash, but not after a clean close', async () => {
+  launched = await launchApp();
+  const { userData } = launched;
+  let page = launched.page;
+  await createBox(page);
+  await page.click('[data-command="cylinder"]');
+  await page.click('[data-testid="panel-ok"]');
+  await idle(page);
+  const flush = (target: Page) => target.evaluate(() => (window as unknown as { __parawerk: { recovery: { flush(): Promise<void> } } }).__parawerk.recovery.flush());
+  await flush(page);
+
+  // The process is killed: the recovery copy stays and is offered at the next start.
+  launched.app.process().kill('SIGKILL');
+  launched = await launchApp({ userData });
+  page = launched.page;
+  await expect(page.locator('[data-testid="recovery-dialog"]')).toBeVisible();
+  await expect(page.locator('.recovery-entry')).toHaveCount(1);
+  await page.click('[data-testid="recovery-restore"]');
+  await expect(page.locator('[data-testid="recovery-dialog"]')).toBeHidden();
+  await expect.poll(async () => (await state(page)).history.features.map((feature) => feature.type)).toEqual(['box', 'cylinder']);
+  expect((await state(page)).dirty).toBe(true);
+  await expect(page.locator('[data-testid="toast-success"]').last()).toContainText('restored');
+
+  // A clean close removes the copy of the restored document too: nothing is offered next time.
+  await flush(page);
+  await launched.app.close();
+  launched = await launchApp({ userData });
+  await idle(launched.page);
+  await launched.page.waitForTimeout(500);
+  await expect(launched.page.locator('[data-testid="recovery-dialog"]')).toBeHidden();
+  expect((await state(launched.page)).history.features).toEqual([]);
+});
+
 /** Drags a row of the feature tree (a feature or the rollback bar) just above or below another row. */
 async function dragInTree(page: Page, from: string, to: string, where: 'above' | 'below'): Promise<void> {
   const source = await page.locator(from).boundingBox();

@@ -4,7 +4,7 @@ import { picksReferences } from '../references.ts';
 import type { SketchToolName } from '../sketch/tools.ts';
 import { getState, useAppState } from '../state/store.ts';
 import { CommandBar } from './CommandBar.tsx';
-import { AboutDialog, SettingsDialog, Toasts } from './Dialogs.tsx';
+import { AboutDialog, RecoveryDialog, SettingsDialog, Toasts } from './Dialogs.tsx';
 import { MaterialDialog } from './MaterialDialog.tsx';
 import { FeatureTree } from './FeatureTree.tsx';
 import { PropertyPanel } from './PropertyPanel.tsx';
@@ -116,6 +116,7 @@ export function App() {
       <SettingsDialog />
       <AboutDialog />
       <MaterialDialog />
+      <RecoveryDialog />
       <Toasts />
     </div>
   );
