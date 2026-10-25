@@ -517,6 +517,36 @@ export const HoleIcon = (p: P) => (
   </Icon>
 );
 
+/** Linear pattern: a solid square and two dashed copies in a row along an arrow. */
+export const PatternIcon = (p: P) => (
+  <Icon {...p}>
+    <rect x="2.5" y="9" width="5" height="5" rx="0.8" />
+    <rect x="9.5" y="9" width="5" height="5" rx="0.8" strokeDasharray="2 1.6" />
+    <rect x="16.5" y="9" width="5" height="5" rx="0.8" strokeDasharray="2 1.6" />
+    <path d="M3 18.5h17M17.5 16.5l2.5 2-2.5 2" />
+  </Icon>
+);
+
+/** Circular pattern: a solid dot and dashed copies on a circle around a center mark. */
+export const CircularPatternIcon = (p: P) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="7" opacity="0.45" />
+    <circle cx="12" cy="5" r="2.3" />
+    <circle cx="18.1" cy="15.5" r="2.3" strokeDasharray="1.8 1.4" />
+    <circle cx="5.9" cy="15.5" r="2.3" strokeDasharray="1.8 1.4" />
+    <path d="M12 10.5v3M10.5 12h3" />
+  </Icon>
+);
+
+/** Mirror: a shape, its dashed mirror image and the dash-dot mirror plane between them. */
+export const MirrorIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="M12 2.5v4M12 8.5v2M12 12.5v4M12 18.5v3" />
+    <path d="M9.5 6.5 4 9v8.5h5.5z" />
+    <path d="M14.5 6.5 20 9v8.5h-5.5z" strokeDasharray="2 1.6" />
+  </Icon>
+);
+
 export const FEATURE_ICONS = {
   variables: VariablesIcon,
   sketch: SketchIcon,
@@ -526,6 +556,8 @@ export const FEATURE_ICONS = {
   extrude: ExtrudeIcon,
   revolve: RevolveIcon,
   hole: HoleIcon,
+  pattern: PatternIcon,
+  mirror: MirrorIcon,
   box: BoxIcon,
   cylinder: CylinderIcon,
   fillet: FilletIcon,

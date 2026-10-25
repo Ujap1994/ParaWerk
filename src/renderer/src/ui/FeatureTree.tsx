@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { isReferenceFeature, type Feature } from '../../../shared/model/feature.ts';
+import { COPYABLE_TYPES, hasReferenceSlots, isCopyFeature, isReferenceFeature, type Feature } from '../../../shared/model/feature.ts';
 import { STANDARD_PLANES } from '../../../shared/model/sketch.ts';
 import * as commands from '../commands.ts';
 import { featureOrdinal } from '../state/document.ts';
@@ -24,6 +24,8 @@ function PlaneItems() {
   const hover = useAppState((state) => state.hover);
   const choosing = useAppState((state) => state.choosingSketchPlane);
   const sketching = useAppState((state) => state.sketch !== null);
+  // While reference fields are filled, the planes are only picked.
+  const picking = useAppState((state) => state.activeEdit !== null && hasReferenceSlots(state.activeEdit.draft));
 
   return STANDARD_PLANES.map((plane, index) => {
     const selected = selection.some((pick) => pick.kind === 'plane' && pick.index === index);
@@ -44,7 +46,7 @@ function PlaneItems() {
       >
         <PlaneIcon className="tree-icon" />
         <span className="tree-name">{t(`planes.${plane}`)}</span>
-        {sketching || choosing ? null : (
+        {sketching || choosing || picking ? null : (
           <span className="tree-actions">
             <button
               type="button"
@@ -70,12 +72,15 @@ export function FeatureTree() {
   const features = useAppState((state) => state.history.features);
   const results = useAppState((state) => state.rebuild?.results);
   const activeEdit = useAppState((state) => state.activeEdit ?? state.sketch);
-  const locked = useAppState((state) => state.sketch !== null || state.choosingSketchPlane);
+  // The tree only picks while a sketch or a feature with reference fields is edited; its actions are hidden.
+  const locked = useAppState((state) => state.sketch !== null || state.choosingSketchPlane || (state.activeEdit !== null && hasReferenceSlots(state.activeEdit.draft)));
   const sketchStatuses = useAppState((state) => state.sketchStatuses);
   const selection = useAppState((state) => state.selection);
   const hover = useAppState((state) => state.hover);
   const sketching = useAppState((state) => state.sketch !== null);
-  const editingReference = useAppState((state) => state.activeEdit !== null && isReferenceFeature(state.activeEdit.draft));
+  const editingReference = useAppState((state) => state.activeEdit !== null && hasReferenceSlots(state.activeEdit.draft));
+  // While a pattern or mirror is edited, the features it can copy are picked in the tree.
+  const copying = useAppState((state) => (state.activeEdit && isCopyFeature(state.activeEdit.draft) ? state.activeEdit.draft.features : null));
   const nameOf = useFeatureName();
 
   return (
@@ -105,7 +110,8 @@ export function FeatureTree() {
           const editing = activeEdit?.mode === 'edit' && activeEdit.index === index;
           // Reference geometry is picked in the tree like in the 3D view (to select it, or to build on it).
           const reference = isReferenceFeature(feature) && !feature.suppressed && !rolledBack && !editing;
-          const selected = reference && selection.some((pick) => pick.kind === 'reference' && pick.index === index);
+          const seed = copying !== null && !rolledBack && !editing && COPYABLE_TYPES.has(feature.type) && !feature.suppressed;
+          const selected = (reference && selection.some((pick) => pick.kind === 'reference' && pick.index === index)) || (seed && copying.includes(feature.id));
           const hovered = reference && hover?.kind === 'reference' && hover.index === index;
           const classes = [
             'tree-item',
@@ -114,7 +120,7 @@ export function FeatureTree() {
             editing ? 'is-editing' : '',
             error ? 'has-error' : '',
             warning ? 'has-warning' : '',
-            reference ? 'is-reference' : '',
+            reference || seed ? 'is-reference' : '',
             selected ? 'is-selected' : '',
             hovered ? 'is-hovered' : '',
           ]
@@ -137,7 +143,9 @@ export function FeatureTree() {
                       : undefined
               }
               onDoubleClick={() => commands.editFeature(feature.id)}
-              {...(reference
+              {...(seed
+                ? { onClick: () => commands.toggleCopySeed(feature.id) }
+                : reference
                 ? {
                     onPointerEnter: () => commands.hoverReference(index),
                     onPointerLeave: () => commands.hoverReference(null),

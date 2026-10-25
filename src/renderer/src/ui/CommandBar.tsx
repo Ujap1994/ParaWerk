@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import type { FeatureType } from '../../../shared/model/feature.ts';
 import * as commands from '../commands.ts';
 import type { SketchToolName } from '../sketch/tools.ts';
-import { useAppState, type CommandTab } from '../state/store.ts';
+import { useAppState, type AppState, type CommandTab } from '../state/store.ts';
 import {
   BoxIcon, ExtrudeIcon, HoleIcon, RevolveIcon,
   CenterArcIcon,
@@ -43,6 +43,9 @@ import {
   SaveIcon,
   LineIcon,
   PointIcon,
+  CircularPatternIcon,
+  MirrorIcon,
+  PatternIcon,
   ReferenceAxisIcon,
   ReferencePlaneIcon,
   ReferencePointIcon,
@@ -131,39 +134,73 @@ const FEATURE_BUTTONS: { type: FeatureType; icon: IconType }[] = [
 
 const TABS: CommandTab[] = ['features', 'sketch'];
 
-const REFERENCE_TYPES = ['plane', 'axis', 'point'] as const;
-type ReferenceType = (typeof REFERENCE_TYPES)[number];
-const REFERENCE_ICONS: Record<ReferenceType, IconType> = { plane: ReferencePlaneIcon, axis: ReferenceAxisIcon, point: ReferencePointIcon };
+interface SplitEntry {
+  id: string;
+  icon: IconType;
+  /** Key below commands. and commands.tooltips. */
+  label: string;
+  start(): void;
+  /** The feature being created when this entry is active. */
+  active(state: AppState): boolean;
+}
 
-/** Reference geometry: the button creates the last used kind, the arrow offers planes, axes and points. */
-function ReferenceGeometryButton({ disabled, activeType }: { disabled: boolean; activeType: FeatureType | null }) {
+const REFERENCE_ENTRIES: readonly SplitEntry[] = (['plane', 'axis', 'point'] as const).map((type) => ({
+  id: type,
+  icon: { plane: ReferencePlaneIcon, axis: ReferenceAxisIcon, point: ReferencePointIcon }[type],
+  label: type,
+  start: () => commands.startFeature(type),
+  active: (state: AppState) => state.activeEdit?.mode === 'create' && state.activeEdit.draft.type === type,
+}));
+
+const COPY_ENTRIES: readonly SplitEntry[] = [
+  {
+    id: 'pattern',
+    icon: PatternIcon,
+    label: 'pattern',
+    start: () => commands.startFeature('pattern'),
+    active: (state) => state.activeEdit?.mode === 'create' && state.activeEdit.draft.type === 'pattern' && state.activeEdit.draft.method === 'linear',
+  },
+  {
+    id: 'circular-pattern',
+    icon: CircularPatternIcon,
+    label: 'circularPattern',
+    start: commands.startCircularPattern,
+    active: (state) => state.activeEdit?.mode === 'create' && state.activeEdit.draft.type === 'pattern' && state.activeEdit.draft.method === 'circular',
+  },
+  { id: 'mirror', icon: MirrorIcon, label: 'mirror', start: () => commands.startFeature('mirror'), active: (state) => state.activeEdit?.mode === 'create' && state.activeEdit.draft.type === 'mirror' },
+];
+
+/** Features of one kind: the button starts the last used one, the arrow offers all of them. */
+function SplitFeatureButton({ entries, menuLabel, variants, disabled }: { entries: readonly SplitEntry[]; menuLabel: string; variants: string; disabled: boolean }) {
   const { t } = useTranslation();
-  const [current, setCurrent] = useState<ReferenceType>('plane');
+  const [currentId, setCurrentId] = useState(entries[0]?.id ?? '');
+  const current = entries.find((entry) => entry.id === currentId) ?? (entries[0] as SplitEntry);
+  const activeId = useAppState((state) => entries.find((entry) => entry.active(state))?.id ?? null);
   const { menuAt, open, anchor, menu, toggle, close } = useSplitMenu();
-  const start = (type: ReferenceType) => {
-    setCurrent(type);
+  const start = (entry: SplitEntry) => {
+    setCurrentId(entry.id);
     close();
-    commands.startFeature(type);
+    entry.start();
   };
   return (
     <div className="split-command popover-anchor" ref={anchor}>
       <CommandButton
-        id={current}
-        icon={REFERENCE_ICONS[current]}
-        label={t(`commands.${current}`)}
-        tooltip={t(`commands.tooltips.${current}`)}
-        active={activeType === current}
+        id={current.id}
+        icon={current.icon}
+        label={t(`commands.${current.label}`)}
+        tooltip={t(`commands.tooltips.${current.label}`)}
+        active={activeId === current.id}
         disabled={disabled}
         onClick={() => start(current)}
       />
       <button
         type="button"
-        className={`split-toggle${activeType !== null && (REFERENCE_TYPES as readonly string[]).includes(activeType) ? ' is-active' : ''}`}
-        title={t('commands.referenceGeometry')}
-        aria-label={t('commands.referenceGeometry')}
+        className={`split-toggle${activeId !== null ? ' is-active' : ''}`}
+        title={menuLabel}
+        aria-label={menuLabel}
         aria-haspopup="menu"
         aria-expanded={open}
-        data-variants="reference-geometry"
+        data-variants={variants}
         disabled={disabled}
         onClick={toggle}
       >
@@ -172,13 +209,13 @@ function ReferenceGeometryButton({ disabled, activeType }: { disabled: boolean; 
       {menuAt
         ? createPortal(
             <div className="popover-menu is-fixed" role="menu" ref={menu} style={{ left: menuAt.left, top: menuAt.top }}>
-              {REFERENCE_TYPES.map((type) => {
-                const Icon = REFERENCE_ICONS[type];
+              {entries.map((entry) => {
+                const Icon = entry.icon;
                 return (
-                  <button key={type} type="button" role="menuitem" className="menu-item" data-reference={type} title={t(`commands.tooltips.${type}`)} onClick={() => start(type)}>
+                  <button key={entry.id} type="button" role="menuitem" className="menu-item" data-entry={entry.id} title={t(`commands.tooltips.${entry.label}`)} onClick={() => start(entry)}>
                     <span className="menu-item-label">
                       <Icon className="menu-item-icon" />
-                      {t(`commands.${type}`)}
+                      {t(`commands.${entry.label}`)}
                     </span>
                   </button>
                 );
@@ -212,7 +249,8 @@ function FeaturesTab() {
           onClick={() => commands.startFeature(type)}
         />
       ))}
-      <ReferenceGeometryButton disabled={sketching} activeType={activeType} />
+      <SplitFeatureButton entries={COPY_ENTRIES} menuLabel={t('commands.copyGeometry')} variants="copy" disabled={sketching || !hasFeatures} />
+      <SplitFeatureButton entries={REFERENCE_ENTRIES} menuLabel={t('commands.referenceGeometry')} variants="reference-geometry" disabled={sketching} />
     </Group>
   );
 }

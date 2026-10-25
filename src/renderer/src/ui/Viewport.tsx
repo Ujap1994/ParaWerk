@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { isEdgeFeature, isReferenceFeature, isSketchBased, type Vec3 } from '../../../shared/model/feature.ts';
+import { hasReferenceSlots, isCopyFeature, isEdgeFeature, isSketchBased, type Vec3 } from '../../../shared/model/feature.ts';
 import { resolveEdgeRefs } from '../../../shared/model/naming.ts';
 import { frameOf, STANDARD_PLANES } from '../../../shared/model/sketch.ts';
 import * as commands from '../commands.ts';
@@ -31,8 +31,17 @@ function cubeLabels(t: (key: string) => string): Record<CubeFace, string> {
  */
 function visibleSelection(state: AppState): Pick[] {
   const edit = state.activeEdit;
-  if (edit && isReferenceFeature(edit.draft)) {
-    return referencePicks(edit.draft.references, state).filter((pick) => pick.kind === 'face' || pick.kind === 'edge' || pick.kind === 'vertex');
+  if (edit && hasReferenceSlots(edit.draft)) {
+    const picks = referencePicks(edit.draft.references, state).filter((pick) => pick.kind === 'face' || pick.kind === 'edge' || pick.kind === 'vertex');
+    // The faces of the features a pattern or mirror copies are highlighted (faces are named after their feature).
+    if (isCopyFeature(edit.draft)) {
+      const seeds = new Set(edit.draft.features);
+      const faces = state.display.body?.naming.faces ?? [];
+      faces.forEach((name, index) => {
+        if (seeds.has(name.split(':')[0] ?? '')) picks.push({ kind: 'face', index });
+      });
+    }
+    return picks;
   }
   if (edit && isEdgeFeature(edit.draft)) {
     const naming = state.display.body?.naming;
@@ -56,7 +65,7 @@ function pickFilter(state: AppState): PickFilter {
   if (state.sketch) return 'none';
   const edit = state.activeEdit;
   if (!edit) return 'all';
-  return isEdgeFeature(edit.draft) ? 'edges' : isReferenceFeature(edit.draft) ? 'references' : 'none';
+  return isEdgeFeature(edit.draft) ? 'edges' : hasReferenceSlots(edit.draft) ? 'references' : 'none';
 }
 
 /** Sketches shown in the 3D view besides the open one: those before the current edit position, unless suppressed. */
@@ -81,9 +90,9 @@ function planeDisplay(state: AppState): PlaneDisplay {
   if (state.sketch) return { visible: [], hovered: null, selected: [] };
   const draft = state.activeEdit?.draft;
   // The standard planes a reference feature is built on are shown while it is edited.
-  const referenced = draft && isReferenceFeature(draft) ? referencePicks(draft.references, state).filter((pick) => pick.kind === 'plane') : [];
+  const referenced = draft && hasReferenceSlots(draft) ? referencePicks(draft.references, state).filter((pick) => pick.kind === 'plane') : [];
   // While reference geometry is edited, the standard planes are shown so they can be picked as references.
-  const showAll = state.choosingSketchPlane || (draft !== undefined && isReferenceFeature(draft));
+  const showAll = state.choosingSketchPlane || (draft !== undefined && hasReferenceSlots(draft));
   return {
     visible: STANDARD_PLANES.map(() => showAll),
     hovered: state.hover?.kind === 'plane' ? state.hover.index : null,

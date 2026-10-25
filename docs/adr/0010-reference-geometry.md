@@ -47,5 +47,9 @@ of the session that created them.
   other edit; reference features themselves are cheap (one naming query and a few geometry queries).
 - Part files with reference geometry are format version 6.
 - Revolve takes a reference axis (`RevolveFeature.axisRef`) besides a line of its sketch; the axis must
-  lie in the sketch plane (`axis-not-in-plane`). Patterns and mirror will take reference axes and planes
-  the same way.
+  lie in the sketch plane (`axis-not-in-plane`).
+- Patterns and mirror (`pattern`, `mirror`) reuse the reference fields: a direction (an axis or the normal
+  of a plane), an axis or a plane, plus the list of features they copy. The kernel resolves the copied
+  features as they were built, builds each one's tool once and combines moved (or, for a mirror, copied
+  and mirrored) instances with the body in one boolean operation (`combineCopies`); holes are drilled again
+  at the transformed centers. Faces of copy *i* of feature *s* are named `<pattern id>:<s>:<i>:<face name>`.

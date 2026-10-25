@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import type { Feature, ReferenceFeature } from '../../../shared/model/feature.ts';
+import type { Feature, ReferenceFeature, SlotFeature } from '../../../shared/model/feature.ts';
 import { AXIS_METHODS, PLANE_METHODS, POINT_METHODS, type GeometryRef } from '../../../shared/model/reference.ts';
 import * as commands from '../commands.ts';
 import { referencePicks, referenceRoles } from '../references.ts';
@@ -8,7 +8,7 @@ import { useFeatureName } from './FeatureTree.tsx';
 import { CloseIcon } from './icons.tsx';
 import { NumberField } from './NumberField.tsx';
 
-const METHODS = { plane: PLANE_METHODS, axis: AXIS_METHODS, point: POINT_METHODS } as const;
+const METHODS = { plane: PLANE_METHODS, axis: AXIS_METHODS, point: POINT_METHODS, pattern: ['linear', 'circular'], mirror: ['plane'] } as const;
 
 /** "Top plane", "Plane1", "Face 4", "Edge 7", "Vertex 2" – what a reference field holds. */
 function useReferenceName() {
@@ -41,15 +41,72 @@ function equation(draft: Feature, field: string): { expression?: string; onExpre
   return { ...(expression !== undefined ? { expression } : {}), onExpression: (text) => commands.setDraftExpression(field, text) };
 }
 
-/** How a reference plane, axis or point is defined: its method, its reference fields and its values. */
-export function ReferenceFields({ draft }: { draft: ReferenceFeature }) {
+/**
+ * The method of a feature with reference fields (when it has more than one) and its fields, filled one
+ * after the other from picks; the active one has a frame. A negative `slot` in the state means no field.
+ */
+export function ReferenceSlots({ draft }: { draft: SlotFeature }) {
   const { t } = useTranslation();
   const slot = useAppState((state) => state.referenceSlot);
   const nameOf = useReferenceName();
   const roles = referenceRoles(draft);
+  const methods: readonly string[] = METHODS[draft.type];
   // Fields are filled in order, so the active field is never after the first empty one.
-  const activeSlot = Math.min(slot, draft.references.length, roles.length - 1);
+  const activeSlot = slot < 0 ? -1 : Math.min(slot, draft.references.length, roles.length - 1);
   const activeRole = roles[activeSlot];
+  return (
+    <>
+      {methods.length > 1 ? (
+        <label className="field">
+          <span className="field-label">{t('references.method')}</span>
+          <select className="field-select" value={draft.method} data-testid="reference-method" onChange={(event) => commands.setReferenceMethod(event.target.value)}>
+            {methods.map((method) => (
+              <option key={method} value={method}>
+                {t(`references.methods.${draft.type}.${method}`)}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+      {roles.length > 0 ? (
+        <ul className="reference-slots" aria-label={t('references.title')}>
+          {roles.map((role, index) => {
+            const ref = draft.references[index];
+            const active = index === activeSlot;
+            return (
+              <li key={index} className={`reference-slot${active ? ' is-active' : ''}${ref ? ' is-filled' : ''}`} data-testid={`reference-slot-${index}`}>
+                <button type="button" className="reference-slot-button" disabled={index > draft.references.length} onClick={() => commands.setReferenceSlot(index)}>
+                  <span className="reference-slot-role">{t(`references.roles.${role}`)}</span>
+                  <span className="reference-slot-value">{ref ? nameOf(ref) : active ? t('references.pick') : t('references.empty')}</span>
+                </button>
+                {ref ? (
+                  <button type="button" className="icon-button" title={t('references.clear')} aria-label={t('references.clear')} onClick={() => commands.clearReference(index)}>
+                    <CloseIcon />
+                  </button>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+      {roles.length > 0 ? (
+        <div className="reference-hint">
+          <p className="panel-hint is-flush">{t('references.hint')}</p>
+          {/* The origin is not drawn in the view; it is offered here for fields that take a point. */}
+          {activeRole === 'point' || activeRole === 'center' ? (
+            <button type="button" className="text-button" data-testid="reference-origin" onClick={() => commands.assignReference('origin')}>
+              {t('references.useOrigin')}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+/** How a reference plane, axis or point is defined: its method, its reference fields and its values. */
+export function ReferenceFields({ draft }: { draft: ReferenceFeature }) {
+  const { t } = useTranslation();
   const flipLabel =
     draft.type === 'plane' ? (draft.method === 'offset' ? t('references.flipOffset') : draft.method === 'angle' ? t('references.flipAngle') : t('references.flipNormal')) : '';
 
@@ -57,48 +114,7 @@ export function ReferenceFields({ draft }: { draft: ReferenceFeature }) {
     <>
       <fieldset className="panel-section">
         <legend className="panel-section-title">{t('references.definition')}</legend>
-        <label className="field">
-          <span className="field-label">{t('references.method')}</span>
-          <select className="field-select" value={draft.method} data-testid="reference-method" onChange={(event) => commands.setReferenceMethod(event.target.value)}>
-            {METHODS[draft.type].map((method) => (
-              <option key={method} value={method}>
-                {t(`references.methods.${draft.type}.${method}`)}
-              </option>
-            ))}
-          </select>
-        </label>
-        {roles.length > 0 ? (
-          <ul className="reference-slots" aria-label={t('references.title')}>
-            {roles.map((role, index) => {
-              const ref = draft.references[index];
-              const active = index === activeSlot;
-              return (
-                <li key={index} className={`reference-slot${active ? ' is-active' : ''}${ref ? ' is-filled' : ''}`} data-testid={`reference-slot-${index}`}>
-                  <button type="button" className="reference-slot-button" disabled={index > draft.references.length} onClick={() => commands.setReferenceSlot(index)}>
-                    <span className="reference-slot-role">{t(`references.roles.${role}`)}</span>
-                    <span className="reference-slot-value">{ref ? nameOf(ref) : active ? t('references.pick') : t('references.empty')}</span>
-                  </button>
-                  {ref ? (
-                    <button type="button" className="icon-button" title={t('references.clear')} aria-label={t('references.clear')} onClick={() => commands.clearReference(index)}>
-                      <CloseIcon />
-                    </button>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ul>
-        ) : null}
-        {roles.length > 0 ? (
-          <div className="reference-hint">
-            <p className="panel-hint is-flush">{t('references.hint')}</p>
-            {/* The origin is not drawn in the view; it is offered here for fields that take a point. */}
-            {activeRole === 'point' || activeRole === 'center' ? (
-              <button type="button" className="text-button" data-testid="reference-origin" onClick={() => commands.assignReference('origin')}>
-                {t('references.useOrigin')}
-              </button>
-            ) : null}
-          </div>
-        ) : null}
+        <ReferenceSlots draft={draft} />
       </fieldset>
       {draft.type === 'plane' ? (
         <fieldset className="panel-section">

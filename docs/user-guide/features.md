@@ -85,6 +85,30 @@ circles of its nominal diameter where it starts and where it ends (dimmed where 
 > (counterbores for ISO 4762) and the head diameters of ISO 10642 (countersinks). Check them against
 > your screws and your manufacturing before you make parts.
 
+## Patterns and mirror
+
+**Pattern** copies features in a row, **Circular pattern** around an axis, **Mirror** through a plane
+(all three under the *Pattern* button and its arrow). They copy features that add or cut material –
+extrusions, revolutions, holes, boxes and cylinders – with everything that defines them; fillets and
+chamfers are not copied.
+
+1. *Features to copy*: click the features in the feature tree (shown below the side panel while you
+   edit) or click one of their faces in the 3D view; click again to take one out. Their faces are
+   highlighted.
+2. Click the next field and pick what the copies follow: for a **linear** pattern a *Direction* – a
+   straight edge, an axis, or a plane or planar face (its normal); for a **circular** pattern an *Axis* –
+   a reference axis, a cylindrical face or a circular edge; for a **mirror** a *Plane* – a standard plane,
+   a planar face or a reference plane.
+3. *Count* (the original included) and *Spacing*, or the *Total angle* of a circular pattern: 360° spreads
+   the copies evenly all round, a smaller angle puts the last copy at its end. **Other direction** and
+   **Other way round** turn the pattern the other way.
+
+![Two holes copied twice along the front edge of the plate, 22 mm apart: the holes being copied are orange, the edge they follow too](../images/screenshots/pattern-linear.png)
+
+All copies of a feature are added or cut in one operation, so even long patterns rebuild quickly. Faces of
+the copies have names of their own (the pattern, the copied feature and the copy), so fillets on them stay
+in place when the pattern changes.
+
 ## Box
 
 Adds or removes a box. *Width* (X), *Depth* (Y) and *Height* (Z) are in millimeters; *Position* is the

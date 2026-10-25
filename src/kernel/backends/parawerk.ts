@@ -1,7 +1,8 @@
 import createParaWerkKernel from '../../../vendor/parawerk-kernel/parawerk-kernel.js';
 import { extrudeRange, revolveRange, type BooleanOperation, type Vec3 } from '../../shared/model/feature.ts';
 import { holeProfile, throughDepth } from '../../shared/model/hole.ts';
-import type { GeometryBackend, KernelFeature, ShapeHandle } from '../backend.ts';
+import { transformDirection, transformPoint } from '../../shared/model/pattern.ts';
+import type { GeometryBackend, KernelFeature, ResolvedCopy, ResolvedHole, ShapeHandle } from '../backend.ts';
 import { FeatureError } from '../feature-error.ts';
 import { axisDirection } from '../feature-geometry.ts';
 import type { MeshQuality } from '../mesh-quality.ts';
@@ -37,7 +38,7 @@ const SURFACE_KINDS: SurfaceKind[] = ['plane', 'cylinder', 'cone', 'sphere', 'to
 const CURVE_KINDS: CurveKind[] = ['line', 'circle', 'ellipse', 'bspline', 'other'];
 
 const FEATURE_ERROR_CODES = new Set<FeatureErrorCode>([
-  'no-body', 'no-edges', 'edge-missing', 'face-missing', 'plane-missing', 'reference-missing', 'reference-kind', 'reference-parallel', 'reference-not-parallel', 'reference-collinear', 'empty-result', 'first-must-add', 'sketch-missing', 'profile-empty', 'profile-crossing', 'axis-missing', 'axis-not-in-plane', 'hole-no-points', 'hole-invalid', 'profile-crosses-axis',
+  'no-body', 'no-edges', 'edge-missing', 'face-missing', 'plane-missing', 'reference-missing', 'reference-kind', 'reference-parallel', 'reference-not-parallel', 'reference-collinear', 'empty-result', 'first-must-add', 'sketch-missing', 'profile-empty', 'profile-crossing', 'axis-missing', 'axis-not-in-plane', 'hole-no-points', 'hole-invalid', 'pattern-empty', 'pattern-seed-missing', 'pattern-unsupported', 'profile-crosses-axis',
   'operation-failed', 'unknown',
 ]);
 
@@ -113,20 +114,18 @@ export class ParaWerkBackend implements GeometryBackend {
     }
   }
 
-  applyFeature(body: ShapeHandle | null, feature: KernelFeature): ShapeHandle {
+  /** The solid a box, cylinder, extrusion or revolution adds or cuts; the caller releases it. */
+  private tool(body: ShapeHandle | null, feature: Extract<KernelFeature, { type: 'box' | 'cylinder' | 'extrude' | 'revolve' }>): ShapeHandle {
     const k = this.kernel;
     switch (feature.type) {
-      case 'box':
+      case 'box': {
+        const [x, y, z] = feature.position;
+        return this.handle(k.makeBox(x - feature.width / 2, y - feature.depth / 2, z, feature.width, feature.depth, feature.height, feature.id));
+      }
       case 'cylinder': {
         const [x, y, z] = feature.position;
-        let tool: ShapeHandle;
-        if (feature.type === 'box') {
-          tool = this.handle(k.makeBox(x - feature.width / 2, y - feature.depth / 2, z, feature.width, feature.depth, feature.height, feature.id));
-        } else {
-          const [dx, dy, dz] = axisDirection(feature.axis);
-          tool = this.handle(k.makeCylinder(x, y, z, dx, dy, dz, feature.radius, feature.height, feature.id));
-        }
-        return this.combine(body, tool, feature.operation);
+        const [dx, dy, dz] = axisDirection(feature.axis);
+        return this.handle(k.makeCylinder(x, y, z, dx, dy, dz, feature.radius, feature.height, feature.id));
       }
       case 'extrude': {
         const { origin, xDir, normal } = feature.frame;
@@ -142,25 +141,78 @@ export class ParaWerkBackend implements GeometryBackend {
           extent = [Math.min(...along), Math.max(...along)];
         }
         const [from, to] = extrudeRange(feature, extent);
-        const tool = this.handle(k.extrudeProfile(encodeProfile(feature.profile), [...origin, ...xDir, ...normal], from, to, profileEdgeNames(feature.profile), feature.id));
-        return this.combine(body, tool, feature.operation);
+        return this.handle(k.extrudeProfile(encodeProfile(feature.profile), [...origin, ...xDir, ...normal], from, to, profileEdgeNames(feature.profile), feature.id));
       }
       case 'revolve': {
         const [from, to] = revolveRange(feature);
         const { origin, xDir, normal } = feature.frame;
-        const tool = this.handle(
+        return this.handle(
           k.revolveProfile(encodeProfile(feature.profile), [...origin, ...xDir, ...normal], feature.line, from, to, profileEdgeNames(feature.profile), feature.id),
         );
-        return this.combine(body, tool, feature.operation);
       }
-      case 'hole': {
+    }
+  }
+
+  /** Cuts holes at their placements; `name` prefixes the names of their faces. */
+  private holes(body: ShapeHandle, feature: ResolvedHole, placements: readonly number[], name: string): ShapeHandle {
+    const throughAll = feature.end === 'throughAll';
+    const { min, max } = this.boundingBox(body);
+    const depth = throughAll ? throughDepth(min, max, placements) : feature.depth;
+    const profile = holeProfile(feature, depth, throughAll);
+    return this.handle(this.kernel.cutHoles(this.id(body), encodeProfile(profile), [...placements], profileEdgeNames(profile), name));
+  }
+
+  /** Adds or cuts the copies of a pattern or mirror, one feature it copies after the other. */
+  private copies(body: ShapeHandle, feature: ResolvedCopy): ShapeHandle {
+    const count = feature.transforms.length / 12;
+    const transforms = Array.from({ length: count }, (_, i) => feature.transforms.slice(12 * i, 12 * i + 12));
+    let current = body;
+    for (const seed of feature.seeds) {
+      // Faces of copy i of feature s are "<pattern id>:<s id>:<i>:…".
+      const name = `${feature.id}:${seed.id}`;
+      let next: ShapeHandle;
+      if (seed.type === 'hole') {
+        // Holes are drilled again at the moved centers, all in one cut.
+        const placements: number[] = [];
+        for (const m of transforms) {
+          for (let k = 0; k + 5 < seed.placements.length; k += 6) {
+            const point = seed.placements.slice(k, k + 3) as Vec3;
+            const direction = seed.placements.slice(k + 3, k + 6) as Vec3;
+            placements.push(...transformPoint(m, point), ...transformDirection(m, direction));
+          }
+        }
+        next = this.holes(current, seed, placements, name);
+      } else if (seed.type === 'box' || seed.type === 'cylinder' || seed.type === 'extrude' || seed.type === 'revolve') {
+        const tool = this.tool(current, seed);
+        try {
+          next = this.handle(this.kernel.combineCopies(this.id(current), this.id(tool), feature.transforms, seed.operation === 'add' ? 0 : 1, name));
+        } finally {
+          this.release(tool);
+        }
+      } else {
+        throw new FeatureError('pattern-unsupported');
+      }
+      if (current !== body) this.release(current);
+      current = next;
+    }
+    return current;
+  }
+
+  applyFeature(body: ShapeHandle | null, feature: KernelFeature): ShapeHandle {
+    const k = this.kernel;
+    switch (feature.type) {
+      case 'box':
+      case 'cylinder':
+      case 'extrude':
+      case 'revolve':
+        return this.combine(body, this.tool(body, feature), feature.operation);
+      case 'hole':
         if (body === null) throw new FeatureError('no-body');
-        const throughAll = feature.end === 'throughAll';
-        const { min, max } = this.boundingBox(body);
-        const depth = throughAll ? throughDepth(min, max, feature.placements) : feature.depth;
-        const profile = holeProfile(feature, depth, throughAll);
-        return this.handle(k.cutHoles(this.id(body), encodeProfile(profile), feature.placements, profileEdgeNames(profile), feature.id));
-      }
+        return this.holes(body, feature, feature.placements, feature.id);
+      case 'pattern':
+      case 'mirror':
+        if (body === null) throw new FeatureError('no-body');
+        return this.copies(body, feature);
       case 'fillet':
       case 'chamfer': {
         if (body === null) throw new FeatureError('no-body');

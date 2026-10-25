@@ -147,6 +147,13 @@ int cutHoles(int bodyId, const std::vector<double>& profile, const std::vector<d
              const std::string& name = "");
 
 /**
+ * Adds (op 0) or cuts (op 1) copies of a stored tool: one per transformation, 12 values each (the rows
+ * of a 3 × 4 matrix: rotation or mirror, then translation). All copies are combined with the body in one
+ * operation. The faces of copy k are named "<name>:<k>:<face name in the tool>".
+ */
+int combineCopies(int bodyId, int toolId, const std::vector<double>& transforms, int op, const std::string& name = "");
+
+/**
  * Rounds the given edges. The faces made for edge k are named `edgeNames[k]`, other new faces (corners
  * where rounds meet) "<name>:corner".
  */

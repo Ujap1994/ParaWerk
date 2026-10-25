@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { isReferenceFeature, type Axis, type BooleanOperation, type EdgeFeature, type ExtrudeDirection, type ExtrudeEnd, type Feature, type Vec3 } from '../../../shared/model/feature.ts';
+import { hasReferenceSlots, isCopyFeature, type Axis, type BooleanOperation, type EdgeFeature, type ExtrudeDirection, type ExtrudeEnd, type Feature, type Vec3 } from '../../../shared/model/feature.ts';
 import type { GeometryRef } from '../../../shared/model/reference.ts';
 import { referenceRoles } from '../references.ts';
 import { resolveEdgeRefs } from '../../../shared/model/naming.ts';
@@ -11,6 +11,7 @@ import { CheckIcon, CloseIcon, FEATURE_ICONS } from './icons.tsx';
 import { NumberField } from './NumberField.tsx';
 import { ReferenceFields } from './ReferencePanel.tsx';
 import { HoleFields } from './HolePanel.tsx';
+import { CopyFields } from './CopyPanel.tsx';
 import { Segmented } from './Segmented.tsx';
 import { VariablesEditor, variablesValid } from './VariablesPanel.tsx';
 
@@ -230,6 +231,9 @@ function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
       return <ReferenceFields draft={draft} />;
     case 'hole':
       return <HoleFields draft={draft} index={index} />;
+    case 'pattern':
+    case 'mirror':
+      return <CopyFields draft={draft} />;
     case 'variables':
       return <VariablesEditor draft={draft} />;
     case 'fillet':
@@ -290,9 +294,10 @@ export function PropertyPanel() {
   const featureLabel = t(`features.${edit.draft.type}`);
   const title = edit.mode === 'create' ? t('panel.creating', { feature: featureLabel }) : t('panel.editing', { feature: featureLabel });
   // Reference geometry needs all its references; until they are chosen, the missing ones are no error yet.
-  const incomplete = isReferenceFeature(edit.draft) && edit.draft.references.length < referenceRoles(edit.draft).length;
-  const failure = result?.id === edit.draft.id && result.status === 'error' ? result.error : undefined;
-  const error = incomplete && failure?.code === 'reference-missing' ? undefined : failure;
+  const draft = edit.draft;
+  const incomplete = hasReferenceSlots(draft) && (draft.references.length < referenceRoles(draft).length || (isCopyFeature(draft) && draft.features.length === 0));
+  const failure = result?.id === draft.id && result.status === 'error' ? result.error : undefined;
+  const error = incomplete && (failure?.code === 'reference-missing' || failure?.code === 'pattern-empty') ? undefined : failure;
   // Variables are applied only when every one has a valid name and a value.
   const applicable = (edit.draft.type !== 'variables' || variablesValid(edit.draft.variables)) && !incomplete;
 

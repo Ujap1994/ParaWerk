@@ -35,9 +35,10 @@ export type GeometryRef =
 /**
  * What a reference has to provide: a plane (a standard plane, a planar face, a reference plane), an axis
  * (a straight or circular edge, a cylindrical or conical face, a reference axis), a point (a vertex, the
- * origin, a reference point), or something with a center (an edge or a face).
+ * origin, a reference point), something with a center (an edge or a face), or a direction (an axis, or
+ * the normal of a plane).
  */
-export type ReferenceRole = 'plane' | 'axis' | 'point' | 'center';
+export type ReferenceRole = 'plane' | 'axis' | 'point' | 'center' | 'direction';
 
 export type PlaneMethod = 'offset' | 'angle' | 'threePoints' | 'midPlane' | 'throughPoint';
 export type AxisMethod = 'reference' | 'twoPlanes' | 'twoPoints' | 'normal';
@@ -52,10 +53,14 @@ export const REFERENCE_ROLES = {
   plane: { offset: ['plane'], angle: ['plane', 'axis'], threePoints: ['point', 'point', 'point'], midPlane: ['plane', 'plane'], throughPoint: ['plane', 'point'] },
   axis: { reference: ['axis'], twoPlanes: ['plane', 'plane'], twoPoints: ['point', 'point'], normal: ['plane', 'point'] },
   point: { coordinates: [], center: ['center'], intersection: ['axis', 'plane'] },
+  pattern: { linear: ['direction'], circular: ['axis'] },
+  mirror: { plane: ['plane'] },
 } as const satisfies {
   plane: Record<PlaneMethod, readonly ReferenceRole[]>;
   axis: Record<AxisMethod, readonly ReferenceRole[]>;
   point: Record<PointMethod, readonly ReferenceRole[]>;
+  pattern: Record<'linear' | 'circular', readonly ReferenceRole[]>;
+  mirror: Record<'plane', readonly ReferenceRole[]>;
 };
 
 /** Where a reference feature lies, as the last rebuild computed it. */

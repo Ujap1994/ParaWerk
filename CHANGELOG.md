@@ -42,6 +42,11 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
   their tap drill; through all or to a depth with a 118° drill point; dimensions from the standards and
   changeable. Threads are shown as dashed circles of their nominal diameter. All holes of a feature are cut
   in one operation (100 holes: 0.3 s instead of 1.2 s as single cuts).
+- Patterns and mirror: linear patterns along an edge, axis or plane normal, circular patterns around an
+  axis (evenly all round or over an angle) and mirror images through a plane, of extrusions, revolutions,
+  holes, boxes and cylinders. The features to copy are picked in the tree (shown below the side panel
+  while picking) or by a face in the 3D view; all copies of a feature are combined with the body in one
+  operation.
 - Lost edges: a fillet or chamfer whose edges are partly gone after an earlier change still rounds the
   others and shows a yellow warning in the tree instead of failing. Editing it lists the lost edges,
   marks where they were in the 3D view and removes them with one click.

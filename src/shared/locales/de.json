@@ -99,7 +99,10 @@
       "plane": "Referenzebene erzeugen: mit Abstand, im Winkel, durch Punkte oder zwischen zwei Ebenen",
       "axis": "Referenzachse erzeugen: entlang einer Kante oder eines Zylinders, im Schnitt zweier Ebenen oder durch zwei Punkte",
       "point": "Referenzpunkt erzeugen: über Koordinaten, im Mittelpunkt oder wo eine Achse eine Ebene trifft",
-      "hole": "Bohrungen für metrische Schrauben an den Punkten einer Skizze: Durchgangsloch, Senkung zylindrisch oder kegelig, Gewinde"
+      "hole": "Bohrungen für metrische Schrauben an den Punkten einer Skizze: Durchgangsloch, Senkung zylindrisch oder kegelig, Gewinde",
+      "pattern": "Features in einer Reihe entlang einer Richtung kopieren",
+      "circularPattern": "Features um eine Achse kopieren",
+      "mirror": "Features an einer Ebene spiegeln"
     },
     "tabs": {
       "label": "Befehlsregister",
@@ -168,7 +171,11 @@
     "axis": "Achse",
     "point": "Punkt",
     "referenceGeometry": "Referenzgeometrie",
-    "hole": "Bohrung"
+    "hole": "Bohrung",
+    "pattern": "Muster",
+    "circularPattern": "Kreismuster",
+    "mirror": "Spiegeln",
+    "copyGeometry": "Muster und Spiegeln"
   },
   "features": {
     "plane": "Ebene",
@@ -183,7 +190,9 @@
     "variables": "Variablen",
     "extrude": "Extrusion",
     "revolve": "Rotation",
-    "hole": "Bohrung"
+    "hole": "Bohrung",
+    "pattern": "Muster",
+    "mirror": "Spiegelung"
   },
   "tree": {
     "title": "Featurebaum",
@@ -364,6 +373,9 @@
     "axis-not-in-plane": "Die Achse muss in der Ebene der Skizze liegen. Wähle eine Achse in dieser Ebene oder eine Linie der Skizze.",
     "hole-no-points": "Die Skizze hat keine Punkte für Bohrungen. Füge Punkte hinzu, die keine End- oder Mittelpunkte von Kurven sind.",
     "hole-invalid": "Die Maße der Bohrung passen nicht zusammen: Eine Senkung muss breiter als die Bohrung und weniger tief sein, ein Gewinde nicht tiefer als die Bohrung.",
+    "pattern-empty": "Wähle die zu kopierenden Features: im Featurebaum anklicken oder eine ihrer Flächen in der 3D-Ansicht.",
+    "pattern-seed-missing": "Ein zu kopierendes Feature fehlt oder ist unterdrückt. Bearbeite das Feature und wähle die Features neu.",
+    "pattern-unsupported": "Nur Features, die Material hinzufügen oder wegnehmen, lassen sich kopieren: Extrusionen, Rotationen, Bohrungen, Quader und Zylinder.",
     "profile-crosses-axis": "Konturen der Skizze liegen auf beiden Seiten der Achse. Halte sie auf einer Seite; berühren dürfen sie die Achse.",
     "plane-missing": "Die Referenzebene, auf der diese Skizze gezeichnet wurde, existiert nicht mehr. Die Skizze bleibt, wo die Ebene war.",
     "reference-missing": "Referenz {{detail}} dieses Features fehlt: Sie wurde noch nicht gewählt, oder eine frühere Änderung hat sie entfernt. Bearbeite das Feature und wähle sie.",
@@ -602,19 +614,27 @@
         "coordinates": "Koordinaten",
         "center": "Mittelpunkt einer Kante oder Fläche",
         "intersection": "Schnitt einer Achse mit einer Ebene"
+      },
+      "pattern": {
+        "linear": "Linear",
+        "circular": "Kreisförmig"
+      },
+      "mirror": {
+        "plane": "An einer Ebene"
       }
     },
     "roles": {
       "plane": "Ebene",
       "axis": "Achse",
       "point": "Punkt",
-      "center": "Kante oder Fläche"
+      "center": "Kante oder Fläche",
+      "direction": "Richtung (Kante, Achse oder Ebene)"
     },
     "empty": "Nicht gewählt",
-    "pick": "In der 3D-Ansicht wählen",
+    "pick": "In der 3D-Ansicht oder im Baum wählen",
     "lost": "Fehlt",
     "clear": "Referenz entfernen",
-    "hint": "Feld anklicken, dann eine Ebene, Fläche, Kante, einen Eckpunkt oder Referenzgeometrie in der 3D-Ansicht.",
+    "hint": "Feld anklicken, dann eine Ebene, Fläche, Kante, einen Eckpunkt oder Referenzgeometrie in der 3D-Ansicht oder im Baum.",
     "distance": "Abstand",
     "flipOffset": "Andere Seite",
     "flipAngle": "Andere Drehrichtung",
@@ -658,5 +678,16 @@
       "normal": "Mittel",
       "loose": "Grob"
     }
+  },
+  "copy": {
+    "features": "Zu kopierende Features",
+    "pickFeatures": "Features im Baum oder ihre Flächen in der 3D-Ansicht anklicken",
+    "count": "Anzahl",
+    "spacing": "Abstand",
+    "angle": "Gesamtwinkel",
+    "flipLinear": "Andere Richtung",
+    "flipCircular": "Andere Drehrichtung",
+    "linearHint": "Die Anzahl zählt das Original mit. Die Kopien folgen im Abstand entlang der Richtung.",
+    "circularHint": "Die Anzahl zählt das Original mit. 360° verteilt sie gleichmäßig rundum; ein kleinerer Winkel setzt die letzte Kopie an sein Ende."
   }
 }

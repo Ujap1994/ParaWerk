@@ -692,6 +692,63 @@ int cutHoles(int bodyId, const std::vector<double>& profile, const std::vector<d
   return store().add(result, namer.take());
 }
 
+int combineCopies(int bodyId, int toolId, const std::vector<double>& transforms, int op, const std::string& name) {
+  if (transforms.empty() || transforms.size() % 12 != 0) throw KernelError("operation-failed", "every copy needs a transformation (12 values)");
+  const StoredShape& body = store().entry(bodyId);
+  const StoredShape& tool = store().entry(toolId);
+  ShapeMap toolFaces;
+  TopExp::MapShapes(tool.shape, TopAbs_FACE, toolFaces);
+  NCollection_List<TopoDS_Shape> tools;
+  std::vector<StoredShape> copies;
+  for (size_t k = 0; k < transforms.size(); k += 12) {
+    const double* m = &transforms[k];
+    gp_Trsf transform;
+    transform.SetValues(m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8], m[9], m[10], m[11]);
+    const std::string prefix = name.empty() ? std::string() : name + ":" + std::to_string(k / 12) + ":";
+    const auto renamed = [&](int face) {
+      const std::string& original = face <= static_cast<int>(tool.names.size()) ? tool.names[static_cast<size_t>(face - 1)] : std::string();
+      return prefix.empty() || original.empty() ? std::string() : prefix + original;
+    };
+    StoredShape copy;
+    if (transform.IsNegative()) {
+      // A mirror image cannot be a location: copy the geometry and follow the faces through the copy.
+      BRepBuilderAPI_Transform copier(tool.shape, transform, true);
+      copy.shape = copier.Shape();
+      FaceNamer namer(copy.shape);
+      for (int f = 1; f <= toolFaces.Extent(); ++f) namer.assign(copier.ModifiedShape(toolFaces(f)), renamed(f));
+      copy.names = namer.take();
+    } else {
+      // Moved copies share the tool's geometry; their faces come in the same order.
+      copy.shape = tool.shape.Moved(TopLoc_Location(transform));
+      for (int f = 1; f <= toolFaces.Extent(); ++f) copy.names.push_back(renamed(f));
+    }
+    tools.Append(copy.shape);
+    copies.push_back(std::move(copy));
+  }
+  const auto run = [&](BRepAlgoAPI_BooleanOperation& algorithm) {
+    NCollection_List<TopoDS_Shape> arguments;
+    arguments.Append(body.shape);
+    algorithm.SetArguments(arguments);
+    algorithm.SetTools(tools);
+    algorithm.SetRunParallel(parallel);
+    algorithm.Build();
+    if (algorithm.HasErrors()) throw KernelError("operation-failed", "the copies could not be combined with the body");
+    algorithm.SimplifyResult(true, true, 1e-6);
+    const TopoDS_Shape result = algorithm.Shape();
+    if (countSolids(result) == 0) throw KernelError("empty-result", "the operation removed the whole body");
+    FaceNamer namer(result);
+    namer.inherit(algorithm, body.shape, body.names);
+    for (const StoredShape& copy : copies) namer.inherit(algorithm, copy.shape, copy.names);
+    return store().add(result, namer.take());
+  };
+  if (op == 0) {
+    BRepAlgoAPI_Fuse algorithm;
+    return run(algorithm);
+  }
+  BRepAlgoAPI_Cut algorithm;
+  return run(algorithm);
+}
+
 void setParallel(bool enabled) { parallel = enabled; }
 
 // ------------------------------------------------------------------ features

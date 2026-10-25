@@ -663,14 +663,14 @@ test('reference geometry screenshots', async () => {
   // The axis of the bore: select its face, then Axis.
   await click([20, -12, 40]);
   await page.click('[data-variants="reference-geometry"]');
-  await page.click('[data-reference="axis"]');
+  await page.click('[data-entry="axis"]');
   await idle(page);
   await page.click('[data-testid="panel-ok"]');
   await idle(page);
 
   // A plane through that axis at 30° to the front plane, edited with its preview.
   await page.click('[data-variants="reference-geometry"]');
-  await page.click('[data-reference="plane"]');
+  await page.click('[data-entry="plane"]');
   await page.selectOption('[data-testid="reference-method"]', 'angle');
   await pick('plane', 0);
   await pick('reference', 6);
@@ -685,7 +685,7 @@ test('reference geometry screenshots', async () => {
 
   // A point at the center of the back hole's top rim.
   await page.click('[data-variants="reference-geometry"]');
-  await page.click('[data-reference="point"]');
+  await page.click('[data-entry="point"]');
   await page.selectOption('[data-testid="reference-method"]', 'center');
   await click([-45, 23.5, 20]);
   await page.click('[data-testid="panel-ok"]');
@@ -754,5 +754,31 @@ test('hole screenshots', async () => {
   if (canvas) await page.mouse.move(canvas.x - 150, canvas.y + canvas.height - 40);
   await page.waitForTimeout(500);
   await page.screenshot({ path: out('hole-threads.png') });
+  await app.close();
+});
+
+test('pattern screenshots', async () => {
+  const { app, page } = await launchApp({ width: 1440, height: 900 });
+  await buildDemoPart(page);
+  await page.evaluate(() => (window as unknown as { __parawerk: { viewport: { zoomToFit(): void } } }).__parawerk.viewport.zoomToFit());
+  await page.waitForTimeout(600);
+  const canvas = await page.locator('.viewport-canvas').boundingBox();
+
+  // The two holes at the left end, copied twice to the right, 22 mm apart along the plate's front edge.
+  await page.click('[data-command="pattern"]');
+  await page.click('.feature-tree .tree-item[data-feature-id="hole1"]');
+  await page.click('.feature-tree .tree-item[data-feature-id="hole2"]');
+  await page.click('[data-testid="reference-slot-0"] .reference-slot-button');
+  const edge = await page.evaluate(() => (window as unknown as { __parawerk: { viewport: { project(x: number, y: number, z: number): { x: number; y: number } } } }).__parawerk.viewport.project(30, -40, 20));
+  if (canvas) await page.mouse.click(canvas.x + edge.x, canvas.y + edge.y);
+  await page.locator('[data-testid="pattern-spacing"]').fill('22');
+  await page.locator('[data-testid="pattern-spacing"]').press('Tab');
+  await idle(page);
+  // Picking in the tree scrolled the side bar; the panel is shown from its top.
+  await page.evaluate(() => document.querySelector('.sidebar')?.scrollTo(0, 0));
+  await page.waitForTimeout(600);
+  if (canvas) await page.mouse.move(canvas.x + 20, canvas.y + canvas.height - 20);
+  await page.screenshot({ path: out('pattern-linear.png') });
+  await page.click('[data-testid="panel-ok"]');
   await app.close();
 });

@@ -1,4 +1,4 @@
-import { isEdgeFeature, isReferenceFeature } from '../../../shared/model/feature.ts';
+import { isCopyFeature, isEdgeFeature, isReferenceFeature } from '../../../shared/model/feature.ts';
 import type { FeatureResult, MassProperties, MeshPayload } from '../../../kernel/protocol.ts';
 import { t } from '../i18n.ts';
 import { KernelClient, KernelCrashedError } from '../kernel/kernel-client.ts';
@@ -131,6 +131,9 @@ function applyResult(
   } else if (isReferenceFeature(activeEdit.draft)) {
     // Reference geometry is built on faces, edges and vertices of the body before it (which it does not change).
     display = { body: meshes.get(activeEdit.index - 1) ?? null, preview: null, pickable: true };
+  } else if (isCopyFeature(activeEdit.draft)) {
+    // A pattern or mirror shows its result; faces of the features it copies and references are picked on it.
+    display = { body: meshes.get(activeEdit.index) ?? null, preview: null, pickable: true };
   } else {
     display = { body: meshes.get(activeEdit.index) ?? null, preview: null, pickable: false };
   }

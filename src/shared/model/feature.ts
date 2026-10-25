@@ -10,7 +10,7 @@ import type { SketchData, SketchPlaneRef } from './sketch.ts';
 
 export type Vec3 = [number, number, number];
 
-export type FeatureType = 'variables' | 'sketch' | 'plane' | 'axis' | 'point' | 'extrude' | 'revolve' | 'hole' | 'box' | 'cylinder' | 'fillet' | 'chamfer';
+export type FeatureType = 'variables' | 'sketch' | 'plane' | 'axis' | 'point' | 'extrude' | 'revolve' | 'hole' | 'pattern' | 'mirror' | 'box' | 'cylinder' | 'fillet' | 'chamfer';
 
 /** How a solid-creating feature combines with the existing body. */
 export type BooleanOperation = 'add' | 'cut';
@@ -65,6 +65,8 @@ export const EXPRESSION_FIELDS: Readonly<Record<FeatureType, readonly string[]>>
   extrude: ['depth'],
   revolve: ['angle'],
   hole: ['diameter', 'depth', 'counterboreDiameter', 'counterboreDepth', 'countersinkDiameter', 'countersinkAngle', 'threadDepth'],
+  pattern: ['spacing', 'angle'],
+  mirror: [],
   box: ['width', 'depth', 'height'],
   cylinder: ['radius', 'height'],
   fillet: ['radius'],
@@ -262,6 +264,51 @@ export interface HoleFeature extends FeatureBase {
   threadDepth: number;
 }
 
+export type PatternMethod = 'linear' | 'circular';
+
+/** Copies of earlier features in a row or around an axis (see src/shared/model/pattern.ts). */
+export interface PatternFeature extends FeatureBase {
+  type: 'pattern';
+  method: PatternMethod;
+  /** Linear: the direction (an edge, an axis or the normal of a plane); circular: the axis. */
+  references: GeometryRef[];
+  /** Ids of the features before the pattern that it copies. */
+  features: string[];
+  /** How many there are in the end, the originals included. */
+  count: number;
+  /** Linear: the distance between neighbors, in mm. */
+  spacing: number;
+  /** Circular: degrees the copies spread over (360: evenly all round). */
+  angle: number;
+  /** The other way along the direction, or round the axis. */
+  flip: boolean;
+}
+
+/** Mirror images of earlier features through a plane. */
+export interface MirrorFeature extends FeatureBase {
+  type: 'mirror';
+  method: 'plane';
+  references: GeometryRef[];
+  features: string[];
+}
+
+/** Features that copy other features. */
+export type CopyFeature = PatternFeature | MirrorFeature;
+
+export function isCopyFeature(feature: Feature): feature is CopyFeature {
+  return feature.type === 'pattern' || feature.type === 'mirror';
+}
+
+/** Features whose references are chosen in fields of the side panel (reference geometry, patterns, mirror). */
+export type SlotFeature = ReferenceFeature | CopyFeature;
+
+export function hasReferenceSlots(feature: Feature): feature is SlotFeature {
+  return isReferenceFeature(feature) || isCopyFeature(feature);
+}
+
+/** The feature types a pattern or mirror can copy: those that add or cut material with a tool of their own. */
+export const COPYABLE_TYPES: ReadonlySet<FeatureType> = new Set(['extrude', 'revolve', 'hole', 'box', 'cylinder']);
+
 /** Features built from a sketch: its outlines (extrude, revolve) or its points (hole). */
 export type SketchBasedFeature = ExtrudeFeature | RevolveFeature | HoleFeature;
 
@@ -278,6 +325,8 @@ export type Feature =
   | ExtrudeFeature
   | RevolveFeature
   | HoleFeature
+  | PatternFeature
+  | MirrorFeature
   | BoxFeature
   | CylinderFeature
   | FilletFeature
@@ -296,7 +345,7 @@ export function isSolidFeature(feature: Feature): feature is BoxFeature | Cylind
   return feature.type === 'box' || feature.type === 'cylinder';
 }
 
-export const FEATURE_TYPES: readonly FeatureType[] = ['variables', 'sketch', 'plane', 'axis', 'point', 'extrude', 'revolve', 'hole', 'box', 'cylinder', 'fillet', 'chamfer'];
+export const FEATURE_TYPES: readonly FeatureType[] = ['variables', 'sketch', 'plane', 'axis', 'point', 'extrude', 'revolve', 'hole', 'pattern', 'mirror', 'box', 'cylinder', 'fillet', 'chamfer'];
 
 let idCounter = 0;
 
@@ -341,6 +390,10 @@ export function defaultFeature(type: FeatureType, id: string = createFeatureId()
         countersinkAngle: 90,
         threadDepth: 12,
       };
+    case 'pattern':
+      return { id, type, method: 'linear', references: [], features: [], count: 3, spacing: 20, angle: 360, flip: false };
+    case 'mirror':
+      return { id, type, method: 'plane', references: [], features: [] };
     case 'box':
       return { id, type, operation: 'add', width: 100, depth: 60, height: 40, position: [0, 0, 0] };
     case 'cylinder':

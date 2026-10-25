@@ -1,7 +1,7 @@
 import { resolveLanguage } from '../../shared/i18n.ts';
 import type { MenuCommand } from '../../shared/ipc.ts';
 import { PART_FILE_EXTENSION } from '../../shared/app-info.ts';
-import { defaultFeature, isEdgeFeature, isReferenceFeature, isSketchBased, type EdgeRef, type Feature, type FeatureType, type HoleFeature, type ReferenceFeature, type SketchFeature } from '../../shared/model/feature.ts';
+import { COPYABLE_TYPES, defaultFeature, hasReferenceSlots, isCopyFeature, isEdgeFeature, isReferenceFeature, isSketchBased, type EdgeRef, type Feature, type FeatureType, type HoleFeature, type ReferenceFeature, type SketchFeature, type SlotFeature } from '../../shared/model/feature.ts';
 import { holePositions, metricSize, sizesFor, standardHoleDimensions } from '../../shared/model/hole.ts';
 import { AXIS_METHODS, PLANE_METHODS, POINT_METHODS, REFERENCE_ROLES, type GeometryRef, type ReferenceRole } from '../../shared/model/reference.ts';
 import { referenceFits, referenceGeometry, referenceOfPick, referenceRoles } from './references.ts';
@@ -223,10 +223,14 @@ export function startFeature(type: FeatureType): void {
   } else if (isReferenceFeature(draft)) {
     // What was selected before starting becomes the references, and decides the method (select first, then act).
     draft = withSelectedReferences(draft, getState().selection);
+  } else if (isCopyFeature(draft)) {
+    // Faces selected before starting name the features to copy.
+    const seeds = getState().selection.flatMap((pick) => (pick.kind === 'face' ? [seedOfFace(pick.index)] : [])).filter((id): id is string => id !== null);
+    draft = { ...draft, features: [...new Set(seeds)] };
   } else if (!hasBodyBefore(features, index) && (draft.type === 'box' || draft.type === 'cylinder')) {
     draft = { ...draft, operation: 'add' };
   }
-  const slot = isReferenceFeature(draft) ? firstEmptySlot(draft) : 0;
+  const slot = hasReferenceSlots(draft) ? firstEmptySlot(draft) : 0;
   setState({ activeEdit: { mode: 'create', index, draft }, selection: [], referenceSlot: slot });
 }
 
@@ -319,10 +323,57 @@ function withSelectedReferences(draft: ReferenceFeature, selection: readonly Pic
   return draft;
 }
 
-function firstEmptySlot(feature: ReferenceFeature): number {
+/**
+ * The field the next pick fills: the list of features to copy while a pattern or mirror has none, else the
+ * first empty reference field (FEATURES_SLOT stands for the list).
+ */
+function firstEmptySlot(feature: SlotFeature): number {
+  if (isCopyFeature(feature) && feature.features.length === 0) return FEATURES_SLOT;
   const roles = referenceRoles(feature);
   const empty = roles.findIndex((_, slot) => feature.references[slot] === undefined);
   return empty >= 0 ? empty : Math.max(0, roles.length - 1);
+}
+
+/** Starts a pattern around an axis. */
+export function startCircularPattern(): void {
+  startFeature('pattern');
+  if (getState().activeEdit?.draft.type === 'pattern') setReferenceMethod('circular');
+}
+
+/** The "field" of a pattern's or mirror's features to copy, in state.referenceSlot. */
+export const FEATURES_SLOT = -1;
+
+/** The feature a face of the shown body comes from, if a pattern or mirror can copy it (faces are named after their feature). */
+function seedOfFace(face: number): string | null {
+  const state = getState();
+  const id = state.display.body?.naming.faces[face]?.split(':')[0];
+  const end = state.activeEdit?.index ?? state.history.features.length;
+  const feature = state.history.features.slice(0, end).find((candidate) => candidate.id === id);
+  return feature && COPYABLE_TYPES.has(feature.type) ? feature.id : null;
+}
+
+/** Adds a feature to the features the edited pattern or mirror copies, or takes it out again. */
+export function toggleCopySeed(id: string): void {
+  const edit = getState().activeEdit;
+  if (!edit || !isCopyFeature(edit.draft)) return;
+  const feature = getState().history.features.slice(0, edit.index).find((candidate) => candidate.id === id);
+  if (!feature || !COPYABLE_TYPES.has(feature.type)) {
+    showToast('info', t('errors.pattern-unsupported'));
+    return;
+  }
+  const features = edit.draft.features.includes(id) ? edit.draft.features.filter((seed) => seed !== id) : [...edit.draft.features, id];
+  updateDraft({ features } as Partial<SlotFeature>);
+}
+
+/** A pick while a pattern or mirror is edited: a face names a feature to copy when the list is active, else it fills a reference field. */
+function pickForCopy(pick: Pick): void {
+  if (getState().referenceSlot !== FEATURES_SLOT) {
+    assignReference(pick);
+    return;
+  }
+  const seed = pick.kind === 'face' ? seedOfFace(pick.index) : null;
+  if (seed) toggleCopySeed(seed);
+  else showToast('info', t('errors.pattern-unsupported'));
 }
 
 /** The reference field the next pick fills. */
@@ -334,11 +385,11 @@ export function setReferenceSlot(slot: number): void {
 export function assignReference(pick: Pick | 'origin'): void {
   const state = getState();
   const edit = state.activeEdit;
-  if (!edit || !isReferenceFeature(edit.draft)) return;
+  if (!edit || !hasReferenceSlots(edit.draft)) return;
   const roles = referenceRoles(edit.draft);
   if (roles.length === 0) return;
   // Fields are filled in order: a field after an empty one cannot be filled yet.
-  const slot = Math.min(state.referenceSlot, edit.draft.references.length, roles.length - 1);
+  const slot = Math.max(0, Math.min(state.referenceSlot, edit.draft.references.length, roles.length - 1));
   const role = roles[slot] as ReferenceRole;
   const ref: GeometryRef | null = pick === 'origin' ? { kind: 'origin' } : referenceOfPick(pick, state);
   if (!ref) return;
@@ -348,7 +399,7 @@ export function assignReference(pick: Pick | 'origin'): void {
   }
   const references = [...edit.draft.references];
   references[slot] = ref;
-  const draft = { ...edit.draft, references } as ReferenceFeature;
+  const draft = { ...edit.draft, references } as SlotFeature;
   updateDraft(draft);
   setState({ referenceSlot: firstEmptySlot(draft) });
 }
@@ -356,8 +407,8 @@ export function assignReference(pick: Pick | 'origin'): void {
 /** Empties a reference field; the next pick fills it. */
 export function clearReference(slot: number): void {
   const edit = getState().activeEdit;
-  if (!edit || !isReferenceFeature(edit.draft)) return;
-  updateDraft({ references: edit.draft.references.slice(0, slot) } as Partial<ReferenceFeature>);
+  if (!edit || !hasReferenceSlots(edit.draft)) return;
+  updateDraft({ references: edit.draft.references.slice(0, slot) } as Partial<SlotFeature>);
   setState({ referenceSlot: slot });
 }
 
@@ -365,8 +416,8 @@ export function clearReference(slot: number): void {
 export function setReferenceMethod(method: string): void {
   const state = getState();
   const edit = state.activeEdit;
-  if (!edit || !isReferenceFeature(edit.draft)) return;
-  const draft = { ...edit.draft, method } as ReferenceFeature;
+  if (!edit || !hasReferenceSlots(edit.draft)) return;
+  const draft = { ...edit.draft, method } as SlotFeature;
   const roles = referenceRoles(draft);
   const kept: GeometryRef[] = [];
   for (const [slot, role] of roles.entries()) {
@@ -374,7 +425,7 @@ export function setReferenceMethod(method: string): void {
     if (!ref || !referenceFits(ref, role, state)) break;
     kept.push(ref);
   }
-  const next = { ...draft, references: kept } as ReferenceFeature;
+  const next = { ...draft, references: kept } as SlotFeature;
   updateDraft(next);
   setState({ referenceSlot: firstEmptySlot(next) });
 }
@@ -390,7 +441,7 @@ export function editFeature(id: string): void {
     enterSketch(openSketchSession('edit', index, feature));
     return;
   }
-  setState({ activeEdit: { mode: 'edit', index, draft: feature }, selection: [], choosingSketchPlane: false, referenceSlot: isReferenceFeature(feature) ? firstEmptySlot(feature) : 0 });
+  setState({ activeEdit: { mode: 'edit', index, draft: feature }, selection: [], choosingSketchPlane: false, referenceSlot: hasReferenceSlots(feature) ? firstEmptySlot(feature) : 0 });
 }
 
 /** Opens the part's variables in the property panel (a new, empty list at the top of the tree if there is none). */
@@ -1028,6 +1079,10 @@ export function handlePick(pick: Pick | null, additive: boolean): void {
   const edit = state.activeEdit;
   if (edit && isEdgeFeature(edit.draft)) {
     if (pick?.kind === 'edge') toggleDraftEdge(pick.index);
+    return;
+  }
+  if (edit && isCopyFeature(edit.draft)) {
+    if (pick) pickForCopy(pick);
     return;
   }
   if (edit && isReferenceFeature(edit.draft)) {

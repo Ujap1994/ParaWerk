@@ -613,6 +613,41 @@ input {
   font-style: italic;
 }
 
+.seed-list {
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.seed-list .reference-slot-value {
+  white-space: normal;
+}
+
+.seed-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  width: 100%;
+  margin: 0;
+  padding: 0 6px 6px;
+  list-style: none;
+}
+
+.seed-chip {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 2px 1px 8px;
+  border-radius: 999px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  font-size: 12px;
+}
+
+.seed-chip .icon-button {
+  width: 20px;
+  height: 20px;
+}
+
 .reference-hint {
   display: flex;
   gap: 8px;

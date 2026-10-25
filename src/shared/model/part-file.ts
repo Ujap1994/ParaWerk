@@ -1,5 +1,5 @@
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
-import { isEdgeFeature, isReferenceFeature, type Feature } from './feature.ts';
+import { isCopyFeature, isEdgeFeature, isReferenceFeature, type Feature } from './feature.ts';
 import { parseFeatures, ValidationError } from './validate.ts';
 
 /**
@@ -15,7 +15,8 @@ export const PART_FORMAT = 'parawerk-part';
 /**
  * 2: sketch features. 3: variables, parameter and dimension expressions, splines. 4: extrusions and
  * revolutions. 5: edges and sketch faces referenced by persistent names (docs/adr/0002-persistent-naming.md).
- * 6: reference planes, axes and points, sketches on reference planes, revolutions around reference axes, holes.
+ * 6: reference planes, axes and points, sketches on reference planes, revolutions around reference axes, holes,
+ * patterns and mirror images.
  * Older versions are read unchanged.
  */
 export const PART_FORMAT_VERSION = 6;
@@ -23,7 +24,11 @@ export const PART_FORMAT_VERSION = 6;
 /** The oldest format version that can hold the document, so older ParaWerk versions can still open it. */
 export function formatVersionOf(features: readonly Feature[]): number {
   const reference = (feature: Feature) =>
-    isReferenceFeature(feature) || feature.type === 'hole' || (feature.type === 'sketch' && feature.plane.kind === 'feature') || (feature.type === 'revolve' && feature.axisRef !== undefined);
+    isReferenceFeature(feature) ||
+    isCopyFeature(feature) ||
+    feature.type === 'hole' ||
+    (feature.type === 'sketch' && feature.plane.kind === 'feature') ||
+    (feature.type === 'revolve' && feature.axisRef !== undefined);
   if (features.some(reference)) return 6;
   const named = features.some(
     (feature) =>

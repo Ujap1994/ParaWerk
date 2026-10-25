@@ -99,7 +99,10 @@
       "plane": "Create a reference plane: offset, at an angle, through points or between two planes",
       "axis": "Create a reference axis: along an edge or a cylinder, where two planes meet or through two points",
       "point": "Create a reference point: by coordinates, at a center or where an axis meets a plane",
-      "hole": "Drill holes for metric screws at the points of a sketch: clearance, counterbore, countersink or tapped"
+      "hole": "Drill holes for metric screws at the points of a sketch: clearance, counterbore, countersink or tapped",
+      "pattern": "Copy features in a row along a direction",
+      "circularPattern": "Copy features around an axis",
+      "mirror": "Mirror features through a plane"
     },
     "tabs": {
       "label": "Command tabs",
@@ -168,7 +171,11 @@
     "axis": "Axis",
     "point": "Point",
     "referenceGeometry": "Reference geometry",
-    "hole": "Hole"
+    "hole": "Hole",
+    "pattern": "Pattern",
+    "circularPattern": "Circular pattern",
+    "mirror": "Mirror",
+    "copyGeometry": "Patterns and mirror"
   },
   "features": {
     "plane": "Plane",
@@ -183,7 +190,9 @@
     "variables": "Variables",
     "extrude": "Extrude",
     "revolve": "Revolve",
-    "hole": "Hole"
+    "hole": "Hole",
+    "pattern": "Pattern",
+    "mirror": "Mirror"
   },
   "tree": {
     "title": "Feature tree",
@@ -364,6 +373,9 @@
     "axis-not-in-plane": "The axis must lie in the plane of the sketch. Choose an axis in that plane, or a line of the sketch.",
     "hole-no-points": "The sketch has no points for holes. Add points that are not ends or centers of curves.",
     "hole-invalid": "The dimensions of the hole do not fit together: a counterbore or countersink must be wider than the hole and less deep, a thread no deeper than the hole.",
+    "pattern-empty": "Choose the features to copy: click them in the feature tree or one of their faces in the 3D view.",
+    "pattern-seed-missing": "A feature to copy is missing or suppressed. Edit the feature and choose the features again.",
+    "pattern-unsupported": "Only features that add or cut material can be copied: extrusions, revolutions, holes, boxes and cylinders.",
     "profile-crosses-axis": "Outlines of the sketch lie on both sides of the axis. Keep them on one side; they may touch it.",
     "plane-missing": "The reference plane this sketch was drawn on no longer exists. The sketch stays where the plane was.",
     "reference-missing": "Reference {{detail}} of this feature is missing: it was not chosen yet, or an earlier change removed it. Edit the feature and choose it.",
@@ -602,19 +614,27 @@
         "coordinates": "Coordinates",
         "center": "Center of an edge or face",
         "intersection": "Where an axis meets a plane"
+      },
+      "pattern": {
+        "linear": "Linear",
+        "circular": "Circular"
+      },
+      "mirror": {
+        "plane": "Through a plane"
       }
     },
     "roles": {
       "plane": "Plane",
       "axis": "Axis",
       "point": "Point",
-      "center": "Edge or face"
+      "center": "Edge or face",
+      "direction": "Direction (edge, axis or plane)"
     },
     "empty": "Not chosen",
-    "pick": "Select in the 3D view",
+    "pick": "Select in the 3D view or the tree",
     "lost": "Missing",
     "clear": "Remove reference",
-    "hint": "Click a field, then a plane, face, edge, vertex or reference geometry in the 3D view.",
+    "hint": "Click a field, then a plane, face, edge, vertex or reference geometry in the 3D view or the tree.",
     "distance": "Distance",
     "flipOffset": "Other side",
     "flipAngle": "Other way round",
@@ -658,5 +678,16 @@
       "normal": "Medium",
       "loose": "Coarse"
     }
+  },
+  "copy": {
+    "features": "Features to copy",
+    "pickFeatures": "Click features in the tree or their faces in the 3D view",
+    "count": "Count",
+    "spacing": "Spacing",
+    "angle": "Total angle",
+    "flipLinear": "Other direction",
+    "flipCircular": "Other way round",
+    "linearHint": "Count includes the original. The copies follow each other at the spacing along the direction.",
+    "circularHint": "Count includes the original. 360° spreads them evenly all round; a smaller angle puts the last copy at its end."
   }
 }

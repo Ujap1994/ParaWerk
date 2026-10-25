@@ -1,4 +1,5 @@
-import { isEdgeFeature, type EdgeFeature, type EdgeRef, type Feature, type HoleFeature, type SketchFeature, type SolidModelingFeature, type Vec3 } from '../shared/model/feature.ts';
+import { COPYABLE_TYPES, isCopyFeature, isEdgeFeature, type CopyFeature, type EdgeFeature, type EdgeRef, type Feature, type HoleFeature, type SketchFeature, type SolidModelingFeature, type Vec3 } from '../shared/model/feature.ts';
+import { circularTransforms, linearTransforms, mirrorTransform, type Transform } from '../shared/model/pattern.ts';
 import { holePositions, holeProblem } from '../shared/model/hole.ts';
 import { edgeFaceNames, edgeRefOf, resolveEdgeRefs, resolveFacePlane, type BodyNaming } from '../shared/model/naming.ts';
 import { sketchProfile, type Profile } from '../shared/model/profile.ts';
@@ -6,9 +7,9 @@ import type { GeometryRef, ReferenceGeometry } from '../shared/model/reference.t
 import { frameOf, frameOnPlane, ORIGIN_ID, toModel, toSketch, type SketchFrame, type SketchPlaneRef } from '../shared/model/sketch.ts';
 import type { Point2 } from '../shared/model/spline.ts';
 import { hashString } from '../shared/hash.ts';
-import type { KernelFeature, ResolvedEdgeFeature, ResolvedHole } from './backend.ts';
+import type { KernelFeature, ResolvedCopy, ResolvedEdgeFeature, ResolvedHole } from './backend.ts';
 import { FeatureError } from './feature-error.ts';
-import { axisOfReference, type ReferenceContext } from './reference.ts';
+import { axisOfReference, referenceValue, type ReferenceContext } from './reference.ts';
 
 const coordinate = (value: number) => String(Math.round(value * 100) / 100);
 
@@ -142,6 +143,37 @@ function resolveHole(feature: HoleFeature, sketch: SketchFeature, frame: SketchF
   return { ...feature, placements };
 }
 
+/**
+ * A pattern or mirror: the features it copies, each resolved as it was built, and where the copies go.
+ * Only features that add or cut material with a tool of their own can be copied.
+ */
+function resolveCopy(feature: CopyFeature, before: readonly Feature[], context: ResolveContext): ResolvedCopy {
+  if (feature.features.length === 0) throw new FeatureError('pattern-empty');
+  const indices = feature.features.map((id) => before.findIndex((candidate) => candidate.id === id));
+  const missing = indices.filter((index) => index < 0 || before[index]?.suppressed).length;
+  if (missing > 0) throw new FeatureError('pattern-seed-missing', String(missing));
+  const seeds = indices
+    .sort((a, b) => a - b)
+    .map((index) => {
+      const seed = before[index] as Feature;
+      if (!COPYABLE_TYPES.has(seed.type)) throw new FeatureError('pattern-unsupported');
+      return resolveFeature(seed as SolidModelingFeature, before.slice(0, index), context);
+    });
+  let transforms: Transform[];
+  if (feature.type === 'mirror') {
+    const plane = referenceValue(feature.references[0], 'plane', 0, context);
+    transforms = [mirrorTransform(plane.point, plane.normal)];
+  } else if (feature.method === 'linear') {
+    const direction = referenceValue(feature.references[0], 'direction', 0, context);
+    transforms = linearTransforms(feature.flip ? ([-direction[0], -direction[1], -direction[2]] as Vec3) : direction, feature.spacing, feature.count);
+  } else {
+    const axis = referenceValue(feature.references[0], 'axis', 0, context);
+    const direction = feature.flip ? ([-axis.direction[0], -axis.direction[1], -axis.direction[2]] as Vec3) : axis.direction;
+    transforms = circularTransforms(axis.point, direction, feature.angle, feature.count);
+  }
+  return { ...feature, seeds, transforms: transforms.flat() };
+}
+
 /** What features are resolved against: the body before them, where sketches lie and where reference features lie. */
 export interface ResolveContext extends ReferenceContext {
   frames: ReadonlyMap<string, SketchFrame>;
@@ -154,6 +186,7 @@ export interface ResolveContext extends ReferenceContext {
  * has no usable outline, or when an edge or the axis is gone.
  */
 export function resolveFeature(feature: SolidModelingFeature, before: readonly Feature[], context: ResolveContext): KernelFeature {
+  if (isCopyFeature(feature)) return resolveCopy(feature, before, context);
   if (isEdgeFeature(feature)) {
     if (!context.body) throw new FeatureError('no-body');
     return resolveEdges(feature, context.body.naming());

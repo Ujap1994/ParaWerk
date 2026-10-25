@@ -103,6 +103,9 @@ export type FeatureErrorCode =
   | 'axis-not-in-plane'
   | 'hole-no-points'
   | 'hole-invalid'
+  | 'pattern-empty'
+  | 'pattern-seed-missing'
+  | 'pattern-unsupported'
   | 'profile-crosses-axis'
   | 'operation-failed'
   | 'unknown';

@@ -2,7 +2,7 @@
  * Reference geometry in the UI: turning picks into references, checking that they fit a field, showing
  * the reference planes, axes and points and highlighting what the edited feature refers to.
  */
-import { isReferenceFeature, type Feature, type ReferenceFeature } from '../../shared/model/feature.ts';
+import { hasReferenceSlots, isReferenceFeature, type Feature, type SlotFeature } from '../../shared/model/feature.ts';
 import { edgeRefOf, faceRefOf, resolveEdgeRefs, resolveFaceRef, resolveVertexRef, vertexRefOf } from '../../shared/model/naming.ts';
 import { REFERENCE_ROLES, type GeometryRef, type ReferenceGeometry, type ReferenceRole } from '../../shared/model/reference.ts';
 import { STANDARD_PLANES } from '../../shared/model/sketch.ts';
@@ -11,7 +11,7 @@ import type { AppState, Pick } from './state/store.ts';
 import type { ReferenceItem } from './viewport/reference-geometry.ts';
 
 /** The roles of the references the feature's method takes, in order. */
-export function referenceRoles(feature: ReferenceFeature): readonly ReferenceRole[] {
+export function referenceRoles(feature: SlotFeature): readonly ReferenceRole[] {
   return (REFERENCE_ROLES[feature.type] as Record<string, readonly ReferenceRole[]>)[feature.method] ?? [];
 }
 
@@ -49,12 +49,12 @@ export function referenceFits(ref: GeometryRef, role: ReferenceRole, state: AppS
   const body = state.display.body;
   switch (ref.kind) {
     case 'standard-plane':
-      return role === 'plane';
+      return role === 'plane' || role === 'direction';
     case 'origin':
       return role === 'point' || role === 'center';
     case 'feature': {
       const kind = referenceGeometry(state, ref.feature)?.kind ?? state.history.features.find((feature) => feature.id === ref.feature)?.type;
-      return kind === role || (kind === 'point' && role === 'center');
+      return kind === role || (kind === 'point' && role === 'center') || (role === 'direction' && (kind === 'plane' || kind === 'axis'));
     }
     case 'vertex':
       return role === 'point' || role === 'center';
@@ -63,12 +63,13 @@ export function referenceFits(ref: GeometryRef, role: ReferenceRole, state: AppS
       if (role === 'center') return true;
       if (role === 'plane') return info ? info.plane !== undefined : true;
       if (role === 'axis') return info ? AXIS_SURFACES.has(info.kind) : true;
+      if (role === 'direction') return info ? info.plane !== undefined || AXIS_SURFACES.has(info.kind) : true;
       return false;
     }
     case 'edge': {
       const info = pick?.kind === 'edge' ? body?.edgeInfo[pick.index] : undefined;
       if (role === 'center') return true;
-      if (role === 'axis') return info ? info.kind === 'line' || info.kind === 'circle' || info.kind === 'ellipse' : true;
+      if (role === 'axis' || role === 'direction') return info ? info.kind === 'line' || info.kind === 'circle' || info.kind === 'ellipse' : true;
       return false;
     }
   }
@@ -126,7 +127,7 @@ export function referenceItems(state: AppState): ReferenceItem[] {
   const end = state.sketch?.index ?? edit?.index ?? features.length;
   const results = new Map(state.rebuild?.results.map((result) => [result.id, result]));
   // What the edited feature is built on is highlighted: the references of reference geometry, the axis of a revolution.
-  const built = edit && isReferenceFeature(edit.draft) ? edit.draft.references : edit?.draft.type === 'revolve' && edit.draft.axisRef ? [edit.draft.axisRef] : [];
+  const built = edit && hasReferenceSlots(edit.draft) ? edit.draft.references : edit?.draft.type === 'revolve' && edit.draft.axisRef ? [edit.draft.axisRef] : [];
   const referenced = new Set(referencePicks(built, state).filter((pick) => pick.kind === 'reference').map((pick) => pick.index));
   const selected = new Set(state.selection.filter((pick) => pick.kind === 'reference').map((pick) => pick.index));
   const hovered = state.hover?.kind === 'reference' ? state.hover.index : null;

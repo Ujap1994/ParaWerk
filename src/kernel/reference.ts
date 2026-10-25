@@ -35,6 +35,14 @@ interface Aspects {
   axis?: Line;
   point?: Vec3;
   center?: Vec3;
+  /** The direction of an axis, or the normal of a plane. */
+  direction?: Vec3;
+}
+
+/** The direction aspect follows from an axis or a plane. */
+function withDirection(aspects: Aspects): Aspects {
+  const direction = aspects.axis?.direction ?? aspects.plane?.normal;
+  return direction ? { ...aspects, direction } : aspects;
 }
 
 const add = (a: Vec3, b: Vec3): Vec3 => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
@@ -107,6 +115,11 @@ function referenceAspects(geometry: ReferenceGeometry): Aspects {
 function aspectsOf(ref: GeometryRef | undefined, slot: number, context: ReferenceContext): { aspects: Aspects; healed?: GeometryRef } {
   const missing = () => new FeatureError('reference-missing', String(slot + 1));
   if (!ref) throw missing();
+  const { aspects, healed } = rawAspectsOf(ref, context, missing);
+  return { aspects: withDirection(aspects), ...(healed ? { healed } : {}) };
+}
+
+function rawAspectsOf(ref: GeometryRef, context: ReferenceContext, missing: () => FeatureError): { aspects: Aspects; healed?: GeometryRef } {
   switch (ref.kind) {
     case 'standard-plane': {
       const frame = STANDARD_FRAMES[ref.plane];
@@ -156,7 +169,14 @@ export function axisOfReference(ref: GeometryRef, context: ReferenceContext): Li
 }
 
 /** The geometry a slot of the given role takes from what its reference provides. */
-type RoleValue = { plane: Plane; axis: Line; point: Vec3; center: Vec3 };
+export type RoleValue = { plane: Plane; axis: Line; point: Vec3; center: Vec3; direction: Vec3 };
+
+/** What reference `ref` (in slot `slot`, counted from 0) provides for a role; throws FeatureError when it is missing or does not fit. */
+export function referenceValue<R extends ReferenceRole>(ref: GeometryRef | undefined, role: R, slot: number, context: ReferenceContext): RoleValue[R] {
+  const value = aspectsOf(ref, slot, context).aspects[role];
+  if (!value) throw new FeatureError('reference-kind', String(slot + 1));
+  return value as RoleValue[R];
+}
 
 export interface ComputedReference {
   geometry: ReferenceGeometry;

@@ -487,7 +487,7 @@ test('builds reference planes, axes and points that follow the part, and sketche
 
   // An axis where the front and right plane meet: the Z axis.
   await page.click('[data-variants="reference-geometry"]');
-  await page.click('[data-reference="axis"]');
+  await page.click('[data-entry="axis"]');
   await page.selectOption('[data-testid="reference-method"]', 'twoPlanes');
   await pick('plane', 0);
   await pick('plane', 2);
@@ -497,7 +497,7 @@ test('builds reference planes, axes and points that follow the part, and sketche
 
   // A point where the axis meets the plane; an axis does not fit a plane field.
   await page.click('[data-variants="reference-geometry"]');
-  await page.click('[data-reference="point"]');
+  await page.click('[data-entry="point"]');
   await page.selectOption('[data-testid="reference-method"]', 'intersection');
   await pick('reference', 1);
   await expect(page.locator('[data-testid="toast-info"]')).toContainText('axis');
@@ -605,4 +605,48 @@ test('drills holes for metric screws at the points of a sketch', async () => {
   expect(await volume(page)).toBeCloseTo(240_000 - 2 * Math.PI * 3.4 * 3.4 * 40, 2);
   expect((await state(page)).history.features[2]).toMatchObject({ type: 'hole', kind: 'tapped', size: 'M8', diameter: 6.8, sketch: 'positions' });
   await expect.poll(threads).toBe(2);
+});
+
+test('patterns a boss along a plane normal and around an axis, and mirrors it', async () => {
+  launched = await launchApp({ width: 1440, height: 900 });
+  const { page } = launched;
+  // A 200 × 100 × 10 plate and a Ø 10 boss on it, left of the middle.
+  await page.evaluate(() => {
+    const features = [
+      { id: 'plate', type: 'box', operation: 'add', width: 200, depth: 100, height: 10, position: [0, 0, 0] },
+      { id: 'boss', type: 'cylinder', operation: 'add', radius: 5, height: 10, axis: 'z', position: [-60, 0, 10] },
+    ];
+    const history = { features, past: [], future: [] };
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history, savedFeatures: features, dirty: false });
+  });
+  await idle(page);
+  const PLATE = 200_000;
+  const BOSS = Math.PI * 25 * 10;
+
+  // Pattern: the boss is picked by clicking its top face, the direction is the right plane (from the tree).
+  await page.click('[data-command="pattern"]');
+  await expect(page.locator('[data-testid="copy-features"]')).toHaveClass(/is-active/);
+  await clickWorldPoint(page, [-60, 0, 20]);
+  await expect(page.locator('[data-testid="copy-features"]')).toContainText('Cylinder1');
+  await page.click('[data-testid="reference-slot-0"] .reference-slot-button');
+  await page.click('.tree-item[data-plane="right"]');
+  await expect(page.locator('[data-testid="reference-slot-0"]')).toContainText('Right plane');
+  await page.locator('[data-testid="pattern-count"]').fill('4');
+  await page.locator('[data-testid="pattern-count"]').press('Tab');
+  await page.locator('[data-testid="pattern-spacing"]').fill('30');
+  await page.locator('[data-testid="pattern-spacing"]').press('Tab');
+  await page.click('[data-testid="panel-ok"]');
+  expect(await volume(page)).toBeCloseTo(PLATE + 4 * BOSS, 2);
+  expect((await state(page)).history.features[2]).toMatchObject({ type: 'pattern', method: 'linear', features: ['boss'], count: 4, spacing: 30 });
+
+  // Undo, then a mirror through the right plane picked first in the tree.
+  await page.click('[data-command="undo"]');
+  await page.click('[data-variants="copy"]');
+  await page.click('[data-entry="mirror"]');
+  await page.click('.feature-tree .tree-item[data-feature-id="boss"]');
+  await page.click('[data-testid="reference-slot-0"] .reference-slot-button');
+  await page.click('.tree-item[data-plane="right"]');
+  await page.click('[data-testid="panel-ok"]');
+  expect(await volume(page)).toBeCloseTo(PLATE + 2 * BOSS, 2);
+  expect((await state(page)).history.features.map((f) => f.type)).toEqual(['box', 'cylinder', 'mirror']);
 });

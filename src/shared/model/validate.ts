@@ -1,5 +1,6 @@
 import { EXPRESSION_FIELDS, EXTRUDE_DIRECTIONS, EXTRUDE_ENDS, type Axis, type BooleanOperation, type EdgeRef, type ExtrudeDirection, type ExtrudeEnd, type Feature, type FeatureType, type Variable, type Vec3 } from './feature.ts';
 import { HOLE_FITS, HOLE_KINDS } from './hole.ts';
+import { MAX_PATTERN_COUNT } from './pattern.ts';
 import { AXIS_METHODS, PLANE_METHODS, POINT_METHODS, type GeometryRef } from './reference.ts';
 import { parseSketchData, parsePlaneRef } from './validate-sketch.ts';
 
@@ -111,6 +112,15 @@ function geometryRef(value: unknown, path: string): GeometryRef {
 function geometryRefs(value: unknown, path: string): GeometryRef[] {
   if (!Array.isArray(value) || value.length > MAX_REFERENCES) throw new ValidationError(`expected up to ${MAX_REFERENCES} references`, path);
   return value.map((ref, i) => geometryRef(ref, `${path}[${i}]`));
+}
+
+/** Ids of the features a pattern or mirror copies; unknown ids are kept and reported by the rebuild. */
+function featureIds(value: unknown, path: string): string[] {
+  if (!Array.isArray(value) || value.length > 200) throw new ValidationError('expected a list of feature ids', path);
+  return value.map((id, i) => {
+    if (typeof id !== 'string' || id.length === 0 || id.length > 64) throw new ValidationError('expected a feature id', `${path}[${i}]`);
+    return id;
+  });
 }
 
 function method<T extends string>(value: unknown, methods: readonly T[], path: string): T {
@@ -279,6 +289,32 @@ function parseFeatureFields(raw: Json, path: string): Feature {
         threadDepth: positiveLength(raw.threadDepth, `${path}.threadDepth`),
       };
     }
+    case 'pattern': {
+      if (typeof raw.count !== 'number' || !Number.isInteger(raw.count) || raw.count < 2 || raw.count > MAX_PATTERN_COUNT) {
+        throw new ValidationError(`expected a whole number from 2 to ${MAX_PATTERN_COUNT}`, `${path}.count`);
+      }
+      if (typeof raw.angle !== 'number' || !(raw.angle > 0 && raw.angle <= 360)) throw new ValidationError('expected an angle above 0 and up to 360 degrees', `${path}.angle`);
+      if (typeof raw.flip !== 'boolean') throw new ValidationError('expected true or false', `${path}.flip`);
+      return {
+        ...common,
+        type: 'pattern',
+        method: method(raw.method, ['linear', 'circular'] as const, `${path}.method`),
+        references: geometryRefs(raw.references, `${path}.references`),
+        features: featureIds(raw.features, `${path}.features`),
+        count: raw.count,
+        spacing: positiveLength(raw.spacing, `${path}.spacing`),
+        angle: raw.angle,
+        flip: raw.flip,
+      };
+    }
+    case 'mirror':
+      return {
+        ...common,
+        type: 'mirror',
+        method: method(raw.method, ['plane'] as const, `${path}.method`),
+        references: geometryRefs(raw.references, `${path}.references`),
+        features: featureIds(raw.features, `${path}.features`),
+      };
     case 'box':
       return {
         ...common,
