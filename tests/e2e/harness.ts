@@ -1,5 +1,5 @@
 import { _electron as electron, type ElectronApplication, type Page } from '@playwright/test';
-import { mkdtemp } from 'node:fs/promises';
+import { cp, mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -66,11 +66,7 @@ export async function idle(page: Page): Promise<void> {
   });
 }
 
-/**
- * Ends the app the hard way, as a crash would (no close handlers run), and waits until it is gone.
- * Windows ends the helper processes (GPU, renderer) a moment after the main process; until then they keep
- * the profile in use and a new instance with the same profile cannot start.
- */
+/** Ends the app the hard way, as a crash would (no close handlers run), and waits until it is gone. */
 export async function crashApp(app: ElectronApplication): Promise<void> {
   const child = app.process();
   const exited = new Promise<void>((resolve) => {
@@ -79,17 +75,15 @@ export async function crashApp(app: ElectronApplication): Promise<void> {
   });
   child.kill('SIGKILL');
   await exited;
-  if (process.platform === 'win32') await new Promise((resolve) => setTimeout(resolve, 3000));
 }
 
-/** Starts the app again after crashApp; retries while the old instance still holds the profile. */
-export async function relaunchApp(options: LaunchOptions, attempts = 5): Promise<LaunchedApp> {
-  for (let attempt = 1; ; attempt++) {
-    try {
-      return await launchApp(options);
-    } catch (error) {
-      if (attempt >= attempts) throw error;
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-    }
-  }
+/**
+ * Starts the app again after crashApp, with a fresh profile that holds the recovery copies the crashed
+ * session left behind. (On Windows the helper processes of a killed app keep its profile in use for a
+ * while, and a new instance cannot start on it.)
+ */
+export async function relaunchAfterCrash(options: LaunchOptions & { userData: string }): Promise<LaunchedApp> {
+  const userData = await mkdtemp(path.join(tmpdir(), 'parawerk-profile-'));
+  await cp(path.join(options.userData, 'recovery'), path.join(userData, 'recovery'), { recursive: true });
+  return launchApp({ ...options, userData });
 }

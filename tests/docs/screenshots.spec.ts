@@ -1,7 +1,7 @@
 import { test, type Page } from '@playwright/test';
 import path from 'node:path';
 import { splinePoint, splineRoots, splineThrough } from '../../src/shared/model/spline.ts';
-import { crashApp, idle, launchApp, relaunchApp, repoRoot } from '../e2e/harness.ts';
+import { crashApp, idle, launchApp, relaunchAfterCrash, repoRoot } from '../e2e/harness.ts';
 
 /**
  * Generates the screenshots used in README.md and docs/user-guide.
@@ -949,7 +949,7 @@ test('recovery screenshots', async () => {
   await idle(first.page);
   await first.page.evaluate(() => (window as unknown as { __parawerk: { recovery: { flush(): Promise<void> } } }).__parawerk.recovery.flush());
   await crashApp(first.app);
-  const { app, page } = await relaunchApp({ width: 1440, height: 900, userData: first.userData });
+  const { app, page } = await relaunchAfterCrash({ width: 1440, height: 900, userData: first.userData });
   await page.locator('[data-testid="recovery-dialog"]').waitFor();
   await page.waitForTimeout(300);
   await page.screenshot({ path: out('recovery.png') });
