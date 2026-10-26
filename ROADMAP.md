@@ -211,6 +211,9 @@ patterns, curves) and [v0.4.0-alpha.2](https://github.com/Ujap1994/ParaWerk/rele
 | Full equation support (functions of several values, conditions, pattern counts from equations) | ✅ done |
 | Surface tools (offset, knit, thicken) | ✅ done |
 
+The reference suite covers the Phase 3 features too: 47 parts, 115 edits at early features, all
+rebuilding without lost references.
+
 ## 2. Guiding principles
 
 1. **Not a clone, a focused tool.** Full parity with commercial CAD suites, which represent thousands of

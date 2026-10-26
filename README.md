@@ -105,7 +105,7 @@ surfaces, multi-body parts, configurations – to part modeling (Phase 2) and th
   **STEP import** as a body.
 - **Stable edits:** faces are named after the feature that made them, so fillets, chamfers, sketches on
   faces and other references stay in place when earlier features change; lost edges are marked instead
-  of breaking the part. A reference suite of 36 parts checks this in every CI run.
+  of breaking the part. A reference suite of 47 parts checks this in every CI run.
 - **Multi-body parts and surfaces:** features that add material can keep it as a body of its own; cuts
   act body by body; **combine** (add, subtract, common) and **delete** bodies. **Offset**, **knit** and
   **thicken** surfaces.

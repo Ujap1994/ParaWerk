@@ -1,7 +1,8 @@
 /**
- * The reference suite of the Gate 2 exit criterion (ROADMAP.md, Phase 2): parts modeled the way a user
- * would model them – sketches on faces, edges and faces picked in the body, holes, patterns, shells –
- * each edited at an early feature. After every edit all features still build, none of them warns about
+ * The reference suite of the Gate 2 exit criterion (ROADMAP.md, Phase 2), extended with the features of
+ * Phase 3: parts modeled the way a user would model them – sketches on faces, edges and faces picked in
+ * the body, holes, patterns, shells, sweeps, lofts, ribs, threads, bodies, surfaces – each edited at an
+ * early feature. After every edit all features still build, none of them warns about
  * references it lost, and the part really changed.
  */
 import { strFromU8 } from 'fflate';
@@ -641,6 +642,161 @@ const MODELS: Model[] = [
       ['thicker wall', set('w', { width: 14, position: [-43, 0, 10] })],
       ['taller wall', set('w', { height: 70 })],
       ['larger round', set('r', { radius: 10 })],
+    ],
+  },
+
+  // ---------------------------------------------------------------- Phase 3 features
+  {
+    name: 'drafted block with rounded top edges',
+    build() {
+      const base = [box('b', 80, 50, 30)];
+      const sides = ['b:front', 'b:back', 'b:left', 'b:right'].map((name) => faceRef(base, name));
+      const drafted = [...base, { id: 'd', type: 'draft', method: 'neutralPlane', references: [{ kind: 'face', name: 'b:bottom', at: [0, 0, 0] }], faces: sides, angle: 5, flip: false } as Feature];
+      return [...drafted, fillet('round', 2, edges(drafted, ['b:top', 'b:front'], ['b:top', 'b:back']))];
+    },
+    edits: [
+      ['taller block', set('b', { height: 40 })],
+      ['steeper draft', set('d', { angle: 8 })],
+    ],
+  },
+  {
+    name: 'handle swept along a bent path onto a plate',
+    build() {
+      const base = [box('plate', 140, 60, 10)];
+      // The profile across the start of the path, on the top of the plate.
+      const profile = sketch('prof', onFace(base, 'plate:top'), C('k', -50, 0, 5));
+      const path = sketch('path', FRONT, [P('a', -50, 10), P('b', -50, 40), P('m', -30, 40), P('c', -30, 60), P('d', 30, 60), P('n', 30, 40), P('e', 50, 40), P('f', 50, 10),
+        L('ab', 'a', 'b'), { id: 'r1', type: 'arc', center: 'm', start: 'c', end: 'b' } as SketchEntity, L('cd', 'c', 'd'), { id: 'r2', type: 'arc', center: 'n', start: 'e', end: 'd' } as SketchEntity, L('ef', 'e', 'f')]);
+      return [...base, profile, path, { id: 'handle', type: 'sweep', operation: 'add', sketch: 'prof', path: 'path' } as Feature];
+    },
+    edits: [
+      ['thicker plate', set('plate', { height: 14 })],
+      ['thicker handle', setCircle('prof', 'k', 6)],
+      ['higher handle', movePoints('path', { b: [-50, 50], m: [-30, 50], c: [-30, 70], d: [30, 70], n: [30, 50], e: [50, 50] })],
+    ],
+  },
+  {
+    name: 'spring on a base plate',
+    build() {
+      const base = [cylinder('base', 20, 4, [0, 0, -4])];
+      const circle = sketch('c', TOP, C('k', 0, 0, 12));
+      const wire = sketch('w', FRONT, C('wk', 12, 2, 1.5));
+      return [...base, circle, { id: 'h', type: 'helix', sketch: 'c', pitch: 6, turns: 5, startAngle: 0, leftHand: false, reverse: false } as Feature, wire, { id: 'spring', type: 'sweep', operation: 'add', sketch: 'w', path: 'h' } as Feature];
+    },
+    edits: [
+      ['more turns', set('h', { turns: 7 })],
+      ['larger pitch', set('h', { pitch: 8 })],
+      ['left-handed', set('h', { leftHand: true })],
+    ],
+  },
+  {
+    name: 'loft from a square base to a round neck, rounded at its foot',
+    build() {
+      const base = [box('b', 80, 80, 10)];
+      const low = sketch('low', onFace(base, 'b:top'), rect('q', -25, -25, 25, 25));
+      const plane = offsetPlane('pl', { kind: 'face', name: 'b:top', at: [0, 0, 10] }, 40);
+      const high = sketch('high', { kind: 'feature', feature: 'pl', frame: frameOnPlane([0, 0, 50], [0, 0, 1]) }, C('k', 0, 0, 12));
+      const all = [...base, low, plane, high, { id: 'neck', type: 'loft', operation: 'add', sketches: ['low', 'high'] } as Feature];
+      return [...all, fillet('foot', 2, edges(all, ['neck:side:qa', 'b:top']))];
+    },
+    edits: [
+      ['higher neck', set('pl', { distance: 55 })],
+      ['wider neck', setCircle('high', 'k', 15)],
+      ['thicker base', set('b', { height: 14 })],
+    ],
+  },
+  {
+    name: 'L bracket with a rib in its corner',
+    build() {
+      const base = [box('floor', 100, 40, 10), box('wall', 10, 40, 60, [-45, 0, 10])];
+      const ribSketch = sketch('rs', FRONT, [P('a', -40, 50), P('b', 20, 10), L('ab', 'a', 'b')]);
+      return [...base, ribSketch, { id: 'rib', type: 'rib', sketch: 'rs', thickness: 6, direction: 'parallel', flip: false } as Feature];
+    },
+    edits: [
+      ['thicker rib', set('rib', { thickness: 8 })],
+      ['taller wall', set('wall', { height: 70 })],
+    ],
+  },
+  {
+    name: 'bolt with a modeled thread and a chamfered end',
+    build() {
+      const shank = [cylinder('shank', 5, 30, [0, 0, 0])];
+      const threaded = [...shank, { id: 't', type: 'thread', faces: [{ kind: 'face', name: 'shank:side', at: [5, 0, 15] }], size: 'M10', pitch: 1.5, length: 15, reverse: false, leftHand: false } as Feature];
+      return [...threaded, chamfer('tip', 1, edges(shank, ['shank:top', 'shank:side']))];
+    },
+    edits: [
+      ['longer bolt', set('shank', { height: 40 })],
+      ['shorter thread', set('t', { length: 10 })],
+    ],
+  },
+  {
+    name: 'grid of holes made by a pattern of a pattern, with chamfered rims',
+    build() {
+      const base = [box('plate', 120, 80, 10)];
+      const holes = [sketch('pts', onFace(base, 'plate:top'), [P('h1', -40, -25)]), hole('h', 'pts', { kind: 'simple', size: 'M5' })];
+      const row = pattern('row', { references: [RIGHT_PLANE], features: ['h'], count: 4, spacing: 25 });
+      const grid = pattern('grid', { references: [FRONT_PLANE], features: ['row'], count: 3, spacing: 25, flip: true });
+      const all = [...base, ...holes, row, grid];
+      return [...all, chamfer('rim', 0.5, edges([...base, ...holes], ['plate:top', 'h:0:side:wall']))];
+    },
+    edits: [
+      ['more holes per row', set('row', { count: 5 })],
+      ['thicker plate', set('plate', { height: 14 })],
+      ['wider spacing', set('grid', { spacing: 22 })],
+    ],
+  },
+  {
+    name: 'block with a notch made by subtracting a separate body, rounded inside',
+    build() {
+      const base = [box('block', 100, 60, 40), box('cutter', 40, 40, 40, [50, 0, 20])];
+      const separate = [base[0] as Feature, { ...(base[1] as BoxFeature), merge: false }];
+      const combined = [...separate, { id: 'c', type: 'combine', operation: 'subtract', bodies: [{ kind: 'face', name: 'block:top', at: [-20, 0, 40] }, { kind: 'face', name: 'cutter:top', at: [50, 0, 60] }] } as Feature];
+      return [...combined, fillet('round', 3, edges(combined, ['block:top', 'cutter:left']))];
+    },
+    edits: [
+      ['deeper notch', set('cutter', { position: [50, 0, 10] })],
+      ['wider notch', set('cutter', { width: 50 })],
+      ['longer block', set('block', { width: 120 })],
+    ],
+  },
+  {
+    name: 'lid thickened from an offset surface over a box',
+    build() {
+      const base = [box('b', 80, 50, 30)];
+      const surface = { id: 's', type: 'offsetSurface', faces: [faceRef(base, 'b:top')], distance: 5 } as Feature;
+      return [...base, surface, { id: 'lid', type: 'thicken', surface: 's', thickness: 3, side: 'normal', fill: false, merge: false } as Feature];
+    },
+    edits: [
+      ['higher lid', set('s', { distance: 8 })],
+      ['thicker lid', set('lid', { thickness: 5 })],
+      ['larger box', set('b', { width: 100 })],
+    ],
+  },
+  {
+    name: 'flat bar twisted along its path with a chamfered end',
+    build() {
+      const bar = sketch('bar', FRONT, rect('q', -10, -2, 10, 2));
+      const path = sketch('path', TOP, [P('a', 0, 0), P('b', 0, 80), L('ab', 'a', 'b')]);
+      const twisted = [bar, path, { id: 'tw', type: 'sweep', operation: 'add', sketch: 'bar', path: 'path', twist: 90 } as Feature];
+      return [...twisted, chamfer('end', 0.5, edges(twisted, ['tw:end', 'tw:side:qa'], ['tw:end', 'tw:side:qc']))];
+    },
+    edits: [
+      ['more twist', set('tw', { twist: 120 })],
+      ['longer bar', movePoints('path', { b: [0, 100] })],
+    ],
+  },
+  {
+    name: 'duct lofted around a corner along a centerline',
+    build() {
+      const inlet = sketch('in', TOP, rect('q', -15, -15, 15, 15));
+      const side = offsetPlane('side', RIGHT_PLANE, 60);
+      const outlet = sketch('out', { kind: 'feature', feature: 'side', frame: frameOnPlane([60, 0, 0], [1, 0, 0]) }, rect('r', -8, 52, 8, 68));
+      const bend = sketch('bend', FRONT, [P('m', 60, 0), P('c1', 0, 0), P('c2', 60, 60), { id: 'arc', type: 'arc', center: 'm', start: 'c2', end: 'c1' } as SketchEntity]);
+      return [inlet, side, outlet, bend, { id: 'duct', type: 'loft', operation: 'add', sketches: ['in', 'out'], centerline: 'bend' } as Feature];
+    },
+    edits: [
+      ['wider inlet', movePoints('in', { q1: [-18, -18], q2: [18, -18], q3: [18, 18], q4: [-18, 18] })],
+      ['larger outlet', movePoints('out', { r1: [-10, 50], r2: [10, 50], r3: [10, 70], r4: [-10, 70] })],
     ],
   },
 ];
