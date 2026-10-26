@@ -191,8 +191,9 @@ what that turns up is fixed before Phase 3 starts.
 
 First previews released as [v0.4.0-alpha.0](https://github.com/Ujap1994/ParaWerk/releases/tag/v0.4.0-alpha.0)
 [v0.4.0-alpha.1](https://github.com/Ujap1994/ParaWerk/releases/tag/v0.4.0-alpha.1) (patterns of
-patterns, curves) and [v0.4.0-alpha.2](https://github.com/Ujap1994/ParaWerk/releases/tag/v0.4.0-alpha.2)
-(twisted and guided sweeps, centerline lofts, multi-body parts, surfaces; all 2026-10-26).
+patterns, curves), [v0.4.0-alpha.2](https://github.com/Ujap1994/ParaWerk/releases/tag/v0.4.0-alpha.2)
+(twisted and guided sweeps, centerline lofts, multi-body parts, surfaces) and
+[v0.4.0-alpha.3](https://github.com/Ujap1994/ParaWerk/releases/tag/v0.4.0-alpha.3) (fixes; all 2026-10-26).
 
 | Item | Status |
 |---|---|

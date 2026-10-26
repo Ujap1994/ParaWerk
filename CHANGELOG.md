@@ -7,6 +7,11 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+## [0.4.0-alpha.3] - 2026-10-26
+
+Fixes for parts of several bodies and faster display of free-form faces, on top of 0.4.0-alpha.2. Still an
+alpha: not ready for productive use; see the disclaimer in the README.
+
 ### Changed
 - Free-form faces (sweeps, lofts, springs) are meshed for the 3D view about six times faster: a spring of
   ten turns builds in about 0.4 s instead of 1.3 s.
@@ -14,6 +19,8 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 ### Fixed
 - Shells, drafts, threads, face fillets and full rounds on a part of several bodies work on the body their
   faces belong to: a shell no longer fails and a thread no longer cuts nothing when another body overlaps.
+  The faces of one such feature must belong to one body; otherwise the feature says so.
+- The reference suite that checks edits of early features covers the features of Phase 3 too (47 parts).
 
 ## [0.4.0-alpha.2] - 2026-10-26
 
@@ -423,7 +430,8 @@ First technical preview (Phase 0). Not ready for productive use; see the disclai
 ### Removed
 - DWG from the planned formats, because it is a closed, proprietary format. DXF covers 2D exchange.
 
-[Unreleased]: https://github.com/Ujap1994/ParaWerk/compare/v0.4.0-alpha.2...HEAD
+[Unreleased]: https://github.com/Ujap1994/ParaWerk/compare/v0.4.0-alpha.3...HEAD
+[0.4.0-alpha.3]: https://github.com/Ujap1994/ParaWerk/compare/v0.4.0-alpha.2...v0.4.0-alpha.3
 [0.4.0-alpha.2]: https://github.com/Ujap1994/ParaWerk/compare/v0.4.0-alpha.1...v0.4.0-alpha.2
 [0.4.0-alpha.1]: https://github.com/Ujap1994/ParaWerk/compare/v0.4.0-alpha.0...v0.4.0-alpha.1
 [0.4.0-alpha.0]: https://github.com/Ujap1994/ParaWerk/compare/v0.3.0-alpha.1...v0.4.0-alpha.0
