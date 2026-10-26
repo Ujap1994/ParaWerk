@@ -13,6 +13,10 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 - Composite curves: edges of the part, sketches and other curves joined end to end into one chain.
 - Sweeps follow projected and composite curves as their path.
 
+### Changed
+- Part files with projected or composite curves are saved as format version 9, so ParaWerk 0.4.0-alpha.0
+  reports them as newer files.
+
 ## [0.4.0-alpha.0] - 2026-10-26
 
 The first alpha of **Phase 3** (advanced features and configurations): draft, sweep (also along a helix,

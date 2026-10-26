@@ -19,14 +19,15 @@ export const PART_FORMAT = 'parawerk-part';
  * 6: reference planes, axes and points, sketches on reference planes, revolutions around reference axes, holes,
  * patterns and mirror images, shells, extrusions up to a surface or vertex. 7: the part's material and color,
  * STEP imports, coordinate systems, extrusions in two directions, with a draft or up to the next face, thin
- * features, uneven chamfers (ParaWerk 0.3). 8: drafts, sweeps, lofts, ribs, modeled threads, variable
- * radius fillets, configurations.
+ * features, uneven chamfers (ParaWerk 0.3). 8: drafts, sweeps, lofts, ribs, modeled threads, helices,
+ * variable radius fillets, configurations (ParaWerk 0.4). 9: projected and composite curves.
  * Older versions are read unchanged.
  */
-export const PART_FORMAT_VERSION = 8;
+export const PART_FORMAT_VERSION = 9;
 
 /** The oldest format version that can hold the document, so older ParaWerk versions can still open it. */
 export function formatVersionOf(features: readonly Feature[], properties: PartProperties = NO_PROPERTIES): number {
+  if (features.some((feature) => feature.type === 'projectedCurve' || feature.type === 'compositeCurve')) return 9;
   const eighth = (feature: Feature) =>
     feature.type === 'draft' ||
     feature.type === 'sweep' ||
@@ -34,8 +35,6 @@ export function formatVersionOf(features: readonly Feature[], properties: PartPr
     feature.type === 'rib' ||
     feature.type === 'thread' ||
     feature.type === 'helix' ||
-    feature.type === 'projectedCurve' ||
-    feature.type === 'compositeCurve' ||
     (feature.type === 'fillet' && feature.method === 'variable');
   if (features.some(eighth) || properties.configurations !== undefined) return 8;
   const seventh = (feature: Feature) =>

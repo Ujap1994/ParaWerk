@@ -114,6 +114,11 @@ describe('part file', () => {
     expect(decodePartFile(bytes).document.features).toEqual(withSketch);
   });
 
+  it('needs version 9 for curves (after ParaWerk 0.4)', () => {
+    for (const type of ['projectedCurve', 'compositeCurve'] as const) expect(formatVersionOf([defaultFeature(type, 'f')]), type).toBe(9);
+    expect(formatVersionOf([defaultFeature('helix', 'f')])).toBe(8);
+  });
+
   it('needs version 8 for the features after ParaWerk 0.3', () => {
     for (const type of ['draft', 'sweep', 'loft', 'rib', 'thread'] as const) expect(formatVersionOf([defaultFeature(type, 'f')]), type).toBe(8);
     expect(formatVersionOf([{ id: 'f', type: 'fillet', radius: 2, edges: [], method: 'variable', radius2: 4 } as Feature])).toBe(8);
