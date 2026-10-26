@@ -163,6 +163,25 @@ circles of its nominal diameter where it starts and where it ends (dimmed where 
 > (counterbores for ISO 4762) and the head diameters of ISO 10642 (countersinks). Check them against
 > your screws and your manufacturing before you make parts.
 
+## Thread
+
+**Thread** (in the arrow of the **Hole** button) cuts a modeled ISO metric thread into a bolt or into the
+wall of a hole – the thread is real geometry, as 3D printing needs. For parts that are drilled and tapped,
+a [tapped hole](#hole) with its cosmetic thread is lighter and enough.
+
+- Click the **cylindrical face** of the bolt or the hole. *Size* follows the face: a bolt of that diameter,
+  or a hole of that tap drill; *Pitch* follows the size (the coarse thread of ISO 261) and can be changed.
+- A bolt keeps its diameter as the outside of the thread, and the groove goes in by the depth of the ISO
+  basic profile. A hole keeps its diameter as the minor diameter, and the groove goes out into the wall –
+  so draw the hole with the tap drill diameter.
+- *Length*: how far the thread goes into the face from the end it starts at, at most to the other end.
+  It runs out of the face at the start. **Start at the other end** and **Left-hand thread** turn it round.
+
+![A screw with a head and a modeled M10 thread over 20 mm](../images/screenshots/thread.png)
+
+A modeled thread takes a second or two to compute (it runs in the background) and makes the part's mesh
+and files larger; add it late in the history, after the features it does not depend on.
+
 ## Patterns and mirror
 
 **Pattern** copies features in a row, **Circular pattern** around an axis, **Mirror** through a plane

@@ -249,6 +249,16 @@ int draftFaces(int bodyId, const std::vector<int>& faceIndices, const std::vecto
 int faceFillet(int bodyId, int faceA, int faceB, double radius, const std::string& name = "");
 
 /**
+ * A modeled ISO metric thread on a cylindrical face: the groove of the basic profile (60° flanks, pitch
+ * `pitch`) swept along a helix and cut out – into the shaft for a face with its material inside, into the
+ * wall for a hole. The thread starts at the end of the face where its axis parameter is smallest (the other
+ * end with `reverse`), runs out of the face there and goes `length` into it (at most the face's length); `leftHand` turns it the other
+ * way. The crest of a bolt thread is the face itself, the minor diameter of a nut thread too. Groove faces
+ * are named "<name>:thread". Fails with "thread-face" or "thread-size".
+ */
+int cutThread(int bodyId, int faceIndex, double pitch, double length, bool reverse, bool leftHand, const std::string& name = "");
+
+/**
  * A full round: the center face between two side faces (parallel planes facing away from each other)
  * replaced by half a cylinder tangent to all three, as wide as the sides are apart, over the length of
  * the center face. The round face is named "<name>:round", faces the cut leaves where the part goes on

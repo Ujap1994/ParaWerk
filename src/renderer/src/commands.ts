@@ -3,7 +3,7 @@ import type { MenuCommand } from '../../shared/ipc.ts';
 import { PART_FILE_EXTENSION } from '../../shared/app-info.ts';
 import { hashString } from '../../shared/hash.ts';
 import { COPYABLE_TYPES, type ImportFeature, defaultFeature, type BooleanOperation, hasReferenceSlots, isCopyFeature, isEdgeFeature, isReferenceFeature, sketchesUsedBy, type EdgeRef, type ExtrudeEnd, extrudesOneWay, type Feature, type FilletMethod, roundFaceCount, type FeatureType, type HoleFeature, type ReferenceFeature, type SketchFeature, type SlotFeature } from '../../shared/model/feature.ts';
-import { holePositions, metricSize, sizesFor, standardHoleDimensions } from '../../shared/model/hole.ts';
+import { holePositions, METRIC_SIZES, metricSize, sizesFor, standardHoleDimensions, type MetricSize } from '../../shared/model/hole.ts';
 import { frameTransform } from '../../shared/model/frame.ts';
 import { sketchProfile } from '../../shared/model/profile.ts';
 import { DEFAULT_THIN_THICKNESS, type ThinSide } from '../../shared/model/thin.ts';
@@ -299,6 +299,16 @@ export function startFeature(type: FeatureType): void {
       const axis = defaultAxis(sketch);
       const reference = features.findLast((feature) => feature.type === 'axis' && !feature.suppressed);
       draft = axis || !reference ? { ...draft, sketch: sketch.id, axis, operation, ...thin } : { ...draft, sketch: sketch.id, axis: '', axisRef: { kind: 'feature', feature: reference.id }, operation, ...thin };
+    }
+  } else if (draft.type === 'thread') {
+    // A cylindrical face selected before starting is the face of the thread (select first, then act).
+    const pick = getState().selection.find((candidate) => candidate.kind === 'face');
+    const body = getState().display.body;
+    const info = pick ? body?.faceInfo[pick.index] : undefined;
+    const ref = pick?.at && body && info?.kind === 'cylinder' ? faceRefOf(body.naming, pick.index, pick.at) : null;
+    if (ref && info?.radius !== undefined) {
+      const size = threadSizeFor(info.radius);
+      draft = { ...draft, faces: [ref], size: size.size, pitch: size.pitch };
     }
   } else if (draft.type === 'rib') {
     // A rib is drawn as open curves: the newest sketch without closed outlines that no feature uses yet.
@@ -737,6 +747,38 @@ export function toggleShellFace(pick: Pick): void {
   }
   const ref = faceRefOf(naming, pick.index, pick.at);
   if (ref) updateDraft({ faces: [...edit.draft.faces, ref] });
+}
+
+/**
+ * The ISO size that fits a cylindrical face of radius `radius`: a bolt of that diameter, or a hole drilled
+ * for tapping (its tap drill).
+ */
+function threadSizeFor(radius: number): MetricSize {
+  const diameter = 2 * radius;
+  const fit = (size: MetricSize) => Math.min(Math.abs(size.d - diameter), Math.abs(size.tapDrill - diameter));
+  return METRIC_SIZES.reduce((best, size) => (fit(size) < fit(best) ? size : best));
+}
+
+/** Puts the edited thread on a cylindrical face of the shown body; its size and pitch follow the face. */
+export function setThreadFace(pick: Pick): void {
+  const { activeEdit: edit, display } = getState();
+  const body = display.body;
+  if (edit?.draft.type !== 'thread' || !body || pick.kind !== 'face' || !pick.at) return;
+  const info = body.faceInfo[pick.index];
+  if (info?.kind !== 'cylinder' || info.radius === undefined) {
+    showToast('info', t('thread.pickCylinder'));
+    return;
+  }
+  const ref = faceRefOf(body.naming, pick.index, pick.at);
+  if (!ref) return;
+  const size = threadSizeFor(info.radius);
+  updateDraft({ faces: [ref], size: size.size, pitch: size.pitch });
+}
+
+/** Changes the size of the edited thread; the pitch follows the standard (coarse) one. */
+export function setThreadSize(name: string): void {
+  const size = metricSize(name);
+  if (size) updateDraft({ size: size.size, pitch: size.pitch });
 }
 
 /** Rounds edges with a constant radius, or makes a full round between two side faces. */
@@ -1523,6 +1565,10 @@ export function handlePick(pick: Pick | null, additive: boolean): void {
   }
   if (edit?.draft.type === 'shell') {
     if (pick) toggleShellFace(pick);
+    return;
+  }
+  if (edit?.draft.type === 'thread') {
+    if (pick) setThreadFace(pick);
     return;
   }
   // A draft: the neutral plane first, then the faces to tilt.

@@ -1210,6 +1210,32 @@ test('sweeps an outline along a path and lofts two outlines', async () => {
   expect((await state(page)).history.features[3]).toMatchObject({ type: 'loft', sketches: ['low', 'high'], ruled: true });
 });
 
+test('cuts a modeled thread into a bolt picked in the 3D view', async () => {
+  launched = await launchApp({ width: 1000, height: 640 });
+  const { page } = launched;
+  // A bolt of 10 mm diameter, 30 long.
+  await page.evaluate(() => {
+    const features = [{ id: 'bolt', type: 'cylinder', operation: 'add', radius: 5, height: 30, axis: 'z', position: [0, 0, 0] }];
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features, past: [], future: [] }, savedFeatures: features, dirty: false });
+  });
+  await idle(page);
+  const plain = await volume(page);
+  await page.click('[data-variants="holes"]');
+  await page.click('[data-entry="thread"]');
+  await idle(page);
+  await clickWorldPoint(page, [3.54, -3.54, 15]);
+  // The size follows the face: M10 with its pitch of 1.5.
+  await expect(page.locator('[data-testid="thread-size"]')).toHaveValue('M10');
+  await expect(page.locator('[data-testid="thread-pitch"]')).toHaveValue('1.5');
+  await page.locator('[data-testid="thread-length"]').fill('12');
+  await page.locator('[data-testid="thread-length"]').press('Tab');
+  await page.click('[data-testid="panel-ok"]');
+  const threaded = await volume(page);
+  expect(threaded).toBeLessThan(plain - 50);
+  expect(threaded).toBeGreaterThan(plain - 200);
+  expect((await state(page)).history.features[1]).toMatchObject({ type: 'thread', size: 'M10', pitch: 1.5, length: 12, faces: [{ name: 'bolt:side' }] });
+});
+
 test('adds a rib in the corner of an angle bracket', async () => {
   launched = await launchApp({ width: 1000, height: 640 });
   const { page } = launched;

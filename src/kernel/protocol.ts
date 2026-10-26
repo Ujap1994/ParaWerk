@@ -132,6 +132,8 @@ export type FeatureErrorCode =
   | 'loft-profile'
   | 'loft-failed'
   | 'rib-curves'
+  | 'thread-face'
+  | 'thread-size'
   | 'import-no-solid'
   | 'cut-nothing'
   | 'profile-crosses-axis'

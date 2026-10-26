@@ -117,7 +117,8 @@
       "draft": "Flächen um einen Winkel zu einer neutralen Ebene neigen, für Guss- und Spritzgussteile",
       "sweep": "Die geschlossenen Konturen einer Skizze entlang der Kurven einer anderen Skizze austragen",
       "loft": "Einen Körper durch die Konturen mehrerer Skizzen der Reihe nach erzeugen",
-      "rib": "Eine Wand von den offenen Kurven einer Skizze bis zum Körper hinzufügen, etwa eine Stützrippe in einer Ecke"
+      "rib": "Eine Wand von den offenen Kurven einer Skizze bis zum Körper hinzufügen, etwa eine Stützrippe in einer Ecke",
+      "thread": "Ein modelliertes ISO-Gewinde in einen Bolzen oder eine Bohrung schneiden"
     },
     "tabs": {
       "label": "Befehlsregister",
@@ -205,7 +206,9 @@
     "sweep": "Austragung",
     "loft": "Ausformung",
     "solidFeatures": "Rotation, Austragung und Ausformung",
-    "rib": "Rippe"
+    "rib": "Rippe",
+    "thread": "Gewinde",
+    "holeFeatures": "Bohrung und Gewinde"
   },
   "features": {
     "plane": "Ebene",
@@ -229,7 +232,8 @@
     "draft": "Formschräge",
     "sweep": "Austragung",
     "loft": "Ausformung",
-    "rib": "Rippe"
+    "rib": "Rippe",
+    "thread": "Gewinde"
   },
   "tree": {
     "title": "Featurebaum",
@@ -497,7 +501,9 @@
     "loft-sections": "Eine Ausformung braucht mindestens zwei Profile.",
     "loft-profile": "Profil {{detail}} muss eine geschlossene Kontur ohne Löcher sein.",
     "loft-failed": "Die Profile ließen sich nicht verbinden. Prüfe, ob sie hintereinander liegen und nicht gegeneinander verdreht sind.",
-    "rib-curves": "Eine Rippe in der Skizzenebene folgt nur Linien; {{detail}} ist eine andere Kurve."
+    "rib-curves": "Eine Rippe in der Skizzenebene folgt nur Linien; {{detail}} ist eine andere Kurve.",
+    "thread-face": "Wähle für das Gewinde die zylindrische Fläche eines Bolzens oder einer Bohrung.",
+    "thread-size": "Steigung und Länge des Gewindes müssen größer als 0 sein."
   },
   "warnings": {
     "edge-missing_one": "{{count}} ausgewählte Kante existiert nicht mehr und wird ausgelassen. Bearbeite das Feature, um sie zu entfernen oder eine andere Kante zu wählen.",
@@ -1026,5 +1032,15 @@
     },
     "flip": "Zuerst die andere Seite versuchen",
     "hint": "Zeichne offene Linien dort, wo die Rippe enden soll, etwa quer über die Ecke zwischen einer Wand und einem Boden. In der Skizzenebene füllt die Rippe den Raum zwischen den Linien und dem Körper, quer zur Ebene so dick wie angegeben; senkrecht zur Skizze wächst sie von den Kurven bis zum Körper. Sie wächst von selbst zum Material hin."
+  },
+  "thread": {
+    "face": "Zylindrische Fläche",
+    "pickCylinder": "Die zylindrische Fläche eines Bolzens oder einer Bohrung anklicken",
+    "size": "Größe",
+    "pitch": "Steigung",
+    "length": "Länge",
+    "reverse": "Am anderen Ende beginnen",
+    "leftHand": "Linksgewinde",
+    "hint": "Das Gewinde ist modelliert: Seine Rille wird in das Teil geschnitten, wie es der 3D-Druck braucht (zum Bohren und Gewindeschneiden ist eine Bohrung mit kosmetischem Gewinde leichter). Ein Bolzen behält seinen Durchmesser als Außendurchmesser des Gewindes; eine Bohrung sollte den Kernlochdurchmesser haben. Das Gewinde beginnt an einem Ende der Fläche, läuft dort aus und geht die Länge weit in die Fläche, höchstens bis zu ihrem anderen Ende. Die Berechnung dauert ein bis zwei Sekunden."
   }
 }

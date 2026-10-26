@@ -177,6 +177,12 @@ if (backendName === 'parawerk') {
       { id: 'cut', type: 'extrude', operation: 'cut', sketch: 'sketch', depth: 10, direction: 'reverse', end: 'upToNext' },
     ];
   };
+  // A modeled M10 thread over 20 mm on a screw (13 turns of the ISO groove swept along a helix).
+  const screw = (length: number): Feature[] => [
+    { id: 'shank', type: 'cylinder', operation: 'add', radius: 5, height: 30, axis: 'z', position: [0, 0, 0] },
+    { id: 'thread', type: 'thread', faces: [{ kind: 'face', name: 'shank:side', at: [5, 0, 10] }], size: 'M10', pitch: 1.5, length, reverse: false, leftHand: false },
+  ];
+  cases['thread.m10x20.rebuild'] = measure((i) => kernel.rebuild(request(screw(20 + (i + 1) * 0.01))), { iterations: 3, warmup: 1 });
   kernel.rebuild(request(lidHoles(5)));
   cases['extrude.upToNext.cut25outlines'] = measure((i) => kernel.rebuild(request(lidHoles(5 + (i + 1) * 0.01))), { iterations: 5, warmup: 1 });
 }

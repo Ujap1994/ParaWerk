@@ -11,7 +11,7 @@ import type { ThinSide } from './thin.ts';
 
 export type Vec3 = [number, number, number];
 
-export type FeatureType = 'variables' | 'sketch' | 'plane' | 'axis' | 'point' | 'csys' | 'extrude' | 'revolve' | 'hole' | 'pattern' | 'mirror' | 'box' | 'cylinder' | 'import' | 'fillet' | 'chamfer' | 'shell' | 'draft' | 'sweep' | 'loft' | 'rib';
+export type FeatureType = 'variables' | 'sketch' | 'plane' | 'axis' | 'point' | 'csys' | 'extrude' | 'revolve' | 'hole' | 'pattern' | 'mirror' | 'box' | 'cylinder' | 'import' | 'fillet' | 'chamfer' | 'shell' | 'draft' | 'sweep' | 'loft' | 'rib' | 'thread';
 
 /** How a solid-creating feature combines with the existing body. */
 export type BooleanOperation = 'add' | 'cut';
@@ -79,6 +79,7 @@ export const EXPRESSION_FIELDS: Readonly<Record<FeatureType, readonly string[]>>
   sweep: [],
   loft: [],
   rib: ['thickness'],
+  thread: ['pitch', 'length'],
 };
 
 /** A named value of the part; its expression may use other variables. */
@@ -512,6 +513,21 @@ export interface RibFeature extends FeatureBase {
   flip: boolean;
 }
 
+/**
+ * A modeled ISO metric thread on a cylindrical face – a bolt or a hole (`faces`: that face): the groove of
+ * the basic profile cut along a helix. It starts at one end of the face (the other with `reverse`), runs
+ * out of it there and goes `length` into the face. `size` names the ISO size the pitch came from.
+ */
+export interface ThreadFeature extends FeatureBase {
+  type: 'thread';
+  faces: FaceNameRef[];
+  size: string;
+  pitch: number;
+  length: number;
+  reverse: boolean;
+  leftHand: boolean;
+}
+
 /** The sketches a feature is built from (their curves belong to its geometry). */
 export function sketchesUsedBy(feature: Feature): string[] {
   if (isSketchBased(feature) || feature.type === 'rib') return [feature.sketch];
@@ -541,7 +557,8 @@ export type Feature =
   | DraftFeature
   | SweepFeature
   | LoftFeature
-  | RibFeature;
+  | RibFeature
+  | ThreadFeature;
 
 /** Features that build or modify the solid body (everything except variables, sketches and reference geometry). */
 export type SolidModelingFeature = Exclude<Feature, SketchFeature | VariablesFeature | ReferenceFeature>;
@@ -556,7 +573,7 @@ export function isSolidFeature(feature: Feature): feature is BoxFeature | Cylind
   return feature.type === 'box' || feature.type === 'cylinder';
 }
 
-export const FEATURE_TYPES: readonly FeatureType[] = ['variables', 'sketch', 'plane', 'axis', 'point', 'csys', 'extrude', 'revolve', 'hole', 'pattern', 'mirror', 'box', 'cylinder', 'import', 'fillet', 'chamfer', 'shell', 'draft', 'sweep', 'loft', 'rib'];
+export const FEATURE_TYPES: readonly FeatureType[] = ['variables', 'sketch', 'plane', 'axis', 'point', 'csys', 'extrude', 'revolve', 'hole', 'pattern', 'mirror', 'box', 'cylinder', 'import', 'fillet', 'chamfer', 'shell', 'draft', 'sweep', 'loft', 'rib', 'thread'];
 
 /** Features that make a body from nothing (the first feature with material must be one of them, adding). */
 export const BODY_TYPES: ReadonlySet<FeatureType> = new Set(['box', 'cylinder', 'extrude', 'revolve', 'import', 'sweep', 'loft']);
@@ -630,5 +647,7 @@ export function defaultFeature(type: FeatureType, id: string = createFeatureId()
       return { id, type, operation: 'add', sketches: [] };
     case 'rib':
       return { id, type, sketch: '', thickness: 3, direction: 'parallel', flip: false };
+    case 'thread':
+      return { id, type, faces: [], size: 'M6', pitch: 1, length: 10, reverse: false, leftHand: false };
   }
 }

@@ -442,6 +442,18 @@ function parseFeatureFields(raw: Json, path: string): Feature {
       }
       return chamfer;
     }
+    case 'thread':
+      if (typeof raw.size !== 'string' || raw.size.length > 20) throw new ValidationError('expected a size', `${path}.size`);
+      return {
+        ...common,
+        type: 'thread',
+        faces: faceRefs(raw.faces, `${path}.faces`, 1),
+        size: raw.size,
+        pitch: positiveLength(raw.pitch, `${path}.pitch`),
+        length: positiveLength(raw.length, `${path}.length`),
+        reverse: flag(raw.reverse, `${path}.reverse`),
+        leftHand: flag(raw.leftHand, `${path}.leftHand`),
+      };
     case 'rib':
       return {
         ...common,

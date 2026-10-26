@@ -1,4 +1,4 @@
-import type { CopyFeature, DraftFeature, EdgeFeature, LoftFeature, RibFeature, SweepFeature, EdgeRef, ExtrudeFeature, HoleFeature, RevolveFeature, ShellFeature, SolidModelingFeature, Vec3 } from '../shared/model/feature.ts';
+import type { CopyFeature, DraftFeature, EdgeFeature, LoftFeature, RibFeature, SweepFeature, ThreadFeature, EdgeRef, ExtrudeFeature, HoleFeature, RevolveFeature, ShellFeature, SolidModelingFeature, Vec3 } from '../shared/model/feature.ts';
 import type { FaceNameRef } from '../shared/model/reference.ts';
 import type { BodyNaming } from '../shared/model/naming.ts';
 import type { Profile, ProfileLoop } from '../shared/model/profile.ts';
@@ -42,6 +42,12 @@ export interface ResolvedLoft extends LoftFeature {
  */
 export interface ResolvedRib extends RibFeature {
   parts: ResolvedExtrude[][];
+}
+
+/** A thread with its face resolved in the body it is cut into. */
+export interface ResolvedThread extends ThreadFeature {
+  faceIndex: number;
+  healedFaces?: FaceNameRef[];
 }
 
 /** A revolution with the outlines and plane of its sketch and its axis in sketch coordinates. */
@@ -97,7 +103,7 @@ export type ResolvedEdgeFeature = EdgeFeature & {
 
 /** A feature as a backend builds it, with its references to earlier features resolved. */
 export type KernelFeature =
-  | Exclude<SolidModelingFeature, ExtrudeFeature | RevolveFeature | EdgeFeature | HoleFeature | CopyFeature | ShellFeature | DraftFeature | SweepFeature | LoftFeature | RibFeature>
+  | Exclude<SolidModelingFeature, ExtrudeFeature | RevolveFeature | EdgeFeature | HoleFeature | CopyFeature | ShellFeature | DraftFeature | SweepFeature | LoftFeature | RibFeature | ThreadFeature>
   | ResolvedExtrude
   | ResolvedRevolve
   | ResolvedHole
@@ -107,6 +113,7 @@ export type KernelFeature =
   | ResolvedSweep
   | ResolvedLoft
   | ResolvedRib
+  | ResolvedThread
   | ResolvedEdgeFeature;
 
 /** Opaque reference to a shape owned by a backend. */

@@ -12,6 +12,9 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
   another sketch (open or closed); the path runs from its end nearer to the outlines. Adds or cuts.
 - Loft: a solid through one closed outline from each of several sketches, in order, smooth or with flat
   faces between them; outlines with different edge counts (a square and a circle) are joined too.
+- Modeled threads: the groove of the ISO basic profile cut along a helix into a bolt or the wall of a hole
+  (the size follows the picked cylindrical face, the pitch the size; length, start end and hand
+  adjustable) – real thread geometry for 3D printing. Hole and Thread share a split button.
 - Variable radius fillets: the radius changes evenly along each edge from a start to an end value (the
   start is the edge's left, front or bottom end; a switch swaps them).
 - Rib: a wall from open sketch lines to the body, within the sketch plane (a gusset between a line and the

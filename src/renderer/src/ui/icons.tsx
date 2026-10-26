@@ -579,6 +579,14 @@ export const RibIcon = (p: P) => (
   </Icon>
 );
 
+/** Thread: a bolt with slanted thread lines. */
+export const ThreadIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="M7.5 3.5h9v17h-9z" />
+    <path d="M7.5 7.5l9-2M7.5 11.5l9-2M7.5 15.5l9-2M7.5 19.5l9-2" />
+  </Icon>
+);
+
 /** Move up in a list. */
 export const MoveUpIcon = (p: P) => (
   <Icon {...p}>
@@ -691,4 +699,5 @@ export const FEATURE_ICONS = {
   sweep: SweepIcon,
   loft: LoftIcon,
   rib: RibIcon,
+  thread: ThreadIcon,
 } as const;

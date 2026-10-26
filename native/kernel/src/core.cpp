@@ -35,6 +35,10 @@
 #include <BRepGProp.hxx>
 #include <BRepOffsetAPI_DraftAngle.hxx>
 #include <BRepOffsetAPI_MakePipe.hxx>
+#include <BRepOffsetAPI_MakePipeShell.hxx>
+#include <BRepBuilderAPI_MakePolygon.hxx>
+#include <Geom2d_Line.hxx>
+#include <Geom_CylindricalSurface.hxx>
 #include <BRepOffsetAPI_ThruSections.hxx>
 #include <BRep_Builder.hxx>
 #include <TopoDS_Compound.hxx>
@@ -1715,6 +1719,87 @@ int fullRound(int bodyId, int side1, int center, int side2, const std::string& n
   namer.inherit(fuse, rest.shape, rest.names);
   namer.inherit(fuse, round.shape, round.names);
   namer.rest(faceName(name, "round"));
+  return store().add(result, namer.take());
+}
+
+int cutThread(int bodyId, int faceIndex, double pitch, double length, bool reverse, bool leftHand, const std::string& name) {
+  const StoredShape& body = store().entry(bodyId);
+  ShapeMap faces;
+  TopExp::MapShapes(body.shape, TopAbs_FACE, faces);
+  if (faceIndex < 0 || faceIndex >= faces.Extent()) throw KernelError("face-missing", "face " + std::to_string(faceIndex) + " does not exist");
+  const TopoDS_Face face = TopoDS::Face(faces(faceIndex + 1));
+  BRepAdaptor_Surface surface(face);
+  if (surface.GetType() != GeomAbs_Cylinder) throw KernelError("thread-face", "a thread needs a cylindrical face");
+  if (!(pitch > 0) || !(length > 0)) throw KernelError("thread-size", "pitch and length must be above 0");
+  const gp_Cylinder cylinder = surface.Cylinder();
+  const double radius = cylinder.Radius();
+  gp_Ax3 frame = cylinder.Position();
+  // Where the face starts and ends along the axis; the thread starts at one end and goes into the face.
+  double v0 = surface.FirstVParameter(), v1 = surface.LastVParameter();
+  const gp_Dir axisDir = frame.Direction();
+  gp_Pnt start = frame.Location().Translated(gp_Vec(axisDir) * (reverse ? v1 : v0));
+  gp_Dir along = reverse ? axisDir.Reversed() : axisDir;
+  // At most as long as the face.
+  length = std::min(length, v1 - v0);
+  // A hole has its material outside: the face's outward normal points to the axis.
+  gp_Pnt point;
+  gp_Vec du, dv;
+  surface.D1((surface.FirstUParameter() + surface.LastUParameter()) / 2, (v0 + v1) / 2, point, du, dv);
+  gp_Vec normal = du.Crossed(dv);
+  if (face.Orientation() == TopAbs_REVERSED) normal.Reverse();
+  const gp_Vec fromAxis(frame.Location(), point);
+  const gp_Vec radial = fromAxis - gp_Vec(axisDir) * fromAxis.Dot(gp_Vec(axisDir));
+  const bool internal = normal.Dot(radial) < 0;
+
+  // The basic ISO profile (fundamental triangle height H): the groove cut into a bolt, or into the wall
+  // of a hole, as a trapezoid in a plane through the axis; it reaches a little past the surface.
+  const double h = std::sqrt(3.0) / 2 * pitch;
+  std::vector<std::pair<double, double>> outline;  // (distance from the axis, position along it)
+  if (!internal) {
+    const double crest = radius, root = radius - 5 * h / 8;
+    outline = {{crest + h / 16, -15 * pitch / 32}, {root, -pitch / 8}, {root, pitch / 8}, {crest + h / 16, 15 * pitch / 32}};
+  } else {
+    const double minor = radius, major = radius + 5 * h / 8;
+    outline = {{minor - h / 16, -13 * pitch / 32}, {major, -pitch / 16}, {major, pitch / 16}, {minor - h / 16, 13 * pitch / 32}};
+  }
+  // The groove runs one pitch past the start, so it opens out of the end of the face cleanly.
+  const double from = -pitch;
+  const double to = length;
+  const double turns = (to - from) / pitch;
+  const gp_Ax3 helixFrame(start, along, frame.XDirection());
+  const auto at = [&](double r, double z) { return gp_Pnt(start.XYZ() + helixFrame.XDirection().XYZ() * r + gp_Vec(along).XYZ() * (from + z)); };
+  BRepBuilderAPI_MakePolygon polygon;
+  for (const auto& [r, z] : outline) polygon.Add(at(r, z));
+  polygon.Close();
+  const double spineRadius = internal ? radius : radius - 5 * h / 8;
+  const occ::handle<Geom_CylindricalSurface> helixSurface = new Geom_CylindricalSurface(helixFrame, spineRadius);
+  const gp_Dir2d slope(leftHand ? -2 * M_PI : 2 * M_PI, pitch);
+  const occ::handle<Geom2d_Line> line = new Geom2d_Line(gp_Pnt2d(0, from), slope);
+  TopoDS_Edge helix = BRepBuilderAPI_MakeEdge(line, helixSurface, 0, turns * std::hypot(2 * M_PI, pitch)).Edge();
+  // A tight 3D curve for the helix and a tight sweep: loose approximations make the cut unreliable.
+  BRepLib::BuildCurves3d(helix, 1e-7, GeomAbs_C1, 14, std::max(64, static_cast<int>(turns * 16)));
+  BRepOffsetAPI_MakePipeShell sweep(BRepBuilderAPI_MakeWire(helix).Wire());
+  sweep.SetMode(along);
+  sweep.SetTolerance(1e-6, 1e-6, 1e-4);
+  sweep.Add(polygon.Wire());
+  sweep.Build();
+  if (!sweep.IsDone() || !sweep.MakeSolid()) throw KernelError("operation-failed", "the thread could not be swept");
+  StoredShape groove{sweep.Shape(), {}};
+  {
+    FaceNamer namer(groove.shape);
+    namer.rest(faceName(name, "thread"));
+    groove.names = namer.take();
+  }
+  BRepAlgoAPI_Cut cut;
+  configure(cut, body.shape, groove.shape);
+  if (cut.HasErrors()) throw KernelError("operation-failed", "the thread could not be cut");
+  cut.SimplifyResult(true, true, 1e-6);
+  const TopoDS_Shape result = cut.Shape();
+  requireValidSolid(result, "thread");
+  FaceNamer namer(result);
+  namer.inherit(cut, body.shape, body.names);
+  namer.inherit(cut, groove.shape, groove.names);
+  namer.rest(faceName(name, "thread"));
   return store().add(result, namer.take());
 }
 

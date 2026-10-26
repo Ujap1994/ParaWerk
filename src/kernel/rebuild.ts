@@ -84,7 +84,7 @@ function withoutTakenOver(result: FeatureResult, feature: Feature | undefined): 
   const edgesNew = healedEdges && !(feature && isEdgeFeature(feature) && stableStringify(feature.edges) === stableStringify(healedEdges));
   const planeNew = healedPlane && !(feature?.type === 'sketch' && stableStringify(feature.plane) === stableStringify(healedPlane));
   const referencesNew = healedReferences && !(feature && isReferenceFeature(feature) && stableStringify(feature.references) === stableStringify(healedReferences));
-  const facesNew = healedFaces && !((feature?.type === 'shell' || feature?.type === 'draft') && stableStringify(feature.faces) === stableStringify(healedFaces));
+  const facesNew = healedFaces && !((feature?.type === 'shell' || feature?.type === 'draft' || feature?.type === 'thread') && stableStringify(feature.faces) === stableStringify(healedFaces));
   return {
     ...rest,
     ...(edgesNew ? { healedEdges } : {}),

@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { formatQuantity } from '../format.ts';
-import { CHAMFER_METHODS, type DraftFeature, type LoftFeature, RIB_DIRECTIONS, type RibDirection, FILLET_METHODS, roundFaceCount, type FilletFeature, type FilletMethod, EXTRUDE_ENDS, extrudesOneWay, MAX_DRAFT_ANGLE, type RevolveDirection, hasReferenceSlots, isCopyFeature, type Axis, type BooleanOperation, type ChamferFeature, type ChamferMethod, type EdgeFeature, type ExtrudeDirection, type ExtrudeEnd, type ExtrudeFeature, type Feature, type RevolveFeature, type Vec3 } from '../../../shared/model/feature.ts';
+import { CHAMFER_METHODS, type DraftFeature, type LoftFeature, RIB_DIRECTIONS, type RibDirection, type ThreadFeature, FILLET_METHODS, roundFaceCount, type FilletFeature, type FilletMethod, EXTRUDE_ENDS, extrudesOneWay, MAX_DRAFT_ANGLE, type RevolveDirection, hasReferenceSlots, isCopyFeature, type Axis, type BooleanOperation, type ChamferFeature, type ChamferMethod, type EdgeFeature, type ExtrudeDirection, type ExtrudeEnd, type ExtrudeFeature, type Feature, type RevolveFeature, type Vec3 } from '../../../shared/model/feature.ts';
 import { DEFAULT_THIN_THICKNESS, THIN_SIDES, type ThinSide } from '../../../shared/model/thin.ts';
+import { METRIC_SIZES } from '../../../shared/model/hole.ts';
 import type { GeometryRef } from '../../../shared/model/reference.ts';
 import { referenceRoles } from '../references.ts';
 import { resolveEdgeRefs } from '../../../shared/model/naming.ts';
@@ -305,6 +306,8 @@ function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
       );
     case 'loft':
       return <LoftFields draft={draft} index={index} firstFeature={firstFeature} />;
+    case 'thread':
+      return <ThreadFields draft={draft} />;
     case 'rib':
       return (
         <Section title={t('panel.parameters')}>
@@ -406,6 +409,44 @@ function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
 }
 
 /** The size of a chamfer: one distance, two distances, or a distance and an angle. */
+/** A modeled thread: its cylindrical face, ISO size and pitch, length, start end and hand. */
+function ThreadFields({ draft }: { draft: ThreadFeature }) {
+  const { t } = useTranslation();
+  const nameOf = useReferenceName();
+  const face = draft.faces[0];
+  return (
+    <Section title={t('panel.parameters')}>
+      <div className={`reference-slot is-active${face ? ' is-filled' : ''}`} data-testid="thread-face">
+        <div className="reference-slot-button">
+          <span className="reference-slot-role">{t('thread.face')}</span>
+          <span className="reference-slot-value">{face ? nameOf(face) : t('thread.pickCylinder')}</span>
+        </div>
+      </div>
+      <label className="field">
+        <span className="field-label">{t('thread.size')}</span>
+        <select className="field-select" value={draft.size} data-testid="thread-size" onChange={(event) => commands.setThreadSize(event.target.value)}>
+          {METRIC_SIZES.map((size) => (
+            <option key={size.size} value={size.size}>
+              {size.size}
+            </option>
+          ))}
+        </select>
+      </label>
+      <NumberField label={t('thread.pitch')} value={draft.pitch} step={0.25} testId="thread-pitch" {...equation(draft, 'pitch')} onChange={(pitch) => commands.updateDraft({ pitch: Math.max(0.1, pitch) })} />
+      <NumberField label={t('thread.length')} value={draft.length} testId="thread-length" {...equation(draft, 'length')} onChange={(length) => commands.updateDraft({ length })} />
+      <label className="checkbox-field">
+        <input type="checkbox" checked={draft.reverse} data-testid="thread-reverse" onChange={(event) => commands.updateDraft({ reverse: event.target.checked })} />
+        {t('thread.reverse')}
+      </label>
+      <label className="checkbox-field">
+        <input type="checkbox" checked={draft.leftHand} data-testid="thread-left" onChange={(event) => commands.updateDraft({ leftHand: event.target.checked })} />
+        {t('thread.leftHand')}
+      </label>
+      <p className="panel-hint">{t('thread.hint')}</p>
+    </Section>
+  );
+}
+
 /** A loft: its sketches in order (each with one closed outline), whether it is ruled, and what it does. */
 function LoftFields({ draft, index, firstFeature }: { draft: LoftFeature; index: number; firstFeature: boolean }) {
   const { t } = useTranslation();

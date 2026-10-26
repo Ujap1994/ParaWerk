@@ -119,6 +119,7 @@ point on the curve. Median solve per drag step (`npm run bench:solver`):
 | Exact mass properties of the 100-hole plate (fast path for planes and circles) | 22 ms |
 | 100 M8 clearance holes as one hole feature | 304 ms |
 | 25 holes cut *up to next* through the lid of a closed box (sketch and cut rebuilt) | 136 ms |
+| A modeled M10 thread over 20 mm (13 turns swept along a helix and cut) | 732 ms |
 | Part of 100 features (a plate with 33 bosses: sketch, extrusion, rim fillet each): full rebuild / edit last feature | 501 ms / 32 ms |
 | Part of 301 features (100 bosses): full rebuild / edit last feature | 2.77 s / 87 ms |
 

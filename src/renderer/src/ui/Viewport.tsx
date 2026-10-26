@@ -38,7 +38,7 @@ function visibleSelection(state: AppState): Pick[] {
   const edit = state.activeEdit;
   if (edit && extrudesUpTo(edit.draft)) return referencePicks(builtOn(edit.draft), state).filter((pick) => pick.kind === 'face' || pick.kind === 'edge' || pick.kind === 'vertex');
   // The preview of a shell shows its openings; highlighting the open faces would cover them.
-  if (edit?.draft.type === 'shell') return state.display.preview ? [] : referencePicks(edit.draft.faces, state);
+  if (edit?.draft.type === 'shell' || edit?.draft.type === 'thread') return state.display.preview ? [] : referencePicks(edit.draft.faces, state);
   if (edit && hasReferenceSlots(edit.draft)) {
     const picks = referencePicks(edit.draft.references, state).filter((pick) => pick.kind === 'face' || pick.kind === 'edge' || pick.kind === 'vertex');
     // The faces a draft tilts, until the preview shows them tilted (the highlight would cover it).
@@ -81,7 +81,7 @@ function pickFilter(state: AppState): PickFilter {
   if (state.sketch) return 'none';
   const edit = state.activeEdit;
   if (!edit) return 'all';
-  if (edit.draft.type === 'shell' || (edit.draft.type === 'fillet' && roundFaceCount(edit.draft.method) > 0)) return 'faces';
+  if (edit.draft.type === 'shell' || edit.draft.type === 'thread' || (edit.draft.type === 'fillet' && roundFaceCount(edit.draft.method) > 0)) return 'faces';
   return isEdgeFeature(edit.draft) ? 'edgesAndFaces' : picksReferences(edit.draft) ? 'references' : 'none';
 }
 

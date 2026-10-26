@@ -1273,3 +1273,26 @@ test('rib screenshots', async () => {
   await page.click('[data-testid="panel-ok"]');
   await app.close();
 });
+
+test('thread screenshots', async () => {
+  const { app, page } = await launchApp({ width: 1440, height: 900 });
+  // A screw: a head and a shank of 10 mm with a modeled M10 thread over 20 mm.
+  await page.evaluate(() => {
+    const features = [
+      { id: 'shank', type: 'cylinder', operation: 'add', radius: 5, height: 30, axis: 'z', position: [0, 0, 0] },
+      { id: 'head', type: 'cylinder', operation: 'add', radius: 8, height: 6, axis: 'z', position: [0, 0, 30] },
+      { id: 'thread', type: 'thread', name: 'M10 thread', faces: [{ kind: 'face', name: 'shank:side', at: [5, 0, 10] }], size: 'M10', pitch: 1.5, length: 20, reverse: false, leftHand: false },
+    ];
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features, past: [], future: [] }, savedFeatures: features, fileName: 'Screw' });
+  });
+  await idle(page);
+  await page.evaluate(() => (window as unknown as { __parawerk: { viewport: { zoomToFit(): void } } }).__parawerk.viewport.zoomToFit());
+  await page.locator('.feature-tree .tree-item[data-feature-id="thread"]').dblclick();
+  await idle(page);
+  const canvas = await page.locator('.viewport-canvas').boundingBox();
+  if (canvas) await page.mouse.move(canvas.x + canvas.width - 30, canvas.y + canvas.height - 30);
+  await page.waitForTimeout(800);
+  await page.screenshot({ path: out('thread.png') });
+  await page.click('[data-testid="panel-ok"]');
+  await app.close();
+});

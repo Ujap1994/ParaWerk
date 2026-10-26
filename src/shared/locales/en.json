@@ -117,7 +117,8 @@
       "draft": "Tilt faces by an angle about a neutral plane, for molding and casting",
       "sweep": "Sweep the closed outlines of a sketch along the curves of another sketch",
       "loft": "Make a solid through the outlines of several sketches, in order",
-      "rib": "Add a wall from the open curves of a sketch to the body, such as a gusset in a corner"
+      "rib": "Add a wall from the open curves of a sketch to the body, such as a gusset in a corner",
+      "thread": "Cut a modeled ISO metric thread into a bolt or a hole"
     },
     "tabs": {
       "label": "Command tabs",
@@ -205,7 +206,9 @@
     "sweep": "Sweep",
     "loft": "Loft",
     "solidFeatures": "Revolve, sweep and loft",
-    "rib": "Rib"
+    "rib": "Rib",
+    "thread": "Thread",
+    "holeFeatures": "Hole and thread"
   },
   "features": {
     "plane": "Plane",
@@ -229,7 +232,8 @@
     "draft": "Draft",
     "sweep": "Sweep",
     "loft": "Loft",
-    "rib": "Rib"
+    "rib": "Rib",
+    "thread": "Thread"
   },
   "tree": {
     "title": "Feature tree",
@@ -497,7 +501,9 @@
     "loft-sections": "A loft needs at least two profiles.",
     "loft-profile": "Profile {{detail}} must be one closed outline without holes.",
     "loft-failed": "The profiles could not be joined. Check that they lie one after the other and are not twisted against each other.",
-    "rib-curves": "A rib within its sketch plane follows lines only; {{detail}} is another curve."
+    "rib-curves": "A rib within its sketch plane follows lines only; {{detail}} is another curve.",
+    "thread-face": "Pick the cylindrical face of a bolt or a hole for the thread.",
+    "thread-size": "Pitch and length of the thread must be above 0."
   },
   "warnings": {
     "edge-missing_one": "{{count}} selected edge no longer exists and is left out. Edit the feature to remove it or pick another edge.",
@@ -1026,5 +1032,15 @@
     },
     "flip": "Try the other side first",
     "hint": "Draw open lines where the rib should end, for example across the corner between a wall and a floor. Within the sketch plane the rib fills the space between the lines and the body, as thick as the thickness across the plane; normal to the sketch it grows from the curves down to the body. It grows towards the material on its own."
+  },
+  "thread": {
+    "face": "Cylindrical face",
+    "pickCylinder": "Click the cylindrical face of a bolt or a hole",
+    "size": "Size",
+    "pitch": "Pitch",
+    "length": "Length",
+    "reverse": "Start at the other end",
+    "leftHand": "Left-hand thread",
+    "hint": "The thread is modeled: its groove is cut into the part, as 3D printing needs (for drilling and tapping, a hole with a cosmetic thread is lighter). A bolt keeps its diameter as the outside of the thread; a hole should be drilled with the tap drill. The thread starts at one end of the face, runs out of it there and goes the length into the face, at most to its other end. It takes a second or two to compute."
   }
 }

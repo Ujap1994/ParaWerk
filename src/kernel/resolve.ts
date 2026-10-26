@@ -1,4 +1,4 @@
-import { COPYABLE_TYPES, isCopyFeature, isEdgeFeature, type CopyFeature, type DraftFeature, type LoftFeature, type RibFeature, type SweepFeature, type EdgeFeature, type EdgeRef, type ExtrudeFeature, type Feature, type FilletFeature, roundFaceCount, type HoleFeature, type ShellFeature, type SketchFeature, type SolidModelingFeature, type Vec3 } from '../shared/model/feature.ts';
+import { COPYABLE_TYPES, isCopyFeature, isEdgeFeature, type CopyFeature, type DraftFeature, type LoftFeature, type RibFeature, type SweepFeature, type ThreadFeature, type EdgeFeature, type EdgeRef, type ExtrudeFeature, type Feature, type FilletFeature, roundFaceCount, type HoleFeature, type ShellFeature, type SketchFeature, type SolidModelingFeature, type Vec3 } from '../shared/model/feature.ts';
 import { circularTransforms, linearTransforms, mirrorTransform, type Transform } from '../shared/model/pattern.ts';
 import { holePositions, holeProblem } from '../shared/model/hole.ts';
 import { edgeFaceNames, edgeRefOf, faceRefOf, resolveEdgeRefs, resolveFaceRef, resolveFacePlane, type BodyNaming } from '../shared/model/naming.ts';
@@ -9,7 +9,7 @@ import type { GeometryRef, ReferenceGeometry } from '../shared/model/reference.t
 import { frameOf, frameOnPlane, ORIGIN_ID, toModel, toSketch, type SketchFrame, type SketchPlaneRef } from '../shared/model/sketch.ts';
 import type { Point2 } from '../shared/model/spline.ts';
 import { hashString } from '../shared/hash.ts';
-import type { KernelFeature, ResolvedCopy, ResolvedDraft, ResolvedLoft, ResolvedRib, ResolvedSweep, ResolvedEdgeFeature, ResolvedExtrude, ResolvedHole, ResolvedShell } from './backend.ts';
+import type { KernelFeature, ResolvedCopy, ResolvedDraft, ResolvedLoft, ResolvedRib, ResolvedSweep, ResolvedThread, ResolvedEdgeFeature, ResolvedExtrude, ResolvedHole, ResolvedShell } from './backend.ts';
 import { FeatureError } from './feature-error.ts';
 import { axisOfReference, curvedFaceOfReference, referenceValue, type BodyQuery, type ReferenceContext } from './reference.ts';
 
@@ -402,6 +402,15 @@ function resolveLoft(feature: LoftFeature, before: readonly Feature[], context: 
   return { ...feature, sections };
 }
 
+/** The face of a thread in the body it is cut into; found by name, or by position with the reference brought up to date. */
+function resolveThread(feature: ThreadFeature, context: ResolveContext): ResolvedThread {
+  if (feature.faces.length === 0) throw new FeatureError('thread-face');
+  const { faceIndices, healedFaces } = resolveShell({ id: feature.id, type: 'shell', thickness: 1, outward: false, faces: feature.faces }, context);
+  const faceIndex = faceIndices[0];
+  if (faceIndex === undefined) throw new FeatureError('face-missing');
+  return { ...feature, faceIndex, ...(healedFaces ? { healedFaces } : {}) };
+}
+
 /** What features are resolved against: the body before them, where sketches lie and where reference features lie. */
 export interface ResolveContext extends ReferenceContext {
   frames: ReadonlyMap<string, SketchFrame>;
@@ -420,6 +429,7 @@ export function resolveFeature(feature: SolidModelingFeature, before: readonly F
   if (feature.type === 'sweep') return resolveSweep(feature, before, context);
   if (feature.type === 'loft') return resolveLoft(feature, before, context);
   if (feature.type === 'rib') return resolveRib(feature, before, context);
+  if (feature.type === 'thread') return resolveThread(feature, context);
   if (isEdgeFeature(feature)) {
     if (!context.body) throw new FeatureError('no-body');
     return resolveEdges(feature, context.body);

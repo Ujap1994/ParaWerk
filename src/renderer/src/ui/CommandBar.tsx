@@ -58,6 +58,7 @@ import {
   SweepIcon,
   LoftIcon,
   RibIcon,
+  ThreadIcon,
   CoordinateSystemIcon,
   SettingsIcon,
   ShellIcon,
@@ -132,12 +133,20 @@ function Group({ label, children }: { label: string; children: React.ReactNode }
 }
 
 const FEATURE_BUTTONS: { type: FeatureType; icon: IconType }[] = [
-  { type: 'hole', icon: HoleIcon },
   { type: 'box', icon: BoxIcon },
   { type: 'cylinder', icon: CylinderIcon },
   { type: 'fillet', icon: FilletIcon },
   { type: 'chamfer', icon: ChamferIcon },
 ];
+
+/** Holes and modeled threads. */
+const HOLE_ENTRIES: readonly SplitEntry[] = (['hole', 'thread'] as const).map((type) => ({
+  id: type,
+  icon: { hole: HoleIcon, thread: ThreadIcon }[type],
+  label: type,
+  start: () => commands.startFeature(type),
+  active: (state: AppState) => state.activeEdit?.mode === 'create' && state.activeEdit.draft.type === type,
+}));
 
 /** Features from sketch outlines besides extrusions: revolve, sweep and loft. */
 const SOLID_ENTRIES: readonly SplitEntry[] = (['revolve', 'sweep', 'loft'] as const).map((type) => ({
@@ -284,6 +293,7 @@ function FeaturesTab() {
         />
       ))}
       <SplitFeatureButton entries={SOLID_ENTRIES} menuLabel={t('commands.solidFeatures')} variants="solid" disabled={sketching} />
+      <SplitFeatureButton entries={HOLE_ENTRIES} menuLabel={t('commands.holeFeatures')} variants="holes" disabled={sketching || !hasFeatures} />
       {FEATURE_BUTTONS.map(({ type, icon }) => (
         <CommandButton
           key={type}
@@ -292,7 +302,7 @@ function FeaturesTab() {
           label={t(`commands.${type}`)}
           tooltip={t(`commands.tooltips.${type}`)}
           active={activeType === type}
-          disabled={(sketching && type !== 'sketch') || ((type === 'fillet' || type === 'chamfer' || type === 'hole') && !hasFeatures)}
+          disabled={(sketching && type !== 'sketch') || ((type === 'fillet' || type === 'chamfer') && !hasFeatures)}
           onClick={() => commands.startFeature(type)}
         />
       ))}

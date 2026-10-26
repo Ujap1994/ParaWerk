@@ -196,7 +196,8 @@ what that turns up is fixed before Phase 3 starts.
 | Rib (within the sketch plane from lines, or normal to the sketch) | ✅ done |
 | Sweep with twist and guide curves, loft with guide curves | open |
 | Variable-radius fillets (from a start to an end radius along each edge) | ✅ done |
-| Multi-body parts, curves (helix, projected, composite), modeled threads | open |
+| Modeled threads (ISO metric, external and internal, on cylindrical faces) | ✅ done |
+| Multi-body parts, curves (helix, projected, composite) | open |
 | Surface tools (offset, knit, thicken), configurations and design tables, full equation support | open |
 
 ## 2. Guiding principles

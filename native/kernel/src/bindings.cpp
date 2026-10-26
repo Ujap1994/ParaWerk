@@ -270,6 +270,10 @@ val filletVariable(int bodyId, val edgeIndices, double startRadius, double endRa
   return guarded([&] { return idResult(parawerk::filletVariable(bodyId, toIntVector(edgeIndices), startRadius, endRadius, swap, toStringVector(edgeNames), name)); });
 }
 
+val cutThread(int bodyId, int faceIndex, double pitch, double length, bool reverse, bool leftHand, std::string name) {
+  return guarded([&] { return idResult(parawerk::cutThread(bodyId, faceIndex, pitch, length, reverse, leftHand, name)); });
+}
+
 val sweepProfile(val profile, val frame, val path, val pathFrame, val edgeNames, std::string name) {
   return guarded([&] {
     const auto numbers = [](const val& array) { return emscripten::convertJSArrayToNumberVector<double>(array); };
@@ -314,7 +318,7 @@ val importStepText(const std::string& text, const std::string& name) {
   return guarded([&] { return idResult(parawerk::importStep(text, name)); });
 }
 
-std::string version() { return "parawerk-kernel 0.16 / OCCT " PARAWERK_OCCT_VERSION; }
+std::string version() { return "parawerk-kernel 0.17 / OCCT " PARAWERK_OCCT_VERSION; }
 
 }  // namespace
 
@@ -355,5 +359,6 @@ EMSCRIPTEN_BINDINGS(parawerk_kernel) {
   emscripten::function("sweepProfile", &sweepProfile);
   emscripten::function("loftProfiles", &loftProfiles);
   emscripten::function("filletVariable", &filletVariable);
+  emscripten::function("cutThread", &cutThread);
   emscripten::function("limitBySurface", &limitBySurface);
 }
