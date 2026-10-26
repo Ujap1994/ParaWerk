@@ -187,7 +187,7 @@ full rounds are ParaWerk's own constructions, since OCCT has no such operations;
 faces. **Open for Gate 2:** the owner models a set of their own real-world parts without workarounds;
 what that turns up is fixed before Phase 3 starts.
 
-### Phase 3 – started (2026-10-26, alongside the owner's Gate 2 tests)
+### Phase 3 – features complete except loft guide curves (2026-10-26)
 
 First previews released as [v0.4.0-alpha.0](https://github.com/Ujap1994/ParaWerk/releases/tag/v0.4.0-alpha.0)
 and [v0.4.0-alpha.1](https://github.com/Ujap1994/ParaWerk/releases/tag/v0.4.0-alpha.1) (patterns of
@@ -200,7 +200,7 @@ patterns, curves; 2026-10-26).
 | Rib (within the sketch plane from lines, or normal to the sketch) | ✅ done |
 | Sweep with twist and a guide curve | ✅ done |
 | Loft along a centerline | ✅ done |
-| Loft with guide curves | open |
+| Loft with guide curves | open – OCCT has no reliable lofting with guides; the centerline covers bent transitions. Revisit with a section-based approach like the guided sweep. |
 | Variable-radius fillets (from a start to an end radius along each edge) | ✅ done |
 | Modeled threads (ISO metric, external and internal, on cylindrical faces) | ✅ done |
 | Helix (pitch, turns, start angle, hand) as the path of sweeps: springs, coils, helical grooves | ✅ done |
