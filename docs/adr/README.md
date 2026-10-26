@@ -15,3 +15,4 @@ and what would make us revisit it.
 | [0008](0008-dependency-licenses.md) | Dependency license policy | Accepted |
 | [0009](0009-sketch-based-features.md) | Sketch-based features: profiles and exact geometry | Accepted |
 | [0010](0010-reference-geometry.md) | Reference geometry: planes, axes and points | Accepted |
+| [0011](0011-multi-body-parts.md) | Multi-body parts: bodies, merging, combining | Accepted |

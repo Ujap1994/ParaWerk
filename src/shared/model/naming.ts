@@ -27,6 +27,8 @@ export interface BodyNaming {
   /** Vertex v meets the faces vertexFaces[vertexFaceOffsets[v] .. vertexFaceOffsets[v + 1]). */
   vertexFaceOffsets: Int32Array;
   vertexFaces: Int32Array;
+  /** Per face: the body (solid) that holds it, numbered from 0 (absent: one body). */
+  faceBodies?: Int32Array;
 }
 
 /** How a reference found its edge: by face names, by position only (its faces were renamed) or by index. */

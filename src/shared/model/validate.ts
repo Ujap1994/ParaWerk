@@ -1,4 +1,4 @@
-import { CHAMFER_METHODS, type ChamferMethod, EXPRESSION_FIELDS, FILLET_METHODS, MAX_HELIX_TURNS, MAX_TWIST, PROJECTION_METHODS, PROJECTION_SIDES, type ProjectionMethod, type ProjectionSide, RIB_DIRECTIONS, EXTRUDE_DIRECTIONS, MAX_DRAFT_ANGLE, REVOLVE_DIRECTIONS, type RevolveDirection, EXTRUDE_ENDS, HOLE_ENDS, type Axis, type BooleanOperation, type EdgeRef, type ExtrudeDirection, type ExtrudeEnd, type Feature, type FeatureType, type HoleEnd, type Variable, type Vec3 } from './feature.ts';
+import { CHAMFER_METHODS, type ChamferMethod, EXPRESSION_FIELDS, FILLET_METHODS, COMBINE_OPERATIONS, type CombineOperation, MAX_HELIX_TURNS, MAX_TWIST, PROJECTION_METHODS, PROJECTION_SIDES, type ProjectionMethod, type ProjectionSide, RIB_DIRECTIONS, EXTRUDE_DIRECTIONS, MAX_DRAFT_ANGLE, REVOLVE_DIRECTIONS, type RevolveDirection, EXTRUDE_ENDS, HOLE_ENDS, type Axis, type BooleanOperation, type EdgeRef, type ExtrudeDirection, type ExtrudeEnd, type Feature, type FeatureType, type HoleEnd, type Variable, type Vec3 } from './feature.ts';
 import { HOLE_FITS, HOLE_KINDS } from './hole.ts';
 import { CUSTOM_MATERIAL, materialInfo, MAX_DENSITY, MIN_DENSITY, NO_PROPERTIES, type PartProperties } from './material.ts';
 import { MAX_PATTERN_COUNT } from './pattern.ts';
@@ -210,6 +210,11 @@ function extrudeEnd<T extends string>(value: unknown, path: string, ends: readon
 }
 
 /** The id of a sketch a feature is built from; empty or unknown ids are kept (the rebuild reports them). */
+/** Whether added material is merged with the bodies it touches (absent: it is). */
+function mergeOf(raw: Json, path: string): { merge?: boolean } {
+  return raw.merge === undefined ? {} : { merge: flag(raw.merge, `${path}.merge`) };
+}
+
 function sketchId(value: unknown, path: string): string {
   if (typeof value !== 'string' || value.length > 200) throw new ValidationError('expected a sketch id', path);
   return value;
@@ -300,6 +305,7 @@ function parseFeatureFields(raw: Json, path: string): Feature {
         ...common,
         type: 'extrude',
         operation: operation(raw.operation, `${path}.operation`),
+        ...mergeOf(raw, path),
         sketch: raw.sketch,
         depth: positiveLength(raw.depth, `${path}.depth`),
         direction: raw.direction as ExtrudeDirection,
@@ -323,6 +329,7 @@ function parseFeatureFields(raw: Json, path: string): Feature {
         ...common,
         type: 'revolve',
         operation: operation(raw.operation, `${path}.operation`),
+        ...mergeOf(raw, path),
         sketch: raw.sketch,
         axis: raw.axis,
         ...(raw.axisRef === undefined ? {} : { axisRef: geometryRef(raw.axisRef, `${path}.axisRef`) }),
@@ -387,6 +394,7 @@ function parseFeatureFields(raw: Json, path: string): Feature {
         ...common,
         type: 'box',
         operation: operation(raw.operation, `${path}.operation`),
+        ...mergeOf(raw, path),
         width: positiveLength(raw.width, `${path}.width`),
         depth: positiveLength(raw.depth, `${path}.depth`),
         height: positiveLength(raw.height, `${path}.height`),
@@ -396,13 +404,15 @@ function parseFeatureFields(raw: Json, path: string): Feature {
       if (typeof raw.file !== 'string' || raw.file.length > MAX_FILE_NAME) throw new ValidationError('expected a file name', `${path}.file`);
       if (typeof raw.hash !== 'string' || raw.hash.length > 64) throw new ValidationError('expected a content hash', `${path}.hash`);
       if (typeof raw.data !== 'string' || raw.data.length === 0 || raw.data.length > MAX_IMPORT_CHARS) throw new ValidationError('expected the imported STEP file', `${path}.data`);
-      return { ...common, type: 'import', operation: operation(raw.operation, `${path}.operation`), file: raw.file, hash: raw.hash, data: raw.data };
+      return { ...common, type: 'import', operation: operation(raw.operation, `${path}.operation`),
+        ...mergeOf(raw, path), file: raw.file, hash: raw.hash, data: raw.data };
     }
     case 'cylinder':
       return {
         ...common,
         type: 'cylinder',
         operation: operation(raw.operation, `${path}.operation`),
+        ...mergeOf(raw, path),
         radius: positiveLength(raw.radius, `${path}.radius`),
         height: positiveLength(raw.height, `${path}.height`),
         axis: axis(raw.axis, `${path}.axis`),
@@ -467,6 +477,11 @@ function parseFeatureFields(raw: Json, path: string): Feature {
         side: raw.side as ProjectionSide,
         sketch2: sketchId(raw.sketch2, `${path}.sketch2`),
       };
+    case 'combine':
+      if (!COMBINE_OPERATIONS.includes(raw.operation as CombineOperation)) throw new ValidationError('expected add, subtract or common', `${path}.operation`);
+      return { ...common, type: 'combine', operation: raw.operation as CombineOperation, bodies: faceRefs(raw.bodies, `${path}.bodies`) };
+    case 'deleteBody':
+      return { ...common, type: 'deleteBody', bodies: faceRefs(raw.bodies, `${path}.bodies`) };
     case 'compositeCurve': {
       if (!Array.isArray(raw.curves) || raw.curves.length > 1000) throw new ValidationError('expected a list of curve ids', `${path}.curves`);
       const curves = raw.curves.map((id, i) => sketchId(id, `${path}.curves[${i}]`));
@@ -498,6 +513,7 @@ function parseFeatureFields(raw: Json, path: string): Feature {
         ...common,
         type: 'sweep',
         operation: operation(raw.operation, `${path}.operation`),
+        ...mergeOf(raw, path),
         sketch: sketchId(raw.sketch, `${path}.sketch`),
         path: sketchId(raw.path, `${path}.path`),
         ...(raw.twist === undefined ? {} : { twist: finiteNumber(raw.twist, `${path}.twist`, MAX_TWIST) }),
@@ -510,6 +526,7 @@ function parseFeatureFields(raw: Json, path: string): Feature {
         ...common,
         type: 'loft',
         operation: operation(raw.operation, `${path}.operation`),
+        ...mergeOf(raw, path),
         sketches,
         ...(raw.ruled === undefined ? {} : { ruled: flag(raw.ruled, `${path}.ruled`) }),
         ...(raw.centerline === undefined ? {} : { centerline: sketchId(raw.centerline, `${path}.centerline`) }),

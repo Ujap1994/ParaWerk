@@ -16,5 +16,6 @@ export function meshTransferables(mesh: MeshPayload): ArrayBuffer[] {
     naming.vertexPositions,
     naming.vertexFaceOffsets,
     naming.vertexFaces,
+    ...(naming.faceBodies ? [naming.faceBodies] : []),
   ].map((array) => array.buffer as ArrayBuffer);
 }

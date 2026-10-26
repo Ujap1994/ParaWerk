@@ -1,4 +1,4 @@
-import type { ProjectionSide, CopyFeature, DraftFeature, EdgeFeature, LoftFeature, RibFeature, SweepFeature, ThreadFeature, EdgeRef, ExtrudeFeature, HoleFeature, RevolveFeature, ShellFeature, SolidModelingFeature, Vec3 } from '../shared/model/feature.ts';
+import type { CombineFeature, DeleteBodyFeature, ProjectionSide, CopyFeature, DraftFeature, EdgeFeature, LoftFeature, RibFeature, SweepFeature, ThreadFeature, EdgeRef, ExtrudeFeature, HoleFeature, RevolveFeature, ShellFeature, SolidModelingFeature, Vec3 } from '../shared/model/feature.ts';
 import type { FaceNameRef, ReferenceGeometry } from '../shared/model/reference.ts';
 import type { BodyNaming } from '../shared/model/naming.ts';
 import type { Profile, ProfileEdge, ProfileLoop } from '../shared/model/profile.ts';
@@ -82,6 +82,9 @@ export type ResolvedCopy = CopyFeature & {
   transforms: number[][];
 };
 
+/** Combining or deleting bodies, with the faces that pick them (topological indices; the main body first). */
+export type ResolvedBodies = (CombineFeature | DeleteBodyFeature) & { faceIndices: number[] };
+
 /** A shell with its open faces resolved in the body it hollows out. */
 export interface ResolvedShell extends ShellFeature {
   faceIndices: number[];
@@ -115,7 +118,8 @@ export type ResolvedEdgeFeature = EdgeFeature & {
 
 /** A feature as a backend builds it, with its references to earlier features resolved. */
 export type KernelFeature =
-  | Exclude<SolidModelingFeature, ExtrudeFeature | RevolveFeature | EdgeFeature | HoleFeature | CopyFeature | ShellFeature | DraftFeature | SweepFeature | LoftFeature | RibFeature | ThreadFeature>
+  | Exclude<SolidModelingFeature, ExtrudeFeature | RevolveFeature | EdgeFeature | HoleFeature | CopyFeature | ShellFeature | DraftFeature | SweepFeature | LoftFeature | RibFeature | ThreadFeature | CombineFeature | DeleteBodyFeature>
+  | ResolvedBodies
   | ResolvedExtrude
   | ResolvedRevolve
   | ResolvedHole

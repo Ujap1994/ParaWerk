@@ -142,6 +142,8 @@ export type FeatureErrorCode =
   | 'guide-gaps'
   | 'centerline-missing'
   | 'centerline-gaps'
+  | 'combine-bodies'
+  | 'body-missing'
   | 'curve-missed'
   | 'curve-faces'
   | 'curve-edge-missing'

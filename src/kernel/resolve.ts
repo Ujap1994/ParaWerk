@@ -1,4 +1,4 @@
-import { COPYABLE_TYPES, type CurveFeature, isCopyFeature, isEdgeFeature, type CopyFeature, type DraftFeature, type LoftFeature, type RibFeature, type SweepFeature, type ThreadFeature, type EdgeFeature, type EdgeRef, type ExtrudeFeature, type Feature, type FilletFeature, roundFaceCount, type HoleFeature, type ShellFeature, type SketchFeature, type SolidModelingFeature, type Vec3 } from '../shared/model/feature.ts';
+import { COPYABLE_TYPES, type CombineFeature, type DeleteBodyFeature, type CurveFeature, isCopyFeature, isEdgeFeature, type CopyFeature, type DraftFeature, type LoftFeature, type RibFeature, type SweepFeature, type ThreadFeature, type EdgeFeature, type EdgeRef, type ExtrudeFeature, type Feature, type FilletFeature, roundFaceCount, type HoleFeature, type ShellFeature, type SketchFeature, type SolidModelingFeature, type Vec3 } from '../shared/model/feature.ts';
 import { circularTransforms, composeTransforms, IDENTITY, linearTransforms, mirrorTransform, sameTransform, type Transform } from '../shared/model/pattern.ts';
 import { holePositions, holeProblem } from '../shared/model/hole.ts';
 import { edgeFaceNames, edgeRefOf, faceRefOf, resolveEdgeRefs, resolveFaceRef, resolveFacePlane, type BodyNaming } from '../shared/model/naming.ts';
@@ -9,7 +9,7 @@ import type { GeometryRef, ReferenceGeometry } from '../shared/model/reference.t
 import { frameOf, frameOnPlane, ORIGIN_ID, toModel, toSketch, type SketchFrame, type SketchPlaneRef } from '../shared/model/sketch.ts';
 import type { Point2 } from '../shared/model/spline.ts';
 import { hashString } from '../shared/hash.ts';
-import type { KernelFeature, ResolvedCurve, ShapeHandle, SketchCurves, ResolvedCopy, ResolvedDraft, ResolvedLoft, ResolvedRib, ResolvedSweep, ResolvedThread, ResolvedEdgeFeature, ResolvedExtrude, ResolvedHole, ResolvedShell } from './backend.ts';
+import type { KernelFeature, ResolvedBodies, ResolvedCurve, ShapeHandle, SketchCurves, ResolvedCopy, ResolvedDraft, ResolvedLoft, ResolvedRib, ResolvedSweep, ResolvedThread, ResolvedEdgeFeature, ResolvedExtrude, ResolvedHole, ResolvedShell } from './backend.ts';
 import { FeatureError } from './feature-error.ts';
 import { axisOfReference, curvedFaceOfReference, referenceValue, type BodyQuery, type ReferenceContext } from './reference.ts';
 
@@ -471,6 +471,18 @@ function resolveLoft(feature: LoftFeature, before: readonly Feature[], context: 
   return { ...feature, sections, ...(centerline.curve ? { centerlineCurve: centerline.curve } : { centerlinePath: centerline.path }) };
 }
 
+/** The bodies a combine or delete-body feature picks, by one face each (the main body first). */
+function resolveBodies(feature: CombineFeature | DeleteBodyFeature, context: ResolveContext): ResolvedBodies {
+  const body = context.body;
+  if (!body) throw new FeatureError('no-body');
+  if (feature.bodies.length === 0 || (feature.type === 'combine' && feature.bodies.length < 2)) throw new FeatureError('combine-bodies');
+  const naming = body.naming();
+  const faceIndices = feature.bodies.map((ref) => resolveFaceRef(ref, naming, (face, point) => Math.hypot(...minus(body.face(face).center, point)))?.index ?? -1);
+  const missing = faceIndices.filter((index) => index < 0).length;
+  if (missing > 0) throw new FeatureError('body-missing', String(missing));
+  return { ...feature, faceIndices };
+}
+
 /** The face of a thread in the body it is cut into; found by name, or by position with the reference brought up to date. */
 function resolveThread(feature: ThreadFeature, context: ResolveContext): ResolvedThread {
   if (feature.faces.length === 0) throw new FeatureError('thread-face');
@@ -537,6 +549,7 @@ export function resolveFeature(feature: SolidModelingFeature, before: readonly F
   if (feature.type === 'loft') return resolveLoft(feature, before, context);
   if (feature.type === 'rib') return resolveRib(feature, before, context);
   if (feature.type === 'thread') return resolveThread(feature, context);
+  if (feature.type === 'combine' || feature.type === 'deleteBody') return resolveBodies(feature, context);
   if (isEdgeFeature(feature)) {
     if (!context.body) throw new FeatureError('no-body');
     return resolveEdges(feature, context.body);

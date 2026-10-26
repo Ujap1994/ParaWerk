@@ -122,7 +122,9 @@
       "configurations": "Varianten des Teils: zwischen ihnen umschalten und ihre Variablen in einer Konstruktionstabelle bearbeiten",
       "helix": "Eine Wendel um den Kreis einer Skizze erzeugen, als Pfad einer Feder oder Spirale",
       "projectedCurve": "Die Kurven einer Skizze auf Flächen projizieren oder eine 3D-Kurve dort erzeugen, wo sich die Kurven zweier Skizzen treffen",
-      "compositeCurve": "Kanten, Skizzenkurven und andere Kurven zu einer Kurve verbinden, als Pfad einer Austragung"
+      "compositeCurve": "Kanten, Skizzenkurven und andere Kurven zu einer Kurve verbinden, als Pfad einer Austragung",
+      "combine": "Körper des Teils kombinieren: vereinigen, von einem Hauptkörper abziehen oder nur das Gemeinsame behalten",
+      "deleteBody": "Körper aus dem Teil entfernen"
     },
     "tabs": {
       "label": "Befehlsregister",
@@ -216,7 +218,10 @@
     "configurations": "Konfigurationen",
     "helix": "Wendel",
     "projectedCurve": "Projizierte Kurve",
-    "compositeCurve": "Zusammengesetzte Kurve"
+    "compositeCurve": "Zusammengesetzte Kurve",
+    "combine": "Kombinieren",
+    "deleteBody": "Körper löschen",
+    "bodyFeatures": "Körper kombinieren und löschen"
   },
   "features": {
     "plane": "Ebene",
@@ -244,7 +249,9 @@
     "thread": "Gewinde",
     "helix": "Wendel",
     "projectedCurve": "Projizierte Kurve",
-    "compositeCurve": "Zusammengesetzte Kurve"
+    "compositeCurve": "Zusammengesetzte Kurve",
+    "combine": "Kombinieren",
+    "deleteBody": "Körper löschen"
   },
   "tree": {
     "title": "Featurebaum",
@@ -342,7 +349,8 @@
       "other": "Andere Seite",
       "both": "Beide Seiten"
     },
-    "thinHint": "Wände entlang jeder Kurve der Skizze, auch offener: eine Seite liegt außerhalb einer geschlossenen Kontur (bei offenen Kurven die Seite, die die Vorschau zeigt), beide Seiten legt je die halbe Stärke auf jede Seite. Linien und Bögen treffen sich in scharfen Ecken."
+    "thinHint": "Wände entlang jeder Kurve der Skizze, auch offener: eine Seite liegt außerhalb einer geschlossenen Kontur (bei offenen Kurven die Seite, die die Vorschau zeigt), beide Seiten legt je die halbe Stärke auf jede Seite. Linien und Bögen treffen sich in scharfen Ecken.",
+    "merge": "Ergebnis verschmelzen (mit berührten Körpern)"
   },
   "status": {
     "kernelLoading": "Geometriekern wird gestartet…",
@@ -527,7 +535,9 @@
     "guide-missing": "Die Leitkurve der Austragung existiert nicht mehr. Wähle eine andere oder keine.",
     "guide-gaps": "Die Leitkurve muss ein Kurvenzug ohne Lücken und Verzweigungen sein.",
     "centerline-missing": "Die Mittellinie der Ausformung existiert nicht mehr. Wähle eine andere oder keine.",
-    "centerline-gaps": "Die Mittellinie muss ein Kurvenzug ohne Lücken und Verzweigungen sein."
+    "centerline-gaps": "Die Mittellinie muss ein Kurvenzug ohne Lücken und Verzweigungen sein.",
+    "combine-bodies": "Wähle mindestens zwei verschiedene Körper: Klicke in der 3D-Ansicht je eine Fläche an, zuerst den Hauptkörper.",
+    "body-missing": "Ein gewählter Körper existiert nicht mehr, eine frühere Änderung hat ihn entfernt. Bearbeite das Feature und wähle die Körper neu."
   },
   "warnings": {
     "edge-missing_one": "{{count}} ausgewählte Kante existiert nicht mehr und wird ausgelassen. Bearbeite das Feature, um sie zu entfernen oder eine andere Kante zu wählen.",
@@ -1129,5 +1139,21 @@
     "hintSketch": "Zeichne die Kurve aus zwei Richtungen gesehen, in zwei Skizzen auf Ebenen im Winkel zueinander: Die 3D-Kurve liegt dort, wo sich die Kurven treffen, wenn jede entlang ihrer Skizzennormalen verlängert wird.",
     "hintComposite": "Klicke Kanten des Teils an und füge Skizzen und Kurven hinzu; zusammen müssen sie sich Ende an Ende zu einem Kurvenzug verbinden. Das Ergebnis ist ein Pfad für eine Austragung.",
     "clear": "Alle entfernen"
+  },
+  "bodies": {
+    "title_one": "Volumenkörper ({{count}})",
+    "title_other": "Volumenkörper ({{count}})",
+    "body": "Körper {{n}}",
+    "operation": "Operation",
+    "operations": {
+      "add": "Hinzufügen",
+      "subtract": "Abziehen",
+      "common": "Gemeinsam"
+    },
+    "chosen": "Körper",
+    "main": "Hauptkörper: {{name}}",
+    "pick": "Klicke in der 3D-Ansicht je eine Fläche jedes Körpers an.",
+    "combineHint": "Klicke je eine Fläche jedes Körpers an, zuerst den Hauptkörper. Hinzufügen vereinigt sie zu einem Körper, Abziehen entfernt die anderen vom Hauptkörper, Gemeinsam behält nur, was alle gemeinsam haben. Nicht gewählte Körper bleiben unverändert.",
+    "deleteHint": "Klicke je eine Fläche der Körper an, die aus dem Teil entfernt werden; die anderen Körper bleiben."
   }
 }

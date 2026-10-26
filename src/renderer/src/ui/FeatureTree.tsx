@@ -4,11 +4,12 @@ import { COPYABLE_TYPES, hasReferenceGeometry, hasReferenceSlots, isCopyFeature,
 import { STANDARD_PLANES } from '../../../shared/model/sketch.ts';
 import * as commands from '../commands.ts';
 import { picksReferences } from '../references.ts';
+import { bodiesOf } from '../bodies.ts';
 import { featureName, rollbackIndex } from '../state/document.ts';
 import { dropRow, ROLLBACK_ROW, type TreeRow } from '../state/tree-order.ts';
 import { getState, partProperties, useAppState } from '../state/store.ts';
 import { materialName } from './MaterialDialog.tsx';
-import { AlertIcon, ConfigurationsIcon, EditIcon, EyeIcon, EyeOffIcon, FEATURE_ICONS, MaterialIcon, OriginIcon, PlaneIcon, RollForwardIcon, SketchIcon, TrashIcon } from './icons.tsx';
+import { AlertIcon, BodiesIcon, ConfigurationsIcon, EditIcon, EyeIcon, EyeOffIcon, FEATURE_ICONS, MaterialIcon, OriginIcon, PlaneIcon, RollForwardIcon, SketchIcon, TrashIcon } from './icons.tsx';
 
 export function useFeatureName() {
   const { t } = useTranslation();
@@ -60,6 +61,32 @@ function ConfigurationItem({ locked }: { locked: boolean }) {
         </button>
       </span>
     </li>
+  );
+}
+
+/** The solid bodies of a part of several (docs/adr/0011-multi-body-parts.md); clicking one selects its faces. */
+function BodyItems() {
+  const { t } = useTranslation();
+  const naming = useAppState((state) => state.display.body?.naming);
+  const features = useAppState((state) => state.history.features);
+  const nameOf = useFeatureName();
+  const bodies = naming ? bodiesOf(naming) : [];
+  if (bodies.length < 2) return null;
+  return (
+    <>
+      <li className="tree-item is-static" role="treeitem" aria-selected={false} data-testid="tree-bodies">
+        <BodiesIcon className="tree-icon" />
+        <span className="tree-name">{t('bodies.title', { count: bodies.length })}</span>
+      </li>
+      {bodies.map((body) => {
+        const index = features.findIndex((feature) => feature.id === body.feature);
+        return (
+          <li key={body.index} className="tree-item is-static is-indented" role="treeitem" aria-selected={false} data-testid="tree-body" onClick={() => commands.selectBody(body.index)}>
+            <span className="tree-name">{index >= 0 ? nameOf(features, index) : t('bodies.body', { n: body.index + 1 })}</span>
+          </li>
+        );
+      })}
+    </>
   );
 }
 
@@ -372,6 +399,7 @@ export function FeatureTree() {
       <ul className="tree-list" role="tree" ref={listRef}>
         <MaterialItem locked={locked} />
         <ConfigurationItem locked={locked} />
+        <BodyItems />
         <li
           className={`tree-item is-static${editingReference ? ' is-choice' : ''}`}
           role="treeitem"

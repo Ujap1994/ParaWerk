@@ -456,6 +456,12 @@ input {
   cursor: default;
 }
 
+/* A body in the list of a part's solid bodies, under its heading. */
+.tree-item.is-indented {
+  padding-left: 32px;
+  cursor: pointer;
+}
+
 .tree-item:hover {
   background: var(--bg-hover);
 }

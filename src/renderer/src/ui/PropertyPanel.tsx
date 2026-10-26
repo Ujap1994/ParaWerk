@@ -1,10 +1,11 @@
 import { useTranslation } from 'react-i18next';
 import { formatQuantity } from '../format.ts';
-import { CHAMFER_METHODS, type DraftFeature, type SweepFeature, MAX_TWIST, type HelixFeature, type ProjectedCurveFeature, type CompositeCurveFeature, isCurveFeature, PROJECTION_METHODS, type ProjectionMethod, PROJECTION_SIDES, type ProjectionSide, MAX_HELIX_TURNS, type LoftFeature, RIB_DIRECTIONS, type RibDirection, type ThreadFeature, FILLET_METHODS, roundFaceCount, type FilletFeature, type FilletMethod, EXTRUDE_ENDS, extrudesOneWay, MAX_DRAFT_ANGLE, type RevolveDirection, hasReferenceSlots, isCopyFeature, type Axis, type BooleanOperation, type ChamferFeature, type ChamferMethod, type EdgeFeature, type ExtrudeDirection, type ExtrudeEnd, type ExtrudeFeature, type Feature, type RevolveFeature, type Vec3 } from '../../../shared/model/feature.ts';
+import { CHAMFER_METHODS, type DraftFeature, type CombineFeature, type DeleteBodyFeature, COMBINE_OPERATIONS, type CombineOperation, type SweepFeature, MAX_TWIST, type HelixFeature, type ProjectedCurveFeature, type CompositeCurveFeature, isCurveFeature, PROJECTION_METHODS, type ProjectionMethod, PROJECTION_SIDES, type ProjectionSide, MAX_HELIX_TURNS, type LoftFeature, RIB_DIRECTIONS, type RibDirection, type ThreadFeature, FILLET_METHODS, roundFaceCount, type FilletFeature, type FilletMethod, EXTRUDE_ENDS, extrudesOneWay, MAX_DRAFT_ANGLE, type RevolveDirection, hasReferenceSlots, isCopyFeature, type Axis, type BooleanOperation, type ChamferFeature, type ChamferMethod, type EdgeFeature, type ExtrudeDirection, type ExtrudeEnd, type ExtrudeFeature, type Feature, type RevolveFeature, type Vec3 } from '../../../shared/model/feature.ts';
 import { DEFAULT_THIN_THICKNESS, THIN_SIDES, type ThinSide } from '../../../shared/model/thin.ts';
 import { METRIC_SIZES } from '../../../shared/model/hole.ts';
 import type { GeometryRef } from '../../../shared/model/reference.ts';
 import { referenceRoles } from '../references.ts';
+import { bodiesOf, bodiesOfRefs } from '../bodies.ts';
 import { resolveEdgeRefs } from '../../../shared/model/naming.ts';
 import * as commands from '../commands.ts';
 import { hasBodyBefore } from '../state/document.ts';
@@ -51,17 +52,67 @@ function PositionFields({ value, onChange }: { value: Vec3; onChange(value: Vec3
 
 function OperationField({ value, firstFeature }: { value: BooleanOperation; firstFeature: boolean }) {
   const { t } = useTranslation();
+  const merge = useAppState((state) => (state.activeEdit?.draft as { merge?: boolean } | undefined)?.merge ?? true);
   return (
-    <Segmented
-      label={t('panel.operation')}
-      value={value}
-      disabled={firstFeature}
-      options={[
-        { value: 'add', label: t('panel.add') },
-        { value: 'cut', label: t('panel.cut') },
-      ]}
-      onChange={commands.setOperation}
-    />
+    <>
+      <Segmented
+        label={t('panel.operation')}
+        value={value}
+        disabled={firstFeature}
+        options={[
+          { value: 'add', label: t('panel.add') },
+          { value: 'cut', label: t('panel.cut') },
+        ]}
+        onChange={commands.setOperation}
+      />
+      {value === 'add' && !firstFeature ? (
+        <label className="checkbox-field">
+          <input type="checkbox" checked={merge} data-testid="merge-result" onChange={(event) => commands.setMerge(event.target.checked)} />
+          {t('panel.merge')}
+        </label>
+      ) : null}
+    </>
+  );
+}
+
+/** The bodies a combine or delete-body feature picks (the main body first), and for combine how. */
+function BodiesFields({ draft }: { draft: CombineFeature | DeleteBodyFeature }) {
+  const { t } = useTranslation();
+  const features = useAppState((state) => state.history.features);
+  const display = useAppState((state) => state.display);
+  const history = useAppState((state) => state.history);
+  const chosen = bodiesOfRefs(draft.bodies, { display, history });
+  const nameOf = useFeatureName();
+  const bodies = display.body ? bodiesOf(display.body.naming) : [];
+  const label = (body: number | null) => {
+    const info = bodies.find((candidate) => candidate.index === body);
+    const index = info ? features.findIndex((feature) => feature.id === info.feature) : -1;
+    return body === null ? t('references.lost') : index >= 0 ? nameOf(features, index) : t('bodies.body', { n: body + 1 });
+  };
+  return (
+    <Section title={t('panel.parameters')}>
+      {draft.type === 'combine' ? (
+        <Segmented<CombineOperation>
+          label={t('bodies.operation')}
+          value={draft.operation}
+          options={COMBINE_OPERATIONS.map((value) => ({ value, label: t(`bodies.operations.${value}`) }))}
+          onChange={(operation) => commands.updateDraft({ operation })}
+        />
+      ) : null}
+      <span className="field-label">{t('bodies.chosen')}</span>
+      <ol className="loft-list" data-testid="body-list">
+        {chosen.map((body, i) => (
+          <li key={i} className="loft-item">
+            <span>{draft.type === 'combine' && i === 0 ? t('bodies.main', { name: label(body) }) : label(body)}</span>
+            <button type="button" className="icon-button" title={t('references.clear')} aria-label={t('references.clear')} onClick={() => commands.updateDraft({ bodies: draft.bodies.filter((_, j) => j !== i) })}>
+              <CloseIcon />
+            </button>
+          </li>
+        ))}
+      </ol>
+      {chosen.length === 0 ? <p className="panel-hint">{t('bodies.pick')}</p> : null}
+      <p className="panel-hint">{t(draft.type === 'combine' ? 'bodies.combineHint' : 'bodies.deleteHint')}</p>
+    </Section>
   );
 }
 
@@ -345,6 +396,9 @@ function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
     case 'pattern':
     case 'mirror':
       return <CopyFields draft={draft} />;
+    case 'combine':
+    case 'deleteBody':
+      return <BodiesFields draft={draft} />;
     case 'shell':
       return (
         <Section title={t('panel.parameters')}>

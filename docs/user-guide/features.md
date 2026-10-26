@@ -289,6 +289,27 @@ pattern of patterns makes at most 10,000 copies.
 the copies have names of their own (the pattern, the copied feature and the copy), so fillets on them stay
 in place when the pattern changes.
 
+## Bodies
+
+A part can hold several solid **bodies**: a mold half and its core, two halves combined later, a tool
+body subtracted at the end, or loose parts kept together. With more than one body, the feature tree lists
+them under *Solid bodies*; click one to select all its faces.
+
+- **Merge result.** Features that add material – extrude, revolve, sweep, loft, box, cylinder, import –
+  fuse it with the bodies it touches (all of them become one body). Clear **Merge result** and the new
+  material stays a body of its own, even where it overlaps another body.
+- **Cuts** remove material from every body they reach, each body on its own; a body a cut removes
+  completely is gone.
+- **Combine** (under the *Combine* button) joins bodies: click a face of each, the main body first.
+  **Add** fuses them, **Subtract** removes the others from the main body, **Common** keeps only what they
+  all share. Bodies you do not pick stay as they are.
+- **Delete body** removes the bodies you click a face of.
+
+Bodies are picked by one of their faces, which are remembered by name like the edges of a fillet, so the
+features follow the part when earlier features change. Mass properties and exports cover all bodies.
+
+![Combine while it is edited: the block minus the cube that overlapped it, the bodies before it outlined in blue](../images/screenshots/bodies-combine.png)
+
 ## Box
 
 Adds or removes a box. *Width* (X), *Depth* (Y) and *Height* (Z) are in millimeters; *Position* is the

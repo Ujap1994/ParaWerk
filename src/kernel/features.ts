@@ -106,6 +106,8 @@ export function applyFeature(oc: OC, body: TopoDS_Shape | null, feature: KernelF
       case 'rib':
       case 'thread':
       case 'import':
+      case 'combine':
+      case 'deleteBody':
         throw new FeatureError('operation-failed', 'this feature needs the ParaWerk kernel');
     }
     return arena.keep(result);

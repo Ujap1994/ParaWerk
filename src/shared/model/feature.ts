@@ -11,7 +11,7 @@ import type { ThinSide } from './thin.ts';
 
 export type Vec3 = [number, number, number];
 
-export type FeatureType = 'variables' | 'sketch' | 'plane' | 'axis' | 'point' | 'csys' | 'extrude' | 'revolve' | 'hole' | 'pattern' | 'mirror' | 'box' | 'cylinder' | 'import' | 'fillet' | 'chamfer' | 'shell' | 'draft' | 'sweep' | 'loft' | 'rib' | 'thread' | 'helix' | 'projectedCurve' | 'compositeCurve';
+export type FeatureType = 'variables' | 'sketch' | 'plane' | 'axis' | 'point' | 'csys' | 'extrude' | 'revolve' | 'hole' | 'pattern' | 'mirror' | 'box' | 'cylinder' | 'import' | 'fillet' | 'chamfer' | 'shell' | 'draft' | 'sweep' | 'loft' | 'rib' | 'thread' | 'helix' | 'projectedCurve' | 'compositeCurve' | 'combine' | 'deleteBody';
 
 /** How a solid-creating feature combines with the existing body. */
 export type BooleanOperation = 'add' | 'cut';
@@ -83,6 +83,8 @@ export const EXPRESSION_FIELDS: Readonly<Record<FeatureType, readonly string[]>>
   helix: ['pitch', 'turns', 'startAngle'],
   projectedCurve: [],
   compositeCurve: [],
+  combine: [],
+  deleteBody: [],
 };
 
 /** A named value of the part; its expression may use other variables. */
@@ -100,6 +102,8 @@ export interface VariablesFeature extends FeatureBase {
 export interface BoxFeature extends FeatureBase {
   type: 'box';
   operation: BooleanOperation;
+  /** Added material stays a body of its own instead of being fused with the bodies it touches (docs/adr/0011-multi-body-parts.md). */
+  merge?: boolean;
   width: number;
   depth: number;
   height: number;
@@ -110,6 +114,8 @@ export interface BoxFeature extends FeatureBase {
 export interface CylinderFeature extends FeatureBase {
   type: 'cylinder';
   operation: BooleanOperation;
+  /** Added material stays a body of its own instead of being fused with the bodies it touches (docs/adr/0011-multi-body-parts.md). */
+  merge?: boolean;
   radius: number;
   height: number;
   axis: Axis;
@@ -125,6 +131,8 @@ export interface CylinderFeature extends FeatureBase {
 export interface ImportFeature extends FeatureBase {
   type: 'import';
   operation: BooleanOperation;
+  /** Added material stays a body of its own instead of being fused with the bodies it touches (docs/adr/0011-multi-body-parts.md). */
+  merge?: boolean;
   /** The name of the imported file. */
   file: string;
   /** Content hash of `data`: rebuilds compare it instead of the whole file. */
@@ -321,6 +329,8 @@ export function extrudesOneWay(end: ExtrudeEnd): boolean {
 export interface ExtrudeFeature extends FeatureBase {
   type: 'extrude';
   operation: BooleanOperation;
+  /** Added material stays a body of its own instead of being fused with the bodies it touches (docs/adr/0011-multi-body-parts.md). */
+  merge?: boolean;
   /** Id of the sketch feature (before this one) whose outlines are extruded. */
   sketch: string;
   /** Used when `end` is blind. */
@@ -369,6 +379,8 @@ export function extrudeRange(feature: Pick<ExtrudeFeature, 'depth' | 'depth2' | 
 export interface RevolveFeature extends FeatureBase {
   type: 'revolve';
   operation: BooleanOperation;
+  /** Added material stays a body of its own instead of being fused with the bodies it touches (docs/adr/0011-multi-body-parts.md). */
+  merge?: boolean;
   /** Id of the sketch feature (before this one) whose outlines are revolved. */
   sketch: string;
   /** Id of the line (often a centerline) of that sketch that is the axis (unused when `axisRef` is set). */
@@ -493,6 +505,8 @@ export function isSketchBased(feature: Feature): feature is SketchBasedFeature {
 export interface SweepFeature extends FeatureBase {
   type: 'sweep';
   operation: BooleanOperation;
+  /** Added material stays a body of its own instead of being fused with the bodies it touches (docs/adr/0011-multi-body-parts.md). */
+  merge?: boolean;
   sketch: string;
   path: string;
   twist?: number;
@@ -506,6 +520,8 @@ export const MAX_TWIST = 36_000;
 export interface LoftFeature extends FeatureBase {
   type: 'loft';
   operation: BooleanOperation;
+  /** Added material stays a body of its own instead of being fused with the bodies it touches (docs/adr/0011-multi-body-parts.md). */
+  merge?: boolean;
   sketches: string[];
   /** Flat faces between the outlines instead of smooth ones. */
   ruled?: boolean;
@@ -601,6 +617,26 @@ export interface CompositeCurveFeature extends FeatureBase {
 
 export type CurveFeature = ProjectedCurveFeature | CompositeCurveFeature;
 
+/** How bodies are combined: fused, the others subtracted from the main body, or only what they share kept. */
+export type CombineOperation = 'add' | 'subtract' | 'common';
+export const COMBINE_OPERATIONS: readonly CombineOperation[] = ['add', 'subtract', 'common'];
+
+/**
+ * Combines bodies of the part (docs/adr/0011-multi-body-parts.md): each is picked by one of its faces; the
+ * first is the main body. The bodies not picked stay as they are.
+ */
+export interface CombineFeature extends FeatureBase {
+  type: 'combine';
+  operation: CombineOperation;
+  bodies: FaceNameRef[];
+}
+
+/** Removes bodies from the part, each picked by one of its faces. */
+export interface DeleteBodyFeature extends FeatureBase {
+  type: 'deleteBody';
+  bodies: FaceNameRef[];
+}
+
 export function isCurveFeature(feature: Feature): feature is CurveFeature {
   return feature.type === 'projectedCurve' || feature.type === 'compositeCurve';
 }
@@ -640,7 +676,9 @@ export type Feature =
   | ThreadFeature
   | HelixFeature
   | ProjectedCurveFeature
-  | CompositeCurveFeature;
+  | CompositeCurveFeature
+  | CombineFeature
+  | DeleteBodyFeature;
 
 /** Features that build or modify the solid body (everything except variables, sketches, reference geometry and curves). */
 export type SolidModelingFeature = Exclude<Feature, SketchFeature | VariablesFeature | ReferenceFeature | HelixFeature | CurveFeature>;
@@ -655,7 +693,7 @@ export function isSolidFeature(feature: Feature): feature is BoxFeature | Cylind
   return feature.type === 'box' || feature.type === 'cylinder';
 }
 
-export const FEATURE_TYPES: readonly FeatureType[] = ['variables', 'sketch', 'plane', 'axis', 'point', 'csys', 'extrude', 'revolve', 'hole', 'pattern', 'mirror', 'box', 'cylinder', 'import', 'fillet', 'chamfer', 'shell', 'draft', 'sweep', 'loft', 'rib', 'thread', 'helix', 'projectedCurve', 'compositeCurve'];
+export const FEATURE_TYPES: readonly FeatureType[] = ['variables', 'sketch', 'plane', 'axis', 'point', 'csys', 'extrude', 'revolve', 'hole', 'pattern', 'mirror', 'box', 'cylinder', 'import', 'fillet', 'chamfer', 'shell', 'draft', 'sweep', 'loft', 'rib', 'thread', 'helix', 'projectedCurve', 'compositeCurve', 'combine', 'deleteBody'];
 
 /** Features that make a body from nothing (the first feature with material must be one of them, adding). */
 export const BODY_TYPES: ReadonlySet<FeatureType> = new Set(['box', 'cylinder', 'extrude', 'revolve', 'import', 'sweep', 'loft']);
@@ -737,5 +775,9 @@ export function defaultFeature(type: FeatureType, id: string = createFeatureId()
       return { id, type, method: 'faces', sketch: '', faces: [], side: 'both', sketch2: '' };
     case 'compositeCurve':
       return { id, type, edges: [], curves: [] };
+    case 'combine':
+      return { id, type, operation: 'add', bodies: [] };
+    case 'deleteBody':
+      return { id, type, bodies: [] };
   }
 }

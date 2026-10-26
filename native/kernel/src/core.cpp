@@ -84,6 +84,7 @@
 #include <TColgp_Array1OfPnt2d.hxx>
 #include <TopExp.hxx>
 #include <TopExp_Explorer.hxx>
+#include <TopoDS_Iterator.hxx>
 #include <TopTools_ShapeMapHasher.hxx>
 #include <TopoDS.hxx>
 #include <TopoDS_Edge.hxx>
@@ -105,6 +106,7 @@
 #include <gp_Sphere.hxx>
 
 #include <algorithm>
+#include <functional>
 #include <cmath>
 #include <limits>
 #include <optional>
@@ -200,6 +202,13 @@ class FaceNamer {
         assign(face, name);
       }
     }
+  }
+
+  /** Names the faces of `input` that are in the result as they are (shapes put together without an algorithm). */
+  void keep(const TopoDS_Shape& input, const FaceNames& names) {
+    ShapeMap inputFaces;
+    TopExp::MapShapes(input, TopAbs_FACE, inputFaces);
+    for (int f = 1; f <= inputFaces.Extent(); ++f) assign(inputFaces(f), f <= static_cast<int>(names.size()) ? names[static_cast<size_t>(f - 1)] : empty_);
   }
 
   /** Names the faces generated from `source` (an edge or vertex). */
@@ -486,6 +495,130 @@ void configure(BRepAlgoAPI_BooleanOperation& algorithm, const TopoDS_Shape& body
   algorithm.SetTools(tools);
   algorithm.SetRunParallel(parallel);
   algorithm.Build();
+}
+
+// ---------------------------------------------------------------- bodies (docs/adr/0011-multi-body-parts.md)
+
+/** The solids of a body, each with the names of its faces. */
+std::vector<StoredShape> solidsOf(const StoredShape& body) {
+  ShapeMap solids, faces;
+  TopExp::MapShapes(body.shape, TopAbs_SOLID, solids);
+  TopExp::MapShapes(body.shape, TopAbs_FACE, faces);
+  std::vector<StoredShape> out;
+  for (int s = 1; s <= solids.Extent(); ++s) {
+    FaceNamer namer(solids(s));
+    ShapeMap own;
+    TopExp::MapShapes(solids(s), TopAbs_FACE, own);
+    for (int f = 1; f <= own.Extent(); ++f) {
+      const int index = faces.FindIndex(own(f));
+      namer.assign(own(f), index > 0 && index <= static_cast<int>(body.names.size()) ? body.names[static_cast<size_t>(index - 1)] : std::string());
+    }
+    out.push_back({solids(s), namer.take()});
+  }
+  return out;
+}
+
+/** Bodies put together into one shape (a compound when there are several), keeping their face names. */
+StoredShape bodyOf(const std::vector<StoredShape>& parts) {
+  if (parts.size() == 1) return parts.front();
+  BRep_Builder builder;
+  TopoDS_Compound compound;
+  builder.MakeCompound(compound);
+  // Compounds are unpacked, so the bodies stay one level deep.
+  for (const StoredShape& part : parts) {
+    if (part.shape.ShapeType() != TopAbs_COMPOUND) {
+      builder.Add(compound, part.shape);
+      continue;
+    }
+    for (TopoDS_Iterator it(part.shape); it.More(); it.Next()) builder.Add(compound, it.Value());
+  }
+  FaceNamer namer(compound);
+  for (const StoredShape& part : parts) namer.keep(part.shape, part.names);
+  return {compound, namer.take()};
+}
+
+/** Shapes put together into one compound. */
+TopoDS_Compound compoundOf(const NCollection_List<TopoDS_Shape>& shapes) {
+  BRep_Builder builder;
+  TopoDS_Compound compound;
+  builder.MakeCompound(compound);
+  for (const TopoDS_Shape& shape : shapes) builder.Add(compound, shape);
+  return compound;
+}
+
+/** Two bodies fused; the faces of `a` keep their names where faces merge. */
+StoredShape fuseBodies(const StoredShape& a, const StoredShape& b) {
+  BRepAlgoAPI_Fuse fuse;
+  configure(fuse, a.shape, b.shape);
+  if (fuse.HasErrors()) throw KernelError("operation-failed", "the bodies could not be fused");
+  fuse.SimplifyResult(true, true, 1e-6);
+  FaceNamer namer(fuse.Shape());
+  namer.inherit(fuse, a.shape, a.names);
+  namer.inherit(fuse, b.shape, b.names);
+  return {fuse.Shape(), namer.take()};
+}
+
+/**
+ * A Boolean step of a body with tools, body by body when the body has several solids, so that no OCCT
+ * Boolean gets solids that overlap each other in one argument. `step` combines one body with the tools.
+ * A cut goes to every solid the tools come near, separately (a solid it removes completely is dropped); a
+ * fuse goes to the first of them, and the result is fused with the others one after the other.
+ */
+StoredShape bodyByBody(const StoredShape& body, const TopoDS_Shape& tools, bool fuse, const std::function<StoredShape(const StoredShape&)>& step) {
+  if (countSolids(body.shape) <= 1) return step(body);
+  Bnd_Box reach;
+  BRepBndLib::Add(tools, reach);
+  reach.Enlarge(1e-6);
+  std::vector<StoredShape> kept, near;
+  for (StoredShape& solid : solidsOf(body)) {
+    Bnd_Box box;
+    BRepBndLib::Add(solid.shape, box);
+    (box.IsOut(reach) ? kept : near).push_back(std::move(solid));
+  }
+  std::vector<StoredShape> parts;
+  if (fuse) {
+    // A tool that touches no body fuses with none: it becomes a body of its own next to them.
+    if (near.empty()) {
+      near.push_back(kept.back());
+      kept.pop_back();
+    }
+    StoredShape merged = step(near.front());
+    for (size_t i = 1; i < near.size(); ++i) merged = fuseBodies(merged, near[i]);
+    parts = kept;
+    parts.push_back(std::move(merged));
+    return bodyOf(parts);
+  }
+  bool missed = true;
+  parts = kept;
+  for (const StoredShape& solid : near) {
+    try {
+      parts.push_back(step(solid));
+      missed = missed && cutMissed;
+    } catch (const KernelError& error) {
+      if (error.code != "empty-result") throw;
+      missed = false;
+    }
+  }
+  if (parts.empty()) throw KernelError("empty-result", "the operation removed every body");
+  cutMissed = missed;
+  return bodyOf(parts);
+}
+
+/** The index (in TopExp::MapShapes order) of the solid that holds each face of a body. */
+std::vector<int32_t> faceSolids(const TopoDS_Shape& shape) {
+  ShapeMap faces, solids;
+  TopExp::MapShapes(shape, TopAbs_FACE, faces);
+  TopExp::MapShapes(shape, TopAbs_SOLID, solids);
+  std::vector<int32_t> out(static_cast<size_t>(faces.Extent()), -1);
+  for (int s = 1; s <= solids.Extent(); ++s) {
+    ShapeMap own;
+    TopExp::MapShapes(solids(s), TopAbs_FACE, own);
+    for (int f = 1; f <= own.Extent(); ++f) {
+      const int index = faces.FindIndex(own(f));
+      if (index > 0) out[static_cast<size_t>(index - 1)] = s - 1;
+    }
+  }
+  return out;
 }
 
 }  // namespace
@@ -1277,24 +1410,28 @@ int cutHoles(int bodyId, const std::vector<double>& profile, const std::vector<d
     tools.Append(copy.shape);
     placed.push_back(std::move(copy));
   }
-  BRepAlgoAPI_Cut algorithm;
-  NCollection_List<TopoDS_Shape> arguments;
-  arguments.Append(body.shape);
-  algorithm.SetArguments(arguments);
-  algorithm.SetTools(tools);
-  algorithm.SetRunParallel(parallel);
-  algorithm.Build();
-  if (algorithm.HasErrors()) throw KernelError("operation-failed", "the holes could not be cut");
-  algorithm.SimplifyResult(true, true, 1e-6);
-  const TopoDS_Shape result = algorithm.Shape();
-  if (countSolids(result) == 0) throw KernelError("empty-result", "the holes removed the whole body");
-  std::vector<TopoDS_Shape> holeShapes;
-  for (const StoredShape& copy : placed) holeShapes.push_back(copy.shape);
-  cutMissed = !toolsLeftWalls(algorithm, body.shape, holeShapes, result);
-  FaceNamer namer(result);
-  namer.inherit(algorithm, body.shape, body.names);
-  for (const StoredShape& copy : placed) namer.inherit(algorithm, copy.shape, copy.names);
-  return store().add(result, namer.take());
+  const auto step = [&](const StoredShape& part) -> StoredShape {
+    BRepAlgoAPI_Cut algorithm;
+    NCollection_List<TopoDS_Shape> arguments;
+    arguments.Append(part.shape);
+    algorithm.SetArguments(arguments);
+    algorithm.SetTools(tools);
+    algorithm.SetRunParallel(parallel);
+    algorithm.Build();
+    if (algorithm.HasErrors()) throw KernelError("operation-failed", "the holes could not be cut");
+    algorithm.SimplifyResult(true, true, 1e-6);
+    const TopoDS_Shape result = algorithm.Shape();
+    if (countSolids(result) == 0) throw KernelError("empty-result", "the holes removed the whole body");
+    std::vector<TopoDS_Shape> holeShapes;
+    for (const StoredShape& copy : placed) holeShapes.push_back(copy.shape);
+    cutMissed = !toolsLeftWalls(algorithm, part.shape, holeShapes, result);
+    FaceNamer namer(result);
+    namer.inherit(algorithm, part.shape, part.names);
+    for (const StoredShape& copy : placed) namer.inherit(algorithm, copy.shape, copy.names);
+    return {result, namer.take()};
+  };
+  StoredShape result = bodyByBody(body, compoundOf(tools), false, step);
+  return store().add(result.shape, std::move(result.names));
 }
 
 int shell(int bodyId, const std::vector<int>& openFaces, double thickness, bool outward, const std::string& name) {
@@ -1698,33 +1835,37 @@ int combineCopies(int bodyId, int toolId, const std::vector<double>& transforms,
     tools.Append(copy.shape);
     copies.push_back(std::move(copy));
   }
-  const auto run = [&](BRepAlgoAPI_BooleanOperation& algorithm) {
-    NCollection_List<TopoDS_Shape> arguments;
-    arguments.Append(body.shape);
-    algorithm.SetArguments(arguments);
-    algorithm.SetTools(tools);
-    algorithm.SetRunParallel(parallel);
-    algorithm.Build();
-    if (algorithm.HasErrors()) throw KernelError("operation-failed", "the copies could not be combined with the body");
-    algorithm.SimplifyResult(true, true, 1e-6);
-    const TopoDS_Shape result = algorithm.Shape();
-    if (countSolids(result) == 0) throw KernelError("empty-result", "the operation removed the whole body");
-    if (op == 1) {
-      std::vector<TopoDS_Shape> copyShapes;
-      for (const StoredShape& copy : copies) copyShapes.push_back(copy.shape);
-      cutMissed = !toolsLeftWalls(algorithm, body.shape, copyShapes, result);
+  const auto step = [&](const StoredShape& part) -> StoredShape {
+    const auto run = [&](BRepAlgoAPI_BooleanOperation& algorithm) -> StoredShape {
+      NCollection_List<TopoDS_Shape> arguments;
+      arguments.Append(part.shape);
+      algorithm.SetArguments(arguments);
+      algorithm.SetTools(tools);
+      algorithm.SetRunParallel(parallel);
+      algorithm.Build();
+      if (algorithm.HasErrors()) throw KernelError("operation-failed", "the copies could not be combined with the body");
+      algorithm.SimplifyResult(true, true, 1e-6);
+      const TopoDS_Shape result = algorithm.Shape();
+      if (countSolids(result) == 0) throw KernelError("empty-result", "the operation removed the whole body");
+      if (op == 1) {
+        std::vector<TopoDS_Shape> copyShapes;
+        for (const StoredShape& copy : copies) copyShapes.push_back(copy.shape);
+        cutMissed = !toolsLeftWalls(algorithm, part.shape, copyShapes, result);
+      }
+      FaceNamer namer(result);
+      namer.inherit(algorithm, part.shape, part.names);
+      for (const StoredShape& copy : copies) namer.inherit(algorithm, copy.shape, copy.names);
+      return {result, namer.take()};
+    };
+    if (op == 0) {
+      BRepAlgoAPI_Fuse algorithm;
+      return run(algorithm);
     }
-    FaceNamer namer(result);
-    namer.inherit(algorithm, body.shape, body.names);
-    for (const StoredShape& copy : copies) namer.inherit(algorithm, copy.shape, copy.names);
-    return store().add(result, namer.take());
-  };
-  if (op == 0) {
-    BRepAlgoAPI_Fuse algorithm;
+    BRepAlgoAPI_Cut algorithm;
     return run(algorithm);
-  }
-  BRepAlgoAPI_Cut algorithm;
-  return run(algorithm);
+  };
+  StoredShape result = bodyByBody(body, compoundOf(tools), op == 0, step);
+  return store().add(result.shape, std::move(result.names));
 }
 
 bool takeCutMissed() {
@@ -1802,25 +1943,99 @@ int makeCylinder(double px, double py, double pz, double dx, double dy, double d
 int booleanOperation(int bodyId, int toolId, int op) {
   const StoredShape& body = store().entry(bodyId);
   const StoredShape& tool = store().entry(toolId);
-  const auto run = [&](BRepAlgoAPI_BooleanOperation& algorithm) {
-    configure(algorithm, body.shape, tool.shape);
-    if (algorithm.HasErrors()) throw KernelError("operation-failed", "boolean operation failed");
-    algorithm.SimplifyResult(true, true, 1e-6);
-    const TopoDS_Shape result = algorithm.Shape();
-    if (countSolids(result) == 0) throw KernelError("empty-result", "the operation removed the whole body");
-    if (op == 1) cutMissed = !toolsLeftWalls(algorithm, body.shape, {tool.shape}, result);
-    // Faces of the body win over coplanar tool faces merged into them, so existing names stay.
-    FaceNamer namer(result);
-    namer.inherit(algorithm, body.shape, body.names);
-    namer.inherit(algorithm, tool.shape, tool.names);
-    return store().add(result, namer.take());
-  };
-  if (op == 0) {
-    BRepAlgoAPI_Fuse algorithm;
-    return run(algorithm);
+  // A new body: the tool's solids next to the body's, not fused.
+  if (op == 2) {
+    StoredShape result = bodyOf({body, tool});
+    return store().add(result.shape, std::move(result.names));
   }
-  BRepAlgoAPI_Cut algorithm;
-  return run(algorithm);
+  const auto step = [&](const StoredShape& part) {
+    const auto run = [&](BRepAlgoAPI_BooleanOperation& algorithm) -> StoredShape {
+      configure(algorithm, part.shape, tool.shape);
+      if (algorithm.HasErrors()) throw KernelError("operation-failed", "boolean operation failed");
+      algorithm.SimplifyResult(true, true, 1e-6);
+      const TopoDS_Shape result = algorithm.Shape();
+      if (countSolids(result) == 0) throw KernelError("empty-result", "the operation removed the whole body");
+      if (op == 1) cutMissed = !toolsLeftWalls(algorithm, part.shape, {tool.shape}, result);
+      // Faces of the body win over coplanar tool faces merged into them, so existing names stay.
+      FaceNamer namer(result);
+      namer.inherit(algorithm, part.shape, part.names);
+      namer.inherit(algorithm, tool.shape, tool.names);
+      return {result, namer.take()};
+    };
+    if (op == 0) {
+      BRepAlgoAPI_Fuse algorithm;
+      return run(algorithm);
+    }
+    BRepAlgoAPI_Cut algorithm;
+    return run(algorithm);
+  };
+  StoredShape result = bodyByBody(body, tool.shape, op == 0, step);
+  return store().add(result.shape, std::move(result.names));
+}
+
+int combineBodies(int bodyId, const std::vector<int>& faceIndices, int op, const std::string& name) {
+  const StoredShape& body = store().entry(bodyId);
+  std::vector<StoredShape> solids = solidsOf(body);
+  const std::vector<int32_t> owners = faceSolids(body.shape);
+  // The main body first, then the others, each once.
+  std::vector<int> chosen;
+  for (int face : faceIndices) {
+    if (face < 0 || face >= static_cast<int>(owners.size())) throw KernelError("operation-failed", "no such face");
+    const int solid = owners[static_cast<size_t>(face)];
+    if (solid >= 0 && std::find(chosen.begin(), chosen.end(), solid) == chosen.end()) chosen.push_back(solid);
+  }
+  if (chosen.size() < 2) throw KernelError("combine-bodies", "pick the main body and at least one other body");
+  StoredShape result = solids[static_cast<size_t>(chosen.front())];
+  for (size_t i = 1; i < chosen.size(); ++i) {
+    const StoredShape& other = solids[static_cast<size_t>(chosen[i])];
+    if (op == 0) {
+      result = fuseBodies(result, other);
+      continue;
+    }
+    const auto run = [&](BRepAlgoAPI_BooleanOperation& algorithm) -> StoredShape {
+      configure(algorithm, result.shape, other.shape);
+      if (algorithm.HasErrors()) throw KernelError("operation-failed", "the bodies could not be combined");
+      algorithm.SimplifyResult(true, true, 1e-6);
+      FaceNamer namer(algorithm.Shape());
+      namer.inherit(algorithm, result.shape, result.names);
+      namer.inherit(algorithm, other.shape, other.names);
+      namer.rest(faceName(name, "face"));
+      return {algorithm.Shape(), namer.take()};
+    };
+    if (op == 1) {
+      BRepAlgoAPI_Cut algorithm;
+      result = run(algorithm);
+    } else {
+      BRepAlgoAPI_Common algorithm;
+      result = run(algorithm);
+    }
+    if (countSolids(result.shape) == 0) throw KernelError("empty-result", op == 2 ? "the bodies have nothing in common" : "the operation removed the whole body");
+  }
+  std::vector<StoredShape> parts;
+  for (size_t s = 0; s < solids.size(); ++s) {
+    if (static_cast<int>(s) == chosen.front()) parts.push_back(result);
+    else if (std::find(chosen.begin(), chosen.end(), static_cast<int>(s)) == chosen.end()) parts.push_back(solids[s]);
+  }
+  StoredShape combined = bodyOf(parts);
+  return store().add(combined.shape, std::move(combined.names));
+}
+
+int deleteBodies(int bodyId, const std::vector<int>& faceIndices) {
+  const StoredShape& body = store().entry(bodyId);
+  std::vector<StoredShape> solids = solidsOf(body);
+  const std::vector<int32_t> owners = faceSolids(body.shape);
+  std::vector<bool> gone(solids.size(), false);
+  for (int face : faceIndices) {
+    if (face < 0 || face >= static_cast<int>(owners.size())) throw KernelError("operation-failed", "no such face");
+    const int solid = owners[static_cast<size_t>(face)];
+    if (solid >= 0) gone[static_cast<size_t>(solid)] = true;
+  }
+  std::vector<StoredShape> parts;
+  for (size_t s = 0; s < solids.size(); ++s)
+    if (!gone[s]) parts.push_back(solids[s]);
+  if (parts.empty()) throw KernelError("empty-result", "every body would be deleted");
+  StoredShape result = bodyOf(parts);
+  return store().add(result.shape, std::move(result.names));
 }
 
 int fillet(int bodyId, const std::vector<int>& edgeIndices, double radius, const std::vector<std::string>& edgeNames, const std::string& name) {
@@ -2307,6 +2522,7 @@ Naming naming(int id) {
     }
     result.vertexFaceOffsets.push_back(static_cast<int32_t>(result.vertexFaces.size()));
   }
+  result.faceBodies = faceSolids(entry.shape);
   return result;
 }
 

@@ -12,10 +12,14 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
   turns) or follow a guide curve, turning towards it and growing or shrinking with its distance from the
   path.
 - Lofts can follow a centerline (a sketch or a curve) between their profiles: bent transitions and ducts.
+- Multi-body parts (ADR 0011): features that add material have *Merge result*; cleared, the material
+  stays a body of its own, also where it overlaps others. Cuts work on every body they reach, body by
+  body. **Combine** fuses bodies, subtracts them from a main body or keeps what they share; **Delete
+  body** removes bodies. The tree lists the bodies of a part of several.
 
 ### Changed
-- Part files with twisted or guided sweeps or lofts along a centerline are saved as format version 10, so
-  ParaWerk 0.4.0-alpha.1 reports them as newer files.
+- Part files with twisted or guided sweeps, lofts along a centerline, separate bodies, combined or deleted
+  bodies are saved as format version 10, so ParaWerk 0.4.0-alpha.1 reports them as newer files.
 
 ## [0.4.0-alpha.1] - 2026-10-26
 

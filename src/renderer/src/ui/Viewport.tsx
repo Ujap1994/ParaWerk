@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { hasReferenceSlots, isCopyFeature, isEdgeFeature, roundFaceCount, sketchesUsedBy, type Vec3 } from '../../../shared/model/feature.ts';
 import { resolveEdgeRefs } from '../../../shared/model/naming.ts';
+import { bodiesOf, bodiesOfRefs } from '../bodies.ts';
 import { frameOf, STANDARD_PLANES } from '../../../shared/model/sketch.ts';
 import * as commands from '../commands.ts';
 import { builtOn, extrudesUpTo, picksReferences, referenceItems, referencePicks, visibleThreads } from '../references.ts';
@@ -38,6 +39,13 @@ function visibleSelection(state: AppState): Pick[] {
   const edit = state.activeEdit;
   if (edit && extrudesUpTo(edit.draft)) return referencePicks(builtOn(edit.draft), state).filter((pick) => pick.kind === 'face' || pick.kind === 'edge' || pick.kind === 'vertex');
   if (edit?.draft.type === 'projectedCurve') return edit.draft.method === 'faces' ? referencePicks(edit.draft.faces, state) : [];
+  // The bodies a combine or delete-body feature picks, all their faces (until the preview shows the result).
+  if (edit?.draft.type === 'combine' || edit?.draft.type === 'deleteBody') {
+    const naming = state.display.body?.naming;
+    if (!naming || state.display.preview) return [];
+    const chosen = new Set(bodiesOfRefs(edit.draft.bodies, state));
+    return bodiesOf(naming).flatMap((body) => (chosen.has(body.index) ? body.faces.map((face) => ({ kind: 'face' as const, index: face })) : []));
+  }
   if (edit?.draft.type === 'compositeCurve') {
     const naming = state.display.body?.naming;
     return naming ? resolveEdgeRefs(edit.draft.edges, naming).flatMap((match) => (match ? [{ kind: 'edge' as const, index: match.index }] : [])) : [];
@@ -97,6 +105,7 @@ function pickFilter(state: AppState): PickFilter {
   if (edit.draft.type === 'shell' || edit.draft.type === 'thread' || (edit.draft.type === 'fillet' && roundFaceCount(edit.draft.method) > 0)) return 'faces';
   if (edit.draft.type === 'projectedCurve') return edit.draft.method === 'faces' ? 'faces' : 'none';
   if (edit.draft.type === 'compositeCurve') return 'edges';
+  if (edit.draft.type === 'combine' || edit.draft.type === 'deleteBody') return 'faces';
   return isEdgeFeature(edit.draft) ? 'edgesAndFaces' : picksReferences(edit.draft) ? 'references' : 'none';
 }
 

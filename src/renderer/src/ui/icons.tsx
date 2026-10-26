@@ -614,6 +614,31 @@ export const CompositeCurveIcon = (p: P) => (
   </Icon>
 );
 
+/** Combine bodies: two overlapping squares joined into one outline. */
+export const CombineIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="M3.5 3.5h11v6h6v11h-11v-6h-6z" />
+    <path d="M9.5 9.5h5v5h-5z" strokeDasharray="2 1.6" opacity="0.6" />
+  </Icon>
+);
+
+/** Delete body: a block with a minus sign beside it. */
+export const DeleteBodyIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="M3 10.5 9.5 7l6.5 3.5v7L9.5 21 3 17.5z" />
+    <path d="M3 10.5l6.5 3.5 6.5-3.5M9.5 14v7" opacity="0.6" />
+    <path d="M16.5 5h5" />
+  </Icon>
+);
+
+/** Solid bodies of a part: two blocks side by side. */
+export const BodiesIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="M2.5 9.5 7 7l4.5 2.5v6L7 18l-4.5-2.5z" />
+    <path d="M12.5 8.5 17 6l4.5 2.5v6L17 17l-4.5-2.5z" />
+  </Icon>
+);
+
 /** Configurations: stacked cards of one part, the front one with lines of values. */
 export const ConfigurationsIcon = (p: P) => (
   <Icon {...p}>
@@ -739,4 +764,6 @@ export const FEATURE_ICONS = {
   helix: HelixIcon,
   projectedCurve: ProjectedCurveIcon,
   compositeCurve: CompositeCurveIcon,
+  combine: CombineIcon,
+  deleteBody: DeleteBodyIcon,
 } as const;

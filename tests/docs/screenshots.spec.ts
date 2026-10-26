@@ -1188,6 +1188,33 @@ test('draft screenshots', async () => {
   await app.close();
 });
 
+test('bodies screenshot', async () => {
+  const { app, page } = await launchApp({ width: 1440, height: 900 });
+  // A block and a cube of its own overlapping it, combined: the block minus the cube.
+  const features = [
+    { id: 'block', type: 'box', name: 'Block', operation: 'add', width: 100, depth: 60, height: 40, position: [0, 0, 0] },
+    { id: 'cube', type: 'box', name: 'Cube', operation: 'add', merge: false, width: 40, depth: 40, height: 40, position: [50, 0, 20] },
+    {
+      id: 'combine', type: 'combine', name: 'Block minus cube', operation: 'subtract',
+      bodies: [{ kind: 'face', name: 'block:top', at: [-20, 0, 40] }, { kind: 'face', name: 'cube:top', at: [50, 0, 60] }],
+    },
+  ];
+  await page.evaluate(
+    (list) => (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features: list, past: [], future: [] }, savedFeatures: list, fileName: 'Bodies' }),
+    features,
+  );
+  await idle(page);
+  await page.evaluate(() => (window as unknown as { __parawerk: { viewport: { zoomToFit(): void } } }).__parawerk.viewport.zoomToFit());
+  await page.locator('.feature-tree .tree-item[data-feature-id="combine"]').dblclick();
+  await idle(page);
+  const canvas = await page.locator('.viewport-canvas').boundingBox();
+  if (canvas) await page.mouse.move(canvas.x + canvas.width - 30, canvas.y + canvas.height - 30);
+  await page.waitForTimeout(600);
+  await page.screenshot({ path: out('bodies-combine.png') });
+  await page.click('[data-testid="panel-ok"]');
+  await app.close();
+});
+
 test('pattern of pattern screenshot', async () => {
   const { app, page } = await launchApp({ width: 1440, height: 900 });
   // A disk with a row of three holes, turned four times around its center.

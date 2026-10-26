@@ -82,6 +82,7 @@ struct Naming {
   std::vector<double> vertexPositions;      // 3 per vertex (TopExp::MapShapes order)
   std::vector<int32_t> vertexFaceOffsets;   // vertex v meets faces vertexFaces[offsets[v] .. offsets[v + 1])
   std::vector<int32_t> vertexFaces;
+  std::vector<int32_t> faceBodies;          // per face: the body (solid, TopExp::MapShapes order) that holds it
 };
 
 /** Exact geometry of one face (see faceGeometry). Unused values are NaN. */
@@ -111,7 +112,22 @@ int makeBox(double x, double y, double z, double dx, double dy, double dz, const
 /** Faces are named "<name>:side|bottom|top". */
 int makeCylinder(double px, double py, double pz, double dx, double dy, double dz, double radius, double height, const std::string& name = "");
 /** op: 0 = fuse (add material), 1 = cut (remove material). Faces keep the names of the faces they come from. */
+/**
+ * The body with a tool: op 0 fuses the tool with the bodies (solids) it touches – all of them become one –
+ * op 1 cuts it from every body it overlaps, op 2 adds its solids as bodies of their own. Several bodies
+ * are handled one by one (docs/adr/0011-multi-body-parts.md).
+ */
 int booleanOperation(int bodyId, int toolId, int op);
+
+/**
+ * Combines bodies: the body holding face `faceIndices[0]` (the main body) with the bodies holding the
+ * other faces – op 0 fuses them, 1 subtracts them from the main body, 2 keeps what they all share.
+ * The other bodies stay. Fails with "combine-bodies" (fewer than two bodies) or "empty-result".
+ */
+int combineBodies(int bodyId, const std::vector<int>& faceIndices, int op, const std::string& name = "");
+
+/** Removes the bodies holding the faces `faceIndices`. Fails with "empty-result" when none would be left. */
+int deleteBodies(int bodyId, const std::vector<int>& faceIndices);
 
 /**
  * The solid swept by planar regions along the normal of their plane, from `from` to `to`.

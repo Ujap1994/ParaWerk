@@ -153,6 +153,7 @@ val naming(int id) {
     result.set("vertexPositions", typedArray("Float64Array", naming.vertexPositions));
     result.set("vertexFaceOffsets", typedArray("Int32Array", naming.vertexFaceOffsets));
     result.set("vertexFaces", typedArray("Int32Array", naming.vertexFaces));
+    result.set("faceBodies", typedArray("Int32Array", naming.faceBodies));
     return result;
   });
 }
@@ -335,6 +336,14 @@ val loftAlongCurve(val sections, int centerlineId, val edgeNames, std::string na
   return guarded([&] { return idResult(parawerk::loftAlongCurve(emscripten::convertJSArrayToNumberVector<double>(sections), centerlineId, toStringVector(edgeNames), name)); });
 }
 
+val combineBodies(int bodyId, val faces, int op, std::string name) {
+  return guarded([&] { return idResult(parawerk::combineBodies(bodyId, toIntVector(faces), op, name)); });
+}
+
+val deleteBodies(int bodyId, val faces) {
+  return guarded([&] { return idResult(parawerk::deleteBodies(bodyId, toIntVector(faces))); });
+}
+
 val loftProfiles(val sections, bool ruled, val edgeNames, std::string name) {
   return guarded([&] { return idResult(parawerk::loftProfiles(emscripten::convertJSArrayToNumberVector<double>(sections), ruled, toStringVector(edgeNames), name)); });
 }
@@ -372,7 +381,7 @@ val importStepText(const std::string& text, const std::string& name) {
   return guarded([&] { return idResult(parawerk::importStep(text, name)); });
 }
 
-std::string version() { return "parawerk-kernel 0.21 / OCCT " PARAWERK_OCCT_VERSION; }
+std::string version() { return "parawerk-kernel 0.22 / OCCT " PARAWERK_OCCT_VERSION; }
 
 }  // namespace
 
@@ -417,6 +426,8 @@ EMSCRIPTEN_BINDINGS(parawerk_kernel) {
   emscripten::function("sweepAlongHelix", &sweepAlongHelix);
   emscripten::function("sweepAlongCurve", &sweepAlongCurve);
   emscripten::function("loftAlongCurve", &loftAlongCurve);
+  emscripten::function("combineBodies", &combineBodies);
+  emscripten::function("deleteBodies", &deleteBodies);
   emscripten::function("sketchWire", &sketchWire);
   emscripten::function("projectCurve", &projectCurve);
   emscripten::function("intersectCurves", &intersectCurves);

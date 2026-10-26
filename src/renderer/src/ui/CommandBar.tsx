@@ -66,6 +66,8 @@ import {
   CoordinateSystemIcon,
   SettingsIcon,
   ShellIcon,
+  CombineIcon,
+  DeleteBodyIcon,
   SketchIcon,
   ThreePointArcIcon,
   TrashIcon,
@@ -156,6 +158,15 @@ const HOLE_ENTRIES: readonly SplitEntry[] = (['hole', 'thread'] as const).map((t
 const SOLID_ENTRIES: readonly SplitEntry[] = (['revolve', 'sweep', 'loft'] as const).map((type) => ({
   id: type,
   icon: { revolve: RevolveIcon, sweep: SweepIcon, loft: LoftIcon }[type],
+  label: type,
+  start: () => commands.startFeature(type),
+  active: (state: AppState) => state.activeEdit?.mode === 'create' && state.activeEdit.draft.type === type,
+}));
+
+/** Bodies of the part: combine and delete them. */
+const BODY_ENTRIES: readonly SplitEntry[] = (['combine', 'deleteBody'] as const).map((type) => ({
+  id: type,
+  icon: { combine: CombineIcon, deleteBody: DeleteBodyIcon }[type],
   label: type,
   start: () => commands.startFeature(type),
   active: (state: AppState) => state.activeEdit?.mode === 'create' && state.activeEdit.draft.type === type,
@@ -321,6 +332,7 @@ function FeaturesTab() {
         onClick={() => commands.startFeature('variables')}
       />
       <SplitFeatureButton entries={COPY_ENTRIES} menuLabel={t('commands.copyGeometry')} variants="copy" disabled={sketching || !hasFeatures} />
+      <SplitFeatureButton entries={BODY_ENTRIES} menuLabel={t('commands.bodyFeatures')} variants="bodies" disabled={sketching || !hasFeatures} />
       <SplitFeatureButton entries={REFERENCE_ENTRIES} menuLabel={t('commands.referenceGeometry')} variants="reference-geometry" disabled={sketching} />
     </Group>
   );

@@ -1006,6 +1006,42 @@ test('copies a pattern with a second pattern into a grid', async () => {
   expect((await state(page)).history.features[3]).toMatchObject({ type: 'pattern', features: ['row'], count: 2 });
 });
 
+test('adds a box as a body of its own and combines the bodies', async () => {
+  launched = await launchApp({ width: 1000, height: 640 });
+  const { page } = launched;
+  // Body a: x −50 … 50, y −30 … 30, z 0 … 40.
+  await page.evaluate(() => {
+    const features = [{ id: 'a', type: 'box', operation: 'add', width: 100, depth: 60, height: 40, position: [0, 0, 0] }];
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features, past: [], future: [] }, savedFeatures: features, dirty: false });
+  });
+  await idle(page);
+  // A 40 cube at x 30 … 70, z 20 … 60, kept as a body of its own.
+  await page.click('[data-command="box"]');
+  for (const [field, value] of [['box-width', '40'], ['box-depth', '40'], ['box-height', '40'], ['position-x', '50'], ['position-z', '20']] as const) {
+    await page.locator(`[data-testid="${field}"]`).fill(value);
+    await page.locator(`[data-testid="${field}"]`).press('Tab');
+  }
+  await page.locator('[data-testid="merge-result"]').uncheck();
+  await page.click('[data-testid="panel-ok"]');
+  expect(await volume(page)).toBeCloseTo(240_000 + 64_000, 2);
+  await expect(page.locator('[data-testid="tree-body"]')).toHaveCount(2);
+  await expect(page.locator('[data-testid="tree-bodies"]')).toContainText('2');
+
+  // Combine: a minus the cube, picked by the tops of a and of the cube.
+  await page.click('[data-variants="bodies"]');
+  await page.click('[data-entry="combine"]');
+  await clickWorldPoint(page, [-20, 0, 40]);
+  await idle(page);
+  await clickWorldPoint(page, [50, 0, 60]);
+  await idle(page);
+  await expect(page.locator('[data-testid="body-list"] li')).toHaveCount(2);
+  await page.getByRole('radio', { name: 'Subtract' }).click();
+  await page.click('[data-testid="panel-ok"]');
+  expect(await volume(page)).toBeCloseTo(240_000 - 16_000, 2);
+  await expect(page.locator('[data-testid="tree-body"]')).toHaveCount(0);
+  expect((await state(page)).history.features[2]).toMatchObject({ type: 'combine', operation: 'subtract' });
+});
+
 test('hollows a box out to a shell open at a picked face', async () => {
   launched = await launchApp({ width: 1440, height: 900 });
   const { page } = launched;

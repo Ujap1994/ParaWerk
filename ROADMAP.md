@@ -205,7 +205,7 @@ patterns, curves; 2026-10-26).
 | Modeled threads (ISO metric, external and internal, on cylindrical faces) | ✅ done |
 | Helix (pitch, turns, start angle, hand) as the path of sweeps: springs, coils, helical grooves | ✅ done |
 | Curves: projected (onto faces, sketch on sketch) and composite, as sweep paths | ✅ done |
-| Multi-body parts | open |
+| Multi-body parts: separate bodies, combine (add, subtract, common), delete body | ✅ done |
 | Configurations and design tables (variables and suppression per configuration) | ✅ done |
 | Full equation support (functions of several values, conditions, pattern counts from equations) | ✅ done |
 | Surface tools (offset, knit, thicken) | open |

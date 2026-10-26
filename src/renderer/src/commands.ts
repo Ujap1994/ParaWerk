@@ -8,6 +8,7 @@ import { frameTransform } from '../../shared/model/frame.ts';
 import { sketchProfile } from '../../shared/model/profile.ts';
 import { DEFAULT_THIN_THICKNESS, type ThinSide } from '../../shared/model/thin.ts';
 import { AXIS_METHODS, CSYS_METHODS, PLANE_METHODS, POINT_METHODS, REFERENCE_ROLES, type GeometryRef, type ReferenceRole } from '../../shared/model/reference.ts';
+import { bodiesOf, bodiesOfRefs, bodyOfFace } from './bodies.ts';
 import { coordinateSystems, extrudesUpTo, referenceFits, referenceGeometry, referenceOfPick, referencePicks, referenceRoles } from './references.ts';
 import { edgeRefOf, faceRefOf, resolveEdgeRefs } from '../../shared/model/naming.ts';
 import { decodePartFile, encodePartFile, PartFileError } from '../../shared/model/part-file.ts';
@@ -348,6 +349,19 @@ export function startFeature(type: FeatureType): void {
       }
       draft = { ...draft, operation, sketches: chosen.map((sketch) => sketch.id) };
     }
+  } else if (draft.type === 'combine' || draft.type === 'deleteBody') {
+    // Faces selected before starting pick their bodies, one face each.
+    const naming = getState().display.body?.naming;
+    const seen = new Set<number>();
+    const bodies = naming
+      ? getState().selection.flatMap((pick) => {
+          const body = pick.kind === 'face' ? bodyOfFace(naming, pick.index) : null;
+          if (body === null || seen.has(body) || !pick.at) return [];
+          seen.add(body);
+          return faceRefOf(naming, pick.index, pick.at) ?? [];
+        })
+      : [];
+    draft = { ...draft, bodies };
   } else if (draft.type === 'projectedCurve' || draft.type === 'compositeCurve') {
     // Faces (a projected curve) or edges (a composite curve) selected before starting are taken over.
     const naming = getState().display.body?.naming;
@@ -850,6 +864,37 @@ export function pickExtrudeEnd(pick: Pick | 'origin'): void {
     return;
   }
   updateDraft({ endRef: ref });
+}
+
+/** Whether the edited feature's added material is fused with the bodies it touches (the default) or stays a body of its own. */
+export function setMerge(merge: boolean): void {
+  const edit = getState().activeEdit;
+  if (!edit || !('merge' in edit.draft || 'operation' in edit.draft)) return;
+  const { merge: _merge, ...rest } = edit.draft as Feature & { merge?: boolean };
+  setState({ activeEdit: { ...edit, draft: (merge ? rest : { ...rest, merge: false }) as Feature } });
+}
+
+/** Adds the body of a picked face to the edited combine or delete-body feature, or takes it out again. */
+export function toggleBody(pick: Pick): void {
+  const state = getState();
+  const edit = state.activeEdit;
+  const naming = state.display.body?.naming;
+  if ((edit?.draft.type !== 'combine' && edit?.draft.type !== 'deleteBody') || !naming || pick.kind !== 'face' || !pick.at) return;
+  const body = bodyOfFace(naming, pick.index);
+  const at = bodiesOfRefs(edit.draft.bodies, state).indexOf(body);
+  if (at >= 0) {
+    updateDraft({ bodies: edit.draft.bodies.filter((_, i) => i !== at) });
+    return;
+  }
+  const ref = faceRefOf(naming, pick.index, pick.at);
+  if (ref) updateDraft({ bodies: [...edit.draft.bodies, ref] });
+}
+
+/** Selects all faces of a body of the shown part (from the list of bodies in the tree). */
+export function selectBody(index: number): void {
+  const naming = getState().display.body?.naming;
+  const body = naming ? bodiesOf(naming).find((candidate) => candidate.index === index) : undefined;
+  if (body) setState({ selection: body.faces.map((face) => ({ kind: 'face' as const, index: face })) });
 }
 
 /** Lets the edited loft follow a centerline (a sketch or curve id), or none. */
@@ -1729,6 +1774,10 @@ export function handlePick(pick: Pick | null, additive: boolean): void {
   }
   if (edit?.draft.type === 'projectedCurve') {
     if (pick?.kind === 'face' && edit.draft.method === 'faces') toggleShellFace(pick);
+    return;
+  }
+  if (edit?.draft.type === 'combine' || edit?.draft.type === 'deleteBody') {
+    if (pick) toggleBody(pick);
     return;
   }
   if (edit?.draft.type === 'compositeCurve') {

@@ -41,7 +41,7 @@ const SURFACE_KINDS: SurfaceKind[] = ['plane', 'cylinder', 'cone', 'sphere', 'to
 const CURVE_KINDS: CurveKind[] = ['line', 'circle', 'ellipse', 'bspline', 'other'];
 
 const FEATURE_ERROR_CODES = new Set<FeatureErrorCode>([
-  'no-body', 'no-edges', 'edge-missing', 'face-missing', 'plane-missing', 'reference-missing', 'reference-kind', 'reference-parallel', 'reference-not-parallel', 'reference-collinear', 'empty-result', 'first-must-add', 'sketch-missing', 'profile-empty', 'profile-crossing', 'axis-missing', 'axis-not-in-plane', 'hole-no-points', 'hole-invalid', 'pattern-empty', 'pattern-seed-missing', 'pattern-unsupported', 'shell-face-missing', 'end-behind', 'end-parallel', 'end-missed', 'thin-empty', 'thin-unsupported', 'thin-branching', 'thin-too-thick', 'round-faces', 'round-face-missing', 'round-sides', 'round-center', 'round-planes', 'round-radius', 'draft-faces', 'draft-face', 'draft-face-missing', 'path-empty', 'path-branching', 'path-gaps', 'sweep-failed', 'loft-sections', 'loft-profile', 'loft-failed', 'rib-curves', 'thread-face', 'thread-size', 'helix-circle', 'sweep-holes', 'curve-empty', 'pattern-too-many', 'guide-missing', 'guide-gaps', 'centerline-missing', 'centerline-gaps', 'curve-missed', 'curve-faces', 'curve-edge-missing', 'import-no-solid', 'profile-crosses-axis',
+  'no-body', 'no-edges', 'edge-missing', 'face-missing', 'plane-missing', 'reference-missing', 'reference-kind', 'reference-parallel', 'reference-not-parallel', 'reference-collinear', 'empty-result', 'first-must-add', 'sketch-missing', 'profile-empty', 'profile-crossing', 'axis-missing', 'axis-not-in-plane', 'hole-no-points', 'hole-invalid', 'pattern-empty', 'pattern-seed-missing', 'pattern-unsupported', 'shell-face-missing', 'end-behind', 'end-parallel', 'end-missed', 'thin-empty', 'thin-unsupported', 'thin-branching', 'thin-too-thick', 'round-faces', 'round-face-missing', 'round-sides', 'round-center', 'round-planes', 'round-radius', 'draft-faces', 'draft-face', 'draft-face-missing', 'path-empty', 'path-branching', 'path-gaps', 'sweep-failed', 'loft-sections', 'loft-profile', 'loft-failed', 'rib-curves', 'thread-face', 'thread-size', 'helix-circle', 'sweep-holes', 'curve-empty', 'pattern-too-many', 'guide-missing', 'guide-gaps', 'centerline-missing', 'centerline-gaps', 'combine-bodies', 'body-missing', 'curve-missed', 'curve-faces', 'curve-edge-missing', 'import-no-solid', 'profile-crosses-axis',
   'operation-failed', 'unknown',
 ]);
 
@@ -111,7 +111,8 @@ export class ParaWerkBackend implements GeometryBackend {
   }
 
   /** Adds the tool to the body or cuts it out; the tool is released (or becomes the body). */
-  private combine(body: ShapeHandle | null, tool: ShapeHandle, operation: BooleanOperation): ShapeHandle {
+  /** Adds the tool to the body (fused with the bodies it touches, or – merge false – as bodies of its own) or cuts it. */
+  private combine(body: ShapeHandle | null, tool: ShapeHandle, operation: BooleanOperation, merge = true): ShapeHandle {
     if (body === null) {
       if (operation === 'cut') {
         this.release(tool);
@@ -120,7 +121,7 @@ export class ParaWerkBackend implements GeometryBackend {
       return tool;
     }
     try {
-      return this.handle(this.kernel.booleanOperation(this.id(body), this.id(tool), operation === 'add' ? 0 : 1));
+      return this.handle(this.kernel.booleanOperation(this.id(body), this.id(tool), operation === 'cut' ? 1 : merge ? 0 : 2));
     } finally {
       this.release(tool);
     }
@@ -311,9 +312,15 @@ export class ParaWerkBackend implements GeometryBackend {
       case 'revolve':
       case 'sweep':
       case 'loft':
-        return this.combine(body, this.tool(body, feature), feature.operation);
+        return this.combine(body, this.tool(body, feature), feature.operation, feature.merge ?? true);
       case 'import':
-        return this.combine(body, this.handle(k.importStepText(feature.data, feature.id)), feature.operation);
+        return this.combine(body, this.handle(k.importStepText(feature.data, feature.id)), feature.operation, feature.merge ?? true);
+      case 'combine':
+        if (body === null) throw new FeatureError('no-body');
+        return this.handle(k.combineBodies(this.id(body), feature.faceIndices, { add: 0, subtract: 1, common: 2 }[feature.operation], feature.id));
+      case 'deleteBody':
+        if (body === null) throw new FeatureError('no-body');
+        return this.handle(k.deleteBodies(this.id(body), feature.faceIndices));
       case 'hole':
         if (body === null) throw new FeatureError('no-body');
         return this.holes(body, feature, feature.placements, feature.id);
@@ -455,6 +462,7 @@ export class ParaWerkBackend implements GeometryBackend {
       vertexPositions: result.vertexPositions,
       vertexFaceOffsets: result.vertexFaceOffsets,
       vertexFaces: result.vertexFaces,
+      faceBodies: result.faceBodies,
     };
   }
 

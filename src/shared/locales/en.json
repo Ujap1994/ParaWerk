@@ -122,7 +122,9 @@
       "configurations": "Variants of the part: switch between them and edit their variables in a design table",
       "helix": "Create a helix around the circle of a sketch, as the path of a spring or a coil",
       "projectedCurve": "Project the curves of a sketch onto faces, or make a 3D curve where the curves of two sketches meet",
-      "compositeCurve": "Join edges, sketch curves and other curves into one curve, as the path of a sweep"
+      "compositeCurve": "Join edges, sketch curves and other curves into one curve, as the path of a sweep",
+      "combine": "Combine bodies of the part: fuse them, subtract them from a main body, or keep what they share",
+      "deleteBody": "Remove bodies from the part"
     },
     "tabs": {
       "label": "Command tabs",
@@ -216,7 +218,10 @@
     "configurations": "Configurations",
     "helix": "Helix",
     "projectedCurve": "Projected curve",
-    "compositeCurve": "Composite curve"
+    "compositeCurve": "Composite curve",
+    "combine": "Combine",
+    "deleteBody": "Delete body",
+    "bodyFeatures": "Combine and delete bodies"
   },
   "features": {
     "plane": "Plane",
@@ -244,7 +249,9 @@
     "thread": "Thread",
     "helix": "Helix",
     "projectedCurve": "Projected curve",
-    "compositeCurve": "Composite curve"
+    "compositeCurve": "Composite curve",
+    "combine": "Combine",
+    "deleteBody": "Delete body"
   },
   "tree": {
     "title": "Feature tree",
@@ -342,7 +349,8 @@
       "other": "Other side",
       "both": "Both sides"
     },
-    "thinHint": "Walls along every curve of the sketch, open curves too: one side is outside a closed outline (and for open curves the side the preview shows), both sides puts half the thickness on each. Lines and arcs meet in sharp corners."
+    "thinHint": "Walls along every curve of the sketch, open curves too: one side is outside a closed outline (and for open curves the side the preview shows), both sides puts half the thickness on each. Lines and arcs meet in sharp corners.",
+    "merge": "Merge result (with the bodies it touches)"
   },
   "status": {
     "kernelLoading": "Starting geometry kernel…",
@@ -527,7 +535,9 @@
     "guide-missing": "The guide curve of the sweep no longer exists. Choose another one, or none.",
     "guide-gaps": "The guide curve must be one chain of curves without gaps or branches.",
     "centerline-missing": "The centerline of the loft no longer exists. Choose another one, or none.",
-    "centerline-gaps": "The centerline must be one chain of curves without gaps or branches."
+    "centerline-gaps": "The centerline must be one chain of curves without gaps or branches.",
+    "combine-bodies": "Pick at least two different bodies: click a face of each in the 3D view, the main body first.",
+    "body-missing": "A picked body no longer exists: an earlier change removed it. Edit the feature and pick the bodies again."
   },
   "warnings": {
     "edge-missing_one": "{{count}} selected edge no longer exists and is left out. Edit the feature to remove it or pick another edge.",
@@ -1129,5 +1139,21 @@
     "hintSketch": "Draw the curve as seen from two directions, in two sketches on planes at an angle: the 3D curve is where the curves meet when each is extended along its sketch normal.",
     "hintComposite": "Click edges of the part and add sketches and curves; together they must join end to end into one chain. The result is a path for a sweep.",
     "clear": "Remove all"
+  },
+  "bodies": {
+    "title_one": "Solid bodies ({{count}})",
+    "title_other": "Solid bodies ({{count}})",
+    "body": "Body {{n}}",
+    "operation": "Operation",
+    "operations": {
+      "add": "Add",
+      "subtract": "Subtract",
+      "common": "Common"
+    },
+    "chosen": "Bodies",
+    "main": "Main body: {{name}}",
+    "pick": "Click a face of each body in the 3D view.",
+    "combineHint": "Click a face of each body, the main body first. Add fuses them into one body, Subtract removes the others from the main body, Common keeps only what they all share. Bodies not picked stay as they are.",
+    "deleteHint": "Click a face of each body to remove from the part; the other bodies stay."
   }
 }
