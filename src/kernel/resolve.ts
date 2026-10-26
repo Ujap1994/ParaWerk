@@ -1,15 +1,15 @@
-import { COPYABLE_TYPES, isCopyFeature, isEdgeFeature, type CopyFeature, type DraftFeature, type LoftFeature, type SweepFeature, type EdgeFeature, type EdgeRef, type ExtrudeFeature, type Feature, type FilletFeature, roundFaceCount, type HoleFeature, type ShellFeature, type SketchFeature, type SolidModelingFeature, type Vec3 } from '../shared/model/feature.ts';
+import { COPYABLE_TYPES, isCopyFeature, isEdgeFeature, type CopyFeature, type DraftFeature, type LoftFeature, type RibFeature, type SweepFeature, type EdgeFeature, type EdgeRef, type ExtrudeFeature, type Feature, type FilletFeature, roundFaceCount, type HoleFeature, type ShellFeature, type SketchFeature, type SolidModelingFeature, type Vec3 } from '../shared/model/feature.ts';
 import { circularTransforms, linearTransforms, mirrorTransform, type Transform } from '../shared/model/pattern.ts';
 import { holePositions, holeProblem } from '../shared/model/hole.ts';
 import { edgeFaceNames, edgeRefOf, faceRefOf, resolveEdgeRefs, resolveFaceRef, resolveFacePlane, type BodyNaming } from '../shared/model/naming.ts';
-import { sketchProfile, type Profile } from '../shared/model/profile.ts';
+import { sketchProfile, type Profile, type ProfileEdge } from '../shared/model/profile.ts';
 import { DEFAULT_THIN_THICKNESS, thinProfile } from '../shared/model/thin.ts';
 import { edgePoint, reversedPath, sketchPath } from '../shared/model/path.ts';
 import type { GeometryRef, ReferenceGeometry } from '../shared/model/reference.ts';
 import { frameOf, frameOnPlane, ORIGIN_ID, toModel, toSketch, type SketchFrame, type SketchPlaneRef } from '../shared/model/sketch.ts';
 import type { Point2 } from '../shared/model/spline.ts';
 import { hashString } from '../shared/hash.ts';
-import type { KernelFeature, ResolvedCopy, ResolvedDraft, ResolvedLoft, ResolvedSweep, ResolvedEdgeFeature, ResolvedExtrude, ResolvedHole, ResolvedShell } from './backend.ts';
+import type { KernelFeature, ResolvedCopy, ResolvedDraft, ResolvedLoft, ResolvedRib, ResolvedSweep, ResolvedEdgeFeature, ResolvedExtrude, ResolvedHole, ResolvedShell } from './backend.ts';
 import { FeatureError } from './feature-error.ts';
 import { axisOfReference, curvedFaceOfReference, referenceValue, type BodyQuery, type ReferenceContext } from './reference.ts';
 
@@ -181,6 +181,8 @@ export function placeSketch(sketch: SketchFeature, body: (() => BodyNaming) | nu
 }
 
 const dot3 = (a: Vec3, b: Vec3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const cross3 = (a: Vec3, b: Vec3): Vec3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+const scale3 = (a: Vec3, s: number): Vec3 => [a[0] * s, a[1] * s, a[2] * s];
 const minus = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 
 /**
@@ -343,6 +345,50 @@ function resolveSweep(feature: SweepFeature, before: readonly Feature[], context
   return { ...feature, profile, frame, spine, spineFrame };
 }
 
+/** A rectangle of `length` × `width` along the x axis, centered on it, as a profile with named sides. */
+function rectangle(length: number, width: number, curve: string): Profile {
+  const [x0, x1, y0, y1] = [0, length, -width / 2, width / 2];
+  const corners: Point2[] = [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
+  const edges = corners.map((from, i): ProfileEdge => ({ kind: 'line', from, to: corners[(i + 1) % 4] as Point2 }));
+  const outer = { edges, curves: [`${curve}:a`, `${curve}:end`, `${curve}:b`, `${curve}:start`], area: length * width, polygon: corners };
+  return { regions: [{ outer, holes: [] }], problems: [] };
+}
+
+/**
+ * A rib as extrusions up to the next face. Within the sketch plane, each line of the sketch becomes a
+ * rectangle as wide as the rib across the plane, moving across the line in the plane; along the sketch
+ * normal, the walls along the curves move along it. Each part can go either way; the preferred one is
+ * tried first (the backend takes the first that reaches the body).
+ */
+function resolveRib(feature: RibFeature, before: readonly Feature[], context: ResolveContext): ResolvedRib {
+  if (!context.body) throw new FeatureError('no-body');
+  const sketch = sketchBefore(before, feature.sketch);
+  const frame = context.frames.get(sketch.id) ?? frameOf(sketch.plane);
+  const base = { id: feature.id, type: 'extrude', operation: 'add', sketch: sketch.id, depth: 1, end: 'upToNext', limit: { kind: 'next' } } as const;
+  const preferred = <T>(ways: [T, T]): [T, T] => (feature.flip ? [ways[1], ways[0]] : ways);
+  if (feature.direction === 'normal') {
+    const profile = thinProfileOf(sketch, { thin: 'both', thickness: feature.thickness });
+    const way = (direction: 'normal' | 'reverse'): ResolvedExtrude => ({ ...base, direction, profile, frame });
+    return { ...feature, parts: [preferred([way('normal'), way('reverse')])] };
+  }
+  const path = sketchPath(sketch.sketch);
+  if ('code' in path) throw new FeatureError(path.code, path.code === 'path-branching' ? `${coordinate(path.at[0])}, ${coordinate(path.at[1])}` : undefined);
+  const parts = path.edges.map((edge, i) => {
+    if (edge.kind !== 'line') throw new FeatureError('rib-curves', path.curves[i]);
+    const a = toModel(frame, ...edge.from);
+    const b = toModel(frame, ...edge.to);
+    const length = Math.hypot(...minus(b, a));
+    const along: Vec3 = [(b[0] - a[0]) / length, (b[1] - a[1]) / length, (b[2] - a[2]) / length];
+    const way = (sign: number): ResolvedExtrude => {
+      // Across the line within the sketch plane; the rectangle stands across the plane.
+      const normal = scale3(cross3(frame.normal, along), sign);
+      return { ...base, direction: 'normal', profile: rectangle(length, feature.thickness, path.curves[i] ?? String(i)), frame: { origin: a, xDir: along, yDir: cross3(normal, along), normal } };
+    };
+    return preferred([way(1), way(-1)]);
+  });
+  return { ...feature, parts };
+}
+
 /** A loft: one outline (without holes) of each of its sketches, in order. */
 function resolveLoft(feature: LoftFeature, before: readonly Feature[], context: ResolveContext): ResolvedLoft {
   if (feature.sketches.length < 2) throw new FeatureError('loft-sections');
@@ -373,6 +419,7 @@ export function resolveFeature(feature: SolidModelingFeature, before: readonly F
   if (feature.type === 'draft') return resolveDraft(feature, context);
   if (feature.type === 'sweep') return resolveSweep(feature, before, context);
   if (feature.type === 'loft') return resolveLoft(feature, before, context);
+  if (feature.type === 'rib') return resolveRib(feature, before, context);
   if (isEdgeFeature(feature)) {
     if (!context.body) throw new FeatureError('no-body');
     return resolveEdges(feature, context.body);

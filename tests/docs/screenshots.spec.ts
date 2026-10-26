@@ -1248,3 +1248,28 @@ test('sweep and loft screenshots', async () => {
   );
   await app.close();
 });
+
+test('rib screenshots', async () => {
+  const { app, page } = await launchApp({ width: 1440, height: 900 });
+  // An angle bracket with a gusset in the middle of its corner.
+  await page.evaluate(() => {
+    const P = (id: string, x: number, y: number) => ({ id, type: 'point', x, y });
+    const features = [
+      { id: 'f', type: 'box', operation: 'add', width: 100, depth: 60, height: 10, position: [0, 0, 0] },
+      { id: 'w', type: 'box', operation: 'add', width: 10, depth: 60, height: 60, position: [-45, 0, 10] },
+      { id: 'line', type: 'sketch', name: 'Gusset line', plane: { kind: 'standard', plane: 'front' }, sketch: { entities: [P('a', -40, 55), P('b', 25, 10), { id: 'ab', type: 'line', p1: 'a', p2: 'b' }], constraints: [] } },
+      { id: 'gusset', type: 'rib', name: 'Gusset', sketch: 'line', thickness: 6, direction: 'parallel', flip: false },
+    ];
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features, past: [], future: [] }, savedFeatures: features, fileName: 'Angle bracket' });
+  });
+  await idle(page);
+  await page.evaluate(() => (window as unknown as { __parawerk: { viewport: { zoomToFit(): void } } }).__parawerk.viewport.zoomToFit());
+  await page.locator('.feature-tree .tree-item[data-feature-id="gusset"]').dblclick();
+  await idle(page);
+  const canvas = await page.locator('.viewport-canvas').boundingBox();
+  if (canvas) await page.mouse.move(canvas.x + canvas.width - 30, canvas.y + canvas.height - 30);
+  await page.waitForTimeout(600);
+  await page.screenshot({ path: out('rib.png') });
+  await page.click('[data-testid="panel-ok"]');
+  await app.close();
+});

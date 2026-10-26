@@ -39,7 +39,7 @@ const SURFACE_KINDS: SurfaceKind[] = ['plane', 'cylinder', 'cone', 'sphere', 'to
 const CURVE_KINDS: CurveKind[] = ['line', 'circle', 'ellipse', 'bspline', 'other'];
 
 const FEATURE_ERROR_CODES = new Set<FeatureErrorCode>([
-  'no-body', 'no-edges', 'edge-missing', 'face-missing', 'plane-missing', 'reference-missing', 'reference-kind', 'reference-parallel', 'reference-not-parallel', 'reference-collinear', 'empty-result', 'first-must-add', 'sketch-missing', 'profile-empty', 'profile-crossing', 'axis-missing', 'axis-not-in-plane', 'hole-no-points', 'hole-invalid', 'pattern-empty', 'pattern-seed-missing', 'pattern-unsupported', 'shell-face-missing', 'end-behind', 'end-parallel', 'end-missed', 'thin-empty', 'thin-unsupported', 'thin-branching', 'thin-too-thick', 'round-faces', 'round-face-missing', 'round-sides', 'round-center', 'round-planes', 'round-radius', 'draft-faces', 'draft-face', 'draft-face-missing', 'path-empty', 'path-branching', 'path-gaps', 'sweep-failed', 'loft-sections', 'loft-profile', 'loft-failed', 'import-no-solid', 'profile-crosses-axis',
+  'no-body', 'no-edges', 'edge-missing', 'face-missing', 'plane-missing', 'reference-missing', 'reference-kind', 'reference-parallel', 'reference-not-parallel', 'reference-collinear', 'empty-result', 'first-must-add', 'sketch-missing', 'profile-empty', 'profile-crossing', 'axis-missing', 'axis-not-in-plane', 'hole-no-points', 'hole-invalid', 'pattern-empty', 'pattern-seed-missing', 'pattern-unsupported', 'shell-face-missing', 'end-behind', 'end-parallel', 'end-missed', 'thin-empty', 'thin-unsupported', 'thin-branching', 'thin-too-thick', 'round-faces', 'round-face-missing', 'round-sides', 'round-center', 'round-planes', 'round-radius', 'draft-faces', 'draft-face', 'draft-face-missing', 'path-empty', 'path-branching', 'path-gaps', 'sweep-failed', 'loft-sections', 'loft-profile', 'loft-failed', 'rib-curves', 'import-no-solid', 'profile-crosses-axis',
   'operation-failed', 'unknown',
 ]);
 
@@ -295,6 +295,29 @@ export class ParaWerkBackend implements GeometryBackend {
       case 'mirror':
         if (body === null) throw new FeatureError('no-body');
         return this.copies(body, feature);
+      case 'rib': {
+        if (body === null) throw new FeatureError('no-body');
+        // Each part grows up to the body, the way that reaches it (the preferred one first).
+        let current = body;
+        for (const ways of feature.parts) {
+          let tool: ShapeHandle | null = null;
+          let failure: unknown = new FeatureError('end-missed');
+          for (const way of ways) {
+            try {
+              tool = this.tool(current, way);
+              break;
+            } catch (error) {
+              if (!(error instanceof FeatureError && (error.code === 'end-missed' || error.code === 'end-behind'))) throw error;
+              failure = error;
+            }
+          }
+          if (!tool) throw failure;
+          const next = this.combine(current, tool, 'add');
+          if (current !== body) this.release(current);
+          current = next;
+        }
+        return current;
+      }
       case 'draft': {
         if (body === null) throw new FeatureError('no-body');
         const angle = (feature.angle * Math.PI) / 180;

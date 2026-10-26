@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { formatQuantity } from '../format.ts';
-import { CHAMFER_METHODS, type DraftFeature, type LoftFeature, FILLET_METHODS, roundFaceCount, type FilletFeature, type FilletMethod, EXTRUDE_ENDS, extrudesOneWay, MAX_DRAFT_ANGLE, type RevolveDirection, hasReferenceSlots, isCopyFeature, type Axis, type BooleanOperation, type ChamferFeature, type ChamferMethod, type EdgeFeature, type ExtrudeDirection, type ExtrudeEnd, type ExtrudeFeature, type Feature, type RevolveFeature, type Vec3 } from '../../../shared/model/feature.ts';
+import { CHAMFER_METHODS, type DraftFeature, type LoftFeature, RIB_DIRECTIONS, type RibDirection, FILLET_METHODS, roundFaceCount, type FilletFeature, type FilletMethod, EXTRUDE_ENDS, extrudesOneWay, MAX_DRAFT_ANGLE, type RevolveDirection, hasReferenceSlots, isCopyFeature, type Axis, type BooleanOperation, type ChamferFeature, type ChamferMethod, type EdgeFeature, type ExtrudeDirection, type ExtrudeEnd, type ExtrudeFeature, type Feature, type RevolveFeature, type Vec3 } from '../../../shared/model/feature.ts';
 import { DEFAULT_THIN_THICKNESS, THIN_SIDES, type ThinSide } from '../../../shared/model/thin.ts';
 import type { GeometryRef } from '../../../shared/model/reference.ts';
 import { referenceRoles } from '../references.ts';
@@ -305,6 +305,24 @@ function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
       );
     case 'loft':
       return <LoftFields draft={draft} index={index} firstFeature={firstFeature} />;
+    case 'rib':
+      return (
+        <Section title={t('panel.parameters')}>
+          <SketchField value={draft.sketch} index={index} />
+          <NumberField label={t('rib.thickness')} value={draft.thickness} testId="rib-thickness" {...equation(draft, 'thickness')} step={0.5} onChange={(thickness) => commands.updateDraft({ thickness: Math.max(0.001, thickness) })} />
+          <Segmented<RibDirection>
+            label={t('panel.direction')}
+            value={draft.direction}
+            options={RIB_DIRECTIONS.map((value) => ({ value, label: t(`rib.directions.${value}`) }))}
+            onChange={(direction) => commands.updateDraft({ direction })}
+          />
+          <label className="checkbox-field">
+            <input type="checkbox" checked={draft.flip} data-testid="rib-flip" onChange={(event) => commands.updateDraft({ flip: event.target.checked })} />
+            {t('rib.flip')}
+          </label>
+          <p className="panel-hint">{t('rib.hint')}</p>
+        </Section>
+      );
     case 'pattern':
     case 'mirror':
       return <CopyFields draft={draft} />;

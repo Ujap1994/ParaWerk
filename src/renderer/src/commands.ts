@@ -300,6 +300,17 @@ export function startFeature(type: FeatureType): void {
       const reference = features.findLast((feature) => feature.type === 'axis' && !feature.suppressed);
       draft = axis || !reference ? { ...draft, sketch: sketch.id, axis, operation, ...thin } : { ...draft, sketch: sketch.id, axis: '', axisRef: { kind: 'feature', feature: reference.id }, operation, ...thin };
     }
+  } else if (draft.type === 'rib') {
+    // A rib is drawn as open curves: the newest sketch without closed outlines that no feature uses yet.
+    const used = new Set(features.flatMap(sketchesUsedBy));
+    const sketches = features.filter((feature): feature is SketchFeature => feature.type === 'sketch' && !feature.suppressed);
+    const open = (sketch: SketchFeature) => sketchProfile(sketch.sketch).regions.length === 0;
+    const sketch = sketches.findLast((candidate) => !used.has(candidate.id) && open(candidate)) ?? sketches.findLast(open) ?? sketchToUse(features);
+    if (!sketch) {
+      showToast('info', t('toasts.noSketchToExtrude'));
+      return;
+    }
+    draft = { ...draft, sketch: sketch.id };
   } else if (draft.type === 'sweep' || draft.type === 'loft') {
     // Sketches no feature uses yet: those with closed outlines are profiles, one without is a path.
     const operation = hasBodyBefore(features, index) ? draft.operation : 'add';
@@ -423,7 +434,7 @@ export function chooseRevolveAxis(value: string): void {
 /** Chooses the sketch of the extrusion or revolution being edited (a revolution also takes its centerline). */
 export function chooseFeatureSketch(id: string): void {
   const draft = getState().activeEdit?.draft;
-  if (draft?.type === 'extrude' || draft?.type === 'hole' || draft?.type === 'sweep') updateDraft({ sketch: id });
+  if (draft?.type === 'extrude' || draft?.type === 'hole' || draft?.type === 'sweep' || draft?.type === 'rib') updateDraft({ sketch: id });
   if (draft?.type !== 'revolve') return;
   const sketch = getState().history.features.find((feature): feature is SketchFeature => feature.type === 'sketch' && feature.id === id);
   updateDraft({ sketch: id, axis: sketch ? defaultAxis(sketch) : '' });

@@ -116,7 +116,8 @@
       "csys": "Create a coordinate system: at a position, or at a point with its axes along edges, axes or plane normals",
       "draft": "Tilt faces by an angle about a neutral plane, for molding and casting",
       "sweep": "Sweep the closed outlines of a sketch along the curves of another sketch",
-      "loft": "Make a solid through the outlines of several sketches, in order"
+      "loft": "Make a solid through the outlines of several sketches, in order",
+      "rib": "Add a wall from the open curves of a sketch to the body, such as a gusset in a corner"
     },
     "tabs": {
       "label": "Command tabs",
@@ -200,10 +201,11 @@
     "exportFormats": "Export formats",
     "csys": "Coordinate system",
     "draft": "Draft",
-    "formFeatures": "Shell and draft",
+    "formFeatures": "Shell, draft and rib",
     "sweep": "Sweep",
     "loft": "Loft",
-    "solidFeatures": "Revolve, sweep and loft"
+    "solidFeatures": "Revolve, sweep and loft",
+    "rib": "Rib"
   },
   "features": {
     "plane": "Plane",
@@ -226,7 +228,8 @@
     "csys": "Coordinate system",
     "draft": "Draft",
     "sweep": "Sweep",
-    "loft": "Loft"
+    "loft": "Loft",
+    "rib": "Rib"
   },
   "tree": {
     "title": "Feature tree",
@@ -493,7 +496,8 @@
     "sweep-failed": "The profile cannot follow the path: it may cross itself where the path bends tighter than the profile is wide.",
     "loft-sections": "A loft needs at least two profiles.",
     "loft-profile": "Profile {{detail}} must be one closed outline without holes.",
-    "loft-failed": "The profiles could not be joined. Check that they lie one after the other and are not twisted against each other."
+    "loft-failed": "The profiles could not be joined. Check that they lie one after the other and are not twisted against each other.",
+    "rib-curves": "A rib within its sketch plane follows lines only; {{detail}} is another curve."
   },
   "warnings": {
     "edge-missing_one": "{{count}} selected edge no longer exists and is left out. Edit the feature to remove it or pick another edge.",
@@ -1008,5 +1012,14 @@
     "choose": "Choose a sketch",
     "ruled": "Flat faces between the profiles",
     "hint": "Each sketch gives one closed outline (without holes). The solid goes through them in the order of the list, usually on parallel planes one above the other."
+  },
+  "rib": {
+    "thickness": "Thickness",
+    "directions": {
+      "parallel": "Within the sketch plane",
+      "normal": "Normal to the sketch"
+    },
+    "flip": "Try the other side first",
+    "hint": "Draw open lines where the rib should end, for example across the corner between a wall and a floor. Within the sketch plane the rib fills the space between the lines and the body, as thick as the thickness across the plane; normal to the sketch it grows from the curves down to the body. It grows towards the material on its own."
   }
 }

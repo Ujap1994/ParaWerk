@@ -270,6 +270,23 @@ reported. The faces keep their names, so fillets on them stay put; faces that an
 are left out with a warning, as for shells. For extrusions, *Draft while extruding* in the extrusion
 itself is often simpler.
 
+## Rib
+
+**Rib** (in the arrow of the **Shell** button) adds a wall from the open curves of a sketch to the body –
+a gusset in the corner of an angle bracket, a stiffening rib across the inside of a housing. Draw open
+lines where the rib should end, for example on the front plane from the wall down to the floor; Rib
+starts with the newest such sketch that no feature uses yet.
+
+- *Thickness*: how thick the rib is, half to each side of the sketch.
+- *Direction*: **Within the sketch plane** fills the space between each line and the body, in the plane
+  of the sketch (lines only); **Normal to the sketch** grows from the curves along the sketch normal until
+  it meets the body, like a thin extrusion up to the next face.
+- The rib grows towards the material by itself: the side of the lines where it meets the body. **Try the
+  other side first** prefers the other side where both would work. Lines whose rib meets nothing are
+  reported.
+
+![A gusset in the corner of an angle bracket, 6 mm thick](../images/screenshots/rib.png)
+
 ## How features remember their edges
 
 A fillet or chamfer remembers each edge by the two faces it lies between – for example "the top face of

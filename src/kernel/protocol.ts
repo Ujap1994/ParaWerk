@@ -131,6 +131,7 @@ export type FeatureErrorCode =
   | 'loft-sections'
   | 'loft-profile'
   | 'loft-failed'
+  | 'rib-curves'
   | 'import-no-solid'
   | 'cut-nothing'
   | 'profile-crosses-axis'

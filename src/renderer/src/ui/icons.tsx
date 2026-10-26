@@ -570,6 +570,15 @@ export const ReferencePointIcon = (p: P) => (
   </Icon>
 );
 
+/** Rib: an angle with a triangular wall in its corner. */
+export const RibIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="M3.5 3.5v17h17" />
+    <path d="M3.5 8.5 15.5 20.5" />
+    <path d="M6 11.5V18h6.5" opacity="0.55" />
+  </Icon>
+);
+
 /** Move up in a list. */
 export const MoveUpIcon = (p: P) => (
   <Icon {...p}>
@@ -681,4 +690,5 @@ export const FEATURE_ICONS = {
   draft: DraftIcon,
   sweep: SweepIcon,
   loft: LoftIcon,
+  rib: RibIcon,
 } as const;

@@ -1,4 +1,4 @@
-import type { CopyFeature, DraftFeature, EdgeFeature, LoftFeature, SweepFeature, EdgeRef, ExtrudeFeature, HoleFeature, RevolveFeature, ShellFeature, SolidModelingFeature, Vec3 } from '../shared/model/feature.ts';
+import type { CopyFeature, DraftFeature, EdgeFeature, LoftFeature, RibFeature, SweepFeature, EdgeRef, ExtrudeFeature, HoleFeature, RevolveFeature, ShellFeature, SolidModelingFeature, Vec3 } from '../shared/model/feature.ts';
 import type { FaceNameRef } from '../shared/model/reference.ts';
 import type { BodyNaming } from '../shared/model/naming.ts';
 import type { Profile, ProfileLoop } from '../shared/model/profile.ts';
@@ -34,6 +34,14 @@ export interface ResolvedSweep extends SweepFeature {
 /** A loft with the outline and plane of each of its sketches, in order. */
 export interface ResolvedLoft extends LoftFeature {
   sections: { loop: ProfileLoop; frame: SketchFrame }[];
+}
+
+/**
+ * A rib as extrusions up to the next face, one per part (each line of a rib within its sketch plane, or the
+ * walls along the curves of a rib along the sketch normal); per part the ways to try, the preferred first.
+ */
+export interface ResolvedRib extends RibFeature {
+  parts: ResolvedExtrude[][];
 }
 
 /** A revolution with the outlines and plane of its sketch and its axis in sketch coordinates. */
@@ -89,7 +97,7 @@ export type ResolvedEdgeFeature = EdgeFeature & {
 
 /** A feature as a backend builds it, with its references to earlier features resolved. */
 export type KernelFeature =
-  | Exclude<SolidModelingFeature, ExtrudeFeature | RevolveFeature | EdgeFeature | HoleFeature | CopyFeature | ShellFeature | DraftFeature | SweepFeature | LoftFeature>
+  | Exclude<SolidModelingFeature, ExtrudeFeature | RevolveFeature | EdgeFeature | HoleFeature | CopyFeature | ShellFeature | DraftFeature | SweepFeature | LoftFeature | RibFeature>
   | ResolvedExtrude
   | ResolvedRevolve
   | ResolvedHole
@@ -98,6 +106,7 @@ export type KernelFeature =
   | ResolvedDraft
   | ResolvedSweep
   | ResolvedLoft
+  | ResolvedRib
   | ResolvedEdgeFeature;
 
 /** Opaque reference to a shape owned by a backend. */

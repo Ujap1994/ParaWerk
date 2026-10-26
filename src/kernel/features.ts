@@ -103,6 +103,7 @@ export function applyFeature(oc: OC, body: TopoDS_Shape | null, feature: KernelF
       case 'draft':
       case 'sweep':
       case 'loft':
+      case 'rib':
       case 'import':
         throw new FeatureError('operation-failed', 'this feature needs the ParaWerk kernel');
     }

@@ -57,6 +57,7 @@ import {
   DraftIcon,
   SweepIcon,
   LoftIcon,
+  RibIcon,
   CoordinateSystemIcon,
   SettingsIcon,
   ShellIcon,
@@ -147,10 +148,10 @@ const SOLID_ENTRIES: readonly SplitEntry[] = (['revolve', 'sweep', 'loft'] as co
   active: (state: AppState) => state.activeEdit?.mode === 'create' && state.activeEdit.draft.type === type,
 }));
 
-/** Features that shape the walls of the body: shell and draft. */
-const FORM_ENTRIES: readonly SplitEntry[] = (['shell', 'draft'] as const).map((type) => ({
+/** Features that shape the walls of the body: shell, draft and rib. */
+const FORM_ENTRIES: readonly SplitEntry[] = (['shell', 'draft', 'rib'] as const).map((type) => ({
   id: type,
-  icon: { shell: ShellIcon, draft: DraftIcon }[type],
+  icon: { shell: ShellIcon, draft: DraftIcon, rib: RibIcon }[type],
   label: type,
   start: () => commands.startFeature(type),
   active: (state: AppState) => state.activeEdit?.mode === 'create' && state.activeEdit.draft.type === type,

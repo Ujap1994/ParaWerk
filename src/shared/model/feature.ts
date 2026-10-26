@@ -11,7 +11,7 @@ import type { ThinSide } from './thin.ts';
 
 export type Vec3 = [number, number, number];
 
-export type FeatureType = 'variables' | 'sketch' | 'plane' | 'axis' | 'point' | 'csys' | 'extrude' | 'revolve' | 'hole' | 'pattern' | 'mirror' | 'box' | 'cylinder' | 'import' | 'fillet' | 'chamfer' | 'shell' | 'draft' | 'sweep' | 'loft';
+export type FeatureType = 'variables' | 'sketch' | 'plane' | 'axis' | 'point' | 'csys' | 'extrude' | 'revolve' | 'hole' | 'pattern' | 'mirror' | 'box' | 'cylinder' | 'import' | 'fillet' | 'chamfer' | 'shell' | 'draft' | 'sweep' | 'loft' | 'rib';
 
 /** How a solid-creating feature combines with the existing body. */
 export type BooleanOperation = 'add' | 'cut';
@@ -78,6 +78,7 @@ export const EXPRESSION_FIELDS: Readonly<Record<FeatureType, readonly string[]>>
   draft: ['angle'],
   sweep: [],
   loft: [],
+  rib: ['thickness'],
 };
 
 /** A named value of the part; its expression may use other variables. */
@@ -489,9 +490,27 @@ export interface LoftFeature extends FeatureBase {
   ruled?: boolean;
 }
 
+/** Which way a rib grows from its curves: within the sketch plane, or along its normal. */
+export type RibDirection = 'parallel' | 'normal';
+
+export const RIB_DIRECTIONS: readonly RibDirection[] = ['parallel', 'normal'];
+
+/**
+ * A rib: a wall of `thickness` from the open curves of a sketch to the body – within the sketch plane
+ * (parallel: a gusset between a line and the walls it leans against) or along the sketch normal. It grows
+ * towards the material; `flip` tries the other side first.
+ */
+export interface RibFeature extends FeatureBase {
+  type: 'rib';
+  sketch: string;
+  thickness: number;
+  direction: RibDirection;
+  flip: boolean;
+}
+
 /** The sketches a feature is built from (their curves belong to its geometry). */
 export function sketchesUsedBy(feature: Feature): string[] {
-  if (isSketchBased(feature)) return [feature.sketch];
+  if (isSketchBased(feature) || feature.type === 'rib') return [feature.sketch];
   if (feature.type === 'sweep') return [feature.sketch, feature.path];
   if (feature.type === 'loft') return feature.sketches;
   return [];
@@ -517,7 +536,8 @@ export type Feature =
   | ShellFeature
   | DraftFeature
   | SweepFeature
-  | LoftFeature;
+  | LoftFeature
+  | RibFeature;
 
 /** Features that build or modify the solid body (everything except variables, sketches and reference geometry). */
 export type SolidModelingFeature = Exclude<Feature, SketchFeature | VariablesFeature | ReferenceFeature>;
@@ -532,7 +552,7 @@ export function isSolidFeature(feature: Feature): feature is BoxFeature | Cylind
   return feature.type === 'box' || feature.type === 'cylinder';
 }
 
-export const FEATURE_TYPES: readonly FeatureType[] = ['variables', 'sketch', 'plane', 'axis', 'point', 'csys', 'extrude', 'revolve', 'hole', 'pattern', 'mirror', 'box', 'cylinder', 'import', 'fillet', 'chamfer', 'shell', 'draft', 'sweep', 'loft'];
+export const FEATURE_TYPES: readonly FeatureType[] = ['variables', 'sketch', 'plane', 'axis', 'point', 'csys', 'extrude', 'revolve', 'hole', 'pattern', 'mirror', 'box', 'cylinder', 'import', 'fillet', 'chamfer', 'shell', 'draft', 'sweep', 'loft', 'rib'];
 
 /** Features that make a body from nothing (the first feature with material must be one of them, adding). */
 export const BODY_TYPES: ReadonlySet<FeatureType> = new Set(['box', 'cylinder', 'extrude', 'revolve', 'import', 'sweep', 'loft']);
@@ -604,5 +624,7 @@ export function defaultFeature(type: FeatureType, id: string = createFeatureId()
       return { id, type, operation: 'add', sketch: '', path: '' };
     case 'loft':
       return { id, type, operation: 'add', sketches: [] };
+    case 'rib':
+      return { id, type, sketch: '', thickness: 3, direction: 'parallel', flip: false };
   }
 }

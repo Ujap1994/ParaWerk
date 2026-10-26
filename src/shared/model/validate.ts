@@ -1,4 +1,4 @@
-import { CHAMFER_METHODS, type ChamferMethod, EXPRESSION_FIELDS, FILLET_METHODS, EXTRUDE_DIRECTIONS, MAX_DRAFT_ANGLE, REVOLVE_DIRECTIONS, type RevolveDirection, EXTRUDE_ENDS, HOLE_ENDS, type Axis, type BooleanOperation, type EdgeRef, type ExtrudeDirection, type ExtrudeEnd, type Feature, type FeatureType, type HoleEnd, type Variable, type Vec3 } from './feature.ts';
+import { CHAMFER_METHODS, type ChamferMethod, EXPRESSION_FIELDS, FILLET_METHODS, RIB_DIRECTIONS, EXTRUDE_DIRECTIONS, MAX_DRAFT_ANGLE, REVOLVE_DIRECTIONS, type RevolveDirection, EXTRUDE_ENDS, HOLE_ENDS, type Axis, type BooleanOperation, type EdgeRef, type ExtrudeDirection, type ExtrudeEnd, type Feature, type FeatureType, type HoleEnd, type Variable, type Vec3 } from './feature.ts';
 import { HOLE_FITS, HOLE_KINDS } from './hole.ts';
 import { CUSTOM_MATERIAL, materialInfo, MAX_DENSITY, MIN_DENSITY, NO_PROPERTIES, type PartProperties } from './material.ts';
 import { MAX_PATTERN_COUNT } from './pattern.ts';
@@ -440,6 +440,15 @@ function parseFeatureFields(raw: Json, path: string): Feature {
       }
       return chamfer;
     }
+    case 'rib':
+      return {
+        ...common,
+        type: 'rib',
+        sketch: sketchId(raw.sketch, `${path}.sketch`),
+        thickness: positiveLength(raw.thickness, `${path}.thickness`),
+        direction: method(raw.direction, RIB_DIRECTIONS, `${path}.direction`),
+        flip: flag(raw.flip, `${path}.flip`),
+      };
     case 'sweep':
       return { ...common, type: 'sweep', operation: operation(raw.operation, `${path}.operation`), sketch: sketchId(raw.sketch, `${path}.sketch`), path: sketchId(raw.path, `${path}.path`) };
     case 'loft': {

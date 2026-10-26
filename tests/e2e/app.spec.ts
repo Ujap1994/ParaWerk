@@ -1210,6 +1210,31 @@ test('sweeps an outline along a path and lofts two outlines', async () => {
   expect((await state(page)).history.features[3]).toMatchObject({ type: 'loft', sketches: ['low', 'high'], ruled: true });
 });
 
+test('adds a rib in the corner of an angle bracket', async () => {
+  launched = await launchApp({ width: 1000, height: 640 });
+  const { page } = launched;
+  // A floor, a wall at its left end and a line on the front plane from the wall down to the floor.
+  await page.evaluate(() => {
+    const P = (id: string, x: number, y: number) => ({ id, type: 'point', x, y });
+    const features = [
+      { id: 'f', type: 'box', operation: 'add', width: 100, depth: 60, height: 10, position: [0, 0, 0] },
+      { id: 'w', type: 'box', operation: 'add', width: 10, depth: 60, height: 60, position: [-45, 0, 10] },
+      { id: 'line', type: 'sketch', plane: { kind: 'standard', plane: 'front' }, sketch: { entities: [P('a', -40, 50), P('b', 10, 10), { id: 'ab', type: 'line', p1: 'a', p2: 'b' }], constraints: [] } },
+    ];
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features, past: [], future: [] }, savedFeatures: features, dirty: false });
+  });
+  await idle(page);
+  await page.click('[data-variants="form"]');
+  await page.click('[data-entry="rib"]');
+  await expect(page.locator('[data-testid="feature-sketch"]')).toHaveValue('line');
+  await page.locator('[data-testid="rib-thickness"]').fill('4');
+  await page.locator('[data-testid="rib-thickness"]').press('Tab');
+  await page.click('[data-testid="panel-ok"]');
+  // A triangle of 50 × 40, 4 thick.
+  expect(await volume(page)).toBeCloseTo(96_000 + 4000, 2);
+  expect((await state(page)).history.features[3]).toMatchObject({ type: 'rib', sketch: 'line', thickness: 4, direction: 'parallel' });
+});
+
 test('drafts faces picked in the 3D view about a neutral plane picked in the tree', async () => {
   launched = await launchApp({ width: 1000, height: 640 });
   const { page } = launched;
