@@ -19,21 +19,25 @@ export const PART_FORMAT = 'parawerk-part';
  * 6: reference planes, axes and points, sketches on reference planes, revolutions around reference axes, holes,
  * patterns and mirror images, shells, extrusions up to a surface or vertex. 7: the part's material and color,
  * STEP imports, coordinate systems, extrusions in two directions, with a draft or up to the next face, thin
- * features, uneven chamfers.
+ * features, uneven chamfers (ParaWerk 0.3). 8: drafts, sweeps, lofts, ribs, modeled threads, variable
+ * radius fillets.
  * Older versions are read unchanged.
  */
-export const PART_FORMAT_VERSION = 7;
+export const PART_FORMAT_VERSION = 8;
 
 /** The oldest format version that can hold the document, so older ParaWerk versions can still open it. */
 export function formatVersionOf(features: readonly Feature[], properties: PartProperties = NO_PROPERTIES): number {
-  const seventh = (feature: Feature) =>
-    feature.type === 'import' ||
-    feature.type === 'csys' ||
+  const eighth = (feature: Feature) =>
     feature.type === 'draft' ||
     feature.type === 'sweep' ||
     feature.type === 'loft' ||
     feature.type === 'rib' ||
     feature.type === 'thread' ||
+    (feature.type === 'fillet' && feature.method === 'variable');
+  if (features.some(eighth)) return 8;
+  const seventh = (feature: Feature) =>
+    feature.type === 'import' ||
+    feature.type === 'csys' ||
     (feature.type === 'extrude' && (feature.end === 'upToNext' || feature.direction === 'two' || (feature.draft ?? 0) > 0)) ||
     ((feature.type === 'extrude' || feature.type === 'revolve') && feature.thin !== undefined) ||
     (feature.type === 'chamfer' && feature.method !== undefined && feature.method !== 'equal') ||

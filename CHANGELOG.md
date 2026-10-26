@@ -7,6 +7,10 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### Changed
+- Part files with drafts, sweeps, lofts, ribs, modeled threads or variable radius fillets are saved as
+  format version 8, so ParaWerk 0.3 reports them as newer files instead of damaged ones.
+
 ### Added
 - Sweep: the closed outlines of a sketch along a path, one chain of lines, arcs, ellipses or splines in
   another sketch (open or closed); the path runs from its end nearer to the outlines. Adds or cuts.

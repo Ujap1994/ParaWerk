@@ -114,6 +114,12 @@ describe('part file', () => {
     expect(decodePartFile(bytes).document.features).toEqual(withSketch);
   });
 
+  it('needs version 8 for the features after ParaWerk 0.3', () => {
+    for (const type of ['draft', 'sweep', 'loft', 'rib', 'thread'] as const) expect(formatVersionOf([defaultFeature(type, 'f')]), type).toBe(8);
+    expect(formatVersionOf([{ id: 'f', type: 'fillet', radius: 2, edges: [], method: 'variable', radius2: 4 } as Feature])).toBe(8);
+    expect(formatVersionOf([{ id: 'f', type: 'fillet', radius: 2, edges: [], method: 'fullRound', round: [] } as Feature])).toBe(7);
+  });
+
   it('needs version 7 for the extrusion and chamfer options of Phase 2', () => {
     const extrude = { ...defaultFeature('extrude', 'e'), sketch: 's' } as Feature;
     expect(formatVersionOf([extrude])).toBe(4);
