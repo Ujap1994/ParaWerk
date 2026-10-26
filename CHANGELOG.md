@@ -10,8 +10,12 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 ### Added
 - Sweeps along a sketch path or a curve can twist about the path (an angle from start to end, also several
   turns) or follow a guide curve, turning towards it and growing or shrinking with its distance from the
-  path. Saved in part format version 9.
+  path.
 - Lofts can follow a centerline (a sketch or a curve) between their profiles: bent transitions and ducts.
+
+### Changed
+- Part files with twisted or guided sweeps or lofts along a centerline are saved as format version 10, so
+  ParaWerk 0.4.0-alpha.1 reports them as newer files.
 
 ## [0.4.0-alpha.1] - 2026-10-26
 

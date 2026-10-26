@@ -126,6 +126,14 @@ describe('part file', () => {
     expect(sameTransform(shift, turn)).toBe(false);
   });
 
+  it('needs version 10 for twisted and guided sweeps and lofts along a centerline', () => {
+    const sweep = { ...defaultFeature('sweep', 's'), sketch: 'a', path: 'b' } as Feature;
+    expect(formatVersionOf([sweep])).toBe(8);
+    expect(formatVersionOf([{ ...sweep, twist: 90 } as Feature])).toBe(10);
+    expect(formatVersionOf([{ ...sweep, guide: 'g' } as Feature])).toBe(10);
+    expect(formatVersionOf([{ ...defaultFeature('loft', 'l'), centerline: 'c' } as Feature])).toBe(10);
+  });
+
   it('needs version 9 for curves (after ParaWerk 0.4)', () => {
     for (const type of ['projectedCurve', 'compositeCurve'] as const) expect(formatVersionOf([defaultFeature(type, 'f')]), type).toBe(9);
     expect(formatVersionOf([defaultFeature('helix', 'f')])).toBe(8);

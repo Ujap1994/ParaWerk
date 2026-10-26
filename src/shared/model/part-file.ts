@@ -21,20 +21,19 @@ export const PART_FORMAT = 'parawerk-part';
  * STEP imports, coordinate systems, extrusions in two directions, with a draft or up to the next face, thin
  * features, uneven chamfers (ParaWerk 0.3). 8: drafts, sweeps, lofts, ribs, modeled threads, helices,
  * variable radius fillets, configurations (ParaWerk 0.4). 9: projected and composite curves, patterns and
- * mirror images of patterns, twisted and guided sweeps, lofts along a centerline.
+ * mirror images of patterns (0.4.0-alpha.1). 10: twisted and guided sweeps, lofts along a centerline.
  * Older versions are read unchanged.
  */
-export const PART_FORMAT_VERSION = 9;
+export const PART_FORMAT_VERSION = 10;
 
 /** The oldest format version that can hold the document, so older ParaWerk versions can still open it. */
 export function formatVersionOf(features: readonly Feature[], properties: PartProperties = NO_PROPERTIES): number {
+  const tenth = (feature: Feature) =>
+    (feature.type === 'sweep' && ((feature.twist ?? 0) !== 0 || feature.guide !== undefined)) || (feature.type === 'loft' && feature.centerline !== undefined);
+  if (features.some(tenth)) return 10;
   const copies = new Set(features.filter(isCopyFeature).map((feature) => feature.id));
   const ninth = (feature: Feature) =>
-    feature.type === 'projectedCurve' ||
-    feature.type === 'compositeCurve' ||
-    (isCopyFeature(feature) && feature.features.some((id) => copies.has(id))) ||
-    (feature.type === 'sweep' && ((feature.twist ?? 0) !== 0 || feature.guide !== undefined)) ||
-    (feature.type === 'loft' && feature.centerline !== undefined);
+    feature.type === 'projectedCurve' || feature.type === 'compositeCurve' || (isCopyFeature(feature) && feature.features.some((id) => copies.has(id)));
   if (features.some(ninth)) return 9;
   const eighth = (feature: Feature) =>
     feature.type === 'draft' ||
