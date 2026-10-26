@@ -852,6 +852,14 @@ export function pickExtrudeEnd(pick: Pick | 'origin'): void {
   updateDraft({ endRef: ref });
 }
 
+/** Lets the edited loft follow a centerline (a sketch or curve id), or none. */
+export function setLoftCenterline(centerline: string | undefined): void {
+  const edit = getState().activeEdit;
+  if (edit?.draft.type !== 'loft') return;
+  const { centerline: _old, ...rest } = edit.draft;
+  setState({ activeEdit: { ...edit, draft: centerline ? { ...rest, centerline } : rest } });
+}
+
 /** Gives the edited sweep a guide curve (a sketch or curve id), or none; a guided sweep does not twist. */
 export function setSweepGuide(guide: string | undefined): void {
   const edit = getState().activeEdit;

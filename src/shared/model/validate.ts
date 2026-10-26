@@ -506,7 +506,14 @@ function parseFeatureFields(raw: Json, path: string): Feature {
     case 'loft': {
       if (!Array.isArray(raw.sketches) || raw.sketches.length > 100) throw new ValidationError('expected a list of sketch ids', `${path}.sketches`);
       const sketches = raw.sketches.map((id, i) => sketchId(id, `${path}.sketches[${i}]`));
-      return { ...common, type: 'loft', operation: operation(raw.operation, `${path}.operation`), sketches, ...(raw.ruled === undefined ? {} : { ruled: flag(raw.ruled, `${path}.ruled`) }) };
+      return {
+        ...common,
+        type: 'loft',
+        operation: operation(raw.operation, `${path}.operation`),
+        sketches,
+        ...(raw.ruled === undefined ? {} : { ruled: flag(raw.ruled, `${path}.ruled`) }),
+        ...(raw.centerline === undefined ? {} : { centerline: sketchId(raw.centerline, `${path}.centerline`) }),
+      };
     }
     case 'draft':
       if (typeof raw.flip !== 'boolean') throw new ValidationError('expected true or false', `${path}.flip`);

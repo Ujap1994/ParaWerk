@@ -207,6 +207,13 @@ int sweepAlongHelix(const std::vector<double>& profile, const std::vector<double
                     const std::string& name = "");
 
 /**
+ * A loft along a centerline: the profiles (encoded as for loftProfiles) joined along the curve
+ * `centerlineId` of the store (one chain; it runs from its end nearer to the first profile), each where
+ * it lies. Faces are named as for sweepProfile. Fails with "loft-sections", "path-gaps" or "loft-failed".
+ */
+int loftAlongCurve(const std::vector<double>& sections, int centerlineId, const std::vector<std::string>& edgeNames = {}, const std::string& name = "");
+
+/**
  * A solid through closed outlines on several planes, in order (`ruled`: flat between them). `sections`
  * holds their count, then per outline its plane (9 values, as `frame` of extrudeProfile) and the outline
  * (edge count, then edges, as one loop of extrudeProfile). Side faces are named after the edges of the first

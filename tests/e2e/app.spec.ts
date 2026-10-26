@@ -1213,6 +1213,7 @@ test('sweeps an outline along a path and lofts two outlines', async () => {
       { id: 'plane', type: 'plane', method: 'offset', references: [{ kind: 'standard-plane', plane: 'top' }], distance: 30, angle: 45, flip: false },
       sketch('low', { kind: 'standard', plane: 'top' }, square('a', 10)),
       sketch('high', { kind: 'feature', feature: 'plane', frame: { origin: [0, 0, 30], xDir: [1, 0, 0], yDir: [0, 1, 0], normal: [0, 0, 1] } }, square('b', 5)),
+      sketch('axis', { kind: 'standard', plane: 'front' }, [P('c1', 0, 0), P('c2', 0, 30), L('c', 'c1', 'c2')]),
     ];
   });
   await idle(page);
@@ -1235,7 +1236,14 @@ test('sweeps an outline along a path and lofts two outlines', async () => {
   await page.locator('[data-testid="loft-ruled"]').check();
   await page.click('[data-testid="panel-ok"]');
   expect(await volume(page)).toBeCloseTo(10 * (400 + 100 + 200), 2);
-  expect((await state(page)).history.features[3]).toMatchObject({ type: 'loft', sketches: ['low', 'high'], ruled: true });
+  expect((await state(page)).history.features[4]).toMatchObject({ type: 'loft', sketches: ['low', 'high'], ruled: true });
+  // Along a straight centerline: the same frustum, without the flat-faces option.
+  await page.locator('.feature-tree .tree-item[data-feature-id]').nth(4).dblclick();
+  await page.selectOption('[data-testid="loft-centerline"]', 'axis');
+  await expect(page.locator('[data-testid="loft-ruled"]')).toHaveCount(0);
+  await page.click('[data-testid="panel-ok"]');
+  expect(Math.abs((await volume(page)) / 7000 - 1)).toBeLessThan(2e-3);
+  expect((await state(page)).history.features[4]).toMatchObject({ type: 'loft', centerline: 'axis' });
 });
 
 test('twists a sweep and lets another one follow a guide curve', async () => {

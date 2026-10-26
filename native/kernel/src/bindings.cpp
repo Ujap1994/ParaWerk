@@ -331,6 +331,10 @@ val sweepAlongHelix(val profile, val frame, val helix, val edgeNames, std::strin
   });
 }
 
+val loftAlongCurve(val sections, int centerlineId, val edgeNames, std::string name) {
+  return guarded([&] { return idResult(parawerk::loftAlongCurve(emscripten::convertJSArrayToNumberVector<double>(sections), centerlineId, toStringVector(edgeNames), name)); });
+}
+
 val loftProfiles(val sections, bool ruled, val edgeNames, std::string name) {
   return guarded([&] { return idResult(parawerk::loftProfiles(emscripten::convertJSArrayToNumberVector<double>(sections), ruled, toStringVector(edgeNames), name)); });
 }
@@ -368,7 +372,7 @@ val importStepText(const std::string& text, const std::string& name) {
   return guarded([&] { return idResult(parawerk::importStep(text, name)); });
 }
 
-std::string version() { return "parawerk-kernel 0.20 / OCCT " PARAWERK_OCCT_VERSION; }
+std::string version() { return "parawerk-kernel 0.21 / OCCT " PARAWERK_OCCT_VERSION; }
 
 }  // namespace
 
@@ -412,6 +416,7 @@ EMSCRIPTEN_BINDINGS(parawerk_kernel) {
   emscripten::function("cutThread", &cutThread);
   emscripten::function("sweepAlongHelix", &sweepAlongHelix);
   emscripten::function("sweepAlongCurve", &sweepAlongCurve);
+  emscripten::function("loftAlongCurve", &loftAlongCurve);
   emscripten::function("sketchWire", &sketchWire);
   emscripten::function("projectCurve", &projectCurve);
   emscripten::function("intersectCurves", &intersectCurves);

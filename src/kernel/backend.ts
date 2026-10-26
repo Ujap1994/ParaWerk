@@ -40,6 +40,9 @@ export interface ResolvedSweep extends SweepFeature {
 /** A loft with the outline and plane of each of its sketches, in order. */
 export interface ResolvedLoft extends LoftFeature {
   sections: { loop: ProfileLoop; frame: SketchFrame }[];
+  /** The centerline: the path of a sketch on its plane, or a projected or composite curve. */
+  centerlinePath?: { path: SketchPath; frame: SketchFrame };
+  centerlineCurve?: ShapeHandle;
 }
 
 /**

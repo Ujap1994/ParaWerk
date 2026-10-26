@@ -1220,6 +1220,40 @@ int loftProfiles(const std::vector<double>& sections, bool ruled, const std::vec
   return store().add(result, namer.take());
 }
 
+int loftAlongCurve(const std::vector<double>& sections, int centerlineId, const std::vector<std::string>& edgeNames, const std::string& name) {
+  const TopoDS_Shape& line = store().get(centerlineId);
+  if (line.ShapeType() != TopAbs_WIRE) throw KernelError("path-gaps", "the centerline is not one chain");
+  ProfileReader in(sections);
+  const int count = in.count(1000);
+  if (count < 2) throw KernelError("loft-sections", "a loft needs at least two profiles");
+  NamedEdges first{edgeNames, {}};
+  const std::vector<std::string> noNames;
+  std::vector<TopoDS_Wire> wires;
+  for (int s = 0; s < count; ++s) {
+    std::vector<double> frame(9);
+    for (double& value : frame) value = in.number();
+    NamedEdges others{noNames, {}};
+    wires.push_back(readLoop(in, framePlane(frame), s == 0 ? first : others));
+  }
+  // The centerline runs from its end nearer to the first profile.
+  TopoDS_Wire spine = TopoDS::Wire(line);
+  TopoDS_Vertex start, end;
+  TopExp::Vertices(spine, start, end);
+  if (!start.IsNull() && !end.IsNull() && !start.IsSame(end)) {
+    Bnd_Box box;
+    BRepBndLib::Add(wires.front(), box);
+    const gp_Pnt middle((box.CornerMin().XYZ() + box.CornerMax().XYZ()) / 2);
+    if (middle.Distance(BRep_Tool::Pnt(end)) < middle.Distance(BRep_Tool::Pnt(start))) spine = TopoDS::Wire(spine.Reversed());
+  }
+  // Each profile where it lies, at the point of the centerline nearest to it.
+  BRepOffsetAPI_MakePipeShell pipe(spine);
+  for (const TopoDS_Wire& wire : wires) pipe.Add(wire, false, false);
+  pipe.Build();
+  if (!pipe.IsDone() || !pipe.MakeSolid()) throw KernelError("loft-failed", "the profiles could not be joined along the centerline");
+  requireValidSolid(pipe.Shape(), "loft");
+  return store().add(pipe.Shape(), sweepNames(pipe, first, name));
+}
+
 int cutHoles(int bodyId, const std::vector<double>& profile, const std::vector<double>& placements, const std::vector<std::string>& edgeNames,
              const std::string& name) {
   if (placements.empty() || placements.size() % 6 != 0) throw KernelError("operation-failed", "every hole needs a center and a direction");

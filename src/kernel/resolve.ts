@@ -4,7 +4,7 @@ import { holePositions, holeProblem } from '../shared/model/hole.ts';
 import { edgeFaceNames, edgeRefOf, faceRefOf, resolveEdgeRefs, resolveFaceRef, resolveFacePlane, type BodyNaming } from '../shared/model/naming.ts';
 import { sketchProfile, type Profile, type ProfileEdge } from '../shared/model/profile.ts';
 import { DEFAULT_THIN_THICKNESS, thinProfile } from '../shared/model/thin.ts';
-import { edgePoint, reversedPath, sketchEdges, sketchPath } from '../shared/model/path.ts';
+import { edgePoint, reversedPath, sketchEdges, sketchPath, type SketchPath } from '../shared/model/path.ts';
 import type { GeometryRef, ReferenceGeometry } from '../shared/model/reference.ts';
 import { frameOf, frameOnPlane, ORIGIN_ID, toModel, toSketch, type SketchFrame, type SketchPlaneRef } from '../shared/model/sketch.ts';
 import type { Point2 } from '../shared/model/spline.ts';
@@ -391,13 +391,25 @@ function resolveSweep(feature: SweepFeature, before: readonly Feature[], context
 /** The guide curve of a sweep: a projected or composite curve, or the path of a sketch. */
 function resolveGuide(feature: SweepFeature, before: readonly Feature[], context: ResolveContext): Pick<ResolvedSweep, 'guidePath' | 'guideCurve'> {
   if (!feature.guide) return {};
-  const curve = context.curves?.get(feature.guide);
-  if (curve) return { guideCurve: curve };
-  const sketch = before.find((candidate): candidate is SketchFeature => candidate.id === feature.guide && candidate.type === 'sketch' && !candidate.suppressed);
-  if (!sketch) throw new FeatureError('guide-missing');
+  const guide = curveOrPath(feature.guide, before, context, 'guide-missing', 'guide-gaps');
+  return guide.curve ? { guideCurve: guide.curve } : { guidePath: guide.path };
+}
+
+/** A projected or composite curve, or the path of a sketch (one chain), by id. */
+function curveOrPath(
+  id: string,
+  before: readonly Feature[],
+  context: ResolveContext,
+  missing: 'guide-missing' | 'centerline-missing',
+  gaps: 'guide-gaps' | 'centerline-gaps',
+): { curve: ShapeHandle; path?: undefined } | { curve?: undefined; path: { path: SketchPath; frame: SketchFrame } } {
+  const curve = context.curves?.get(id);
+  if (curve) return { curve };
+  const sketch = before.find((candidate): candidate is SketchFeature => candidate.id === id && candidate.type === 'sketch' && !candidate.suppressed);
+  if (!sketch) throw new FeatureError(missing);
   const found = sketchPath(sketch.sketch);
-  if ('code' in found) throw new FeatureError('guide-gaps');
-  return { guidePath: { path: found, frame: context.frames.get(sketch.id) ?? frameOf(sketch.plane) } };
+  if ('code' in found) throw new FeatureError(gaps);
+  return { path: { path: found, frame: context.frames.get(sketch.id) ?? frameOf(sketch.plane) } };
 }
 
 /** A rectangle of `length` × `width` along the x axis, centered on it, as a profile with named sides. */
@@ -454,7 +466,9 @@ function resolveLoft(feature: LoftFeature, before: readonly Feature[], context: 
     if (!region || profile.regions.length > 1 || region.holes.length > 0) throw new FeatureError('loft-profile', String(i + 1));
     return { loop: region.outer, frame: context.frames.get(sketch.id) ?? frameOf(sketch.plane) };
   });
-  return { ...feature, sections };
+  if (!feature.centerline) return { ...feature, sections };
+  const centerline = curveOrPath(feature.centerline, before, context, 'centerline-missing', 'centerline-gaps');
+  return { ...feature, sections, ...(centerline.curve ? { centerlineCurve: centerline.curve } : { centerlinePath: centerline.path }) };
 }
 
 /** The face of a thread in the body it is cut into; found by name, or by position with the reference brought up to date. */

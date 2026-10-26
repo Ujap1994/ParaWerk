@@ -525,7 +525,9 @@
     "curve-edge-missing": "{{detail}} Kante(n) der Kurve existieren nicht mehr, eine frühere Änderung hat sie entfernt. Bearbeite die Kurve und wähle die Kanten neu aus.",
     "pattern-too-many": "Das Muster würde {{detail}} Kopien erzeugen; höchstens 10.000 sind möglich. Verringere die Anzahlen.",
     "guide-missing": "Die Leitkurve der Austragung existiert nicht mehr. Wähle eine andere oder keine.",
-    "guide-gaps": "Die Leitkurve muss ein Kurvenzug ohne Lücken und Verzweigungen sein."
+    "guide-gaps": "Die Leitkurve muss ein Kurvenzug ohne Lücken und Verzweigungen sein.",
+    "centerline-missing": "Die Mittellinie der Ausformung existiert nicht mehr. Wähle eine andere oder keine.",
+    "centerline-gaps": "Die Mittellinie muss ein Kurvenzug ohne Lücken und Verzweigungen sein."
   },
   "warnings": {
     "edge-missing_one": "{{count}} ausgewählte Kante existiert nicht mehr und wird ausgelassen. Bearbeite das Feature, um sie zu entfernen oder eine andere Kante zu wählen.",
@@ -1049,7 +1051,10 @@
     "add": "Profil hinzufügen",
     "choose": "Skizze wählen",
     "ruled": "Ebene Flächen zwischen den Profilen",
-    "hint": "Jede Skizze liefert eine geschlossene Kontur (ohne Löcher). Der Körper verläuft durch sie in der Reihenfolge der Liste, meist auf parallelen Ebenen übereinander."
+    "hint": "Jede Skizze liefert eine geschlossene Kontur (ohne Löcher). Der Körper verläuft durch sie in der Reihenfolge der Liste, meist auf parallelen Ebenen übereinander.",
+    "centerline": "Mittellinie",
+    "noCenterline": "Keine (gerade zwischen den Profilen)",
+    "centerlineHint": "Die Profile bleiben, wo sie gezeichnet sind; dazwischen folgt die Ausformung der Mittellinie – einer Skizze oder Kurve durch die Profile –, für gebogene Übergänge und Kanäle."
   },
   "rib": {
     "thickness": "Dicke",

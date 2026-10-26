@@ -140,6 +140,8 @@ export type FeatureErrorCode =
   | 'pattern-too-many'
   | 'guide-missing'
   | 'guide-gaps'
+  | 'centerline-missing'
+  | 'centerline-gaps'
   | 'curve-missed'
   | 'curve-faces'
   | 'curve-edge-missing'

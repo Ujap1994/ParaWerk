@@ -71,6 +71,44 @@ describe('sweep', () => {
   });
 });
 
+describe('loft along a centerline', () => {
+  const loft = (more: Partial<LoftFeature> = {}): LoftFeature => ({ id: 'l', type: 'loft', operation: 'add', sketches: ['s1', 's2'], ...more });
+  const P2 = (p: string, cx: number, cy: number, half: number): SketchEntity[] => [
+    P(`${p}1`, cx - half, cy - half), P(`${p}2`, cx + half, cy - half), P(`${p}3`, cx + half, cy + half), P(`${p}4`, cx - half, cy + half),
+    L(`${p}a`, `${p}1`, `${p}2`), L(`${p}b`, `${p}2`, `${p}3`), L(`${p}c`, `${p}3`, `${p}4`), L(`${p}d`, `${p}4`, `${p}1`),
+  ];
+
+  it('joins the profiles along a straight centerline', () => {
+    const [plane, high] = above('s2', 30, ...P2('b', 0, 0, 5));
+    const low = sketch('s1', { kind: 'standard', plane: 'top' }, ...P2('a', 0, 0, 10));
+    const line = sketch('c', { kind: 'standard', plane: 'front' }, P('c1', 0, 0), P('c2', 0, 30), L('c12', 'c1', 'c2'));
+    const result = build([low, plane, high, line, loft({ centerline: 'c' })]);
+    expect(result.features.at(-1)?.status).toBe('ok');
+    // A frustum from 20 × 20 to 10 × 10 over 30.
+    expect(Math.abs((result.captures[0]?.properties?.volume ?? 0) / 7000 - 1)).toBeLessThan(2e-3);
+    expect(result.captures[0]?.mesh?.naming.faces).toEqual(expect.arrayContaining(['l:side:aa', 'l:start', 'l:end']));
+  });
+
+  it('bends with the centerline', () => {
+    // A 10 × 10 square on the top plane and another on a plane at x = 30, joined along a quarter circle.
+    const low = sketch('s1', { kind: 'standard', plane: 'top' }, ...P2('a', 0, 0, 5));
+    const side: PlaneFeature = { id: 'side', type: 'plane', method: 'offset', references: [{ kind: 'standard-plane', plane: 'right' }], distance: 30, angle: 45, flip: false };
+    const high = sketch('s2', { kind: 'feature', feature: 'side', frame: frameOnPlane([30, 0, 0], [1, 0, 0]) }, ...P2('b', 0, 30, 5));
+    const arc = sketch('c', { kind: 'standard', plane: 'front' }, P('m', 30, 0), P('c1', 0, 0), P('c2', 30, 30), { id: 'r', type: 'arc', center: 'm', start: 'c2', end: 'c1' });
+    const result = build([low, side, high, arc, loft({ centerline: 'c' })]);
+    expect(result.features.at(-1)?.status).toBe('ok');
+    // The square around the quarter circle (Pappus): 100 · π/2 · 30.
+    expect(Math.abs((result.captures[0]?.properties?.volume ?? 0) / (100 * (Math.PI / 2) * 30) - 1)).toBeLessThan(2e-3);
+    expect(result.captures[0]?.properties?.bboxMax[0]).toBeCloseTo(30, 2);
+  });
+
+  it('reports a centerline it cannot follow', () => {
+    const [plane, high] = above('s2', 30, ...P2('b', 0, 0, 5));
+    const low = sketch('s1', { kind: 'standard', plane: 'top' }, ...P2('a', 0, 0, 10));
+    expect(last([low, plane, high, loft({ centerline: 'gone' })])?.error?.code).toBe('centerline-missing');
+  });
+});
+
 describe('loft', () => {
   const loft = (sketches: string[], more: Partial<LoftFeature> = {}): LoftFeature => ({ id: 'l', type: 'loft', operation: 'add', sketches, ...more });
   const bottom = sketch('s1', { kind: 'standard', plane: 'top' }, ...square('a', 10));

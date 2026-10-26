@@ -200,6 +200,12 @@ outline without holes, usually on parallel planes one above the other (reference
   surface through all of them.
 - Outlines with different numbers of edges (a square and a circle) are joined too; the side faces are
   named after the edges of the first outline.
+- *Centerline* (optional): a sketch or a [curve](#curves) through the profiles. The profiles stay where
+  they are drawn, and between them the loft follows the centerline instead of running straight – bent
+  transitions, elbows, ducts around a corner. With a centerline there are no flat faces between the
+  profiles.
+
+![A square duct bent around a corner: a loft between two profiles along a quarter-circle centerline](../images/screenshots/loft-centerline.png)
 
 ![A transition from a square to a circle 60 mm above it](../images/screenshots/loft.png)
 

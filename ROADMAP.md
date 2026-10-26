@@ -199,6 +199,7 @@ patterns, curves; 2026-10-26).
 | Sweep (along a path of lines, arcs, ellipses and splines) and loft (through outlines of several sketches) | ✅ done |
 | Rib (within the sketch plane from lines, or normal to the sketch) | ✅ done |
 | Sweep with twist and a guide curve | ✅ done |
+| Loft along a centerline | ✅ done |
 | Loft with guide curves | open |
 | Variable-radius fillets (from a start to an end radius along each edge) | ✅ done |
 | Modeled threads (ISO metric, external and internal, on cylindrical faces) | ✅ done |

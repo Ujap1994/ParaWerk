@@ -1265,6 +1265,23 @@ test('sweep and loft screenshots', async () => {
     { id: 'spring', type: 'sweep', name: 'Spring', operation: 'add', sketch: 'wire', path: 'helix' },
   ];
   await show(spring, 'helix', 'helix.png', 'Spring');
+  // A duct from a wide square on the top plane to a smaller one on a plane at x = 60, around a quarter circle.
+  const squareAt = (p: string, cx: number, cy: number, half: number) => [
+    P(`${p}1`, cx - half, cy - half), P(`${p}2`, cx + half, cy - half), P(`${p}3`, cx + half, cy + half), P(`${p}4`, cx - half, cy + half),
+    L(`${p}a`, `${p}1`, `${p}2`), L(`${p}b`, `${p}2`, `${p}3`), L(`${p}c`, `${p}3`, `${p}4`), L(`${p}d`, `${p}4`, `${p}1`),
+  ];
+  await show(
+    [
+      { id: 'inlet', type: 'sketch', name: 'Inlet', plane: { kind: 'standard', plane: 'top' }, sketch: { entities: squareAt('a', 0, 0, 15), constraints: [] } },
+      { id: 'side', type: 'plane', name: 'Outlet plane', method: 'offset', references: [{ kind: 'standard-plane', plane: 'right' }], distance: 60, angle: 45, flip: false },
+      { id: 'outlet', type: 'sketch', name: 'Outlet', plane: { kind: 'feature', feature: 'side', frame: { origin: [60, 0, 0], xDir: [0, 1, 0], yDir: [0, 0, 1], normal: [1, 0, 0] } }, sketch: { entities: squareAt('b', 0, 60, 8), constraints: [] } },
+      { id: 'bend', type: 'sketch', name: 'Centerline', plane: { kind: 'standard', plane: 'front' }, sketch: { entities: [P('m', 60, 0), P('c1', 0, 0), P('c2', 60, 60), { id: 'r', type: 'arc', center: 'm', start: 'c2', end: 'c1' }], constraints: [] } },
+      { id: 'duct', type: 'loft', name: 'Duct', operation: 'add', sketches: ['inlet', 'outlet'], centerline: 'bend' },
+    ],
+    'duct',
+    'loft-centerline.png',
+    'Duct',
+  );
   // A flat bar twisted half a turn along a straight path.
   await show(
     [

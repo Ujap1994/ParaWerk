@@ -525,7 +525,9 @@
     "curve-edge-missing": "{{detail}} edge(s) of the curve no longer exist: an earlier change removed them. Edit the curve and pick the edges again.",
     "pattern-too-many": "The pattern would make {{detail}} copies; at most 10,000 are possible. Reduce the counts.",
     "guide-missing": "The guide curve of the sweep no longer exists. Choose another one, or none.",
-    "guide-gaps": "The guide curve must be one chain of curves without gaps or branches."
+    "guide-gaps": "The guide curve must be one chain of curves without gaps or branches.",
+    "centerline-missing": "The centerline of the loft no longer exists. Choose another one, or none.",
+    "centerline-gaps": "The centerline must be one chain of curves without gaps or branches."
   },
   "warnings": {
     "edge-missing_one": "{{count}} selected edge no longer exists and is left out. Edit the feature to remove it or pick another edge.",
@@ -1049,7 +1051,10 @@
     "add": "Add a profile",
     "choose": "Choose a sketch",
     "ruled": "Flat faces between the profiles",
-    "hint": "Each sketch gives one closed outline (without holes). The solid goes through them in the order of the list, usually on parallel planes one above the other."
+    "hint": "Each sketch gives one closed outline (without holes). The solid goes through them in the order of the list, usually on parallel planes one above the other.",
+    "centerline": "Centerline",
+    "noCenterline": "None (straight between the profiles)",
+    "centerlineHint": "The profiles stay where they are drawn; between them the loft follows the centerline – a sketch or a curve through the profiles – for bent transitions and ducts."
   },
   "rib": {
     "thickness": "Thickness",

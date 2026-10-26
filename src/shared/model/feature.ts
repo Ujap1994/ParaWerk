@@ -509,6 +509,8 @@ export interface LoftFeature extends FeatureBase {
   sketches: string[];
   /** Flat faces between the outlines instead of smooth ones. */
   ruled?: boolean;
+  /** A centerline the loft follows (a sketch or curve id); the outlines stay where they are drawn. */
+  centerline?: string;
 }
 
 /** Which way a rib grows from its curves: within the sketch plane, or along its normal. */
@@ -607,7 +609,7 @@ export function isCurveFeature(feature: Feature): feature is CurveFeature {
 export function sketchesUsedBy(feature: Feature): string[] {
   if (isSketchBased(feature) || feature.type === 'rib' || feature.type === 'helix') return [feature.sketch];
   if (feature.type === 'sweep') return feature.guide ? [feature.sketch, feature.path, feature.guide] : [feature.sketch, feature.path];
-  if (feature.type === 'loft') return feature.sketches;
+  if (feature.type === 'loft') return feature.centerline ? [...feature.sketches, feature.centerline] : feature.sketches;
   if (feature.type === 'projectedCurve') return feature.method === 'sketch' ? [feature.sketch, feature.sketch2] : [feature.sketch];
   if (feature.type === 'compositeCurve') return feature.curves;
   return [];
