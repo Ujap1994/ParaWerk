@@ -34,8 +34,8 @@ rebuilds your part; your document is not affected. Please report the steps that 
 
 ## Known limitations of the alpha
 
-- Not available yet: multi-body tools, projected and composite curves, surface tools, sweeps with twist
-  or guide curves (Phase 3); assemblies (Phase 4). Thin features offset lines, arcs and circles, not
+- Not available yet: multi-body tools, surface tools, sweeps with twist or guide curves, lofts with guide
+  curves (Phase 3); assemblies (Phase 4). Thin features offset lines, arcs and circles, not
   ellipses and splines; face fillets work between planar faces.
 - Along a helix, a sweep takes outlines without holes. A spring of many turns takes a second or more to
   build and show.

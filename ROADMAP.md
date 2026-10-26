@@ -189,8 +189,9 @@ what that turns up is fixed before Phase 3 starts.
 
 ### Phase 3 – started (2026-10-26, alongside the owner's Gate 2 tests)
 
-First preview released as [v0.4.0-alpha.0](https://github.com/Ujap1994/ParaWerk/releases/tag/v0.4.0-alpha.0)
-(2026-10-26).
+First previews released as [v0.4.0-alpha.0](https://github.com/Ujap1994/ParaWerk/releases/tag/v0.4.0-alpha.0)
+and [v0.4.0-alpha.1](https://github.com/Ujap1994/ParaWerk/releases/tag/v0.4.0-alpha.1) (patterns of
+patterns, curves; 2026-10-26).
 
 | Item | Status |
 |---|---|

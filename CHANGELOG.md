@@ -7,6 +7,12 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+## [0.4.0-alpha.1] - 2026-10-26
+
+Patterns of patterns (requested after the first tests of 0.4.0-alpha.0), projected and composite curves,
+and a fix for the recovery of unsaved work. Still an alpha: not ready for productive use; see the
+disclaimer in the README.
+
 ### Added
 - Projected curves: the curves of a sketch projected along its normal onto picked faces (on both sides of
   the sketch or one), or a 3D curve where the curves of two sketches meet (sketch on sketch).
@@ -19,6 +25,11 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 ### Changed
 - Part files with projected or composite curves, or with patterns of patterns, are saved as format
   version 9, so ParaWerk 0.4.0-alpha.0 reports them as newer files.
+
+### Fixed
+- After a clean close, ParaWerk could still offer to restore the document at the next start (mostly on
+  Linux, where the program ended before the recovery copy was deleted); the copy is now removed before
+  the program ends.
 
 ## [0.4.0-alpha.0] - 2026-10-26
 
@@ -58,9 +69,6 @@ full equations. Still an alpha: not ready for productive use; see the disclaimer
   damaged ones.
 
 ### Fixed
-- After a clean close, ParaWerk could still offer to restore the document at the next start (mostly on
-  Linux, where the program ended before the recovery copy was deleted); the copy is now removed before
-  the program ends.
 - Mass properties: the bounding box lies tight around curved faces (it was up to a millimeter too large
   around swept and lofted faces).
 
@@ -376,7 +384,8 @@ First technical preview (Phase 0). Not ready for productive use; see the disclai
 ### Removed
 - DWG from the planned formats, because it is a closed, proprietary format. DXF covers 2D exchange.
 
-[Unreleased]: https://github.com/Ujap1994/ParaWerk/compare/v0.4.0-alpha.0...HEAD
+[Unreleased]: https://github.com/Ujap1994/ParaWerk/compare/v0.4.0-alpha.1...HEAD
+[0.4.0-alpha.1]: https://github.com/Ujap1994/ParaWerk/compare/v0.4.0-alpha.0...v0.4.0-alpha.1
 [0.4.0-alpha.0]: https://github.com/Ujap1994/ParaWerk/compare/v0.3.0-alpha.1...v0.4.0-alpha.0
 [0.3.0-alpha.1]: https://github.com/Ujap1994/ParaWerk/compare/v0.3.0-alpha.0...v0.3.0-alpha.1
 [0.3.0-alpha.0]: https://github.com/Ujap1994/ParaWerk/compare/v0.2.0-alpha.1...v0.3.0-alpha.0

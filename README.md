@@ -96,15 +96,17 @@ configurations – to part modeling (Phase 2) and the 2D sketcher (Phase 1):
   a draft angle, also as **thin features** (walls along open or closed curves); **sweep** along a path or
   a **helix** (springs, coils) and **loft** through several outlines; **rib**; **draft** on picked faces;
   **holes** for ISO metric screws (clearance, counterbore, countersink, tapped with cosmetic threads) and
-  **modeled ISO threads** for 3D printing; **linear and circular patterns** and **mirror** images;
+  **modeled ISO threads** for 3D printing; **linear and circular patterns** and **mirror** images, also of
+  other patterns;
   **shell**; **fillet** (on edges or whole faces, constant or variable radius, face fillets also without a
   shared edge, full rounds) and **chamfer** (equal, two distances, distance and angle); box and cylinder;
   **STEP import** as a body.
 - **Stable edits:** faces are named after the feature that made them, so fillets, chamfers, sketches on
   faces and other references stay in place when earlier features change; lost edges are marked instead
   of breaking the part. A reference suite of 36 parts checks this in every CI run.
-- **Reference geometry:** planes, axes, points, coordinate systems and helices built on the part or on
-  each other; they carry sketches and follow the part.
+- **Reference geometry and curves:** planes, axes, points, coordinate systems, helices, projected and
+  composite curves built on the part or on each other; they carry sketches, guide sweeps and follow the
+  part.
 - **Feature tree and property panels:** live preview while editing, rollback bar to insert features in
   the middle of the history, reorder by dragging (with dependency checks), suppress, delete, undo and
   redo; clear errors and warnings that point to the cause.
@@ -162,7 +164,7 @@ See the [user guide](docs/user-guide/README.md) for details.
 > Everything below is **planned**. Each item moves to "Available now", with screenshots, once it ships.
 
 ### Part modeling
-- Multi-body parts (combine, split, separate bodies), projected and composite curves
+- Multi-body parts (combine, split, separate bodies)
 - Sweeps with twist and guide curves, lofts with guide curves
 - Surface tools (offset, knit, thicken)
 

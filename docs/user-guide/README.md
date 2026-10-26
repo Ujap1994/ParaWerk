@@ -16,7 +16,7 @@
 4. [Sketches](sketches.md): planes, sketch mode, drawing and editing tools, snapping, relations,
    dimensions, definition status, DXF, and a step-by-step example
 5. [Modeling features](features.md): extrude, revolve, sweep, helix and springs, loft, holes, threads,
-   patterns and mirror, box, cylinder, fillet, chamfer, shell, draft, rib, reference geometry, variables,
+   patterns and mirror, box, cylinder, fillet, chamfer, shell, draft, rib, reference geometry, curves, variables,
    configurations, editing and undo
 6. [Material and evaluation](evaluate.md): material and density, color, mass, center of mass,
    moments of inertia, and the measure tool
@@ -28,8 +28,8 @@
 
 | Area | Available now |
 |---|---|
-| Modeling | Extrude and revolve sketches (add or remove material; a depth, through all, up to the next face, a planar or curved surface or a vertex; two directions; draft; thin features), holes for metric screws (clearance, counterbore, countersink, tapped with cosmetic threads), sweeps along paths and helices (springs), lofts, ribs, drafts on picked faces, modeled ISO threads, linear and circular patterns and mirror images of features, box and cylinder, fillet (constant or variable radius) and chamfer (equal, two distances, distance and angle) on edges or whole faces picked in the 3D view, face fillets and full rounds, shells open at picked faces; features keep their edges and faces when earlier features change |
-| Reference geometry | Planes (offset, at an angle, through three points, between two planes, parallel through a point), axes, points, coordinate systems and helices that follow the part and carry sketches |
+| Modeling | Extrude and revolve sketches (add or remove material; a depth, through all, up to the next face, a planar or curved surface or a vertex; two directions; draft; thin features), holes for metric screws (clearance, counterbore, countersink, tapped with cosmetic threads), sweeps along paths and helices (springs), lofts, ribs, drafts on picked faces, modeled ISO threads, linear and circular patterns and mirror images of features (also of other patterns), box and cylinder, fillet (constant or variable radius) and chamfer (equal, two distances, distance and angle) on edges or whole faces picked in the 3D view, face fillets and full rounds, shells open at picked faces; features keep their edges and faces when earlier features change |
+| Reference geometry and curves | Planes (offset, at an angle, through three points, between two planes, parallel through a point), axes, points, coordinate systems, helices, projected and composite curves that follow the part, carry sketches and guide sweeps |
 | Sketching | Sketches on the front, top and right plane and on planar faces, with their own undo history; lines, rectangles (corner, center, 3-point, parallelogram), circles, ellipses, arcs (center, 3-point, tangent), splines (with points on them, trimmed exactly), slots, polygons and points, with snapping and automatic relations; relations checked by the solver and shown as symbols next to the geometry; smart dimensions with reference dimensions; status colors and conflict diagnosis; trim, extend, sketch fillet and chamfer, offset, mirror, patterns, move, copy and scale; converting model edges; dragging with live solving; DXF import and export |
 | Feature tree | Edit, suppress and delete features; rollback bar to insert features in the middle of the history; reorder by dragging, with dependency checks; undo and redo |
 | Variables | Named values and equations for the whole part, used by name in parameters and sketch dimensions; calculations with functions and conditions in every number field; configurations with a design table |
@@ -37,5 +37,6 @@
 | Files | Save and open `.pwpart` with recovery copies of unsaved work after a crash, import STEP as a body, export STEP (AP214), binary STL and 3MF with material and color |
 | Interface | English and German, light and dark theme, mouse and trackpad navigation |
 
-Multi-body parts, more curves and surface tools follow in Phase 3, assemblies in Phase 4. See the
+Multi-body parts, surface tools and sweeps with twist and guide curves follow in Phase 3, assemblies in
+Phase 4. See the
 [roadmap](../../ROADMAP.md).
