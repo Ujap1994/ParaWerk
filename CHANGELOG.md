@@ -7,6 +7,12 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+## [0.4.0-alpha.2] - 2026-10-26
+
+Completes the features of **Phase 3** except lofts with guide curves: twisted and guided sweeps, lofts
+along a centerline, multi-body parts and surface tools, with a new *Surfaces* tab. Still an alpha: not
+ready for productive use; see the disclaimer in the README.
+
 ### Added
 - Sweeps along a sketch path or a curve can twist about the path (an angle from start to end, also several
   turns) or follow a guide curve, turning towards it and growing or shrinking with its distance from the
@@ -26,6 +32,9 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
   narrower screens.
 - Part files with twisted or guided sweeps, lofts along a centerline, separate bodies, combined or deleted
   bodies, or surfaces are saved as format version 10, so ParaWerk 0.4.0-alpha.1 reports them as newer files.
+
+### Fixed
+- The close button of messages is labeled in the language of the interface.
 
 ## [0.4.0-alpha.1] - 2026-10-26
 
@@ -406,7 +415,8 @@ First technical preview (Phase 0). Not ready for productive use; see the disclai
 ### Removed
 - DWG from the planned formats, because it is a closed, proprietary format. DXF covers 2D exchange.
 
-[Unreleased]: https://github.com/Ujap1994/ParaWerk/compare/v0.4.0-alpha.1...HEAD
+[Unreleased]: https://github.com/Ujap1994/ParaWerk/compare/v0.4.0-alpha.2...HEAD
+[0.4.0-alpha.2]: https://github.com/Ujap1994/ParaWerk/compare/v0.4.0-alpha.1...v0.4.0-alpha.2
 [0.4.0-alpha.1]: https://github.com/Ujap1994/ParaWerk/compare/v0.4.0-alpha.0...v0.4.0-alpha.1
 [0.4.0-alpha.0]: https://github.com/Ujap1994/ParaWerk/compare/v0.3.0-alpha.1...v0.4.0-alpha.0
 [0.3.0-alpha.1]: https://github.com/Ujap1994/ParaWerk/compare/v0.3.0-alpha.0...v0.3.0-alpha.1

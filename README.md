@@ -20,7 +20,8 @@
 > [!WARNING]
 > **ParaWerk is under active development.** Alpha 0.4 models real parts: sketches, extrusions and
 > revolutions, sweeps (also springs) and lofts, holes and modeled threads, patterns, shells, drafts, ribs,
-> fillets and chamfers, reference geometry, configurations, materials and mass properties. Assemblies, standard parts and drawings follow in later phases. It is an alpha to try out
+> fillets and chamfers, reference geometry and curves, surfaces, parts of several bodies, configurations,
+> materials and mass properties. Assemblies, standard parts and drawings follow in later phases. It is an alpha to try out
 > and give feedback on, not yet a tool for productive work. Please read the [disclaimer](#disclaimer)
 > first.
 
@@ -86,15 +87,16 @@ makers, students and small workshops that covers the everyday mechanical design 
 
 ## Available now
 
-Alpha 0.4 brings the first advanced features of Phase 3 – sweep, loft, rib, draft, modeled threads,
-configurations – to part modeling (Phase 2) and the 2D sketcher (Phase 1):
+Alpha 0.4 brings the advanced features of Phase 3 – sweep, loft, rib, draft, modeled threads, curves,
+surfaces, multi-body parts, configurations – to part modeling (Phase 2) and the 2D sketcher (Phase 1):
 
 ![A bearing housing built from sketches: plate, boss, bore, counterbored M6 holes, rounds and a chamfer, in aluminium](docs/images/screenshots/part-modeling.png)
 
 - **Solid features:** **extrude** and **revolve** sketches (add or remove material) – a depth, through
   all, up to the next face, up to a planar or curved surface or a vertex, in one or two directions, with
-  a draft angle, also as **thin features** (walls along open or closed curves); **sweep** along a path or
-  a **helix** (springs, coils) and **loft** through several outlines; **rib**; **draft** on picked faces;
+  a draft angle, also as **thin features** (walls along open or closed curves); **sweep** along a path, a
+  **helix** (springs, coils) or a curve, also **twisted** or along a **guide curve**, and **loft** through
+  several outlines, also along a **centerline**; **rib**; **draft** on picked faces;
   **holes** for ISO metric screws (clearance, counterbore, countersink, tapped with cosmetic threads) and
   **modeled ISO threads** for 3D printing; **linear and circular patterns** and **mirror** images, also of
   other patterns;
@@ -104,6 +106,9 @@ configurations – to part modeling (Phase 2) and the 2D sketcher (Phase 1):
 - **Stable edits:** faces are named after the feature that made them, so fillets, chamfers, sketches on
   faces and other references stay in place when earlier features change; lost edges are marked instead
   of breaking the part. A reference suite of 36 parts checks this in every CI run.
+- **Multi-body parts and surfaces:** features that add material can keep it as a body of its own; cuts
+  act body by body; **combine** (add, subtract, common) and **delete** bodies. **Offset**, **knit** and
+  **thicken** surfaces.
 - **Reference geometry and curves:** planes, axes, points, coordinate systems, helices, projected and
   composite curves built on the part or on each other; they carry sketches, guide sweeps and follow the
   part.
@@ -164,9 +169,7 @@ See the [user guide](docs/user-guide/README.md) for details.
 > Everything below is **planned**. Each item moves to "Available now", with screenshots, once it ships.
 
 ### Part modeling
-- Multi-body parts (combine, split, separate bodies)
-- Sweeps with twist and guide curves, lofts with guide curves
-- Surface tools (offset, knit, thicken)
+- Lofts with guide curves; splitting bodies and feature scope for multi-body parts
 
 ### Assemblies
 - Components and sub-assemblies with standard, advanced and mechanical mates

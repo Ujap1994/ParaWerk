@@ -34,16 +34,19 @@ rebuilds your part; your document is not affected. Please report the steps that 
 
 ## Known limitations of the alpha
 
-- Not available yet: multi-body tools, surface tools, sweeps with twist or guide curves, lofts with guide
-  curves (Phase 3); assemblies (Phase 4). Thin features offset lines, arcs and circles, not
-  ellipses and splines; face fillets work between planar faces.
-- Along a helix, a sweep takes outlines without holes. A spring of many turns takes a second or more to
-  build and show.
-- No multi-body tools yet (combining, splitting or listing separate bodies of a part).
+- Not available yet: lofts with guide curves, splitting bodies, feature scope (cuts limited to chosen
+  bodies) and moving or copying bodies; assemblies (Phase 4).
+- Thin features offset lines, arcs and circles, not ellipses and splines; face fillets work between
+  planar faces.
+- Shell, draft, threads and face fillets on bodies that overlap other bodies act on the part as a whole;
+  combine overlapping bodies first.
+- Along a helix, with a twist or with a guide curve, a sweep takes outlines without holes. A spring of
+  many turns takes a second or more to build and show.
 - Converted model edges are fixed copies; they do not follow later changes of the model yet.
 - Ellipses can only be trimmed as a whole, and *Offset* leaves ellipses and splines out.
-- Part files with projected or composite curves or patterns of patterns (format version 9) cannot be
-  opened by ParaWerk 0.4.0-alpha.0.
+- Part files with twisted or guided sweeps, centerline lofts, several bodies or surfaces (format version
+  10) cannot be opened by ParaWerk 0.4.0-alpha.1, those with curves or patterns of patterns (format
+  version 9) not by 0.4.0-alpha.0.
 - Part files with the features of 0.4 (format version 8) cannot be opened by ParaWerk 0.3, and those of
   0.3 (format versions 4–7) not by ParaWerk 0.2; the older version reports a newer file.
 - Builds are not code-signed yet.

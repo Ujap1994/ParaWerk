@@ -190,8 +190,9 @@ what that turns up is fixed before Phase 3 starts.
 ### Phase 3 – features complete except loft guide curves (2026-10-26)
 
 First previews released as [v0.4.0-alpha.0](https://github.com/Ujap1994/ParaWerk/releases/tag/v0.4.0-alpha.0)
-and [v0.4.0-alpha.1](https://github.com/Ujap1994/ParaWerk/releases/tag/v0.4.0-alpha.1) (patterns of
-patterns, curves; 2026-10-26).
+[v0.4.0-alpha.1](https://github.com/Ujap1994/ParaWerk/releases/tag/v0.4.0-alpha.1) (patterns of
+patterns, curves) and [v0.4.0-alpha.2](https://github.com/Ujap1994/ParaWerk/releases/tag/v0.4.0-alpha.2)
+(twisted and guided sweeps, centerline lofts, multi-body parts, surfaces; all 2026-10-26).
 
 | Item | Status |
 |---|---|
