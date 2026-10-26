@@ -12,10 +12,13 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
   the sketch or one), or a 3D curve where the curves of two sketches meet (sketch on sketch).
 - Composite curves: edges of the part, sketches and other curves joined end to end into one chain.
 - Sweeps follow projected and composite curves as their path.
+- Patterns and mirror images copy other patterns and mirror images too, with their original and all
+  their copies (a row of holes turned around an axis, a row copied into a grid); places that coincide are
+  made once.
 
 ### Changed
-- Part files with projected or composite curves are saved as format version 9, so ParaWerk 0.4.0-alpha.0
-  reports them as newer files.
+- Part files with projected or composite curves, or with patterns of patterns, are saved as format
+  version 9, so ParaWerk 0.4.0-alpha.0 reports them as newer files.
 
 ## [0.4.0-alpha.0] - 2026-10-26
 

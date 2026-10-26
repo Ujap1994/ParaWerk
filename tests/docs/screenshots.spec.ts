@@ -1188,6 +1188,36 @@ test('draft screenshots', async () => {
   await app.close();
 });
 
+test('pattern of pattern screenshot', async () => {
+  const { app, page } = await launchApp({ width: 1440, height: 900 });
+  // A disk with a row of three holes, turned four times around its center.
+  const features = [
+    { id: 'disk', type: 'cylinder', name: 'Disk', operation: 'add', radius: 50, height: 10, axis: 'z', position: [0, 0, 0] },
+    { id: 'points', type: 'sketch', name: 'Hole position', plane: { kind: 'face', face: 2, name: 'disk:top', frame: { origin: [0, 0, 10], xDir: [1, 0, 0], yDir: [0, 1, 0], normal: [0, 0, 1] } }, sketch: { entities: [{ id: 'p', type: 'point', x: 14, y: 0 }], constraints: [] } },
+    {
+      id: 'hole', type: 'hole', name: 'M6 clearance hole', kind: 'simple', size: 'M6', fit: 'normal', sketch: 'points', end: 'throughAll', reverse: false,
+      diameter: 6.6, depth: 12, counterboreDiameter: 11, counterboreDepth: 6.4, countersinkDiameter: 13.7, countersinkAngle: 90, threadDepth: 12,
+    },
+    { id: 'row', type: 'pattern', name: 'Row', method: 'linear', references: [{ kind: 'standard-plane', plane: 'right' }], features: ['hole'], count: 3, spacing: 12, angle: 360, flip: false },
+    { id: 'z', type: 'axis', name: 'Center axis', method: 'twoPlanes', references: [{ kind: 'standard-plane', plane: 'front' }, { kind: 'standard-plane', plane: 'right' }] },
+    { id: 'around', type: 'pattern', name: 'Around', method: 'circular', references: [{ kind: 'feature', feature: 'z' }], features: ['row'], count: 4, spacing: 20, angle: 360, flip: false },
+  ];
+  await page.evaluate(
+    (list) => (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features: list, past: [], future: [] }, savedFeatures: list, fileName: 'Flange' }),
+    features,
+  );
+  await idle(page);
+  await page.evaluate(() => (window as unknown as { __parawerk: { viewport: { zoomToFit(): void } } }).__parawerk.viewport.zoomToFit());
+  await page.locator('.feature-tree .tree-item[data-feature-id="around"]').dblclick();
+  await idle(page);
+  const canvas = await page.locator('.viewport-canvas').boundingBox();
+  if (canvas) await page.mouse.move(canvas.x + canvas.width - 30, canvas.y + canvas.height - 30);
+  await page.waitForTimeout(600);
+  await page.screenshot({ path: out('pattern-of-pattern.png') });
+  await page.click('[data-testid="panel-ok"]');
+  await app.close();
+});
+
 test('sweep and loft screenshots', async () => {
   const { app, page } = await launchApp({ width: 1440, height: 900 });
   const P = (id: string, x: number, y: number) => ({ id, type: 'point', x, y });

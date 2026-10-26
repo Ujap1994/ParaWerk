@@ -473,7 +473,8 @@ export function hasReferenceSlots(feature: Feature): feature is SlotFeature {
 }
 
 /** The feature types a pattern or mirror can copy: those that add or cut material with a tool of their own. */
-export const COPYABLE_TYPES: ReadonlySet<FeatureType> = new Set(['extrude', 'revolve', 'hole', 'box', 'cylinder', 'sweep', 'loft']);
+/** Features a pattern or mirror can copy; patterns and mirror images copy what they copy, and its copies. */
+export const COPYABLE_TYPES: ReadonlySet<FeatureType> = new Set(['extrude', 'revolve', 'hole', 'box', 'cylinder', 'sweep', 'loft', 'pattern', 'mirror']);
 
 /** Features built from a sketch: its outlines (extrude, revolve) or its points (hole). */
 export type SketchBasedFeature = ExtrudeFeature | RevolveFeature | HoleFeature;

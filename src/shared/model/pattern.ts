@@ -55,6 +55,24 @@ export function mirrorTransform(point: Vec3, normal: Vec3): Transform {
   return [0, 1, 2].flatMap((i) => [0, 1, 2].map((j) => (i === j ? 1 : 0) - 2 * (n[i] ?? 0) * (n[j] ?? 0)).concat(d * (n[i] ?? 0)));
 }
 
+/** The identity: the original of a pattern. */
+export const IDENTITY: Transform = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0];
+
+/** `a` after `b`: a point is moved by `b` first, then by `a`. */
+export function composeTransforms(a: Transform, b: Transform): Transform {
+  const at = (m: Transform, i: number, j: number) => m[4 * i + j] ?? 0;
+  const out: number[] = [];
+  for (let i = 0; i < 3; i++) {
+    for (let j = 0; j < 4; j++) out.push(at(a, i, 0) * at(b, 0, j) + at(a, i, 1) * at(b, 1, j) + at(a, i, 2) * at(b, 2, j) + (j === 3 ? at(a, i, 3) : 0));
+  }
+  return out;
+}
+
+/** Whether two transformations place a copy at the same spot (within `tolerance` in mm). */
+export function sameTransform(a: Transform, b: Transform, tolerance = 1e-6): boolean {
+  return a.every((value, i) => Math.abs(value - (b[i] ?? 0)) <= tolerance);
+}
+
 export function transformPoint(m: Transform, p: Vec3): Vec3 {
   return [0, 1, 2].map((i) => (m[4 * i] ?? 0) * p[0] + (m[4 * i + 1] ?? 0) * p[1] + (m[4 * i + 2] ?? 0) * p[2] + (m[4 * i + 3] ?? 0)) as Vec3;
 }

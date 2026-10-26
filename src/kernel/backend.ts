@@ -66,11 +66,14 @@ export interface ResolvedHole extends HoleFeature {
   placements: number[];
 }
 
-/** A pattern or mirror with the features it copies (resolved) and the placements of the copies. */
+/**
+ * A pattern or mirror with the features it copies (resolved) and the placements of their copies. A
+ * pattern of a pattern copies the features of the inner one: their originals and their copies.
+ */
 export type ResolvedCopy = CopyFeature & {
-  seeds: KernelFeature[];
-  /** 12 numbers per copy (see src/shared/model/pattern.ts). */
-  transforms: number[];
+  seeds: Exclude<KernelFeature, ResolvedCopy>[];
+  /** For each seed: 12 numbers per copy (see src/shared/model/pattern.ts). */
+  transforms: number[][];
 };
 
 /** A shell with its open faces resolved in the body it hollows out. */

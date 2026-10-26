@@ -481,7 +481,7 @@
     "hole-invalid": "Die Maße der Bohrung passen nicht zusammen: Eine Senkung muss breiter als die Bohrung und weniger tief sein, ein Gewinde nicht tiefer als die Bohrung.",
     "pattern-empty": "Wähle die zu kopierenden Features: im Featurebaum anklicken oder eine ihrer Flächen in der 3D-Ansicht.",
     "pattern-seed-missing": "Ein zu kopierendes Feature fehlt oder ist unterdrückt. Bearbeite das Feature und wähle die Features neu.",
-    "pattern-unsupported": "Nur Features, die Material hinzufügen oder wegnehmen, lassen sich kopieren: Extrusionen, Rotationen, Austragungen, Ausformungen, Bohrungen, Quader und Zylinder.",
+    "pattern-unsupported": "Nur Features, die Material hinzufügen oder entfernen, können kopiert werden: Extrusionen, Rotationen, Austragungen, Ausformungen, Bohrungen, Quader, Zylinder sowie Muster und Spiegelungen davon.",
     "shell-face-missing": "Die zu öffnenden Flächen existieren nicht mehr, eine frühere Änderung hat sie entfernt. Bearbeite die Schale und wähle die Flächen neu.",
     "end-behind": "Das Ende liegt in dieser Richtung hinter der Skizze. Wähle die andere Richtung oder ein anderes Ende.",
     "end-parallel": "Die Extrusion läuft entlang dieser Ebene und erreicht sie nie. Wähle eine Ebene, die schräg zur Extrusion liegt.",
@@ -522,7 +522,8 @@
     "curve-empty": "Die Kurve hat nichts zu projizieren oder zu verbinden: Wähle eine Skizze mit Kurven, oder wähle Kanten aus bzw. füge Skizzen und Kurven hinzu.",
     "curve-missed": "Die Kurven treffen die gewählten Flächen nicht, oder die Kurven der beiden Skizzen treffen sich nicht. Prüfe die Flächen und die Seite.",
     "curve-faces": "Wähle die Flächen, auf die die Kurven projiziert werden.",
-    "curve-edge-missing": "{{detail}} Kante(n) der Kurve existieren nicht mehr, eine frühere Änderung hat sie entfernt. Bearbeite die Kurve und wähle die Kanten neu aus."
+    "curve-edge-missing": "{{detail}} Kante(n) der Kurve existieren nicht mehr, eine frühere Änderung hat sie entfernt. Bearbeite die Kurve und wähle die Kanten neu aus.",
+    "pattern-too-many": "Das Muster würde {{detail}} Kopien erzeugen; höchstens 10.000 sind möglich. Verringere die Anzahlen."
   },
   "warnings": {
     "edge-missing_one": "{{count}} ausgewählte Kante existiert nicht mehr und wird ausgelassen. Bearbeite das Feature, um sie zu entfernen oder eine andere Kante zu wählen.",

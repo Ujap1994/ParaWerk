@@ -481,7 +481,7 @@
     "hole-invalid": "The dimensions of the hole do not fit together: a counterbore or countersink must be wider than the hole and less deep, a thread no deeper than the hole.",
     "pattern-empty": "Choose the features to copy: click them in the feature tree or one of their faces in the 3D view.",
     "pattern-seed-missing": "A feature to copy is missing or suppressed. Edit the feature and choose the features again.",
-    "pattern-unsupported": "Only features that add or cut material can be copied: extrusions, revolutions, sweeps, lofts, holes, boxes and cylinders.",
+    "pattern-unsupported": "Only features that add or cut material can be copied: extrusions, revolutions, sweeps, lofts, holes, boxes, cylinders, and patterns and mirror images of them.",
     "shell-face-missing": "The faces to open no longer exist: an earlier change removed them. Edit the shell and pick the faces again.",
     "end-behind": "The end lies behind the sketch in this direction. Choose the other direction or another end.",
     "end-parallel": "The extrusion runs along this plane and never reaches it. Choose a plane at an angle to the extrusion.",
@@ -522,7 +522,8 @@
     "curve-empty": "The curve has nothing to project or join: choose a sketch with curves, or pick edges or add sketches and curves.",
     "curve-missed": "The curves do not land on the chosen faces, or the curves of the two sketches do not meet. Check the faces and the side.",
     "curve-faces": "Pick the faces the curves are projected onto.",
-    "curve-edge-missing": "{{detail}} edge(s) of the curve no longer exist: an earlier change removed them. Edit the curve and pick the edges again."
+    "curve-edge-missing": "{{detail}} edge(s) of the curve no longer exist: an earlier change removed them. Edit the curve and pick the edges again.",
+    "pattern-too-many": "The pattern would make {{detail}} copies; at most 10,000 are possible. Reduce the counts."
   },
   "warnings": {
     "edge-missing_one": "{{count}} selected edge no longer exists and is left out. Edit the feature to remove it or pick another edge.",

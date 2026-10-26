@@ -42,8 +42,8 @@ rebuilds your part; your document is not affected. Please report the steps that 
 - No multi-body tools yet (combining, splitting or listing separate bodies of a part).
 - Converted model edges are fixed copies; they do not follow later changes of the model yet.
 - Ellipses can only be trimmed as a whole, and *Offset* leaves ellipses and splines out.
-- Part files with projected or composite curves (format version 9) cannot be opened by ParaWerk
-  0.4.0-alpha.0.
+- Part files with projected or composite curves or patterns of patterns (format version 9) cannot be
+  opened by ParaWerk 0.4.0-alpha.0.
 - Part files with the features of 0.4 (format version 8) cannot be opened by ParaWerk 0.3, and those of
   0.3 (format versions 4–7) not by ParaWerk 0.2; the older version reports a newer file.
 - Builds are not code-signed yet.

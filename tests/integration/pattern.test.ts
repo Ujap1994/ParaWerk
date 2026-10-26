@@ -96,6 +96,42 @@ describe('mirror', () => {
   });
 });
 
+describe('patterns of patterns', () => {
+  it('copies a pattern into a grid, with its original and its copies', () => {
+    // Three bosses along x, then that row twice along y (the front plane's normal points to −y).
+    const row = pattern({ id: 'row', references: [right], features: ['boss'], count: 3, spacing: 30 });
+    const grid = pattern({ id: 'grid', references: [front], features: ['row'], count: 2, spacing: 30 });
+    const result = build([plate, boss, row, grid]);
+    expect(result.features.map((feature) => feature.status)).toEqual(['ok', 'ok', 'ok', 'ok']);
+    expect(result.captures[0]?.properties?.volume).toBeCloseTo(PLATE + 6 * BOSS, 4);
+    expect(result.captures[0]?.properties?.bboxMin[1]).toBeCloseTo(-50, 6);
+    // The copies are named after the outer pattern and the feature the inner one copies.
+    expect(result.captures[0]?.mesh?.naming.faces).toEqual(expect.arrayContaining(['grid:boss:0:boss:side', 'grid:boss:2:boss:side']));
+    // Copying the boss as well does not copy it twice.
+    expect(volumeOf([plate, boss, row, { ...grid, features: ['boss', 'row'] }])).toBeCloseTo(PLATE + 6 * BOSS, 4);
+  });
+
+  it('turns a row of holes around an axis and mirrors a pattern', () => {
+    const disk: CylinderFeature = { id: 'disk', type: 'cylinder', operation: 'add', radius: 50, height: 10, axis: 'z', position: [0, 0, 0] };
+    const points: SketchFeature = {
+      id: 'points', type: 'sketch', plane: { kind: 'face', face: 2, name: 'disk:top', frame: frameOnPlane([0, 0, 10], [0, 0, 1]) },
+      sketch: { entities: [{ id: 'p', type: 'point', x: 15, y: 0 }], constraints: [] },
+    };
+    const hole: HoleFeature = { ...(defaultFeature('hole', 'hole') as HoleFeature), sketch: 'points' };
+    const row = pattern({ id: 'row', references: [right], features: ['hole'], count: 3, spacing: 12 });
+    const zAxis: AxisFeature = { id: 'z', type: 'axis', method: 'twoPlanes', references: [front, right] };
+    const around = pattern({ id: 'around', method: 'circular', references: [{ kind: 'feature', feature: 'z' }], features: ['row'], count: 4 });
+    const DISK = Math.PI * 2500 * 10;
+    const HOLE = Math.PI * 3.3 * 3.3 * 10;
+    const result = build([disk, points, hole, row, zAxis, around]);
+    expect(result.features.every((feature) => feature.status === 'ok')).toBe(true);
+    expect(result.captures[0]?.properties?.volume).toBeCloseTo(DISK - 12 * HOLE, 3);
+    // A row of three bosses (x −60, −40, −20) mirrored through the right plane: six bosses.
+    const bosses = pattern({ id: 'row', references: [right], features: ['boss'], count: 3, spacing: 20 });
+    expect(volumeOf([plate, boss, bosses, mirror({ references: [right], features: ['row'] })])).toBeCloseTo(PLATE + 6 * BOSS, 4);
+  });
+});
+
 describe('what cannot be copied', () => {
   it('reports missing, unsupported and unchosen features and a missing direction', () => {
     const fillet: Feature = { id: 'round', type: 'fillet', radius: 1, edges: [{ kind: 'edge-index', index: 0 }] };

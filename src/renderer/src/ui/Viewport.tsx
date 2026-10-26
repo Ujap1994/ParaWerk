@@ -50,7 +50,15 @@ function visibleSelection(state: AppState): Pick[] {
     if (edit.draft.type === 'draft' && !state.display.preview) picks.push(...referencePicks(edit.draft.faces, state));
     // The faces of the features a pattern or mirror copies are highlighted (faces are named after their feature).
     if (isCopyFeature(edit.draft)) {
-      const seeds = new Set(edit.draft.features);
+      // A pattern being copied stands for what it copies too (its originals).
+      const seeds = new Set<string>();
+      const add = (id: string) => {
+        if (seeds.has(id)) return;
+        seeds.add(id);
+        const feature = state.history.features.find((candidate) => candidate.id === id);
+        if (feature && isCopyFeature(feature)) feature.features.forEach(add);
+      };
+      edit.draft.features.forEach(add);
       const faces = state.display.body?.naming.faces ?? [];
       faces.forEach((name, index) => {
         if (seeds.has(name.split(':')[0] ?? '')) picks.push({ kind: 'face', index });

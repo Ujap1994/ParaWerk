@@ -137,6 +137,7 @@ export type FeatureErrorCode =
   | 'helix-circle'
   | 'sweep-holes'
   | 'curve-empty'
+  | 'pattern-too-many'
   | 'curve-missed'
   | 'curve-faces'
   | 'curve-edge-missing'

@@ -1,5 +1,5 @@
 import { COPYABLE_TYPES, type CurveFeature, isCopyFeature, isEdgeFeature, type CopyFeature, type DraftFeature, type LoftFeature, type RibFeature, type SweepFeature, type ThreadFeature, type EdgeFeature, type EdgeRef, type ExtrudeFeature, type Feature, type FilletFeature, roundFaceCount, type HoleFeature, type ShellFeature, type SketchFeature, type SolidModelingFeature, type Vec3 } from '../shared/model/feature.ts';
-import { circularTransforms, linearTransforms, mirrorTransform, type Transform } from '../shared/model/pattern.ts';
+import { circularTransforms, composeTransforms, IDENTITY, linearTransforms, mirrorTransform, sameTransform, type Transform } from '../shared/model/pattern.ts';
 import { holePositions, holeProblem } from '../shared/model/hole.ts';
 import { edgeFaceNames, edgeRefOf, faceRefOf, resolveEdgeRefs, resolveFaceRef, resolveFacePlane, type BodyNaming } from '../shared/model/naming.ts';
 import { sketchProfile, type Profile, type ProfileEdge } from '../shared/model/profile.ts';
@@ -245,13 +245,23 @@ function resolveCopy(feature: CopyFeature, before: readonly Feature[], context: 
   const indices = feature.features.map((id) => before.findIndex((candidate) => candidate.id === id));
   const missing = indices.filter((index) => index < 0 || before[index]?.suppressed).length;
   if (missing > 0) throw new FeatureError('pattern-seed-missing', String(missing));
-  const seeds = indices
-    .sort((a, b) => a - b)
-    .map((index) => {
-      const seed = before[index] as Feature;
-      if (!COPYABLE_TYPES.has(seed.type)) throw new FeatureError('pattern-unsupported');
-      return resolveFeature(seed as SolidModelingFeature, before.slice(0, index), context);
-    });
+  // What each feature it copies stands for: itself where it is, or – a pattern or mirror – the features
+  // that one copies, where they are and where its copies are.
+  const groups = new Map<string, { seed: Exclude<KernelFeature, ResolvedCopy>; placed: Transform[] }>();
+  for (const index of indices.sort((a, b) => a - b)) {
+    const seed = before[index] as Feature;
+    if (!COPYABLE_TYPES.has(seed.type)) throw new FeatureError('pattern-unsupported');
+    const resolved = resolveFeature(seed as SolidModelingFeature, before.slice(0, index), context);
+    const parts =
+      resolved.type === 'pattern' || resolved.type === 'mirror'
+        ? resolved.seeds.map((inner, i) => ({ seed: inner, placed: [IDENTITY, ...chunks(resolved.transforms[i] ?? [])] }))
+        : [{ seed: resolved, placed: [IDENTITY] }];
+    for (const part of parts) {
+      const group = groups.get(part.seed.id) ?? { seed: part.seed, placed: [] };
+      for (const placement of part.placed) if (!group.placed.some((other) => sameTransform(other, placement))) group.placed.push(placement);
+      groups.set(part.seed.id, group);
+    }
+  }
   let transforms: Transform[];
   if (feature.type === 'mirror') {
     const plane = referenceValue(feature.references[0], 'plane', 0, context);
@@ -264,7 +274,29 @@ function resolveCopy(feature: CopyFeature, before: readonly Feature[], context: 
     const direction = feature.flip ? ([-axis.direction[0], -axis.direction[1], -axis.direction[2]] as Vec3) : axis.direction;
     transforms = circularTransforms(axis.point, direction, feature.angle, feature.count);
   }
-  return { ...feature, seeds, transforms: transforms.flat() };
+  // Each copy of each place of each feature, without the places it is at already.
+  const seeds = [...groups.values()];
+  const copies = seeds.map(({ placed }) => {
+    const out: Transform[] = [];
+    for (const t of transforms) {
+      for (const p of placed) {
+        const copy = composeTransforms(t, p);
+        if (!placed.some((other) => sameTransform(other, copy)) && !out.some((other) => sameTransform(other, copy))) out.push(copy);
+      }
+    }
+    return out;
+  });
+  const total = copies.reduce((sum, list) => sum + list.length, 0);
+  if (total > MAX_COPIES) throw new FeatureError('pattern-too-many', String(total));
+  return { ...feature, seeds: seeds.map(({ seed }) => seed), transforms: copies.map((list) => list.flat()) };
+}
+
+/** Most copies a pattern of patterns may make in all. */
+const MAX_COPIES = 10_000;
+
+/** A flat list of transformations, 12 numbers each, as a list. */
+function chunks(flat: readonly number[]): Transform[] {
+  return Array.from({ length: Math.floor(flat.length / 12) }, (_, i) => flat.slice(12 * i, 12 * i + 12));
 }
 
 /**

@@ -978,6 +978,34 @@ test('patterns a boss along a plane normal and around an axis, and mirrors it', 
   expect((await state(page)).history.features.map((f) => f.type)).toEqual(['box', 'cylinder', 'mirror']);
 });
 
+test('copies a pattern with a second pattern into a grid', async () => {
+  launched = await launchApp({ width: 1000, height: 640 });
+  const { page } = launched;
+  // A plate, a boss and a row of three bosses along x.
+  await page.evaluate(() => {
+    const features = [
+      { id: 'plate', type: 'box', operation: 'add', width: 200, depth: 100, height: 10, position: [0, 0, 0] },
+      { id: 'boss', type: 'cylinder', operation: 'add', radius: 5, height: 10, axis: 'z', position: [-60, 0, 10] },
+      { id: 'row', type: 'pattern', method: 'linear', references: [{ kind: 'standard-plane', plane: 'right' }], features: ['boss'], count: 3, spacing: 30, angle: 360, flip: false },
+    ];
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features, past: [], future: [] }, savedFeatures: features, dirty: false });
+  });
+  await idle(page);
+  // The row is picked by clicking the top of one of its copies; the copies go along the front plane's normal.
+  await page.click('[data-command="pattern"]');
+  await clickWorldPoint(page, [0, 0, 20]);
+  await expect(page.locator('[data-testid="copy-features"]')).toContainText('Pattern1');
+  await page.click('[data-testid="reference-slot-0"] .reference-slot-button');
+  await page.click('.tree-item[data-plane="front"]');
+  await page.locator('[data-testid="pattern-count"]').fill('2');
+  await page.locator('[data-testid="pattern-count"]').press('Tab');
+  await page.locator('[data-testid="pattern-spacing"]').fill('30');
+  await page.locator('[data-testid="pattern-spacing"]').press('Tab');
+  await page.click('[data-testid="panel-ok"]');
+  expect(await volume(page)).toBeCloseTo(200_000 + 6 * Math.PI * 25 * 10, 2);
+  expect((await state(page)).history.features[3]).toMatchObject({ type: 'pattern', features: ['row'], count: 2 });
+});
+
 test('hollows a box out to a shell open at a picked face', async () => {
   launched = await launchApp({ width: 1440, height: 900 });
   const { page } = launched;

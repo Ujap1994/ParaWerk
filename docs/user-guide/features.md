@@ -246,7 +246,9 @@ and files larger; add it late in the history, after the features it does not dep
 **Pattern** copies features in a row, **Circular pattern** around an axis, **Mirror** through a plane
 (all three under the *Pattern* button and its arrow). They copy features that add or cut material –
 extrusions, revolutions, sweeps, lofts, holes, boxes and cylinders – with everything that defines them;
-fillets and chamfers are not copied.
+fillets and chamfers are not copied. They also copy **other patterns and mirror images**: with the
+original and all its copies – a row of holes turned around an axis, a row copied into a grid, one half of
+a part mirrored with its patterns. A feature that ends up at the same place twice is made only once.
 
 1. *Features to copy*: click the features in the feature tree (shown below the side panel while you
    edit) or click one of their faces in the 3D view; click again to take one out. Their faces are
@@ -261,7 +263,11 @@ fillets and chamfers are not copied.
 
 ![Two holes copied twice along the front edge of the plate, 22 mm apart: the holes being copied are orange, the edge they follow too](../images/screenshots/pattern-linear.png)
 
-All copies of a feature are added or cut in one operation, so even long patterns rebuild quickly. Faces of
+All copies of a feature are added or cut in one operation, so even long patterns rebuild quickly; a
+pattern of patterns makes at most 10,000 copies.
+
+![A row of three holes turned four times around the center of a disk: a circular pattern of a linear pattern](../images/screenshots/pattern-of-pattern.png)
+ Faces of
 the copies have names of their own (the pattern, the copied feature and the copy), so fillets on them stay
 in place when the pattern changes.
 

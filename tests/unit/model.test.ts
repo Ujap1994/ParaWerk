@@ -3,6 +3,7 @@ import { defaultFeature, FEATURE_TYPES, type Feature, type SketchFeature } from 
 import { decodePartFile, encodePartFile, formatVersionOf, PartFileError, PART_FORMAT } from '../../src/shared/model/part-file.ts';
 import { parseFeature, parseFeatures, ValidationError } from '../../src/shared/model/validate.ts';
 import { strToU8, unzipSync, zipSync } from 'fflate';
+import { circularTransforms, composeTransforms, IDENTITY, linearTransforms, sameTransform, transformPoint } from '../../src/shared/model/pattern.ts';
 
 describe('feature validation', () => {
   it('accepts every default feature', () => {
@@ -114,9 +115,23 @@ describe('part file', () => {
     expect(decodePartFile(bytes).document.features).toEqual(withSketch);
   });
 
+  it('composes transformations of patterns of patterns', () => {
+    const [shift] = linearTransforms([1, 0, 0], 10, 2);
+    const [turn] = circularTransforms([0, 0, 0], [0, 0, 1], 360, 4);
+    if (!shift || !turn) throw new Error('no transforms');
+    // Moved first, then turned a quarter around z.
+    expect(transformPoint(composeTransforms(turn, shift), [1, 0, 0]).map((v) => Math.round(v * 1e9) / 1e9 + 0)).toEqual([0, 11, 0]);
+    expect(composeTransforms(IDENTITY, shift)).toEqual(shift);
+    expect(sameTransform(composeTransforms(shift, IDENTITY), shift)).toBe(true);
+    expect(sameTransform(shift, turn)).toBe(false);
+  });
+
   it('needs version 9 for curves (after ParaWerk 0.4)', () => {
     for (const type of ['projectedCurve', 'compositeCurve'] as const) expect(formatVersionOf([defaultFeature(type, 'f')]), type).toBe(9);
     expect(formatVersionOf([defaultFeature('helix', 'f')])).toBe(8);
+    const row = { ...defaultFeature('pattern', 'row'), features: ['boss'] } as Feature;
+    expect(formatVersionOf([row])).toBe(6);
+    expect(formatVersionOf([row, { ...defaultFeature('mirror', 'm'), features: ['row'] } as Feature])).toBe(9);
   });
 
   it('needs version 8 for the features after ParaWerk 0.3', () => {

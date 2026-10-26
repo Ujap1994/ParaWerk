@@ -41,7 +41,7 @@ const SURFACE_KINDS: SurfaceKind[] = ['plane', 'cylinder', 'cone', 'sphere', 'to
 const CURVE_KINDS: CurveKind[] = ['line', 'circle', 'ellipse', 'bspline', 'other'];
 
 const FEATURE_ERROR_CODES = new Set<FeatureErrorCode>([
-  'no-body', 'no-edges', 'edge-missing', 'face-missing', 'plane-missing', 'reference-missing', 'reference-kind', 'reference-parallel', 'reference-not-parallel', 'reference-collinear', 'empty-result', 'first-must-add', 'sketch-missing', 'profile-empty', 'profile-crossing', 'axis-missing', 'axis-not-in-plane', 'hole-no-points', 'hole-invalid', 'pattern-empty', 'pattern-seed-missing', 'pattern-unsupported', 'shell-face-missing', 'end-behind', 'end-parallel', 'end-missed', 'thin-empty', 'thin-unsupported', 'thin-branching', 'thin-too-thick', 'round-faces', 'round-face-missing', 'round-sides', 'round-center', 'round-planes', 'round-radius', 'draft-faces', 'draft-face', 'draft-face-missing', 'path-empty', 'path-branching', 'path-gaps', 'sweep-failed', 'loft-sections', 'loft-profile', 'loft-failed', 'rib-curves', 'thread-face', 'thread-size', 'helix-circle', 'sweep-holes', 'curve-empty', 'curve-missed', 'curve-faces', 'curve-edge-missing', 'import-no-solid', 'profile-crosses-axis',
+  'no-body', 'no-edges', 'edge-missing', 'face-missing', 'plane-missing', 'reference-missing', 'reference-kind', 'reference-parallel', 'reference-not-parallel', 'reference-collinear', 'empty-result', 'first-must-add', 'sketch-missing', 'profile-empty', 'profile-crossing', 'axis-missing', 'axis-not-in-plane', 'hole-no-points', 'hole-invalid', 'pattern-empty', 'pattern-seed-missing', 'pattern-unsupported', 'shell-face-missing', 'end-behind', 'end-parallel', 'end-missed', 'thin-empty', 'thin-unsupported', 'thin-branching', 'thin-too-thick', 'round-faces', 'round-face-missing', 'round-sides', 'round-center', 'round-planes', 'round-radius', 'draft-faces', 'draft-face', 'draft-face-missing', 'path-empty', 'path-branching', 'path-gaps', 'sweep-failed', 'loft-sections', 'loft-profile', 'loft-failed', 'rib-curves', 'thread-face', 'thread-size', 'helix-circle', 'sweep-holes', 'curve-empty', 'pattern-too-many', 'curve-missed', 'curve-faces', 'curve-edge-missing', 'import-no-solid', 'profile-crosses-axis',
   'operation-failed', 'unknown',
 ]);
 
@@ -250,10 +250,11 @@ export class ParaWerkBackend implements GeometryBackend {
 
   /** Adds or cuts the copies of a pattern or mirror, one feature it copies after the other. */
   private copies(body: ShapeHandle, feature: ResolvedCopy): ShapeHandle {
-    const count = feature.transforms.length / 12;
-    const transforms = Array.from({ length: count }, (_, i) => feature.transforms.slice(12 * i, 12 * i + 12));
     let current = body;
-    for (const seed of feature.seeds) {
+    for (const [s, seed] of feature.seeds.entries()) {
+      const flat = feature.transforms[s] ?? [];
+      if (flat.length === 0) continue;
+      const transforms = Array.from({ length: flat.length / 12 }, (_, i) => flat.slice(12 * i, 12 * i + 12));
       // Faces of copy i of feature s are "<pattern id>:<s id>:<i>:…".
       const name = `${feature.id}:${seed.id}`;
       let next: ShapeHandle;
@@ -271,7 +272,7 @@ export class ParaWerkBackend implements GeometryBackend {
       } else if (seed.type === 'box' || seed.type === 'cylinder' || seed.type === 'extrude' || seed.type === 'revolve' || seed.type === 'sweep' || seed.type === 'loft') {
         const tool = this.tool(current, seed);
         try {
-          next = this.handle(this.kernel.combineCopies(this.id(current), this.id(tool), feature.transforms, seed.operation === 'add' ? 0 : 1, name));
+          next = this.handle(this.kernel.combineCopies(this.id(current), this.id(tool), flat, seed.operation === 'add' ? 0 : 1, name));
         } finally {
           this.release(tool);
         }
