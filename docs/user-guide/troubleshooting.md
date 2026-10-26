@@ -34,12 +34,14 @@ rebuilds your part; your document is not affected. Please report the steps that 
 
 ## Known limitations of the alpha
 
-- Not available yet: sweep, loft, rib, draft as a feature and configurations (Phase 3); assemblies
-  (Phase 4). Thin features offset lines, arcs and circles, not ellipses and splines; face fillets work
-  between planar faces.
+- Not available yet: multi-body tools, projected and composite curves, surface tools, sweeps with twist
+  or guide curves (Phase 3); assemblies (Phase 4). Thin features offset lines, arcs and circles, not
+  ellipses and splines; face fillets work between planar faces.
+- Along a helix, a sweep takes outlines without holes. A spring of many turns takes a second or more to
+  build and show.
 - No multi-body tools yet (combining, splitting or listing separate bodies of a part).
 - Converted model edges are fixed copies; they do not follow later changes of the model yet.
 - Ellipses can only be trimmed as a whole, and *Offset* leaves ellipses and splines out.
-- Part files of this version (format versions 4–7) cannot be opened by ParaWerk 0.2; it reports a newer
-  file.
+- Part files with the features of 0.4 (format version 8) cannot be opened by ParaWerk 0.3, and those of
+  0.3 (format versions 4–7) not by ParaWerk 0.2; the older version reports a newer file.
 - Builds are not code-signed yet.

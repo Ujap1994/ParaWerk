@@ -7,38 +7,46 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
-### Changed
-- Part files with drafts, sweeps, lofts, ribs, modeled threads or variable radius fillets are saved as
-  format version 8, so ParaWerk 0.3 reports them as newer files instead of damaged ones.
+## [0.4.0-alpha.0] - 2026-10-26
+
+The first alpha of **Phase 3** (advanced features and configurations): draft, sweep (also along a helix,
+for springs), loft, rib, variable radius fillets, modeled threads, configurations with design tables and
+full equations. Still an alpha: not ready for productive use; see the disclaimer in the README.
 
 ### Added
+- Sweep: the closed outlines of a sketch along a path, one chain of lines, arcs, ellipses or splines in
+  another sketch (open or closed); the path runs from its end nearer to the outlines. Adds or cuts.
 - Helix: a curve winding around the axis of a sketch circle, with pitch, turns (also parts of a turn),
   start angle, direction and hand (in the arrow of the **Plane** button). A sweep follows it with the
   profile keeping its angle to the axis – springs, coils and helical grooves.
-- Mass properties: the bounding box lies tight around curved faces (it was up to a millimeter too large
-  around swept and lofted faces).
-- Sweep: the closed outlines of a sketch along a path, one chain of lines, arcs, ellipses or splines in
-  another sketch (open or closed); the path runs from its end nearer to the outlines. Adds or cuts.
 - Loft: a solid through one closed outline from each of several sketches, in order, smooth or with flat
   faces between them; outlines with different edge counts (a square and a circle) are joined too.
+- Rib: a wall from open sketch lines to the body, within the sketch plane (a gusset between a line and the
+  walls it leans against) or along the sketch normal, growing towards the material by itself.
+- Draft as a feature: faces picked in the 3D view tilt by an angle about a neutral plane (a standard
+  plane, planar face or reference plane), for molded and cast parts; the faces keep their names.
+- Variable radius fillets: the radius changes evenly along each edge from a start to an end value (the
+  start is the edge's left, front or bottom end; a switch swaps them).
+- Modeled threads: the groove of the ISO basic profile cut along a helix into a bolt or the wall of a hole
+  (the size follows the picked cylindrical face, the pitch the size; length, start end and hand
+  adjustable) – real thread geometry for 3D printing.
+- Configurations: variants of a part in one file, each with its own values of the part's variables and
+  its own suppressed features; a design table lists the variables of all configurations for editing, and a
+  switch in the feature tree shows another one (one undo step).
 - Equations: `min`, `max`, `round`, `floor`, `ceil`, `asin`, `acos`, `atan` and `if(condition; then; else)`
   with comparisons; arguments separated by `;` (or a comma not between digits). The count of a pattern
   takes an equation, rounded to a whole number.
-- Configurations: variants of a part in one file, each with its own values of the part's variables and
-  its own suppressed features; a design table lists the variables of all configurations for editing, and a
-  switch in the feature tree shows another one (one undo step). Saved in part format version 8.
-- Modeled threads: the groove of the ISO basic profile cut along a helix into a bolt or the wall of a hole
-  (the size follows the picked cylindrical face, the pitch the size; length, start end and hand
-  adjustable) – real thread geometry for 3D printing. Hole and Thread share a split button.
-- Variable radius fillets: the radius changes evenly along each edge from a start to an end value (the
-  start is the edge's left, front or bottom end; a switch swaps them).
-- Rib: a wall from open sketch lines to the body, within the sketch plane (a gusset between a line and the
-  walls it leans against) or along the sketch normal, growing towards the material by itself. Shell,
-  Draft and Rib share a split button.
-- Revolve, Sweep and Loft share a split button; patterns and mirror copy sweeps and lofts as well.
-- Draft as a feature (Phase 3): faces picked in the 3D view tilt by an angle about a neutral plane (a
-  standard plane, planar face or reference plane), for molded and cast parts; the faces keep their names.
-  Shell and Draft share a split button in the *Features* tab.
+- Split buttons in the *Features* tab: Revolve, Sweep and Loft; Hole and Thread; Shell, Draft and Rib.
+  Patterns and mirror copy sweeps and lofts as well.
+
+### Changed
+- Part files with drafts, sweeps, lofts, ribs, helices, modeled threads, variable radius fillets or
+  configurations are saved as format version 8, so ParaWerk 0.3 reports them as newer files instead of
+  damaged ones.
+
+### Fixed
+- Mass properties: the bounding box lies tight around curved faces (it was up to a millimeter too large
+  around swept and lofted faces).
 
 ## [0.3.0-alpha.1] - 2026-10-26
 
@@ -352,7 +360,8 @@ First technical preview (Phase 0). Not ready for productive use; see the disclai
 ### Removed
 - DWG from the planned formats, because it is a closed, proprietary format. DXF covers 2D exchange.
 
-[Unreleased]: https://github.com/Ujap1994/ParaWerk/compare/v0.3.0-alpha.1...HEAD
+[Unreleased]: https://github.com/Ujap1994/ParaWerk/compare/v0.4.0-alpha.0...HEAD
+[0.4.0-alpha.0]: https://github.com/Ujap1994/ParaWerk/compare/v0.3.0-alpha.1...v0.4.0-alpha.0
 [0.3.0-alpha.1]: https://github.com/Ujap1994/ParaWerk/compare/v0.3.0-alpha.0...v0.3.0-alpha.1
 [0.3.0-alpha.0]: https://github.com/Ujap1994/ParaWerk/compare/v0.2.0-alpha.1...v0.3.0-alpha.0
 [0.2.0-alpha.1]: https://github.com/Ujap1994/ParaWerk/compare/v0.2.0-alpha.0...v0.2.0-alpha.1

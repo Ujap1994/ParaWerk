@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img alt="Status: alpha" src="https://img.shields.io/badge/status-alpha%200.3%20(part%20modeling)-orange">
+  <img alt="Status: alpha" src="https://img.shields.io/badge/status-alpha%200.4%20(advanced%20features)-orange">
   <a href="https://github.com/Ujap1994/ParaWerk/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Ujap1994/ParaWerk/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="Platforms" src="https://img.shields.io/badge/platforms-Windows%20%7C%20macOS%20%7C%20Linux-blue">
   <img alt="UI languages" src="https://img.shields.io/badge/UI-English%20%7C%20Deutsch-informational">
@@ -18,9 +18,9 @@
 </p>
 
 > [!WARNING]
-> **ParaWerk is under active development.** Alpha 0.3 models real parts: sketches, extrusions and
-> revolutions, holes, patterns, shells, fillets and chamfers, reference geometry, materials and mass
-> properties. Assemblies, standard parts and drawings follow in later phases. It is an alpha to try out
+> **ParaWerk is under active development.** Alpha 0.4 models real parts: sketches, extrusions and
+> revolutions, sweeps (also springs) and lofts, holes and modeled threads, patterns, shells, drafts, ribs,
+> fillets and chamfers, reference geometry, configurations, materials and mass properties. Assemblies, standard parts and drawings follow in later phases. It is an alpha to try out
 > and give feedback on, not yet a tool for productive work. Please read the [disclaimer](#disclaimer)
 > first.
 
@@ -86,30 +86,35 @@ makers, students and small workshops that covers the everyday mechanical design 
 
 ## Available now
 
-Alpha 0.3 adds part modeling (Phase 2) to the 2D sketcher of Phase 1:
+Alpha 0.4 brings the first advanced features of Phase 3 – sweep, loft, rib, draft, modeled threads,
+configurations – to part modeling (Phase 2) and the 2D sketcher (Phase 1):
 
 ![A bearing housing built from sketches: plate, boss, bore, counterbored M6 holes, rounds and a chamfer, in aluminium](docs/images/screenshots/part-modeling.png)
 
 - **Solid features:** **extrude** and **revolve** sketches (add or remove material) – a depth, through
   all, up to the next face, up to a planar or curved surface or a vertex, in one or two directions, with
-  a draft angle, also as **thin features** (walls along open or closed curves); **holes** for ISO metric
-  screws (clearance, counterbore, countersink, tapped with cosmetic threads); **linear and circular
-  patterns** and **mirror** images; **shell**; **fillet** (on edges or whole faces, face fillets also
-  without a shared edge, full rounds) and **chamfer** (equal, two distances, distance and angle); box and
-  cylinder; **STEP import** as a body.
+  a draft angle, also as **thin features** (walls along open or closed curves); **sweep** along a path or
+  a **helix** (springs, coils) and **loft** through several outlines; **rib**; **draft** on picked faces;
+  **holes** for ISO metric screws (clearance, counterbore, countersink, tapped with cosmetic threads) and
+  **modeled ISO threads** for 3D printing; **linear and circular patterns** and **mirror** images;
+  **shell**; **fillet** (on edges or whole faces, constant or variable radius, face fillets also without a
+  shared edge, full rounds) and **chamfer** (equal, two distances, distance and angle); box and cylinder;
+  **STEP import** as a body.
 - **Stable edits:** faces are named after the feature that made them, so fillets, chamfers, sketches on
   faces and other references stay in place when earlier features change; lost edges are marked instead
-  of breaking the part. A reference suite of 33 parts checks this in every CI run.
-- **Reference geometry:** planes, axes, points and coordinate systems built on the part or on each other;
-  they carry sketches and follow the part.
+  of breaking the part. A reference suite of 36 parts checks this in every CI run.
+- **Reference geometry:** planes, axes, points, coordinate systems and helices built on the part or on
+  each other; they carry sketches and follow the part.
 - **Feature tree and property panels:** live preview while editing, rollback bar to insert features in
   the middle of the history, reorder by dragging (with dependency checks), suppress, delete, undo and
   redo; clear errors and warnings that point to the cause.
 - **Evaluation:** materials (27 metals, plastics and woods, or your own density) and part colors; exact
   mass, volume, center of mass and moments of inertia, also in a coordinate system; measuring distances,
   angles and center distances; section views with filled cut faces.
-- **Variables and equations:** named values for the whole part, used by name in parameters and sketch
-  dimensions; calculations with units in every number field.
+- **Variables, equations and configurations:** named values for the whole part, used by name in
+  parameters and sketch dimensions; calculations with units, functions and conditions (`if`, `min`,
+  `max`, `round`, …) in every number field; **configurations** – variants of a part in one file, edited
+  side by side in a design table.
 - **2D sketcher:** sketches on the standard planes, planar faces and reference planes, with their own
   undo history.
   - *Drawing:* lines and centerlines, rectangles (corner, center, 3-point, parallelogram), circles
@@ -145,6 +150,10 @@ Alpha 0.3 adds part modeling (Phase 2) to the 2D sketcher of Phase 1:
 | ![Sketch](docs/images/screenshots/sketch-bracket.png) | ![Cut spline](docs/images/screenshots/sketch-spline-cut.png) |
 | **Fillet with live preview** | **Dark theme, German interface** |
 | ![Fillet preview](docs/images/screenshots/fillet-preview.png) | ![Dark theme](docs/images/screenshots/dark-theme-german.png) |
+| **A spring: a wire swept along a helix** | **Loft from a square to a circle** |
+| ![Spring](docs/images/screenshots/sweep-spring.png) | ![Loft](docs/images/screenshots/loft.png) |
+| **Modeled M10 thread** | **Configurations in a design table** |
+| ![Thread](docs/images/screenshots/thread.png) | ![Configurations](docs/images/screenshots/configurations.png) |
 
 See the [user guide](docs/user-guide/README.md) for details.
 
@@ -153,8 +162,9 @@ See the [user guide](docs/user-guide/README.md) for details.
 > Everything below is **planned**. Each item moves to "Available now", with screenshots, once it ships.
 
 ### Part modeling
-- Sweep, loft, rib, draft as a feature, variable fillets, multi-body parts
-- Configurations and design tables
+- Multi-body parts (combine, split, separate bodies), projected and composite curves
+- Sweeps with twist and guide curves, lofts with guide curves
+- Surface tools (offset, knit, thicken)
 
 ### Assemblies
 - Components and sub-assemblies with standard, advanced and mechanical mates
