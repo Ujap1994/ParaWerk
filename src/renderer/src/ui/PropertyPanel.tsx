@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { formatQuantity } from '../format.ts';
-import { CHAMFER_METHODS, EXTRUDE_ENDS, extrudesOneWay, MAX_DRAFT_ANGLE, type RevolveDirection, hasReferenceSlots, isCopyFeature, type Axis, type BooleanOperation, type ChamferFeature, type ChamferMethod, type EdgeFeature, type ExtrudeDirection, type ExtrudeEnd, type ExtrudeFeature, type Feature, type Vec3 } from '../../../shared/model/feature.ts';
+import { CHAMFER_METHODS, EXTRUDE_ENDS, extrudesOneWay, MAX_DRAFT_ANGLE, type RevolveDirection, hasReferenceSlots, isCopyFeature, type Axis, type BooleanOperation, type ChamferFeature, type ChamferMethod, type EdgeFeature, type ExtrudeDirection, type ExtrudeEnd, type ExtrudeFeature, type Feature, type RevolveFeature, type Vec3 } from '../../../shared/model/feature.ts';
+import { DEFAULT_THIN_THICKNESS, THIN_SIDES, type ThinSide } from '../../../shared/model/thin.ts';
 import type { GeometryRef } from '../../../shared/model/reference.ts';
 import { referenceRoles } from '../references.ts';
 import { resolveEdgeRefs } from '../../../shared/model/naming.ts';
@@ -202,6 +203,7 @@ function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
               </label>
             </>
           ) : null}
+          <ThinFields draft={draft} />
           <p className="panel-hint">{t('panel.extrudeHint')}</p>
         </Section>
       );
@@ -222,6 +224,7 @@ function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
             ]}
             onChange={(direction) => commands.updateDraft({ direction })}
           />
+          <ThinFields draft={draft} />
           <p className="panel-hint">{t('panel.revolveHint')}</p>
         </Section>
       );
@@ -430,6 +433,37 @@ function ExtrudeEndFields({ draft }: { draft: ExtrudeFeature }) {
             <input type="checkbox" checked={draft.endBeyond ?? false} data-testid="extrude-end-beyond" onChange={(event) => commands.updateDraft({ endBeyond: event.target.checked })} />
             {t('panel.endBeyond')}
           </label>
+        </>
+      ) : null}
+    </>
+  );
+}
+
+/** Thin feature: walls of a thickness along the sketch curves (open ones too), to one side, the other or both. */
+function ThinFields({ draft }: { draft: ExtrudeFeature | RevolveFeature }) {
+  const { t } = useTranslation();
+  return (
+    <>
+      <label className="checkbox-field">
+        <input type="checkbox" checked={draft.thin !== undefined} data-testid="thin-on" onChange={(event) => commands.setThin(event.target.checked ? 'one' : null)} />
+        {t('panel.thin')}
+      </label>
+      {draft.thin !== undefined ? (
+        <>
+          <NumberField
+            label={t('panel.thickness')}
+            value={draft.thickness ?? DEFAULT_THIN_THICKNESS}
+            testId="thin-thickness"
+            {...equation(draft, 'thickness')}
+            onChange={(thickness) => commands.updateDraft({ thickness: Math.max(0.001, thickness) })}
+          />
+          <Segmented<ThinSide>
+            label={t('panel.thinSide')}
+            value={draft.thin}
+            options={THIN_SIDES.map((side) => ({ value: side, label: t(`panel.thinSides.${side}`) }))}
+            onChange={(side) => commands.setThin(side)}
+          />
+          <p className="panel-hint">{t('panel.thinHint')}</p>
         </>
       ) : null}
     </>

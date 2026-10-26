@@ -70,7 +70,7 @@ function cross(a: Point2, b: Point2): number {
   return a[0] * b[1] - a[1] * b[0];
 }
 
-function polygonArea(points: readonly Point2[]): number {
+export function polygonArea(points: readonly Point2[]): number {
   let area = 0;
   for (let i = 0; i < points.length; i++) area += cross(points[i] as Point2, points[(i + 1) % points.length] as Point2);
   return area / 2;
@@ -118,7 +118,7 @@ function bezierSpans(spline: SplineGeometry, range: SplineRange): { poles: Point
 }
 
 /** Merges end points that lie in the same place into vertices. */
-class Vertices {
+export class Vertices {
   private readonly cells = new Map<string, number[]>();
   readonly points: Point2[] = [];
   private readonly tolerance: number;

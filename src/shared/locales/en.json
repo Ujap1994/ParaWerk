@@ -299,7 +299,16 @@
     "depth2": "Depth 2 (other side)",
     "draft": "Draft while extruding",
     "draftAngle": "Draft angle",
-    "draftOutward": "Draft outward"
+    "draftOutward": "Draft outward",
+    "thin": "Thin feature",
+    "thickness": "Wall thickness",
+    "thinSide": "Walls",
+    "thinSides": {
+      "one": "One side",
+      "other": "Other side",
+      "both": "Both sides"
+    },
+    "thinHint": "Walls along every curve of the sketch, open curves too: one side is outside a closed outline (and for open curves the side the preview shows), both sides puts half the thickness on each. Lines and arcs meet in sharp corners."
   },
   "status": {
     "kernelLoading": "Starting geometry kernel…",
@@ -417,7 +426,7 @@
     "empty-result": "The operation removed the whole body.",
     "first-must-add": "The first feature must add material.",
     "sketch-missing": "The sketch of this feature is missing or suppressed. Edit the feature and choose a sketch.",
-    "profile-empty": "The sketch has no closed outline. Close its outlines, or choose another sketch.",
+    "profile-empty": "The sketch has no closed outline. Close its outlines, turn on Thin feature for walls along open curves, or choose another sketch.",
     "profile-crossing": "Curves of the sketch cross each other near ({{detail}}) mm. Trim them so the outlines are clear.",
     "operation-failed": "The geometry kernel could not build this feature ({{detail}}).",
     "unknown": "Unexpected error: {{detail}}",
@@ -432,6 +441,10 @@
     "end-behind": "The end lies behind the sketch in this direction. Choose the other direction or another end.",
     "end-parallel": "The extrusion runs along this plane and never reaches it. Choose a plane at an angle to the extrusion.",
     "end-missed": "The body or surface does not stop the whole outline: part of it would go on without end. Move the outline or choose another end.",
+    "thin-empty": "The sketch has no curves to put walls along.",
+    "thin-unsupported": "Walls along ellipses and splines are not possible yet ({{detail}}). Use lines and arcs, or turn the thin feature off.",
+    "thin-branching": "More than two curves meet at ({{detail}}) mm: walls need chains of curves without branches.",
+    "thin-too-thick": "The walls are too thick for the curves: an arc or a short line would vanish inside them. Make the walls thinner or put them on the other side.",
     "profile-crosses-axis": "Outlines of the sketch lie on both sides of the axis. Keep them on one side; they may touch it.",
     "plane-missing": "The reference plane this sketch was drawn on no longer exists. The sketch stays where the plane was.",
     "reference-missing": "Reference {{detail}} of this feature is missing: it was not chosen yet, or an earlier change removed it. Edit the feature and choose it.",

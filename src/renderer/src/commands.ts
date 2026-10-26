@@ -4,6 +4,8 @@ import { PART_FILE_EXTENSION } from '../../shared/app-info.ts';
 import { hashString } from '../../shared/hash.ts';
 import { COPYABLE_TYPES, type ImportFeature, defaultFeature, type BooleanOperation, hasReferenceSlots, isCopyFeature, isEdgeFeature, isReferenceFeature, isSketchBased, type EdgeRef, type ExtrudeEnd, extrudesOneWay, type Feature, type FeatureType, type HoleFeature, type ReferenceFeature, type SketchFeature, type SlotFeature } from '../../shared/model/feature.ts';
 import { holePositions, metricSize, sizesFor, standardHoleDimensions } from '../../shared/model/hole.ts';
+import { sketchProfile } from '../../shared/model/profile.ts';
+import { DEFAULT_THIN_THICKNESS, type ThinSide } from '../../shared/model/thin.ts';
 import { AXIS_METHODS, PLANE_METHODS, POINT_METHODS, REFERENCE_ROLES, type GeometryRef, type ReferenceRole } from '../../shared/model/reference.ts';
 import { extrudesUpTo, referenceFits, referenceGeometry, referenceOfPick, referencePicks, referenceRoles } from './references.ts';
 import { edgeRefOf, faceRefOf, resolveEdgeRefs } from '../../shared/model/naming.ts';
@@ -267,13 +269,15 @@ export function startFeature(type: FeatureType): void {
       return;
     }
     const operation = hasBodyBefore(features, index) ? draft.operation : 'add';
+    // A sketch of open curves only becomes walls along them (a thin feature).
+    const thin = sketchProfile(sketch.sketch).regions.length === 0 ? { thin: 'one' as const, thickness: DEFAULT_THIN_THICKNESS } : {};
     if (draft.type === 'extrude') {
-      draft = { ...draft, sketch: sketch.id, operation };
+      draft = { ...draft, sketch: sketch.id, operation, ...thin };
     } else {
       // Without a centerline in the sketch, the last reference axis is the axis.
       const axis = defaultAxis(sketch);
       const reference = features.findLast((feature) => feature.type === 'axis' && !feature.suppressed);
-      draft = axis || !reference ? { ...draft, sketch: sketch.id, axis, operation } : { ...draft, sketch: sketch.id, axis: '', axisRef: { kind: 'feature', feature: reference.id }, operation };
+      draft = axis || !reference ? { ...draft, sketch: sketch.id, axis, operation, ...thin } : { ...draft, sketch: sketch.id, axis: '', axisRef: { kind: 'feature', feature: reference.id }, operation, ...thin };
     }
   } else if (draft.type === 'hole') {
     const sketch = holeSketchToUse(features);
@@ -619,6 +623,14 @@ export function toggleDraftEdge(index: number): void {
 function fitsExtrudeEnd(ref: GeometryRef, end: ExtrudeEnd, state: AppState, pick?: Pick): boolean {
   if (end === 'upToSurface') return ref.kind === 'face' || referenceFits(ref, 'plane', state, pick);
   return end === 'upToVertex' && referenceFits(ref, 'point', state, pick);
+}
+
+/** Turns the edited extrusion or revolution into a thin feature with walls on `side`, or (null) back into a solid one. */
+export function setThin(side: ThinSide | null): void {
+  const edit = getState().activeEdit;
+  if (edit?.draft.type !== 'extrude' && edit?.draft.type !== 'revolve') return;
+  const { thin: _thin, ...rest } = edit.draft;
+  setState({ activeEdit: { ...edit, draft: side ? { ...rest, thin: side, thickness: edit.draft.thickness ?? DEFAULT_THIN_THICKNESS } : rest } });
 }
 
 /** Changes how far the edited extrusion goes; up to the next face, a surface or a vertex goes one way only. */

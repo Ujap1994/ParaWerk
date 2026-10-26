@@ -1053,3 +1053,32 @@ test('part modeling overview screenshot', async () => {
   await page.screenshot({ path: out('part-modeling.png') });
   await app.close();
 });
+
+test('thin feature screenshots', async () => {
+  const { app, page } = await launchApp({ width: 1440, height: 900 });
+  // An open profile of a bent sheet: a flange, a web and a rounded return, made into 3 mm walls.
+  await page.evaluate(() => {
+    const P = (id: string, x: number, y: number) => ({ id, type: 'point', x, y });
+    const L = (id: string, p1: string, p2: string) => ({ id, type: 'line', p1, p2 });
+    const entities = [
+      P('a', -40, 0), P('b', 20, 0), P('m', 20, 15), P('c', 35, 15), P('d', 35, 50),
+      L('flange', 'a', 'b'), { id: 'bend', type: 'arc', center: 'm', start: 'b', end: 'c' }, L('web', 'c', 'd'),
+    ];
+    const features = [
+      { id: 'profile', type: 'sketch', name: 'Profile', plane: { kind: 'standard', plane: 'front' }, sketch: { entities, constraints: [] } },
+      { id: 'bracket', type: 'extrude', name: 'Bracket', operation: 'add', sketch: 'profile', depth: 60, direction: 'both', end: 'blind', thin: 'one', thickness: 3 },
+    ];
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features, past: [], future: [] }, savedFeatures: features, fileName: 'Bracket' });
+  });
+  await idle(page);
+  await page.evaluate(() => (window as unknown as { __parawerk: { viewport: { zoomToFit(): void } } }).__parawerk.viewport.zoomToFit());
+  await page.locator('.feature-tree .tree-item[data-feature-id="bracket"]').dblclick();
+  await idle(page);
+  await page.locator('[data-testid="thin-thickness"]').scrollIntoViewIfNeeded();
+  const canvas = await page.locator('.viewport-canvas').boundingBox();
+  if (canvas) await page.mouse.move(canvas.x + canvas.width - 30, canvas.y + canvas.height - 30);
+  await page.waitForTimeout(600);
+  await page.screenshot({ path: out('extrude-thin.png') });
+  await page.click('[data-testid="panel-ok"]');
+  await app.close();
+});

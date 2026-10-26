@@ -18,7 +18,8 @@ export const PART_FORMAT = 'parawerk-part';
  * revolutions. 5: edges and sketch faces referenced by persistent names (docs/adr/0002-persistent-naming.md).
  * 6: reference planes, axes and points, sketches on reference planes, revolutions around reference axes, holes,
  * patterns and mirror images, shells, extrusions up to a surface or vertex. 7: the part's material and color,
- * STEP imports, extrusions in two directions, with a draft or up to the next face, uneven chamfers.
+ * STEP imports, extrusions in two directions, with a draft or up to the next face, thin features, uneven
+ * chamfers.
  * Older versions are read unchanged.
  */
 export const PART_FORMAT_VERSION = 7;
@@ -28,6 +29,7 @@ export function formatVersionOf(features: readonly Feature[], properties: PartPr
   const seventh = (feature: Feature) =>
     feature.type === 'import' ||
     (feature.type === 'extrude' && (feature.end === 'upToNext' || feature.direction === 'two' || (feature.draft ?? 0) > 0)) ||
+    ((feature.type === 'extrude' || feature.type === 'revolve') && feature.thin !== undefined) ||
     (feature.type === 'chamfer' && feature.method !== undefined && feature.method !== 'equal');
   if (properties.material !== undefined || properties.color !== undefined || features.some(seventh)) return 7;
   const reference = (feature: Feature) =>

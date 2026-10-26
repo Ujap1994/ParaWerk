@@ -7,6 +7,7 @@
 
 import type { AxisMethod, FaceNameRef, GeometryRef, PlaneMethod, PointMethod } from './reference.ts';
 import type { SketchData, SketchPlaneRef } from './sketch.ts';
+import type { ThinSide } from './thin.ts';
 
 export type Vec3 = [number, number, number];
 
@@ -62,8 +63,8 @@ export const EXPRESSION_FIELDS: Readonly<Record<FeatureType, readonly string[]>>
   plane: ['distance', 'angle'],
   axis: [],
   point: ['x', 'y', 'z'],
-  extrude: ['depth', 'depth2', 'draft', 'endOffset'],
-  revolve: ['angle'],
+  extrude: ['depth', 'depth2', 'draft', 'endOffset', 'thickness'],
+  revolve: ['angle', 'thickness'],
   hole: ['diameter', 'depth', 'counterboreDiameter', 'counterboreDepth', 'countersinkDiameter', 'countersinkAngle', 'threadDepth'],
   pattern: ['spacing', 'angle'],
   mirror: [],
@@ -261,6 +262,9 @@ export interface ExtrudeFeature extends FeatureBase {
   /** Up to surface: how far before the surface the extrusion stops (after it, with `endBeyond`). */
   endOffset?: number;
   endBeyond?: boolean;
+  /** Thin feature: walls of `thickness` along the sketch curves (open ones too) instead of the areas they enclose. */
+  thin?: ThinSide;
+  thickness?: number;
 }
 
 /**
@@ -299,6 +303,9 @@ export interface RevolveFeature extends FeatureBase {
   angle: number;
   /** One way around the axis, the other way, or half the angle each way. */
   direction: RevolveDirection;
+  /** Thin feature: walls of `thickness` along the sketch curves (open ones too) instead of the areas they enclose. */
+  thin?: ThinSide;
+  thickness?: number;
 }
 
 /** Where a revolution starts and ends around its axis, in radians. */

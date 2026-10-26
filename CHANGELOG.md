@@ -7,6 +7,12 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### Added
+- Thin features: extrusions and revolutions of walls of a thickness along the curves of a sketch – open
+  curves too – instead of the areas they enclose, to one side, the other or both. Lines and arcs are
+  offset exactly and meet in sharp corners (an arc around very sharp outside corners); branching curves
+  and walls too thick for their curves are reported. A sketch of open curves starts as a thin feature.
+
 ## [0.3.0-alpha.0] - 2026-10-26
 
 The first **part modeling** preview (Phase 2): sketches become solids by extruding and revolving them,

@@ -1070,6 +1070,37 @@ test('extrudes up to the next face and up to a curved face picked in the 3D view
   expect((await state(page)).history.features[2]).toMatchObject({ type: 'extrude', end: 'upToSurface', endRef: { kind: 'face', name: 'shaft:side' }, endOffset: 5 });
 });
 
+test('extrudes open curves as a thin feature and switches the side of the walls', async () => {
+  launched = await launchApp({ width: 1000, height: 640 });
+  const { page } = launched;
+  // An L of two lines (40 along x, then 30 up) on the top plane: no closed outline.
+  await page.evaluate(() => {
+    const P = (id: string, x: number, y: number) => ({ id, type: 'point', x, y });
+    const L = (id: string, p1: string, p2: string) => ({ id, type: 'line', p1, p2 });
+    const features = [{ id: 'ell', type: 'sketch', plane: { kind: 'standard', plane: 'top' }, sketch: { entities: [P('a', 0, 0), P('b', 40, 0), P('c', 40, 30), L('ab', 'a', 'b'), L('bc', 'b', 'c')], constraints: [] } }];
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features, past: [], future: [] }, savedFeatures: features, dirty: false });
+  });
+  await idle(page);
+  // Extrude starts as a thin feature, since the sketch has no closed outline.
+  await page.click('[data-command="extrude"]');
+  await expect(page.locator('[data-testid="thin-on"]')).toBeChecked();
+  await page.click('[data-testid="panel-ok"]');
+  expect(await volume(page)).toBeCloseTo((42 * 2 + 30 * 2) * 20, 3);
+  // 4 mm walls inside the corner.
+  await page.locator('.feature-tree .tree-item[data-feature-id]').nth(1).dblclick();
+  await page.locator('[data-testid="thin-thickness"]').fill('4');
+  await page.locator('[data-testid="thin-thickness"]').press('Tab');
+  await page.getByRole('radio', { name: 'Other side' }).click();
+  await page.click('[data-testid="panel-ok"]');
+  expect(await volume(page)).toBeCloseTo((40 * 4 + 26 * 4) * 20, 3);
+  expect((await state(page)).history.features[1]).toMatchObject({ type: 'extrude', thin: 'other', thickness: 4 });
+  // Turned off, the open curves have no outline to extrude.
+  await page.locator('.feature-tree .tree-item[data-feature-id]').nth(1).dblclick();
+  await page.locator('[data-testid="thin-on"]').uncheck();
+  await idle(page);
+  expect((await state(page)).rebuild?.results[1]?.error?.code).toBe('profile-empty');
+});
+
 test('cutting from a sketch on a face goes into the part, and a cut that misses warns', async () => {
   launched = await launchApp({ width: 1440, height: 900 });
   const { page } = launched;

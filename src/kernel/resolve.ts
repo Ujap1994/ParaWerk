@@ -3,6 +3,7 @@ import { circularTransforms, linearTransforms, mirrorTransform, type Transform }
 import { holePositions, holeProblem } from '../shared/model/hole.ts';
 import { edgeFaceNames, edgeRefOf, faceRefOf, resolveEdgeRefs, resolveFaceRef, resolveFacePlane, type BodyNaming } from '../shared/model/naming.ts';
 import { sketchProfile, type Profile } from '../shared/model/profile.ts';
+import { DEFAULT_THIN_THICKNESS, thinProfile } from '../shared/model/thin.ts';
 import type { GeometryRef, ReferenceGeometry } from '../shared/model/reference.ts';
 import { frameOf, frameOnPlane, ORIGIN_ID, toModel, toSketch, type SketchFrame, type SketchPlaneRef } from '../shared/model/sketch.ts';
 import type { Point2 } from '../shared/model/spline.ts';
@@ -20,6 +21,24 @@ function profileOf(sketch: SketchFeature): Profile {
   if (crossing) throw new FeatureError('profile-crossing', `${coordinate(crossing.at[0])}, ${coordinate(crossing.at[1])}`);
   if (profile.regions.length === 0) throw new FeatureError('profile-empty');
   return profile;
+}
+
+/**
+ * The walls of a thin feature along the curves of its sketch (but not along `axis`, the line a revolution
+ * turns around); throws FeatureError when they cannot be built.
+ */
+function thinProfileOf(sketch: SketchFeature, feature: Pick<ExtrudeFeature, 'thin' | 'thickness'>, axis?: string): Profile {
+  const data = axis ? { ...sketch.sketch, entities: sketch.sketch.entities.filter((entity) => entity.id !== axis) } : sketch.sketch;
+  const result = thinProfile(data, feature.thin ?? 'one', feature.thickness ?? DEFAULT_THIN_THICKNESS);
+  if (!('code' in result)) return result;
+  switch (result.code) {
+    case 'thin-unsupported':
+      throw new FeatureError(result.code, result.curve);
+    case 'thin-branching':
+      throw new FeatureError(result.code, `${coordinate(result.at[0])}, ${coordinate(result.at[1])}`);
+    default:
+      throw new FeatureError(result.code);
+  }
 }
 
 /** The axis line of a revolution in sketch coordinates: a line of its sketch. */
@@ -268,7 +287,8 @@ export function resolveFeature(feature: SolidModelingFeature, before: readonly F
   const sketch = before.find((candidate): candidate is SketchFeature => candidate.type === 'sketch' && candidate.id === feature.sketch);
   if (!sketch || sketch.suppressed) throw new FeatureError('sketch-missing');
   if (feature.type === 'hole') return resolveHole(feature, sketch, context.frames.get(sketch.id) ?? frameOf(sketch.plane));
-  const profile = profileOf(sketch);
+  const axisLine = feature.type === 'revolve' && !feature.axisRef ? feature.axis : undefined;
+  const profile = feature.thin ? thinProfileOf(sketch, feature, axisLine) : profileOf(sketch);
   const frame = context.frames.get(sketch.id) ?? frameOf(sketch.plane);
   if (feature.type === 'extrude') return { ...feature, profile, frame, ...extrudeEnd(feature, profile, frame, context) };
   const axis = feature.axisRef ? referenceAxis(feature.axisRef, frame, context) : sketchAxis(sketch, feature.axis);

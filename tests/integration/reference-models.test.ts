@@ -605,6 +605,19 @@ const MODELS: Model[] = [
       ['gap of 3', set('boss', { endOffset: 3 })],
     ],
   },
+  {
+    name: 'channel extruded as a thin feature from an open profile, rounded along its bottom',
+    build() {
+      const profile = [P('a', -20, 30), P('b', -20, 0), P('c', 20, 0), P('d', 20, 30), L('ab', 'a', 'b'), L('bc', 'b', 'c'), L('cd', 'c', 'd')];
+      const channel = [sketch('s', FRONT, profile), extrude('ch', 's', 80, { thin: 'one', thickness: 3 })];
+      return [...channel, fillet('round', 2, edges(channel, ['ch:side:bc:right', 'ch:end'], ['ch:side:ab:right', 'ch:side:bc:right']))];
+    },
+    edits: [
+      ['thicker walls', set('ch', { thickness: 4 })],
+      ['wider channel', movePoints('s', { c: [30, 0], d: [30, 30] })],
+      ['walls inside', set('ch', { thin: 'other' })],
+    ],
+  },
 ];
 
 describe('reference models', () => {

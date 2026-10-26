@@ -299,7 +299,16 @@
     "depth2": "Tiefe 2 (andere Seite)",
     "draft": "Formschräge beim Extrudieren",
     "draftAngle": "Schrägenwinkel",
-    "draftOutward": "Schräge nach außen"
+    "draftOutward": "Schräge nach außen",
+    "thin": "Dünnwand-Feature",
+    "thickness": "Wandstärke",
+    "thinSide": "Wände",
+    "thinSides": {
+      "one": "Eine Seite",
+      "other": "Andere Seite",
+      "both": "Beide Seiten"
+    },
+    "thinHint": "Wände entlang jeder Kurve der Skizze, auch offener: eine Seite liegt außerhalb einer geschlossenen Kontur (bei offenen Kurven die Seite, die die Vorschau zeigt), beide Seiten legt je die halbe Stärke auf jede Seite. Linien und Bögen treffen sich in scharfen Ecken."
   },
   "status": {
     "kernelLoading": "Geometriekern wird gestartet…",
@@ -417,7 +426,7 @@
     "empty-result": "Die Operation hat den gesamten Körper entfernt.",
     "first-must-add": "Das erste Feature muss Material hinzufügen.",
     "sketch-missing": "Die Skizze dieses Features fehlt oder ist unterdrückt. Bearbeite das Feature und wähle eine Skizze.",
-    "profile-empty": "Die Skizze hat keine geschlossene Kontur. Schließe ihre Konturen oder wähle eine andere Skizze.",
+    "profile-empty": "Die Skizze hat keine geschlossene Kontur. Schließe ihre Konturen, schalte das Dünnwand-Feature für Wände entlang offener Kurven ein oder wähle eine andere Skizze.",
     "profile-crossing": "Kurven der Skizze kreuzen sich bei ({{detail}}) mm. Trimme sie, damit die Konturen eindeutig sind.",
     "operation-failed": "Der Geometriekern konnte dieses Feature nicht erzeugen ({{detail}}).",
     "unknown": "Unerwarteter Fehler: {{detail}}",
@@ -432,6 +441,10 @@
     "end-behind": "Das Ende liegt in dieser Richtung hinter der Skizze. Wähle die andere Richtung oder ein anderes Ende.",
     "end-parallel": "Die Extrusion läuft entlang dieser Ebene und erreicht sie nie. Wähle eine Ebene, die schräg zur Extrusion liegt.",
     "end-missed": "Der Körper oder die Fläche stoppt nicht die ganze Kontur: Ein Teil davon ginge endlos weiter. Verschiebe die Kontur oder wähle ein anderes Ende.",
+    "thin-empty": "Die Skizze hat keine Kurven, entlang derer Wände entstehen könnten.",
+    "thin-unsupported": "Wände entlang von Ellipsen und Splines sind noch nicht möglich ({{detail}}). Verwende Linien und Bögen oder schalte das Dünnwand-Feature aus.",
+    "thin-branching": "Bei ({{detail}}) mm treffen sich mehr als zwei Kurven: Wände brauchen Kurvenzüge ohne Verzweigungen.",
+    "thin-too-thick": "Die Wände sind zu dick für die Kurven: Ein Bogen oder eine kurze Linie würde in ihnen verschwinden. Mach die Wände dünner oder lege sie auf die andere Seite.",
     "profile-crosses-axis": "Konturen der Skizze liegen auf beiden Seiten der Achse. Halte sie auf einer Seite; berühren dürfen sie die Achse.",
     "plane-missing": "Die Referenzebene, auf der diese Skizze gezeichnet wurde, existiert nicht mehr. Die Skizze bleibt, wo die Ebene war.",
     "reference-missing": "Referenz {{detail}} dieses Features fehlt: Sie wurde noch nicht gewählt, oder eine frühere Änderung hat sie entfernt. Bearbeite das Feature und wähle sie.",

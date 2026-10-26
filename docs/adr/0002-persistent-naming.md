@@ -41,6 +41,7 @@ using OCCT's history to pass the names of the faces it modifies on:
 | Cylinder | `<id>:side/bottom/top` | – |
 | Extrude, revolve | `<id>:side:<sketch curve id>`, `<id>:start`, `<id>:end` | `Generated(edge)`, `FirstShape`, `LastShape`; faces still unnamed get the name of the profile edge whose middle lies on them (a revolution reports no generated face for an edge that touches the axis, such as the flat ends of a shaft) |
 | Extrude up to a surface or the next face | as for extrude; the face along the surface is named like the far end | the long extrusion is split at the surface (or cut by the body) and the pieces that start at the sketch are kept, their faces looked up in the split result; up to next adds no face of its own where it meets the body |
+| Thin feature | `<id>:side:<curve>:left/right` (open chains) or `:inner/outer` (closed), `<id>:side:<curve>:start/end` at open ends, `<id>:side:<curve>:<next curve>:join` around sharp corners | names given to the profile edges before the sweep (src/shared/model/thin.ts); a wall keeps its name when the walls switch sides |
 | Draft while extruding | none: the tapered side faces keep their names | `Modified`, `ModifiedShape` (BRepOffsetAPI_DraftAngle reports the tapered faces only there) |
 | STEP import | `<id>:f<i>` in the order of the imported faces | – |
 | Boolean (add, cut) | none: every face keeps the name of the face it comes from | `Modified`, `IsDeleted`, merged by `SimplifyResult` |

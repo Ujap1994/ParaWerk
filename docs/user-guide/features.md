@@ -49,6 +49,27 @@ chooses another one.
 Once an extrusion uses a sketch, the sketch is hidden in the 3D view; editing the extrusion shows it again,
 and editing the sketch (double-click it in the feature tree) rebuilds the extrusion.
 
+### Thin features
+
+**Thin feature** extrudes walls of a *Wall thickness* along the curves of the sketch instead of the
+areas they enclose: brackets and channels from a bent profile, ribs from a single line, tubes and frames
+from a closed outline. Open curves work too, so a sketch of open curves only starts as a thin feature
+right away.
+
+- *Walls*: **One side** puts the walls outside a closed outline (for open curves on the side the preview
+  shows), **Other side** inside, **Both sides** half the thickness on each side of the curves.
+- Lines stay lines and arcs and circles stay arcs and circles around the same center, so the walls are
+  exact. Where lines and arcs meet at an angle, the walls meet in a sharp corner; outside a very sharp
+  corner an arc around it joins them. Open ends are square.
+- Curves that branch (more than two meeting in one point) are reported, and so are walls too thick for
+  the curves (an arc or a short line would vanish inside them). Walls along ellipses and splines are not
+  possible yet.
+- All other options of the extrusion work as usual: ends, directions, draft, *Remove material* (a thin
+  cut makes a groove along the curves). The wall faces are named after their curves and side, so fillets
+  on them stay put.
+
+![A bracket extruded as a thin feature from an open profile: flange, bend and web with 3 mm walls](../images/screenshots/extrude-thin.png)
+
 ![Extruding a plate with two holes: the side panel with sketch, depth and direction](../images/screenshots/extrude-plate.png)
 
 ![A pocket cut from a sketch on the top face of the plate](../images/screenshots/extrude-pocket.png)
@@ -60,7 +81,8 @@ and editing the sketch (double-click it in the feature tree) rebuilds the extrus
 **Revolve** turns the closed outlines of a sketch around an axis into a solid – shafts, bushes, pulleys,
 knobs – or cuts them out of the body (grooves, recesses) with **Remove material**. Draw a half section and
 a **centerline** as the axis in the sketch; the outlines may touch the axis but must stay on one side of
-it.
+it. As a [thin feature](#thin-features) it turns walls along the curves (not along the axis line), for
+example a cup from the open outline of its inside.
 
 - *Sketch* and *Axis*: Revolve takes the newest sketch that no extrusion or revolution uses yet and its
   first centerline. *Axis* lists the centerlines and the other lines of the sketch; the chosen one is shown

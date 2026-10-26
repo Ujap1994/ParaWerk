@@ -2,6 +2,7 @@ import { CHAMFER_METHODS, type ChamferMethod, EXPRESSION_FIELDS, EXTRUDE_DIRECTI
 import { HOLE_FITS, HOLE_KINDS } from './hole.ts';
 import { CUSTOM_MATERIAL, materialInfo, MAX_DENSITY, MIN_DENSITY, NO_PROPERTIES, type PartProperties } from './material.ts';
 import { MAX_PATTERN_COUNT } from './pattern.ts';
+import { THIN_SIDES, type ThinSide } from './thin.ts';
 import { AXIS_METHODS, PLANE_METHODS, POINT_METHODS, type GeometryRef } from './reference.ts';
 import { parseSketchData, parsePlaneRef } from './validate-sketch.ts';
 
@@ -207,6 +208,15 @@ function extrudeEnd<T extends string>(value: unknown, path: string, ends: readon
   return value as T;
 }
 
+/** The thin-feature fields of an extrusion or revolution (absent: a solid profile). */
+function thinWalls(raw: Json, path: string): { thin?: ThinSide; thickness?: number } {
+  if (raw.thin !== undefined && !(THIN_SIDES as readonly unknown[]).includes(raw.thin)) throw new ValidationError(`expected ${THIN_SIDES.join(', ')}`, `${path}.thin`);
+  return {
+    ...(raw.thin === undefined ? {} : { thin: raw.thin as ThinSide }),
+    ...(raw.thickness === undefined ? {} : { thickness: positiveLength(raw.thickness, `${path}.thickness`) }),
+  };
+}
+
 export function parseFeature(raw: unknown, path = 'feature'): Feature {
   if (!isObject(raw)) throw new ValidationError('expected an object', path);
   const feature = parseFeatureFields(raw, path);
@@ -270,6 +280,7 @@ function parseFeatureFields(raw: Json, path: string): Feature {
         ...(raw.depth2 === undefined ? {} : { depth2: positiveLength(raw.depth2, `${path}.depth2`) }),
         ...(raw.draft === undefined ? {} : { draft: raw.draft as number }),
         ...(raw.draftOutward === undefined ? {} : { draftOutward: flag(raw.draftOutward, `${path}.draftOutward`) }),
+        ...thinWalls(raw, path),
       };
     }
     case 'revolve': {
@@ -287,6 +298,7 @@ function parseFeatureFields(raw: Json, path: string): Feature {
         ...(raw.axisRef === undefined ? {} : { axisRef: geometryRef(raw.axisRef, `${path}.axisRef`) }),
         angle: raw.angle,
         direction: raw.direction as RevolveDirection,
+        ...thinWalls(raw, path),
       };
     }
     case 'hole': {
