@@ -7,6 +7,12 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### Added
+- Projected curves: the curves of a sketch projected along its normal onto picked faces (on both sides of
+  the sketch or one), or a 3D curve where the curves of two sketches meet (sketch on sketch).
+- Composite curves: edges of the part, sketches and other curves joined end to end into one chain.
+- Sweeps follow projected and composite curves as their path.
+
 ## [0.4.0-alpha.0] - 2026-10-26
 
 The first alpha of **Phase 3** (advanced features and configurations): draft, sweep (also along a helix,

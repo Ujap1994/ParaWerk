@@ -201,7 +201,8 @@ First preview released as [v0.4.0-alpha.0](https://github.com/Ujap1994/ParaWerk/
 | Variable-radius fillets (from a start to an end radius along each edge) | ✅ done |
 | Modeled threads (ISO metric, external and internal, on cylindrical faces) | ✅ done |
 | Helix (pitch, turns, start angle, hand) as the path of sweeps: springs, coils, helical grooves | ✅ done |
-| Multi-body parts, curves (projected, composite) | open |
+| Curves: projected (onto faces, sketch on sketch) and composite, as sweep paths | ✅ done |
+| Multi-body parts | open |
 | Configurations and design tables (variables and suppression per configuration) | ✅ done |
 | Full equation support (functions of several values, conditions, pattern counts from equations) | ✅ done |
 | Surface tools (offset, knit, thicken) | open |

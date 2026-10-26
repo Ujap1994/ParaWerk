@@ -60,6 +60,8 @@ import {
   RibIcon,
   ThreadIcon,
   HelixIcon,
+  ProjectedCurveIcon,
+  CompositeCurveIcon,
   ConfigurationsIcon,
   CoordinateSystemIcon,
   SettingsIcon,
@@ -180,9 +182,9 @@ interface SplitEntry {
   active(state: AppState): boolean;
 }
 
-const REFERENCE_ENTRIES: readonly SplitEntry[] = (['plane', 'axis', 'point', 'csys', 'helix'] as const).map((type) => ({
+const REFERENCE_ENTRIES: readonly SplitEntry[] = (['plane', 'axis', 'point', 'csys', 'helix', 'projectedCurve', 'compositeCurve'] as const).map((type) => ({
   id: type,
-  icon: { plane: ReferencePlaneIcon, axis: ReferenceAxisIcon, point: ReferencePointIcon, csys: CoordinateSystemIcon, helix: HelixIcon }[type],
+  icon: { plane: ReferencePlaneIcon, axis: ReferenceAxisIcon, point: ReferencePointIcon, csys: CoordinateSystemIcon, helix: HelixIcon, projectedCurve: ProjectedCurveIcon, compositeCurve: CompositeCurveIcon }[type],
   label: type,
   start: () => commands.startFeature(type),
   active: (state: AppState) => state.activeEdit?.mode === 'create' && state.activeEdit.draft.type === type,

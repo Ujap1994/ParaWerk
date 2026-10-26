@@ -83,8 +83,9 @@ export function referenceFits(ref: GeometryRef, role: ReferenceRole, state: AppS
     case 'feature': {
       const kind = referenceGeometry(state, ref.feature)?.kind ?? state.history.features.find((feature) => feature.id === ref.feature)?.type;
       // A coordinate system is a point (its origin), a plane (XY) and an axis (Z) at once.
-      // A helix stands for its axis.
+      // A helix stands for its axis; curves stand for nothing a reference field takes.
       if (kind === 'helix') return role === 'axis' || role === 'direction';
+      if (kind === 'curve' || kind === 'projectedCurve' || kind === 'compositeCurve') return false;
       return kind === 'csys' || kind === role || (kind === 'point' && role === 'center') || (role === 'direction' && (kind === 'plane' || kind === 'axis'));
     }
     case 'vertex':

@@ -106,8 +106,8 @@ the curves of another sketch – handles, tubes, wires, grooves along a curve wi
 
 - *Profile*: the sketch with the closed outlines. They are swept as they lie, so draw them across the
   start of the path – usually on a plane at a right angle to it, through its first point.
-- *Path*: a sketch with one chain of lines, arcs, ellipses or splines, open or closed, or a
-  [helix](#helix-and-springs). Curves that branch or do not connect are reported. The path runs from its
+- *Path*: a sketch with one chain of lines, arcs, ellipses or splines, open or closed, a
+  [helix](#helix-and-springs) or a [projected or composite curve](#curves). Curves that branch or do not connect are reported. The path runs from its
   end nearer to the outlines, so it does not matter in which direction it was drawn.
 - Sweep starts with the newest sketch with closed outlines as profile and the newest helix or sketch
   without closed outlines as path, if no feature uses them yet.
@@ -144,6 +144,37 @@ the body instead. Along a helix, profiles take outlines without holes (for a tub
 and cut the inner one).
 
 ![A compression spring: a wire of Ø3 swept along the helix](../images/screenshots/sweep-spring.png)
+
+## Curves
+
+Curves in space are paths for sweeps that no single sketch can draw. Like reference geometry they do not
+change the body; they are drawn as lines in the 3D view and listed in the tree. Both are in the arrow of
+the **Plane** button. While you edit a curve, the panel shows its length and how many pieces it has; a
+sweep needs a curve of one piece.
+
+### Projected curve
+
+- **Onto faces** projects the curves of a sketch (all that are not construction geometry) along the sketch
+  normal onto faces of the part: a mark or a groove path on a shaft, a line across a curved lid. Click the
+  faces in the 3D view (again to take one out). *Lands* decides where: on **both sides** of the sketch,
+  only **along the normal** or only **against** it – a curve projected onto a whole shaft would otherwise
+  land on its top and its bottom.
+- **Sketch on sketch** makes a 3D curve from two views: draw it as seen from above in one sketch and as
+  seen from the front in another. The curve is where the two meet when each is extended along its sketch
+  normal – for example a line rising along a bent path.
+
+Projected curve starts with the newest sketch that no feature uses yet and takes faces selected before.
+
+![A circle projected onto the top of a shaft: a saddle-shaped curve, previewed in teal on the picked face](../images/screenshots/curve-projected.png)
+
+### Composite curve
+
+**Composite curve** joins edges of the part, sketches and other curves end to end into one chain: click
+edges in the 3D view (again to take one out) and add sketches and curves from the list. Together they must
+form one chain without branches or gaps – it is reported otherwise. Edges are remembered by name like the
+edges of a fillet, so the curve follows the part when earlier features change.
+
+![Three top edges of a block and a line in a sketch beyond them, joined into one path](../images/screenshots/curve-composite.png)
 
 ## Loft
 
@@ -370,7 +401,8 @@ Planes, axes, points and coordinate systems that are not faces of the part: a pl
 sketch on, an axis through the middle of a bore, a point to build a plane through, a coordinate system
 to give mass properties in or to export in. They do not change the body. Create them with the **Plane**
 button in the *Features* tab; its arrow offers **Axis**, **Point** and **Coordinate system** as well, and
-the [Helix](#helix-and-springs). Where a field takes an axis, a helix gives its axis.
+the [Helix](#helix-and-springs) and the [curves](#curves). Where a field takes an axis, a helix gives
+its axis.
 
 ![A plane at 30° to the front plane through the axis of the bore: the new plane is drawn in teal, what it is built on in orange](../images/screenshots/reference-plane.png)
 

@@ -595,6 +595,25 @@ export const HelixIcon = (p: P) => (
   </Icon>
 );
 
+/** Projected curve: a curve drawn above a curved surface and the same curve lying on it. */
+export const ProjectedCurveIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="M3 18.5c3-3.5 15-3.5 18 0" opacity="0.55" />
+    <path d="M5 6.5c2.5-2 5 2 7 0s4.5-2 7 0" strokeDasharray="2.2 2" />
+    <path d="M5 16.3c2.5-1.6 5 .9 7-.3s4.5-1.1 7 .3" />
+    <path d="M8.5 8.5v5M15.5 8.5v5M7 12l1.5 1.5L10 12M14 12l1.5 1.5L17 12" opacity="0.7" />
+  </Icon>
+);
+
+/** Composite curve: a straight piece, an arc and another straight piece joined at dots. */
+export const CompositeCurveIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="M3 19.5 9 13.5a5 5 0 0 1 7-7l5-3" />
+    {dot(9, 13.5, 1.6)}
+    {dot(16, 6.5, 1.6)}
+  </Icon>
+);
+
 /** Configurations: stacked cards of one part, the front one with lines of values. */
 export const ConfigurationsIcon = (p: P) => (
   <Icon {...p}>
@@ -718,4 +737,6 @@ export const FEATURE_ICONS = {
   rib: RibIcon,
   thread: ThreadIcon,
   helix: HelixIcon,
+  projectedCurve: ProjectedCurveIcon,
+  compositeCurve: CompositeCurveIcon,
 } as const;

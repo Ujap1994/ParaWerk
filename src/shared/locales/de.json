@@ -120,7 +120,9 @@
       "rib": "Eine Wand von den offenen Kurven einer Skizze bis zum Körper hinzufügen, etwa eine Stützrippe in einer Ecke",
       "thread": "Ein modelliertes ISO-Gewinde in einen Bolzen oder eine Bohrung schneiden",
       "configurations": "Varianten des Teils: zwischen ihnen umschalten und ihre Variablen in einer Konstruktionstabelle bearbeiten",
-      "helix": "Eine Wendel um den Kreis einer Skizze erzeugen, als Pfad einer Feder oder Spirale"
+      "helix": "Eine Wendel um den Kreis einer Skizze erzeugen, als Pfad einer Feder oder Spirale",
+      "projectedCurve": "Die Kurven einer Skizze auf Flächen projizieren oder eine 3D-Kurve dort erzeugen, wo sich die Kurven zweier Skizzen treffen",
+      "compositeCurve": "Kanten, Skizzenkurven und andere Kurven zu einer Kurve verbinden, als Pfad einer Austragung"
     },
     "tabs": {
       "label": "Befehlsregister",
@@ -189,7 +191,7 @@
     "plane": "Ebene",
     "axis": "Achse",
     "point": "Punkt",
-    "referenceGeometry": "Referenzgeometrie",
+    "referenceGeometry": "Referenzgeometrie und Kurven",
     "hole": "Bohrung",
     "pattern": "Muster",
     "circularPattern": "Kreismuster",
@@ -212,7 +214,9 @@
     "thread": "Gewinde",
     "holeFeatures": "Bohrung und Gewinde",
     "configurations": "Konfigurationen",
-    "helix": "Wendel"
+    "helix": "Wendel",
+    "projectedCurve": "Projizierte Kurve",
+    "compositeCurve": "Zusammengesetzte Kurve"
   },
   "features": {
     "plane": "Ebene",
@@ -238,7 +242,9 @@
     "loft": "Ausformung",
     "rib": "Rippe",
     "thread": "Gewinde",
-    "helix": "Wendel"
+    "helix": "Wendel",
+    "projectedCurve": "Projizierte Kurve",
+    "compositeCurve": "Zusammengesetzte Kurve"
   },
   "tree": {
     "title": "Featurebaum",
@@ -454,7 +460,8 @@
     "importFailed": "Import fehlgeschlagen: {{message}}",
     "noSweepSketches": "Eine Austragung braucht zwei Skizzen: eine mit geschlossener Kontur und eine mit dem Pfad.",
     "noLoftSketches": "Eine Ausformung braucht mindestens zwei Skizzen mit je einer geschlossenen Kontur.",
-    "noHelixSketch": "Zeichne zuerst einen Kreis in eine Skizze: Die Wendel windet sich um ihn."
+    "noHelixSketch": "Zeichne zuerst einen Kreis in eine Skizze: Die Wendel windet sich um ihn.",
+    "noCurveSketch": "Zeichne zuerst die zu projizierenden Kurven in eine Skizze."
   },
   "errors": {
     "no-body": "Es gibt noch keinen Körper, der verändert werden kann.",
@@ -511,7 +518,11 @@
     "thread-face": "Wähle für das Gewinde die zylindrische Fläche eines Bolzens oder einer Bohrung.",
     "thread-size": "Steigung und Länge des Gewindes müssen größer als 0 sein.",
     "helix-circle": "Die Skizze der Wendel braucht einen Kreis: Die Wendel windet sich mit seinem Radius um seinen Mittelpunkt.",
-    "sweep-holes": "Entlang einer Wendel nimmt das Profil nur Umrisse ohne Löcher."
+    "sweep-holes": "Entlang einer Wendel nimmt das Profil nur Umrisse ohne Löcher.",
+    "curve-empty": "Die Kurve hat nichts zu projizieren oder zu verbinden: Wähle eine Skizze mit Kurven, oder wähle Kanten aus bzw. füge Skizzen und Kurven hinzu.",
+    "curve-missed": "Die Kurven treffen die gewählten Flächen nicht, oder die Kurven der beiden Skizzen treffen sich nicht. Prüfe die Flächen und die Seite.",
+    "curve-faces": "Wähle die Flächen, auf die die Kurven projiziert werden.",
+    "curve-edge-missing": "{{detail}} Kante(n) der Kurve existieren nicht mehr, eine frühere Änderung hat sie entfernt. Bearbeite die Kurve und wähle die Kanten neu aus."
   },
   "warnings": {
     "edge-missing_one": "{{count}} ausgewählte Kante existiert nicht mehr und wird ausgelassen. Bearbeite das Feature, um sie zu entfernen oder eine andere Kante zu wählen.",
@@ -1076,5 +1087,34 @@
     "reverse": "Zur anderen Seite der Skizze winden",
     "leftHand": "Linksgängig (gegen den Uhrzeigersinn)",
     "hint": "Die Wendel windet sich um den ersten Kreis der Skizze, mit seinem Radius, und beginnt auf dem Kreis beim Startwinkel (von der X-Achse der Skizze aus). Trage ein Profil entlang der Wendel aus, um eine Feder oder Spirale zu erhalten: Zeichne das Profil in einer Ebene durch die Achse der Wendel, an ihrem Startpunkt."
+  },
+  "curve": {
+    "method": "Typ",
+    "methods": {
+      "faces": "Auf Flächen",
+      "sketch": "Skizze auf Skizze"
+    },
+    "sketch": "Skizze mit den Kurven",
+    "sketch2": "Zweite Skizze",
+    "faces_one": "{{count}} Fläche",
+    "faces_other": "{{count}} Flächen",
+    "pickFaces": "Klicke die Flächen in der 3D-Ansicht an",
+    "side": "Trifft auf",
+    "sides": {
+      "both": "Auf beiden Seiten der Skizze",
+      "normal": "Entlang der Skizzennormalen",
+      "reverse": "Entgegen der Skizzennormalen"
+    },
+    "edges_one": "{{count}} Kante",
+    "edges_other": "{{count}} Kanten",
+    "pickEdges": "Klicke Kanten in der 3D-Ansicht an",
+    "curves": "Skizzen und Kurven",
+    "add": "Skizze oder Kurve hinzufügen",
+    "summary_one": "Länge {{length}}, ein Stück.",
+    "summary_other": "Länge {{length}} in {{count}} Stücken.",
+    "hintFaces": "Die Kurven der Skizze (ohne Konstruktionsgeometrie) werden entlang der Skizzennormalen auf die angeklickten Flächen projiziert – auf beiden Seiten der Skizze oder nur auf einer. Eine Austragung folgt dem Ergebnis, wenn es ein Stück ist.",
+    "hintSketch": "Zeichne die Kurve aus zwei Richtungen gesehen, in zwei Skizzen auf Ebenen im Winkel zueinander: Die 3D-Kurve liegt dort, wo sich die Kurven treffen, wenn jede entlang ihrer Skizzennormalen verlängert wird.",
+    "hintComposite": "Klicke Kanten des Teils an und füge Skizzen und Kurven hinzu; zusammen müssen sie sich Ende an Ende zu einem Kurvenzug verbinden. Das Ergebnis ist ein Pfad für eine Austragung.",
+    "clear": "Alle entfernen"
   }
 }

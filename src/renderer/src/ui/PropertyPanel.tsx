@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { formatQuantity } from '../format.ts';
-import { CHAMFER_METHODS, type DraftFeature, type HelixFeature, MAX_HELIX_TURNS, type LoftFeature, RIB_DIRECTIONS, type RibDirection, type ThreadFeature, FILLET_METHODS, roundFaceCount, type FilletFeature, type FilletMethod, EXTRUDE_ENDS, extrudesOneWay, MAX_DRAFT_ANGLE, type RevolveDirection, hasReferenceSlots, isCopyFeature, type Axis, type BooleanOperation, type ChamferFeature, type ChamferMethod, type EdgeFeature, type ExtrudeDirection, type ExtrudeEnd, type ExtrudeFeature, type Feature, type RevolveFeature, type Vec3 } from '../../../shared/model/feature.ts';
+import { CHAMFER_METHODS, type DraftFeature, type HelixFeature, type ProjectedCurveFeature, type CompositeCurveFeature, isCurveFeature, PROJECTION_METHODS, type ProjectionMethod, PROJECTION_SIDES, type ProjectionSide, MAX_HELIX_TURNS, type LoftFeature, RIB_DIRECTIONS, type RibDirection, type ThreadFeature, FILLET_METHODS, roundFaceCount, type FilletFeature, type FilletMethod, EXTRUDE_ENDS, extrudesOneWay, MAX_DRAFT_ANGLE, type RevolveDirection, hasReferenceSlots, isCopyFeature, type Axis, type BooleanOperation, type ChamferFeature, type ChamferMethod, type EdgeFeature, type ExtrudeDirection, type ExtrudeEnd, type ExtrudeFeature, type Feature, type RevolveFeature, type Vec3 } from '../../../shared/model/feature.ts';
 import { DEFAULT_THIN_THICKNESS, THIN_SIDES, type ThinSide } from '../../../shared/model/thin.ts';
 import { METRIC_SIZES } from '../../../shared/model/hole.ts';
 import type { GeometryRef } from '../../../shared/model/reference.ts';
@@ -71,21 +71,23 @@ function SketchField({
   index,
   label,
   testId = 'feature-sketch',
-  helices = false,
+  curves = false,
   onChange = commands.chooseFeatureSketch,
 }: {
   value: string;
   index: number;
   label?: string;
   testId?: string;
-  /** Helices can be chosen as well (the path of a sweep). */
-  helices?: boolean;
+  /** Helices and projected and composite curves can be chosen as well (the path of a sweep). */
+  curves?: boolean;
   onChange?(id: string): void;
 }) {
   const { t } = useTranslation();
   const features = useAppState((state) => state.history.features);
   const nameOf = useFeatureName();
-  const sketches = features.slice(0, index).flatMap((feature, i) => (feature.type === 'sketch' || (helices && feature.type === 'helix') ? [{ id: feature.id, name: nameOf(features, i) }] : []));
+  const sketches = features
+    .slice(0, index)
+    .flatMap((feature, i) => (feature.type === 'sketch' || (curves && (feature.type === 'helix' || isCurveFeature(feature))) ? [{ id: feature.id, name: nameOf(features, i) }] : []));
   return (
     <label className="field">
       <span className="field-label">{label ?? t('panel.sketch')}</span>
@@ -314,7 +316,7 @@ function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
       return (
         <Section title={t('panel.parameters')}>
           <SketchField value={draft.sketch} index={index} label={t('sweep.profile')} testId="sweep-profile" onChange={(sketch) => commands.updateDraft({ sketch })} />
-          <SketchField value={draft.path} index={index} label={t('sweep.path')} testId="sweep-path" helices onChange={(path) => commands.updateDraft({ path })} />
+          <SketchField value={draft.path} index={index} label={t('sweep.path')} testId="sweep-path" curves onChange={(path) => commands.updateDraft({ path })} />
           <OperationField value={draft.operation} firstFeature={firstFeature} />
           <p className="panel-hint">{t('sweep.hint')}</p>
         </Section>
@@ -325,6 +327,10 @@ function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
       return <ThreadFields draft={draft} />;
     case 'helix':
       return <HelixFields draft={draft} index={index} />;
+    case 'projectedCurve':
+      return <ProjectedCurveFields draft={draft} index={index} />;
+    case 'compositeCurve':
+      return <CompositeCurveFields draft={draft} index={index} />;
     case 'rib':
       return (
         <Section title={t('panel.parameters')}>
@@ -486,6 +492,109 @@ function HelixFields({ draft, index }: { draft: HelixFeature; index: number }) {
         {t('helix.leftHand')}
       </label>
       <p className="panel-hint">{t('helix.hint')}</p>
+    </Section>
+  );
+}
+
+/** The length of the edited curve and how many pieces it has, as the last rebuild built it. */
+function CurveSummary({ id }: { id: string }) {
+  const { t } = useTranslation();
+  const language = useAppState((state) => state.language);
+  const curve = useAppState((state) => state.rebuild?.results.find((result) => result.id === id)?.reference);
+  if (curve?.kind !== 'curve') return null;
+  return (
+    <p className="panel-hint" data-testid="curve-summary">
+      {t('curve.summary', { length: formatQuantity(curve.length, language, 'mm'), count: curve.chains })}
+    </p>
+  );
+}
+
+/** A projected curve: its sketch, and the faces it lands on (on which side) or the second sketch. */
+function ProjectedCurveFields({ draft, index }: { draft: ProjectedCurveFeature; index: number }) {
+  const { t } = useTranslation();
+  return (
+    <Section title={t('panel.parameters')}>
+      <Segmented<ProjectionMethod>
+        label={t('curve.method')}
+        value={draft.method}
+        options={PROJECTION_METHODS.map((value) => ({ value, label: t(`curve.methods.${value}`) }))}
+        onChange={(method) => commands.updateDraft({ method })}
+      />
+      <SketchField value={draft.sketch} index={index} label={t('curve.sketch')} />
+      {draft.method === 'faces' ? (
+        <>
+          <div className="edge-summary">
+            <span data-testid="curve-faces">{draft.faces.length > 0 ? t('curve.faces', { count: draft.faces.length }) : t('curve.pickFaces')}</span>
+            <button type="button" className="text-button" disabled={draft.faces.length === 0} onClick={() => commands.updateDraft({ faces: [] })}>
+              {t('curve.clear')}
+            </button>
+          </div>
+          <label className="field">
+            <span className="field-label">{t('curve.side')}</span>
+            <select className="field-select" value={draft.side} data-testid="curve-side" onChange={(event) => commands.updateDraft({ side: event.target.value as ProjectionSide })}>
+              {PROJECTION_SIDES.map((side) => (
+                <option key={side} value={side}>
+                  {t(`curve.sides.${side}`)}
+                </option>
+              ))}
+            </select>
+          </label>
+        </>
+      ) : (
+        <SketchField value={draft.sketch2} index={index} label={t('curve.sketch2')} testId="curve-sketch2" onChange={(sketch2) => commands.updateDraft({ sketch2 })} />
+      )}
+      <CurveSummary id={draft.id} />
+      <p className="panel-hint">{t(draft.method === 'faces' ? 'curve.hintFaces' : 'curve.hintSketch')}</p>
+    </Section>
+  );
+}
+
+/** A composite curve: edges picked in the 3D view and sketches and curves from a list, joined into one chain. */
+function CompositeCurveFields({ draft, index }: { draft: CompositeCurveFeature; index: number }) {
+  const { t } = useTranslation();
+  const features = useAppState((state) => state.history.features);
+  const nameOf = useFeatureName();
+  const candidates = features.slice(0, index).flatMap((feature, i) => (feature.type === 'sketch' || isCurveFeature(feature) ? [{ id: feature.id, name: nameOf(features, i) }] : []));
+  const name = (id: string) => candidates.find((candidate) => candidate.id === id)?.name ?? t('references.lost');
+  const available = candidates.filter((candidate) => !draft.curves.includes(candidate.id));
+  return (
+    <Section title={t('panel.parameters')}>
+      <div className="edge-summary">
+        <span data-testid="curve-edges">{draft.edges.length > 0 ? t('curve.edges', { count: draft.edges.length }) : t('curve.pickEdges')}</span>
+        <button type="button" className="text-button" disabled={draft.edges.length === 0} onClick={() => commands.updateDraft({ edges: [] })}>
+          {t('curve.clear')}
+        </button>
+      </div>
+      {draft.curves.length > 0 ? (
+        <>
+          <span className="field-label">{t('curve.curves')}</span>
+          <ol className="loft-list" data-testid="curve-list">
+            {draft.curves.map((id) => (
+              <li key={id} className="loft-item">
+                <span>{name(id)}</span>
+                <button type="button" className="icon-button" title={t('references.clear')} aria-label={t('references.clear')} onClick={() => commands.updateDraft({ curves: draft.curves.filter((other) => other !== id) })}>
+                  <CloseIcon />
+                </button>
+              </li>
+            ))}
+          </ol>
+        </>
+      ) : null}
+      {available.length > 0 ? (
+        <label className="field">
+          <span className="field-label">{t('curve.add')}</span>
+          <select className="field-select" value="" data-testid="curve-add" onChange={(event) => event.target.value && commands.updateDraft({ curves: [...draft.curves, event.target.value] })}>
+            <option value="">{t('loft.choose')}</option>
+            {available.map((candidate) => (
+              <option key={candidate.id} value={candidate.id}>
+                {candidate.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+      <CurveSummary id={draft.id} />
+      <p className="panel-hint">{t('curve.hintComposite')}</p>
     </Section>
   );
 }

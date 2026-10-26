@@ -77,6 +77,8 @@ export type ReferenceGeometry =
   | { kind: 'point'; point: Vec3 }
   /** Unit axes, perpendicular to each other and right-handed. */
   | { kind: 'csys'; origin: Vec3; xDir: Vec3; yDir: Vec3; zDir: Vec3 }
+  /** A projected or composite curve: points along its edges for drawing, its length, and whether it is one chain that closes. */
+  | { kind: 'curve'; polylines: Vec3[][]; length: number; chains: number; closed: boolean }
   /**
    * A helix around `axis` (unit) through `center`, of `radius`, starting at center + radius · xDir and
    * rising `pitch` per turn along the axis; turning left-handed with `leftHand`.

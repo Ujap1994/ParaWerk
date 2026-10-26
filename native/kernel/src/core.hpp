@@ -149,6 +149,51 @@ int sweepProfile(const std::vector<double>& profile, const std::vector<double>& 
                  const std::vector<std::string>& edgeNames = {}, const std::string& name = "");
 
 /**
+ * The solid swept by the regions of `profile` (as for sweepProfile) along the curve `curveId` of the
+ * store (one chain, see the curve functions below); an open curve runs from its end nearer to the
+ * outlines. Fails with "path-gaps" (several chains) or "sweep-failed".
+ */
+int sweepAlongCurve(const std::vector<double>& profile, const std::vector<double>& frame, int curveId, const std::vector<std::string>& edgeNames = {},
+                    const std::string& name = "");
+
+// Curves: wires (or compounds of wires) in the store that are not bodies; they are drawn, joined and
+// swept along.
+
+/** The path of a sketch (as for sweepProfile) as a curve. */
+int sketchWire(const std::vector<double>& path, const std::vector<double>& pathFrame);
+
+/**
+ * The curve `wireId` projected along `direction` onto the faces `faceIndices` of body `bodyId`; pieces
+ * that meet are joined. `side` 0 keeps what lands on either side of the plane through `origin` normal
+ * to the direction, 1 only what lies along the direction, -1 only what lies against it. Fails with
+ * "curve-missed" when nothing lands on the faces.
+ */
+int projectCurve(int wireId, int bodyId, const std::vector<int>& faceIndices, const std::vector<double>& origin, const std::vector<double>& direction, int side);
+
+/**
+ * Where two curves meet when each is extended along its direction (the normals of their sketch planes):
+ * a 3D curve from two views. Fails with "curve-missed".
+ */
+int intersectCurves(int wireA, const std::vector<double>& directionA, int wireB, const std::vector<double>& directionB);
+
+/**
+ * One curve of the edges `edgeIndices` of body `bodyId` and the curves `curveIds`, joined end to end.
+ * Fails with "curve-empty", or with "path-gaps" when they do not form `oneChain` (otherwise the result
+ * may be several chains).
+ */
+int compositeCurve(int bodyId, const std::vector<int>& edgeIndices, const std::vector<int>& curveIds, bool oneChain);
+
+struct CurveInfo {
+  double length = 0;
+  /** Number of wires (1 for a curve that is one chain). */
+  int chains = 0;
+  bool closed = false;
+  /** Points along each edge for drawing: per edge its point count, then x, y, z of each point. */
+  std::vector<double> points;
+};
+CurveInfo curveInfo(int id, double linear, double angular);
+
+/**
  * The solid swept by the regions of `profile` (as for sweepProfile; outlines without holes) along a helix:
  * `helix` holds its center and unit axis, the unit x direction it starts in (perpendicular to the axis),
  * its radius, pitch and number of turns and 1 for left-handed (13 values). The outlines keep their angle

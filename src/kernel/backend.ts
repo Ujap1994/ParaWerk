@@ -1,7 +1,7 @@
-import type { CopyFeature, DraftFeature, EdgeFeature, LoftFeature, RibFeature, SweepFeature, ThreadFeature, EdgeRef, ExtrudeFeature, HoleFeature, RevolveFeature, ShellFeature, SolidModelingFeature, Vec3 } from '../shared/model/feature.ts';
+import type { ProjectionSide, CopyFeature, DraftFeature, EdgeFeature, LoftFeature, RibFeature, SweepFeature, ThreadFeature, EdgeRef, ExtrudeFeature, HoleFeature, RevolveFeature, ShellFeature, SolidModelingFeature, Vec3 } from '../shared/model/feature.ts';
 import type { FaceNameRef, ReferenceGeometry } from '../shared/model/reference.ts';
 import type { BodyNaming } from '../shared/model/naming.ts';
-import type { Profile, ProfileLoop } from '../shared/model/profile.ts';
+import type { Profile, ProfileEdge, ProfileLoop } from '../shared/model/profile.ts';
 import type { SketchPath } from '../shared/model/path.ts';
 import type { SketchFrame } from '../shared/model/sketch.ts';
 import type { EdgeGeometry, FaceGeometry, MassProperties, MeshPayload } from './protocol.ts';
@@ -27,10 +27,11 @@ export interface ResolvedExtrude extends ExtrudeFeature {
 export interface ResolvedSweep extends SweepFeature {
   profile: Profile;
   frame: SketchFrame;
-  /** A path of a sketch and its plane, or a helix. */
+  /** A path of a sketch and its plane, a helix, or a projected or composite curve. */
   spine?: SketchPath;
   spineFrame?: SketchFrame;
   helix?: Extract<ReferenceGeometry, { kind: 'helix' }>;
+  curve?: ShapeHandle;
 }
 
 /** A loft with the outline and plane of each of its sketches, in order. */
@@ -118,6 +119,29 @@ export type KernelFeature =
   | ResolvedThread
   | ResolvedEdgeFeature;
 
+/** The curves of a sketch (those that are not construction geometry) on its plane. */
+export interface SketchCurves {
+  edges: ProfileEdge[];
+  frame: SketchFrame;
+}
+
+/** A projected or composite curve as a backend builds it. */
+export type ResolvedCurve =
+  /** The curves projected along the sketch normal onto faces of the body (topological indices), on one side of the sketch or both. */
+  | { kind: 'projected'; sketch: SketchCurves; faces: number[]; side: ProjectionSide }
+  /** Where the curves of two sketches meet when each is extended along its normal. */
+  | { kind: 'intersection'; sketches: [SketchCurves, SketchCurves] }
+  /** Edges of the body, curves of sketches and earlier curves joined into one chain. */
+  | { kind: 'composite'; edges: number[]; sketches: SketchCurves[]; curves: ShapeHandle[] };
+
+/** A curve as drawn: points along its edges, its length, how many chains it has and whether it closes. */
+export interface CurveGeometry {
+  polylines: Vec3[][];
+  length: number;
+  chains: number;
+  closed: boolean;
+}
+
 /** Opaque reference to a shape owned by a backend. */
 export type ShapeHandle = { readonly __shape: unique symbol };
 
@@ -151,6 +175,9 @@ export interface GeometryBackend {
   /** A copy of the shape moved by a transformation (12 values, rows of a 3 × 4 matrix); the caller releases it. */
   transformed?(shape: ShapeHandle, transform: readonly number[]): ShapeHandle;
   importStep(bytes: Uint8Array): ShapeHandle;
+  /** Builds a projected or composite curve (a shape that is not a body); throws FeatureError. The caller owns it. */
+  curve?(body: ShapeHandle | null, curve: ResolvedCurve): ShapeHandle;
+  curveGeometry?(curve: ShapeHandle): CurveGeometry;
   heapBytes(): number;
   describeError(error: unknown): string;
 }

@@ -1235,6 +1235,37 @@ test('sweep and loft screenshots', async () => {
     { id: 'spring', type: 'sweep', name: 'Spring', operation: 'add', sketch: 'wire', path: 'helix' },
   ];
   await show(spring, 'helix', 'helix.png', 'Spring');
+  // A circle seen from above, projected onto the top of a shaft: a saddle-shaped curve.
+  await show(
+    [
+      { id: 'shaft', type: 'cylinder', name: 'Shaft', operation: 'add', radius: 20, height: 100, axis: 'x', position: [-50, 0, 0] },
+      { id: 'mark', type: 'sketch', name: 'Mark', plane: { kind: 'standard', plane: 'top' }, sketch: { entities: [P('o', 0, 0), { id: 'k', type: 'circle', center: 'o', radius: 12 }], constraints: [] } },
+      { id: 'projected', type: 'projectedCurve', name: 'Projected curve', method: 'faces', sketch: 'mark', faces: [{ kind: 'face', name: 'shaft:side', at: [0, 0, 20] }], side: 'normal', sketch2: '' },
+    ],
+    'projected',
+    'curve-projected.png',
+    'Shaft',
+  );
+  // Three top edges of a block and a line beyond them in a sketch, joined into one path.
+  await show(
+    [
+      { id: 'block', type: 'box', name: 'Block', operation: 'add', width: 100, depth: 60, height: 40, position: [50, 0, 0] },
+      { id: 'level', type: 'plane', name: 'Top level', method: 'offset', references: [{ kind: 'standard-plane', plane: 'top' }], distance: 40, angle: 45, flip: false },
+      { id: 'beyond', type: 'sketch', name: 'Beyond', plane: { kind: 'feature', feature: 'level', frame: { origin: [0, 0, 40], xDir: [1, 0, 0], yDir: [0, 1, 0], normal: [0, 0, 1] } }, sketch: { entities: [P('a', 0, 30), P('b', -40, 30), L('ab', 'a', 'b')], constraints: [] } },
+      {
+        id: 'path', type: 'compositeCurve', name: 'Composite curve',
+        edges: [
+          { kind: 'edge', faces: ['block:front', 'block:top'], at: [50, -30, 40] },
+          { kind: 'edge', faces: ['block:right', 'block:top'], at: [100, 0, 40] },
+          { kind: 'edge', faces: ['block:back', 'block:top'], at: [50, 30, 40] },
+        ],
+        curves: ['beyond'],
+      },
+    ],
+    'path',
+    'curve-composite.png',
+    'Block',
+  );
   await show(spring, 'spring', 'sweep-spring.png', 'Spring');
   // A transition from a square duct to a round one.
   const square = (p: string, half: number) => [

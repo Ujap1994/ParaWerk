@@ -37,6 +37,11 @@ function cubeLabels(t: (key: string) => string): Record<CubeFace, string> {
 function visibleSelection(state: AppState): Pick[] {
   const edit = state.activeEdit;
   if (edit && extrudesUpTo(edit.draft)) return referencePicks(builtOn(edit.draft), state).filter((pick) => pick.kind === 'face' || pick.kind === 'edge' || pick.kind === 'vertex');
+  if (edit?.draft.type === 'projectedCurve') return edit.draft.method === 'faces' ? referencePicks(edit.draft.faces, state) : [];
+  if (edit?.draft.type === 'compositeCurve') {
+    const naming = state.display.body?.naming;
+    return naming ? resolveEdgeRefs(edit.draft.edges, naming).flatMap((match) => (match ? [{ kind: 'edge' as const, index: match.index }] : [])) : [];
+  }
   // The preview of a shell shows its openings; highlighting the open faces would cover them.
   if (edit?.draft.type === 'shell' || edit?.draft.type === 'thread') return state.display.preview ? [] : referencePicks(edit.draft.faces, state);
   if (edit && hasReferenceSlots(edit.draft)) {
@@ -82,6 +87,8 @@ function pickFilter(state: AppState): PickFilter {
   const edit = state.activeEdit;
   if (!edit) return 'all';
   if (edit.draft.type === 'shell' || edit.draft.type === 'thread' || (edit.draft.type === 'fillet' && roundFaceCount(edit.draft.method) > 0)) return 'faces';
+  if (edit.draft.type === 'projectedCurve') return edit.draft.method === 'faces' ? 'faces' : 'none';
+  if (edit.draft.type === 'compositeCurve') return 'edges';
   return isEdgeFeature(edit.draft) ? 'edgesAndFaces' : picksReferences(edit.draft) ? 'references' : 'none';
 }
 

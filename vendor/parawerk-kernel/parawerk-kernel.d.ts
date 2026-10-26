@@ -46,6 +46,12 @@ interface EmbindModule {
   filletVariable(_0: number, _1: any, _2: number, _3: number, _4: boolean, _5: any, _6: EmbindString): any;
   cutThread(_0: number, _1: number, _2: number, _3: number, _4: boolean, _5: boolean, _6: EmbindString): any;
   sweepAlongHelix(_0: any, _1: any, _2: any, _3: any, _4: EmbindString): any;
+  sweepAlongCurve(_0: any, _1: any, _2: number, _3: any, _4: EmbindString): any;
+  sketchWire(_0: any, _1: any): any;
+  projectCurve(_0: number, _1: number, _2: any, _3: any, _4: any, _5: number): any;
+  intersectCurves(_0: number, _1: any, _2: number, _3: any): any;
+  compositeCurve(_0: number, _1: any, _2: any, _3: boolean): any;
+  curveInfo(_0: number, _1: number, _2: number): any;
   limitBySurface(_0: number, _1: number, _2: number, _3: any, _4: number, _5: boolean, _6: EmbindString): any;
 }
 

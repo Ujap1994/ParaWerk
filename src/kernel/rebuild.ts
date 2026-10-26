@@ -1,5 +1,5 @@
 import { hashString } from '../shared/hash.ts';
-import { hasReferenceGeometry, isEdgeFeature, isReferenceFeature, sketchesUsedBy, type Feature, type SketchFeature, type Vec3 } from '../shared/model/feature.ts';
+import { hasReferenceGeometry, isCurveFeature, isEdgeFeature, isReferenceFeature, sketchesUsedBy, type Feature, type SketchFeature, type Vec3 } from '../shared/model/feature.ts';
 import type { BodyNaming } from '../shared/model/naming.ts';
 import type { ReferenceGeometry } from '../shared/model/reference.ts';
 import type { SketchFrame, SketchPlaneRef } from '../shared/model/sketch.ts';
@@ -8,7 +8,7 @@ import { holeThreads, throughDepth, type CosmeticThread } from '../shared/model/
 import { FeatureError } from './feature-error.ts';
 import type { FeatureResult } from './protocol.ts';
 import { computeReference, helixGeometry, type BodyQuery } from './reference.ts';
-import { placeSketch, resolveFeature } from './resolve.ts';
+import { placeSketch, resolveCurve, resolveFeature } from './resolve.ts';
 
 interface CacheEntry {
   /** Identifies this feature together with everything before it. */
@@ -21,6 +21,8 @@ interface CacheEntry {
   frame?: SketchFrame;
   /** Reference planes, axes and points: where they lie. */
   reference?: ReferenceGeometry;
+  /** Projected and composite curves: the curve (owned by the entry). */
+  curve?: ShapeHandle;
   result: FeatureResult;
 }
 
@@ -135,9 +137,11 @@ export class Rebuilder implements Disposable {
     this.truncate(firstChanged);
     const frames = new Map<string, SketchFrame>();
     const references = new Map<string, ReferenceGeometry>();
+    const curves = new Map<string, ShapeHandle>();
     this.entries.forEach((entry, i) => {
       if (entry.frame) frames.set(features[i]?.id ?? '', entry.frame);
       if (entry.reference) references.set(features[i]?.id ?? '', entry.reference);
+      if (entry.curve) curves.set(features[i]?.id ?? '', entry.curve);
     });
     // Several features in a row may ask for the names of the same body.
     const namings = new Map<ShapeHandle, BodyNaming>();
@@ -185,8 +189,33 @@ export class Rebuilder implements Disposable {
         continue;
       }
 
+      // Projected and composite curves are shapes of their own; they do not change the body.
+      if (isCurveFeature(feature) && !feature.suppressed) {
+        let curve: ShapeHandle | undefined;
+        let result: FeatureResult;
+        try {
+          if (!this.backend.curve || !this.backend.curveGeometry) throw new FeatureError('operation-failed', 'curves need the ParaWerk kernel');
+          curve = this.backend.curve(input, resolveCurve(feature, features.slice(0, i), { body: input ? query(input) : null, frames, references, curves }));
+          const geometry = this.backend.curveGeometry(curve);
+          const reference: ReferenceGeometry = { kind: 'curve', ...geometry };
+          curves.set(feature.id, curve);
+          references.set(feature.id, reference);
+          result = { id: feature.id, status: 'ok', timeMs: performance.now() - start, cached: false, reference };
+        } catch (error) {
+          if (curve) this.backend.release(curve);
+          curve = undefined;
+          const failure =
+            error instanceof FeatureError
+              ? { code: error.code, ...(error.detail === undefined ? {} : { detail: error.detail }) }
+              : { code: 'unknown' as const, detail: this.backend.describeError(error) };
+          result = { id: feature.id, status: 'error', error: failure, timeMs: performance.now() - start, cached: false };
+        }
+        this.entries.push({ key, shapeKey: inputKey, shape: input, ownsShape: false, ...(curve ? { curve, reference: references.get(feature.id) } : {}), result });
+        continue;
+      }
+
       // Reference planes, axes, points and helices do not change the body either.
-      if (hasReferenceGeometry(feature) && !feature.suppressed) {
+      if ((isReferenceFeature(feature) || feature.type === 'helix') && !feature.suppressed) {
         let result: FeatureResult;
         let reference: ReferenceGeometry | undefined;
         try {
@@ -219,7 +248,7 @@ export class Rebuilder implements Disposable {
       }
 
       try {
-        const resolved = resolveFeature(feature, features.slice(0, i), { body: input ? query(input) : null, frames, references });
+        const resolved = resolveFeature(feature, features.slice(0, i), { body: input ? query(input) : null, frames, references, curves });
         this.backend.takeCutMissed?.();
         const shape = this.backend.applyFeature(input, resolved);
         const missed = this.backend.takeCutMissed?.() ?? false;
@@ -281,6 +310,7 @@ export class Rebuilder implements Disposable {
     for (let i = this.entries.length - 1; i >= from; i--) {
       const entry = this.entries[i];
       if (entry?.ownsShape && entry.shape) this.backend.release(entry.shape);
+      if (entry?.curve) this.backend.release(entry.curve);
     }
     this.entries.length = Math.min(this.entries.length, from);
   }

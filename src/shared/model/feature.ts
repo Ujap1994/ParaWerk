@@ -11,7 +11,7 @@ import type { ThinSide } from './thin.ts';
 
 export type Vec3 = [number, number, number];
 
-export type FeatureType = 'variables' | 'sketch' | 'plane' | 'axis' | 'point' | 'csys' | 'extrude' | 'revolve' | 'hole' | 'pattern' | 'mirror' | 'box' | 'cylinder' | 'import' | 'fillet' | 'chamfer' | 'shell' | 'draft' | 'sweep' | 'loft' | 'rib' | 'thread' | 'helix';
+export type FeatureType = 'variables' | 'sketch' | 'plane' | 'axis' | 'point' | 'csys' | 'extrude' | 'revolve' | 'hole' | 'pattern' | 'mirror' | 'box' | 'cylinder' | 'import' | 'fillet' | 'chamfer' | 'shell' | 'draft' | 'sweep' | 'loft' | 'rib' | 'thread' | 'helix' | 'projectedCurve' | 'compositeCurve';
 
 /** How a solid-creating feature combines with the existing body. */
 export type BooleanOperation = 'add' | 'cut';
@@ -81,6 +81,8 @@ export const EXPRESSION_FIELDS: Readonly<Record<FeatureType, readonly string[]>>
   rib: ['thickness'],
   thread: ['pitch', 'length'],
   helix: ['pitch', 'turns', 'startAngle'],
+  projectedCurve: [],
+  compositeCurve: [],
 };
 
 /** A named value of the part; its expression may use other variables. */
@@ -273,9 +275,9 @@ export function isReferenceFeature(feature: Feature): feature is ReferenceFeatur
   return feature.type === 'plane' || feature.type === 'axis' || feature.type === 'point' || feature.type === 'csys';
 }
 
-/** Features shown as reference geometry, which do not change the body: reference geometry and helices. */
-export function hasReferenceGeometry(feature: Feature): feature is ReferenceFeature | HelixFeature {
-  return isReferenceFeature(feature) || feature.type === 'helix';
+/** Features shown as reference geometry, which do not change the body: reference geometry and curves. */
+export function hasReferenceGeometry(feature: Feature): feature is ReferenceFeature | HelixFeature | CurveFeature {
+  return isReferenceFeature(feature) || feature.type === 'helix' || isCurveFeature(feature);
 }
 
 /** Which way an extrusion goes from its sketch plane: along the plane normal, against it, or half each way. */
@@ -552,11 +554,54 @@ export interface HelixFeature extends FeatureBase {
   reverse: boolean;
 }
 
-/** The sketches a feature is built from (their curves belong to its geometry). */
+/** How a projected curve is made: projected onto faces of the body, or where two sketches meet. */
+export type ProjectionMethod = 'faces' | 'sketch';
+export const PROJECTION_METHODS: readonly ProjectionMethod[] = ['faces', 'sketch'];
+
+/** Where a curve projected onto faces lands: on both sides of its sketch, along its normal or against it. */
+export type ProjectionSide = 'both' | 'normal' | 'reverse';
+export const PROJECTION_SIDES: readonly ProjectionSide[] = ['both', 'normal', 'reverse'];
+
+/**
+ * A projected curve: the curves of a sketch projected along its normal (both ways) onto faces of the
+ * body (`faces`), or (`sketch`) where they meet the curves of a second sketch extended along its normal –
+ * a 3D curve drawn in two views. A path for sweeps; it does not change the body.
+ */
+export interface ProjectedCurveFeature extends FeatureBase {
+  type: 'projectedCurve';
+  method: ProjectionMethod;
+  sketch: string;
+  /** Onto faces: the faces the curves land on, and on which side of the sketch. */
+  faces: FaceNameRef[];
+  side: ProjectionSide;
+  /** Sketch on sketch: the second sketch. */
+  sketch2: string;
+}
+
+/**
+ * A composite curve: edges of the body and curves (sketch paths, projected and composite curves) joined
+ * end to end into one chain, as the path of a sweep. It does not change the body.
+ */
+export interface CompositeCurveFeature extends FeatureBase {
+  type: 'compositeCurve';
+  edges: EdgeRef[];
+  /** Ids of sketches and curve features. */
+  curves: string[];
+}
+
+export type CurveFeature = ProjectedCurveFeature | CompositeCurveFeature;
+
+export function isCurveFeature(feature: Feature): feature is CurveFeature {
+  return feature.type === 'projectedCurve' || feature.type === 'compositeCurve';
+}
+
+/** The sketches (and curves) a feature is built from (their curves belong to its geometry). */
 export function sketchesUsedBy(feature: Feature): string[] {
   if (isSketchBased(feature) || feature.type === 'rib' || feature.type === 'helix') return [feature.sketch];
   if (feature.type === 'sweep') return [feature.sketch, feature.path];
   if (feature.type === 'loft') return feature.sketches;
+  if (feature.type === 'projectedCurve') return feature.method === 'sketch' ? [feature.sketch, feature.sketch2] : [feature.sketch];
+  if (feature.type === 'compositeCurve') return feature.curves;
   return [];
 }
 
@@ -583,10 +628,12 @@ export type Feature =
   | LoftFeature
   | RibFeature
   | ThreadFeature
-  | HelixFeature;
+  | HelixFeature
+  | ProjectedCurveFeature
+  | CompositeCurveFeature;
 
 /** Features that build or modify the solid body (everything except variables, sketches, reference geometry and curves). */
-export type SolidModelingFeature = Exclude<Feature, SketchFeature | VariablesFeature | ReferenceFeature | HelixFeature>;
+export type SolidModelingFeature = Exclude<Feature, SketchFeature | VariablesFeature | ReferenceFeature | HelixFeature | CurveFeature>;
 
 export type EdgeFeature = FilletFeature | ChamferFeature;
 
@@ -598,7 +645,7 @@ export function isSolidFeature(feature: Feature): feature is BoxFeature | Cylind
   return feature.type === 'box' || feature.type === 'cylinder';
 }
 
-export const FEATURE_TYPES: readonly FeatureType[] = ['variables', 'sketch', 'plane', 'axis', 'point', 'csys', 'extrude', 'revolve', 'hole', 'pattern', 'mirror', 'box', 'cylinder', 'import', 'fillet', 'chamfer', 'shell', 'draft', 'sweep', 'loft', 'rib', 'thread', 'helix'];
+export const FEATURE_TYPES: readonly FeatureType[] = ['variables', 'sketch', 'plane', 'axis', 'point', 'csys', 'extrude', 'revolve', 'hole', 'pattern', 'mirror', 'box', 'cylinder', 'import', 'fillet', 'chamfer', 'shell', 'draft', 'sweep', 'loft', 'rib', 'thread', 'helix', 'projectedCurve', 'compositeCurve'];
 
 /** Features that make a body from nothing (the first feature with material must be one of them, adding). */
 export const BODY_TYPES: ReadonlySet<FeatureType> = new Set(['box', 'cylinder', 'extrude', 'revolve', 'import', 'sweep', 'loft']);
@@ -676,5 +723,9 @@ export function defaultFeature(type: FeatureType, id: string = createFeatureId()
       return { id, type, faces: [], size: 'M6', pitch: 1, length: 10, reverse: false, leftHand: false };
     case 'helix':
       return { id, type, sketch: '', pitch: 5, turns: 5, startAngle: 0, leftHand: false, reverse: false };
+    case 'projectedCurve':
+      return { id, type, method: 'faces', sketch: '', faces: [], side: 'both', sketch2: '' };
+    case 'compositeCurve':
+      return { id, type, edges: [], curves: [] };
   }
 }

@@ -1246,6 +1246,46 @@ test('creates a helix around a sketch circle and sweeps a spring along it', asyn
   expect(Math.abs((await volume(page)) / (Math.PI * 2 * Math.PI * 10 * 4) - 1)).toBeLessThan(1e-3);
 });
 
+test('builds a composite curve from picked edges and a projected curve on a picked face', async () => {
+  launched = await launchApp({ width: 1000, height: 640 });
+  const { page } = launched;
+  // A block from x 0 to 100 (y −30 to 30, z 0 to 40), a shaft of radius 10 on it, and a line on the top plane across the shaft.
+  await page.evaluate(() => {
+    const features = [
+      { id: 'b', type: 'box', operation: 'add', width: 100, depth: 60, height: 40, position: [50, 0, 0] },
+      { id: 's', type: 'sketch', plane: { kind: 'standard', plane: 'top' }, sketch: { entities: [{ id: 'a', type: 'point', x: 20, y: -5 }, { id: 'c', type: 'point', x: 80, y: -5 }, { id: 'l', type: 'line', p1: 'a', p2: 'c' }], constraints: [] } },
+    ];
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features, past: [], future: [] }, savedFeatures: features, dirty: false });
+  });
+  await idle(page);
+  await page.click('[data-variants="reference-geometry"]');
+  await page.click('[data-entry="compositeCurve"]');
+  await expect(page.locator('[data-testid="curve-edges"]')).toContainText(/click/i);
+  await clickWorldPoint(page, [50, -30, 40]);
+  await idle(page);
+  await clickWorldPoint(page, [100, 0, 40]);
+  await idle(page);
+  await expect(page.locator('[data-testid="curve-edges"]')).toContainText('2');
+  await expect(page.locator('[data-testid="curve-summary"]')).toContainText('160');
+  await page.click('[data-testid="panel-ok"]');
+  await idle(page);
+  expect((await state(page)).history.features[2]).toMatchObject({ type: 'compositeCurve', curves: [] });
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __parawerk: { viewport: { references(): number } } }).__parawerk.viewport.references())).toBe(1);
+
+  // The line projected onto the top face of the block: 60 long, one piece.
+  await page.click('[data-variants="reference-geometry"]');
+  await page.click('[data-entry="projectedCurve"]');
+  await expect(page.locator('[data-testid="feature-sketch"]')).toHaveValue('s');
+  await clickWorldPoint(page, [50, 15, 40]);
+  await idle(page);
+  await expect(page.locator('[data-testid="curve-faces"]')).toContainText('1');
+  await expect(page.locator('[data-testid="curve-summary"]')).toContainText('60');
+  await page.click('[data-testid="panel-ok"]');
+  await idle(page);
+  expect((await state(page)).history.features[3]).toMatchObject({ type: 'projectedCurve', method: 'faces', sketch: 's' });
+  expect((await state(page)).rebuild?.results.every((result) => result.status === 'ok')).toBe(true);
+});
+
 test('adds a configuration, changes its variable in the design table and switches between them', async () => {
   launched = await launchApp({ width: 1000, height: 640 });
   const { page } = launched;

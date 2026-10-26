@@ -1,4 +1,4 @@
-import { CHAMFER_METHODS, type ChamferMethod, EXPRESSION_FIELDS, FILLET_METHODS, MAX_HELIX_TURNS, RIB_DIRECTIONS, EXTRUDE_DIRECTIONS, MAX_DRAFT_ANGLE, REVOLVE_DIRECTIONS, type RevolveDirection, EXTRUDE_ENDS, HOLE_ENDS, type Axis, type BooleanOperation, type EdgeRef, type ExtrudeDirection, type ExtrudeEnd, type Feature, type FeatureType, type HoleEnd, type Variable, type Vec3 } from './feature.ts';
+import { CHAMFER_METHODS, type ChamferMethod, EXPRESSION_FIELDS, FILLET_METHODS, MAX_HELIX_TURNS, PROJECTION_METHODS, PROJECTION_SIDES, type ProjectionMethod, type ProjectionSide, RIB_DIRECTIONS, EXTRUDE_DIRECTIONS, MAX_DRAFT_ANGLE, REVOLVE_DIRECTIONS, type RevolveDirection, EXTRUDE_ENDS, HOLE_ENDS, type Axis, type BooleanOperation, type EdgeRef, type ExtrudeDirection, type ExtrudeEnd, type Feature, type FeatureType, type HoleEnd, type Variable, type Vec3 } from './feature.ts';
 import { HOLE_FITS, HOLE_KINDS } from './hole.ts';
 import { CUSTOM_MATERIAL, materialInfo, MAX_DENSITY, MIN_DENSITY, NO_PROPERTIES, type PartProperties } from './material.ts';
 import { MAX_PATTERN_COUNT } from './pattern.ts';
@@ -455,6 +455,23 @@ function parseFeatureFields(raw: Json, path: string): Feature {
         leftHand: flag(raw.leftHand, `${path}.leftHand`),
         reverse: flag(raw.reverse, `${path}.reverse`),
       };
+    case 'projectedCurve':
+      if (!PROJECTION_METHODS.includes(raw.method as ProjectionMethod)) throw new ValidationError('expected a projection method', `${path}.method`);
+      if (!PROJECTION_SIDES.includes(raw.side as ProjectionSide)) throw new ValidationError('expected both, normal or reverse', `${path}.side`);
+      return {
+        ...common,
+        type: 'projectedCurve',
+        method: raw.method as ProjectionMethod,
+        sketch: sketchId(raw.sketch, `${path}.sketch`),
+        faces: faceRefs(raw.faces, `${path}.faces`),
+        side: raw.side as ProjectionSide,
+        sketch2: sketchId(raw.sketch2, `${path}.sketch2`),
+      };
+    case 'compositeCurve': {
+      if (!Array.isArray(raw.curves) || raw.curves.length > 1000) throw new ValidationError('expected a list of curve ids', `${path}.curves`);
+      const curves = raw.curves.map((id, i) => sketchId(id, `${path}.curves[${i}]`));
+      return { ...common, type: 'compositeCurve', edges: edges(raw.edges, `${path}.edges`), curves };
+    }
     case 'thread':
       if (typeof raw.size !== 'string' || raw.size.length > 20) throw new ValidationError('expected a size', `${path}.size`);
       return {

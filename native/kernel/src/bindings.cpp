@@ -281,6 +281,49 @@ val sweepProfile(val profile, val frame, val path, val pathFrame, val edgeNames,
   });
 }
 
+val sweepAlongCurve(val profile, val frame, int curveId, val edgeNames, std::string name) {
+  return guarded([&] {
+    const auto numbers = [](const val& array) { return emscripten::convertJSArrayToNumberVector<double>(array); };
+    return idResult(parawerk::sweepAlongCurve(numbers(profile), numbers(frame), curveId, toStringVector(edgeNames), name));
+  });
+}
+
+val sketchWire(val path, val frame) {
+  return guarded([&] {
+    return idResult(parawerk::sketchWire(emscripten::convertJSArrayToNumberVector<double>(path), emscripten::convertJSArrayToNumberVector<double>(frame)));
+  });
+}
+
+val projectCurve(int wireId, int bodyId, val faces, val origin, val direction, int side) {
+  return guarded([&] {
+    const auto numbers = [](const val& array) { return emscripten::convertJSArrayToNumberVector<double>(array); };
+    return idResult(parawerk::projectCurve(wireId, bodyId, toIntVector(faces), numbers(origin), numbers(direction), side));
+  });
+}
+
+val intersectCurves(int wireA, val directionA, int wireB, val directionB) {
+  return guarded([&] {
+    const auto numbers = [](const val& array) { return emscripten::convertJSArrayToNumberVector<double>(array); };
+    return idResult(parawerk::intersectCurves(wireA, numbers(directionA), wireB, numbers(directionB)));
+  });
+}
+
+val compositeCurve(int bodyId, val edges, val curves, bool oneChain) {
+  return guarded([&] { return idResult(parawerk::compositeCurve(bodyId, toIntVector(edges), toIntVector(curves), oneChain)); });
+}
+
+val curveInfo(int id, double linear, double angular) {
+  return guarded([&] {
+    const parawerk::CurveInfo info = parawerk::curveInfo(id, linear, angular);
+    val result = okObject();
+    result.set("length", info.length);
+    result.set("chains", info.chains);
+    result.set("closed", info.closed);
+    result.set("points", val::array(info.points));
+    return result;
+  });
+}
+
 val sweepAlongHelix(val profile, val frame, val helix, val edgeNames, std::string name) {
   return guarded([&] {
     const auto numbers = [](const val& array) { return emscripten::convertJSArrayToNumberVector<double>(array); };
@@ -325,7 +368,7 @@ val importStepText(const std::string& text, const std::string& name) {
   return guarded([&] { return idResult(parawerk::importStep(text, name)); });
 }
 
-std::string version() { return "parawerk-kernel 0.18 / OCCT " PARAWERK_OCCT_VERSION; }
+std::string version() { return "parawerk-kernel 0.19 / OCCT " PARAWERK_OCCT_VERSION; }
 
 }  // namespace
 
@@ -368,5 +411,11 @@ EMSCRIPTEN_BINDINGS(parawerk_kernel) {
   emscripten::function("filletVariable", &filletVariable);
   emscripten::function("cutThread", &cutThread);
   emscripten::function("sweepAlongHelix", &sweepAlongHelix);
+  emscripten::function("sweepAlongCurve", &sweepAlongCurve);
+  emscripten::function("sketchWire", &sketchWire);
+  emscripten::function("projectCurve", &projectCurve);
+  emscripten::function("intersectCurves", &intersectCurves);
+  emscripten::function("compositeCurve", &compositeCurve);
+  emscripten::function("curveInfo", &curveInfo);
   emscripten::function("limitBySurface", &limitBySurface);
 }

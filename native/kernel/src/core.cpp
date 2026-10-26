@@ -46,6 +46,9 @@
 #include <BRepLib_ToolTriangulatedShape.hxx>
 #include <BRepMesh_IncrementalMesh.hxx>
 #include <BRepPrimAPI_MakeBox.hxx>
+#include <BRepAlgoAPI_Section.hxx>
+#include <BRepProj_Projection.hxx>
+#include <ShapeAnalysis_FreeBounds.hxx>
 #include <BRepPrimAPI_MakeCylinder.hxx>
 #include <BRepPrimAPI_MakePrism.hxx>
 #include <BRepPrimAPI_MakeRevol.hxx>
@@ -76,6 +79,7 @@
 #include <TColStd_Array1OfReal.hxx>
 #include <TColgp_Array1OfPnt2d.hxx>
 #include <TopExp.hxx>
+#include <TopExp_Explorer.hxx>
 #include <TopTools_ShapeMapHasher.hxx>
 #include <TopoDS.hxx>
 #include <TopoDS_Edge.hxx>
@@ -777,17 +781,20 @@ int revolveProfile(const std::vector<double>& profile, const std::vector<double>
   return store().add(result.shape, std::move(result.names));
 }
 
-int sweepProfile(const std::vector<double>& profile, const std::vector<double>& frame, const std::vector<double>& path, const std::vector<double>& pathFrame,
-                 const std::vector<std::string>& edgeNames, const std::string& name) {
-  // The path: one chain of curves (open or closed) on its own sketch plane.
+namespace {
+
+/** One chain of curves (open or closed) of a sketch path on its plane. */
+TopoDS_Wire pathWire(const std::vector<double>& path, const std::vector<double>& pathFrame) {
   ProfileReader pathData(path);
   const std::vector<std::string> noNames;
   NamedEdges pathEdges{noNames, {}};
-  const TopoDS_Wire spine = readLoop(pathData, framePlane(pathFrame), pathEdges, false);
-  const occ::handle<Geom_Plane> plane = framePlane(frame);
-  NamedEdges named{edgeNames, {}};
+  return readLoop(pathData, framePlane(pathFrame), pathEdges, false);
+}
+
+/** The regions of `profile` swept along `spine`, joined into one body. */
+int sweepRegions(const TopoDS_Wire& spine, const std::vector<TopoDS_Face>& faces, NamedEdges& named, const std::string& name) {
   std::vector<StoredShape> solids;
-  for (const TopoDS_Face& face : readFaces(profile, plane, named)) {
+  for (const TopoDS_Face& face : faces) {
     BRepOffsetAPI_MakePipe pipe(spine, face);
     pipe.Build();
     if (!pipe.IsDone()) throw KernelError("sweep-failed", "the profile could not be swept along the path");
@@ -796,6 +803,167 @@ int sweepProfile(const std::vector<double>& profile, const std::vector<double>& 
   }
   StoredShape result = joinRegions(solids, "swept");
   return store().add(result.shape, std::move(result.names));
+}
+
+/** The edges of a shape joined into wires where their ends meet (as few wires as possible). */
+std::vector<TopoDS_Wire> joinEdges(const TopoDS_Shape& shape) {
+  ShapeMap map;
+  TopExp::MapShapes(shape, TopAbs_EDGE, map);
+  occ::handle<NCollection_HSequence<TopoDS_Shape>> edges = new NCollection_HSequence<TopoDS_Shape>();
+  for (int i = 1; i <= map.Extent(); ++i)
+    if (!BRep_Tool::Degenerated(TopoDS::Edge(map(i)))) edges->Append(map(i));
+  std::vector<TopoDS_Wire> result;
+  if (edges->IsEmpty()) return result;
+  const occ::handle<NCollection_HSequence<TopoDS_Shape>> wires = ShapeAnalysis_FreeBounds::ConnectEdgesToWires(edges, 1e-4, false);
+  for (int i = 1; i <= wires->Length(); ++i) result.push_back(TopoDS::Wire(wires->Value(i)));
+  return result;
+}
+
+/** One wire as it is, several as a compound of wires. */
+TopoDS_Shape curveShape(const std::vector<TopoDS_Wire>& wires) {
+  if (wires.size() == 1) return wires[0];
+  BRep_Builder builder;
+  TopoDS_Compound compound;
+  builder.MakeCompound(compound);
+  for (const TopoDS_Wire& wire : wires) builder.Add(compound, wire);
+  return compound;
+}
+
+gp_Dir directionOf(const std::vector<double>& d) {
+  if (d.size() != 3) throw KernelError("operation-failed", "a direction needs 3 values");
+  return gp_Dir(d[0], d[1], d[2]);
+}
+
+}  // namespace
+
+int sweepProfile(const std::vector<double>& profile, const std::vector<double>& frame, const std::vector<double>& path, const std::vector<double>& pathFrame,
+                 const std::vector<std::string>& edgeNames, const std::string& name) {
+  // The path: one chain of curves (open or closed) on its own sketch plane.
+  const TopoDS_Wire spine = pathWire(path, pathFrame);
+  NamedEdges named{edgeNames, {}};
+  return sweepRegions(spine, readFaces(profile, framePlane(frame), named), named, name);
+}
+
+int sweepAlongCurve(const std::vector<double>& profile, const std::vector<double>& frame, int curveId, const std::vector<std::string>& edgeNames, const std::string& name) {
+  const TopoDS_Shape& curve = store().get(curveId);
+  if (curve.ShapeType() != TopAbs_WIRE) throw KernelError("path-gaps", "the curve is not one chain");
+  TopoDS_Wire spine = TopoDS::Wire(curve);
+  NamedEdges named{edgeNames, {}};
+  const std::vector<TopoDS_Face> faces = readFaces(profile, framePlane(frame), named);
+  // An open curve runs from its end nearer to the outlines.
+  TopoDS_Vertex first, last;
+  TopExp::Vertices(spine, first, last);
+  if (!first.IsNull() && !last.IsNull() && !first.IsSame(last) && !faces.empty()) {
+    GProp_GProps props;
+    for (const TopoDS_Face& face : faces) BRepGProp::SurfaceProperties(face, props);
+    const gp_Pnt middle = props.CentreOfMass();
+    if (middle.Distance(BRep_Tool::Pnt(last)) < middle.Distance(BRep_Tool::Pnt(first))) spine = TopoDS::Wire(spine.Reversed());
+  }
+  return sweepRegions(spine, faces, named, name);
+}
+
+int sketchWire(const std::vector<double>& path, const std::vector<double>& pathFrame) { return store().add(pathWire(path, pathFrame)); }
+
+int projectCurve(int wireId, int bodyId, const std::vector<int>& faceIndices, const std::vector<double>& origin, const std::vector<double>& direction, int side) {
+  ShapeMap faces;
+  TopExp::MapShapes(store().get(bodyId), TopAbs_FACE, faces);
+  BRep_Builder builder;
+  TopoDS_Compound target;
+  builder.MakeCompound(target);
+  for (int index : faceIndices) {
+    if (index < 0 || index >= faces.Extent()) throw KernelError("operation-failed", "no such face");
+    builder.Add(target, faces(index + 1));
+  }
+  // Along the direction both ways: the curve lands on the faces on either side of its sketch.
+  const gp_Dir along = directionOf(direction);
+  BRepProj_Projection projection(store().get(wireId), target, along);
+  if (!projection.IsDone()) throw KernelError("curve-missed", "the curve misses the faces");
+  std::vector<TopoDS_Wire> wires = joinEdges(projection.Shape());
+  if (side != 0 && origin.size() == 3) {
+    // Each piece by the middle of its first edge.
+    const gp_Pnt start(origin[0], origin[1], origin[2]);
+    std::vector<TopoDS_Wire> kept;
+    for (const TopoDS_Wire& wire : wires) {
+      TopExp_Explorer edges(wire, TopAbs_EDGE);
+      if (!edges.More()) continue;
+      BRepAdaptor_Curve curve(TopoDS::Edge(edges.Current()));
+      const gp_Pnt middle = curve.Value((curve.FirstParameter() + curve.LastParameter()) / 2);
+      if (side * gp_Vec(start, middle).Dot(gp_Vec(along)) > 0) kept.push_back(wire);
+    }
+    wires = kept;
+  }
+  if (wires.empty()) throw KernelError("curve-missed", "the curve misses the faces");
+  return store().add(curveShape(wires));
+}
+
+int intersectCurves(int wireA, const std::vector<double>& directionA, int wireB, const std::vector<double>& directionB) {
+  const TopoDS_Shape& a = store().get(wireA);
+  const TopoDS_Shape& b = store().get(wireB);
+  Bnd_Box box;
+  BRepBndLib::Add(a, box);
+  BRepBndLib::Add(b, box);
+  const double size = 2 * std::sqrt(box.SquareExtent()) + 1;
+  // Each curve as a surface along its sketch normal, through the whole space of both.
+  const auto wall = [size](const TopoDS_Shape& wire, const gp_Dir& d) {
+    gp_Trsf back;
+    back.SetTranslation(gp_Vec(d) * -size);
+    return BRepPrimAPI_MakePrism(BRepBuilderAPI_Transform(wire, back, true).Shape(), gp_Vec(d) * (2 * size)).Shape();
+  };
+  BRepAlgoAPI_Section section(wall(a, directionOf(directionA)), wall(b, directionOf(directionB)), false);
+  section.Approximation(true);
+  section.Build();
+  if (!section.IsDone()) throw KernelError("curve-missed", "the curves of the two sketches do not meet");
+  const std::vector<TopoDS_Wire> wires = joinEdges(section.Shape());
+  if (wires.empty()) throw KernelError("curve-missed", "the curves of the two sketches do not meet");
+  return store().add(curveShape(wires));
+}
+
+int compositeCurve(int bodyId, const std::vector<int>& edgeIndices, const std::vector<int>& curveIds, bool oneChain) {
+  BRep_Builder builder;
+  TopoDS_Compound all;
+  builder.MakeCompound(all);
+  if (!edgeIndices.empty()) {
+    ShapeMap edges;
+    TopExp::MapShapes(store().get(bodyId), TopAbs_EDGE, edges);
+    for (int index : edgeIndices) {
+      if (index < 0 || index >= edges.Extent()) throw KernelError("operation-failed", "no such edge");
+      builder.Add(all, edges(index + 1));
+    }
+  }
+  for (int id : curveIds) builder.Add(all, store().get(id));
+  const std::vector<TopoDS_Wire> wires = joinEdges(all);
+  if (wires.empty()) throw KernelError("curve-empty", "the curve has no edges");
+  if (oneChain && wires.size() > 1) throw KernelError("path-gaps", "the curves do not join into one chain");
+  return store().add(curveShape(wires));
+}
+
+CurveInfo curveInfo(int id, double linear, double angular) {
+  const TopoDS_Shape& shape = store().get(id);
+  CurveInfo info;
+  ShapeMap edges, wires;
+  TopExp::MapShapes(shape, TopAbs_EDGE, edges);
+  TopExp::MapShapes(shape, TopAbs_WIRE, wires);
+  info.chains = wires.Extent();
+  if (shape.ShapeType() == TopAbs_WIRE) {
+    TopoDS_Vertex first, last;
+    TopExp::Vertices(TopoDS::Wire(shape), first, last);
+    info.closed = !first.IsNull() && first.IsSame(last);
+  }
+  for (int i = 1; i <= edges.Extent(); ++i) {
+    const TopoDS_Edge& edge = TopoDS::Edge(edges(i));
+    if (BRep_Tool::Degenerated(edge)) continue;
+    GProp_GProps props;
+    BRepGProp::LinearProperties(edge, props);
+    info.length += props.Mass();
+    BRepAdaptor_Curve curve(edge);
+    GCPnts_TangentialDeflection discretizer(curve, angular, linear);
+    info.points.push_back(discretizer.NbPoints());
+    for (int k = 1; k <= discretizer.NbPoints(); ++k) {
+      const gp_Pnt p = discretizer.Value(k);
+      info.points.insert(info.points.end(), {p.X(), p.Y(), p.Z()});
+    }
+  }
+  return info;
 }
 
 int sweepAlongHelix(const std::vector<double>& profile, const std::vector<double>& frame, const std::vector<double>& helix, const std::vector<std::string>& edgeNames,

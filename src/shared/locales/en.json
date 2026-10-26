@@ -120,7 +120,9 @@
       "rib": "Add a wall from the open curves of a sketch to the body, such as a gusset in a corner",
       "thread": "Cut a modeled ISO metric thread into a bolt or a hole",
       "configurations": "Variants of the part: switch between them and edit their variables in a design table",
-      "helix": "Create a helix around the circle of a sketch, as the path of a spring or a coil"
+      "helix": "Create a helix around the circle of a sketch, as the path of a spring or a coil",
+      "projectedCurve": "Project the curves of a sketch onto faces, or make a 3D curve where the curves of two sketches meet",
+      "compositeCurve": "Join edges, sketch curves and other curves into one curve, as the path of a sweep"
     },
     "tabs": {
       "label": "Command tabs",
@@ -189,7 +191,7 @@
     "plane": "Plane",
     "axis": "Axis",
     "point": "Point",
-    "referenceGeometry": "Reference geometry",
+    "referenceGeometry": "Reference geometry and curves",
     "hole": "Hole",
     "pattern": "Pattern",
     "circularPattern": "Circular pattern",
@@ -212,7 +214,9 @@
     "thread": "Thread",
     "holeFeatures": "Hole and thread",
     "configurations": "Configurations",
-    "helix": "Helix"
+    "helix": "Helix",
+    "projectedCurve": "Projected curve",
+    "compositeCurve": "Composite curve"
   },
   "features": {
     "plane": "Plane",
@@ -238,7 +242,9 @@
     "loft": "Loft",
     "rib": "Rib",
     "thread": "Thread",
-    "helix": "Helix"
+    "helix": "Helix",
+    "projectedCurve": "Projected curve",
+    "compositeCurve": "Composite curve"
   },
   "tree": {
     "title": "Feature tree",
@@ -454,7 +460,8 @@
     "importFailed": "Import failed: {{message}}",
     "noSweepSketches": "A sweep needs two sketches: one with a closed outline and one with the path.",
     "noLoftSketches": "A loft needs at least two sketches with a closed outline each.",
-    "noHelixSketch": "Draw a circle in a sketch first: the helix winds around it."
+    "noHelixSketch": "Draw a circle in a sketch first: the helix winds around it.",
+    "noCurveSketch": "Draw the curves to project in a sketch first."
   },
   "errors": {
     "no-body": "There is no body to modify yet.",
@@ -511,7 +518,11 @@
     "thread-face": "Pick the cylindrical face of a bolt or a hole for the thread.",
     "thread-size": "Pitch and length of the thread must be above 0.",
     "helix-circle": "The sketch of the helix needs a circle: the helix winds around its center with its radius.",
-    "sweep-holes": "Along a helix, the profile takes outlines without holes."
+    "sweep-holes": "Along a helix, the profile takes outlines without holes.",
+    "curve-empty": "The curve has nothing to project or join: choose a sketch with curves, or pick edges or add sketches and curves.",
+    "curve-missed": "The curves do not land on the chosen faces, or the curves of the two sketches do not meet. Check the faces and the side.",
+    "curve-faces": "Pick the faces the curves are projected onto.",
+    "curve-edge-missing": "{{detail}} edge(s) of the curve no longer exist: an earlier change removed them. Edit the curve and pick the edges again."
   },
   "warnings": {
     "edge-missing_one": "{{count}} selected edge no longer exists and is left out. Edit the feature to remove it or pick another edge.",
@@ -1076,5 +1087,34 @@
     "reverse": "Wind to the other side of the sketch",
     "leftHand": "Left-hand (counterclockwise)",
     "hint": "The helix winds around the first circle of the sketch, with its radius, starting on the circle at the start angle (from the sketch X axis). Sweep a profile along it for a spring or a coil: draw the profile in a plane through the axis of the helix, at its start point."
+  },
+  "curve": {
+    "method": "Type",
+    "methods": {
+      "faces": "Onto faces",
+      "sketch": "Sketch on sketch"
+    },
+    "sketch": "Sketch with the curves",
+    "sketch2": "Second sketch",
+    "faces_one": "{{count}} face",
+    "faces_other": "{{count}} faces",
+    "pickFaces": "Click the faces in the 3D view",
+    "side": "Lands",
+    "sides": {
+      "both": "On both sides of the sketch",
+      "normal": "Along the sketch normal",
+      "reverse": "Against the sketch normal"
+    },
+    "edges_one": "{{count}} edge",
+    "edges_other": "{{count}} edges",
+    "pickEdges": "Click edges in the 3D view",
+    "curves": "Sketches and curves",
+    "add": "Add a sketch or curve",
+    "summary_one": "Length {{length}}, one piece.",
+    "summary_other": "Length {{length}} in {{count}} pieces.",
+    "hintFaces": "The curves of the sketch (not construction geometry) are projected along the sketch normal onto the faces you click – on both sides of the sketch, or only on one. A sweep follows the result if it is one piece.",
+    "hintSketch": "Draw the curve as seen from two directions, in two sketches on planes at an angle: the 3D curve is where the curves meet when each is extended along its sketch normal.",
+    "hintComposite": "Click edges of the part and add sketches and curves; together they must join end to end into one chain. The result is a path for a sweep.",
+    "clear": "Remove all"
   }
 }

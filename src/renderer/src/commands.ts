@@ -2,7 +2,7 @@ import { resolveLanguage } from '../../shared/i18n.ts';
 import type { MenuCommand } from '../../shared/ipc.ts';
 import { PART_FILE_EXTENSION } from '../../shared/app-info.ts';
 import { hashString } from '../../shared/hash.ts';
-import { COPYABLE_TYPES, createFeatureId, type ImportFeature, defaultFeature, type BooleanOperation, hasReferenceSlots, isCopyFeature, isEdgeFeature, isReferenceFeature, sketchesUsedBy, type EdgeRef, type ExtrudeEnd, extrudesOneWay, type Feature, type FilletMethod, roundFaceCount, type FeatureType, type HoleFeature, type ReferenceFeature, type SketchFeature, type SlotFeature } from '../../shared/model/feature.ts';
+import { COPYABLE_TYPES, isCurveFeature, createFeatureId, type ImportFeature, defaultFeature, type BooleanOperation, hasReferenceSlots, isCopyFeature, isEdgeFeature, isReferenceFeature, sketchesUsedBy, type EdgeRef, type ExtrudeEnd, extrudesOneWay, type Feature, type FilletMethod, roundFaceCount, type FeatureType, type HoleFeature, type ReferenceFeature, type SketchFeature, type SlotFeature } from '../../shared/model/feature.ts';
 import { holePositions, METRIC_SIZES, metricSize, sizesFor, standardHoleDimensions, type MetricSize } from '../../shared/model/hole.ts';
 import { frameTransform } from '../../shared/model/frame.ts';
 import { sketchProfile } from '../../shared/model/profile.ts';
@@ -331,8 +331,8 @@ export function startFeature(type: FeatureType): void {
     const outlined = (sketch: SketchFeature) => sketchProfile(sketch.sketch).regions.length > 0;
     if (draft.type === 'sweep') {
       const profile = unused.findLast(outlined) ?? sketches.findLast(outlined);
-      // The path: the newest helix or sketch of open curves no other sweep follows yet.
-      const paths = features.filter((feature) => !feature.suppressed && ((feature.type === 'sketch' && feature !== profile && !outlined(feature)) || feature.type === 'helix'));
+      // The path: the newest curve, helix or sketch of open curves no other sweep follows yet.
+      const paths = features.filter((feature) => !feature.suppressed && ((feature.type === 'sketch' && feature !== profile && !outlined(feature)) || feature.type === 'helix' || isCurveFeature(feature)));
       const path = paths.findLast((feature) => !used.has(feature.id)) ?? paths.at(-1);
       if (!profile || !path) {
         showToast('info', t('toasts.noSweepSketches'));
@@ -347,6 +347,22 @@ export function startFeature(type: FeatureType): void {
         return;
       }
       draft = { ...draft, operation, sketches: chosen.map((sketch) => sketch.id) };
+    }
+  } else if (draft.type === 'projectedCurve' || draft.type === 'compositeCurve') {
+    // Faces (a projected curve) or edges (a composite curve) selected before starting are taken over.
+    const naming = getState().display.body?.naming;
+    const selection = getState().selection;
+    if (draft.type === 'projectedCurve') {
+      const sketch = sketchToUse(features);
+      if (!sketch) {
+        showToast('info', t('toasts.noCurveSketch'));
+        return;
+      }
+      const faces = naming ? selection.flatMap((pick) => (pick.kind === 'face' && pick.at ? (faceRefOf(naming, pick.index, pick.at) ?? []) : [])) : [];
+      draft = { ...draft, sketch: sketch.id, faces };
+    } else {
+      const edges = naming ? selection.flatMap((pick) => (pick.kind === 'edge' ? (edgeRefOf(naming, pick.index) ?? []) : [])) : [];
+      draft = { ...draft, edges };
     }
   } else if (draft.type === 'helix') {
     // Around the circle of the newest sketch with one that no feature uses yet.
@@ -457,7 +473,7 @@ export function chooseRevolveAxis(value: string): void {
 /** Chooses the sketch of the extrusion or revolution being edited (a revolution also takes its centerline). */
 export function chooseFeatureSketch(id: string): void {
   const draft = getState().activeEdit?.draft;
-  if (draft?.type === 'extrude' || draft?.type === 'hole' || draft?.type === 'sweep' || draft?.type === 'rib' || draft?.type === 'helix') updateDraft({ sketch: id });
+  if (draft?.type === 'extrude' || draft?.type === 'hole' || draft?.type === 'sweep' || draft?.type === 'rib' || draft?.type === 'helix' || draft?.type === 'projectedCurve') updateDraft({ sketch: id });
   if (draft?.type !== 'revolve') return;
   const sketch = getState().history.features.find((feature): feature is SketchFeature => feature.type === 'sketch' && feature.id === id);
   updateDraft({ sketch: id, axis: sketch ? defaultAxis(sketch) : '' });
@@ -836,11 +852,26 @@ export function pickExtrudeEnd(pick: Pick | 'origin'): void {
   updateDraft({ endRef: ref });
 }
 
+/** Adds an edge of the shown body to the edited composite curve, or takes it out again. */
+export function toggleCurveEdge(index: number): void {
+  const { activeEdit: edit, display } = getState();
+  const naming = display.body?.naming;
+  if (edit?.draft.type !== 'compositeCurve' || !naming) return;
+  const matches = resolveEdgeRefs(edit.draft.edges, naming);
+  const at = matches.findIndex((match) => match?.index === index);
+  if (at >= 0) {
+    updateDraft({ edges: edit.draft.edges.filter((_, i) => i !== at) });
+    return;
+  }
+  const ref = edgeRefOf(naming, index);
+  if (ref) updateDraft({ edges: [...edit.draft.edges, ref] });
+}
+
 /** Opens the edited shell at a face of the shown body (the body it hollows out), or closes it there again. */
 export function toggleShellFace(pick: Pick): void {
   const { activeEdit: edit, display } = getState();
   const naming = display.body?.naming;
-  if ((edit?.draft.type !== 'shell' && edit?.draft.type !== 'draft') || !naming || pick.kind !== 'face' || !pick.at) return;
+  if ((edit?.draft.type !== 'shell' && edit?.draft.type !== 'draft' && edit?.draft.type !== 'projectedCurve') || !naming || pick.kind !== 'face' || !pick.at) return;
   // One entry per reference (also for faces that are gone), so the positions match the list.
   const open = edit.draft.faces.map((ref) => referencePicks([ref], getState())[0]?.index);
   const at = open.indexOf(pick.index);
@@ -1672,6 +1703,14 @@ export function handlePick(pick: Pick | null, additive: boolean): void {
   }
   if (edit?.draft.type === 'thread') {
     if (pick) setThreadFace(pick);
+    return;
+  }
+  if (edit?.draft.type === 'projectedCurve') {
+    if (pick?.kind === 'face' && edit.draft.method === 'faces') toggleShellFace(pick);
+    return;
+  }
+  if (edit?.draft.type === 'compositeCurve') {
+    if (pick?.kind === 'edge') toggleCurveEdge(pick.index);
     return;
   }
   // A draft: the neutral plane first, then the faces to tilt.

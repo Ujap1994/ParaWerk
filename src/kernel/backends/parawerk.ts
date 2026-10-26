@@ -3,7 +3,9 @@ import { extrudeRange, revolveRange, type BooleanOperation, type Vec3 } from '..
 import { holeProfile, throughDepth } from '../../shared/model/hole.ts';
 import { transformDirection, transformPoint } from '../../shared/model/pattern.ts';
 import type { MeasuredDistance, MeasureTarget } from '../measure.ts';
-import type { GeometryBackend, KernelFeature, ResolvedExtrude, ResolvedCopy, ResolvedHole, ShapeHandle } from '../backend.ts';
+import type { CurveGeometry, GeometryBackend, KernelFeature, ResolvedCurve, ResolvedExtrude, ResolvedCopy, ResolvedHole, ShapeHandle, SketchCurves } from '../backend.ts';
+import { displayQuality } from '../mesh-quality.ts';
+import type { SketchFrame } from '../../shared/model/sketch.ts';
 import { FeatureError } from '../feature-error.ts';
 import { axisDirection } from '../feature-geometry.ts';
 import type { MeshQuality } from '../mesh-quality.ts';
@@ -39,7 +41,7 @@ const SURFACE_KINDS: SurfaceKind[] = ['plane', 'cylinder', 'cone', 'sphere', 'to
 const CURVE_KINDS: CurveKind[] = ['line', 'circle', 'ellipse', 'bspline', 'other'];
 
 const FEATURE_ERROR_CODES = new Set<FeatureErrorCode>([
-  'no-body', 'no-edges', 'edge-missing', 'face-missing', 'plane-missing', 'reference-missing', 'reference-kind', 'reference-parallel', 'reference-not-parallel', 'reference-collinear', 'empty-result', 'first-must-add', 'sketch-missing', 'profile-empty', 'profile-crossing', 'axis-missing', 'axis-not-in-plane', 'hole-no-points', 'hole-invalid', 'pattern-empty', 'pattern-seed-missing', 'pattern-unsupported', 'shell-face-missing', 'end-behind', 'end-parallel', 'end-missed', 'thin-empty', 'thin-unsupported', 'thin-branching', 'thin-too-thick', 'round-faces', 'round-face-missing', 'round-sides', 'round-center', 'round-planes', 'round-radius', 'draft-faces', 'draft-face', 'draft-face-missing', 'path-empty', 'path-branching', 'path-gaps', 'sweep-failed', 'loft-sections', 'loft-profile', 'loft-failed', 'rib-curves', 'thread-face', 'thread-size', 'helix-circle', 'sweep-holes', 'import-no-solid', 'profile-crosses-axis',
+  'no-body', 'no-edges', 'edge-missing', 'face-missing', 'plane-missing', 'reference-missing', 'reference-kind', 'reference-parallel', 'reference-not-parallel', 'reference-collinear', 'empty-result', 'first-must-add', 'sketch-missing', 'profile-empty', 'profile-crossing', 'axis-missing', 'axis-not-in-plane', 'hole-no-points', 'hole-invalid', 'pattern-empty', 'pattern-seed-missing', 'pattern-unsupported', 'shell-face-missing', 'end-behind', 'end-parallel', 'end-missed', 'thin-empty', 'thin-unsupported', 'thin-branching', 'thin-too-thick', 'round-faces', 'round-face-missing', 'round-sides', 'round-center', 'round-planes', 'round-radius', 'draft-faces', 'draft-face', 'draft-face-missing', 'path-empty', 'path-branching', 'path-gaps', 'sweep-failed', 'loft-sections', 'loft-profile', 'loft-failed', 'rib-curves', 'thread-face', 'thread-size', 'helix-circle', 'sweep-holes', 'curve-empty', 'curve-missed', 'curve-faces', 'curve-edge-missing', 'import-no-solid', 'profile-crosses-axis',
   'operation-failed', 'unknown',
 ]);
 
@@ -218,6 +220,7 @@ export class ParaWerkBackend implements GeometryBackend {
           const { center, axis, xDir, radius, pitch, turns, leftHand } = feature.helix;
           return this.handle(k.sweepAlongHelix(profile, frame(feature.frame), [...center, ...axis, ...xDir, radius, pitch, turns, leftHand ? 1 : 0], names, feature.id));
         }
+        if (feature.curve) return this.handle(k.sweepAlongCurve(profile, frame(feature.frame), this.id(feature.curve), names, feature.id));
         if (!feature.spine || !feature.spineFrame) throw new FeatureError('path-empty');
         return this.handle(k.sweepProfile(profile, frame(feature.frame), encodeEdges(feature.spine.edges), frame(feature.spineFrame), names, feature.id));
       }
@@ -362,6 +365,55 @@ export class ParaWerkBackend implements GeometryBackend {
 
   release(handle: ShapeHandle): void {
     this.kernel.release(this.id(handle));
+  }
+
+  curve(body: ShapeHandle | null, curve: ResolvedCurve): ShapeHandle {
+    const k = this.kernel;
+    const temporary: ShapeHandle[] = [];
+    const keep = (handle: ShapeHandle) => {
+      temporary.push(handle);
+      return this.id(handle);
+    };
+    const frame = (f: SketchFrame) => [...f.origin, ...f.xDir, ...f.normal];
+    // Each curve of a sketch on its own, then all of them joined where they meet.
+    const wiresOf = (sketch: SketchCurves) => sketch.edges.map((edge) => keep(this.handle(k.sketchWire(encodeEdges([edge]), frame(sketch.frame)))));
+    const joined = (sketch: SketchCurves) => {
+      if (sketch.edges.length === 0) throw new FeatureError('curve-empty');
+      return keep(this.handle(k.compositeCurve(-1, [], wiresOf(sketch), false)));
+    };
+    try {
+      switch (curve.kind) {
+        case 'projected':
+          if (!body) throw new FeatureError('no-body');
+          return this.handle(k.projectCurve(joined(curve.sketch), this.id(body), curve.faces, curve.sketch.frame.origin, curve.sketch.frame.normal, { both: 0, normal: 1, reverse: -1 }[curve.side]));
+        case 'intersection': {
+          const [a, b] = curve.sketches;
+          return this.handle(k.intersectCurves(joined(a), a.frame.normal, joined(b), b.frame.normal));
+        }
+        case 'composite': {
+          const parts = [...curve.sketches.flatMap(wiresOf), ...curve.curves.map((handle) => this.id(handle))];
+          if (curve.edges.length === 0 && parts.length === 0) throw new FeatureError('curve-empty');
+          return this.handle(k.compositeCurve(body && curve.edges.length > 0 ? this.id(body) : -1, curve.edges, parts, true));
+        }
+      }
+      throw new FeatureError('curve-empty');
+    } finally {
+      for (const handle of temporary) this.release(handle);
+    }
+  }
+
+  curveGeometry(curve: ShapeHandle): CurveGeometry {
+    const { min, max } = this.boundingBox(curve);
+    const linear = displayQuality(Math.hypot(max[0] - min[0], max[1] - min[1], max[2] - min[2])).linear;
+    const info = check(this.kernel.curveInfo(this.id(curve), linear, 0.1) as { ok: true; length: number; chains: number; closed: boolean; points: number[] } | Failure);
+    const polylines: Vec3[][] = [];
+    for (let i = 0; i < info.points.length; ) {
+      const count = info.points[i++] as number;
+      const line: Vec3[] = [];
+      for (let p = 0; p < count; p++, i += 3) line.push([info.points[i] as number, info.points[i + 1] as number, info.points[i + 2] as number]);
+      polylines.push(line);
+    }
+    return { polylines, length: info.length, chains: info.chains, closed: info.closed };
   }
 
   counts(handle: ShapeHandle) {

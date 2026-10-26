@@ -1,15 +1,15 @@
-import { COPYABLE_TYPES, isCopyFeature, isEdgeFeature, type CopyFeature, type DraftFeature, type LoftFeature, type RibFeature, type SweepFeature, type ThreadFeature, type EdgeFeature, type EdgeRef, type ExtrudeFeature, type Feature, type FilletFeature, roundFaceCount, type HoleFeature, type ShellFeature, type SketchFeature, type SolidModelingFeature, type Vec3 } from '../shared/model/feature.ts';
+import { COPYABLE_TYPES, type CurveFeature, isCopyFeature, isEdgeFeature, type CopyFeature, type DraftFeature, type LoftFeature, type RibFeature, type SweepFeature, type ThreadFeature, type EdgeFeature, type EdgeRef, type ExtrudeFeature, type Feature, type FilletFeature, roundFaceCount, type HoleFeature, type ShellFeature, type SketchFeature, type SolidModelingFeature, type Vec3 } from '../shared/model/feature.ts';
 import { circularTransforms, linearTransforms, mirrorTransform, type Transform } from '../shared/model/pattern.ts';
 import { holePositions, holeProblem } from '../shared/model/hole.ts';
 import { edgeFaceNames, edgeRefOf, faceRefOf, resolveEdgeRefs, resolveFaceRef, resolveFacePlane, type BodyNaming } from '../shared/model/naming.ts';
 import { sketchProfile, type Profile, type ProfileEdge } from '../shared/model/profile.ts';
 import { DEFAULT_THIN_THICKNESS, thinProfile } from '../shared/model/thin.ts';
-import { edgePoint, reversedPath, sketchPath } from '../shared/model/path.ts';
+import { edgePoint, reversedPath, sketchEdges, sketchPath } from '../shared/model/path.ts';
 import type { GeometryRef, ReferenceGeometry } from '../shared/model/reference.ts';
 import { frameOf, frameOnPlane, ORIGIN_ID, toModel, toSketch, type SketchFrame, type SketchPlaneRef } from '../shared/model/sketch.ts';
 import type { Point2 } from '../shared/model/spline.ts';
 import { hashString } from '../shared/hash.ts';
-import type { KernelFeature, ResolvedCopy, ResolvedDraft, ResolvedLoft, ResolvedRib, ResolvedSweep, ResolvedThread, ResolvedEdgeFeature, ResolvedExtrude, ResolvedHole, ResolvedShell } from './backend.ts';
+import type { KernelFeature, ResolvedCurve, ShapeHandle, SketchCurves, ResolvedCopy, ResolvedDraft, ResolvedLoft, ResolvedRib, ResolvedSweep, ResolvedThread, ResolvedEdgeFeature, ResolvedExtrude, ResolvedHole, ResolvedShell } from './backend.ts';
 import { FeatureError } from './feature-error.ts';
 import { axisOfReference, curvedFaceOfReference, referenceValue, type BodyQuery, type ReferenceContext } from './reference.ts';
 
@@ -329,6 +329,9 @@ function resolveSweep(feature: SweepFeature, before: readonly Feature[], context
   const sketch = sketchBefore(before, feature.sketch);
   const profile = profileOf(sketch);
   const frame = context.frames.get(sketch.id) ?? frameOf(sketch.plane);
+  // Along a projected or composite curve: the shape the rebuild made.
+  const curve = context.curves?.get(feature.path);
+  if (curve) return { ...feature, profile, frame, curve };
   // Along a helix: where the rebuild found it.
   const helix = before.find((candidate) => candidate.id === feature.path && candidate.type === 'helix' && !candidate.suppressed);
   if (helix) {
@@ -421,6 +424,44 @@ function resolveThread(feature: ThreadFeature, context: ResolveContext): Resolve
 /** What features are resolved against: the body before them, where sketches lie and where reference features lie. */
 export interface ResolveContext extends ReferenceContext {
   frames: ReadonlyMap<string, SketchFrame>;
+  /** The projected and composite curves before the feature, by id. */
+  curves?: ReadonlyMap<string, ShapeHandle>;
+}
+
+/** The curves of a sketch before a feature (not construction geometry) on its plane. */
+function curvesOfSketch(before: readonly Feature[], id: string, context: ResolveContext): SketchCurves {
+  const sketch = sketchBefore(before, id);
+  return { edges: sketchEdges(sketch.sketch), frame: context.frames.get(sketch.id) ?? frameOf(sketch.plane) };
+}
+
+/**
+ * Gives a projected or composite curve what it is built from: the curves of its sketches, the faces
+ * it lands on, the edges and earlier curves it joins. Throws FeatureError.
+ */
+export function resolveCurve(feature: CurveFeature, before: readonly Feature[], context: ResolveContext): ResolvedCurve {
+  if (feature.type === 'projectedCurve') {
+    if (feature.method === 'sketch') return { kind: 'intersection', sketches: [curvesOfSketch(before, feature.sketch, context), curvesOfSketch(before, feature.sketch2, context)] };
+    const sketch = curvesOfSketch(before, feature.sketch, context);
+    const body = context.body;
+    if (!body) throw new FeatureError('no-body');
+    if (feature.faces.length === 0) throw new FeatureError('curve-faces');
+    const naming = body.naming();
+    const faces = feature.faces.flatMap((ref) => resolveFaceRef(ref, naming, (face, point) => Math.hypot(...minus(body.face(face).center, point)))?.index ?? []);
+    if (faces.length === 0) throw new FeatureError('face-missing');
+    return { kind: 'projected', sketch, faces: [...new Set(faces)], side: feature.side };
+  }
+  const matches = feature.edges.length > 0 && context.body ? resolveEdgeRefs(feature.edges, context.body.naming()) : [];
+  const missing = feature.edges.length - matches.filter((match) => match !== null).length;
+  if (missing > 0) throw new FeatureError('curve-edge-missing', String(missing));
+  const sketches: SketchCurves[] = [];
+  const curves: ShapeHandle[] = [];
+  for (const id of feature.curves) {
+    const curve = context.curves?.get(id);
+    if (curve) curves.push(curve);
+    else if (before.some((candidate) => candidate.id === id && candidate.type === 'sketch')) sketches.push(curvesOfSketch(before, id, context));
+    else throw new FeatureError('sketch-missing');
+  }
+  return { kind: 'composite', edges: [...new Set(matches.flatMap((match) => (match ? [match.index] : [])))], sketches, curves };
 }
 
 /**

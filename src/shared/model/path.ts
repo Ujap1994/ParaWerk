@@ -52,6 +52,15 @@ export function sketchPath(sketch: SketchData): SketchPath | PathProblem {
   return used.size === open.length ? path : { code: 'path-gaps' };
 }
 
+/** All curves of a sketch that are not construction geometry, as edges (each the way it was drawn). */
+export function sketchEdges(sketch: SketchData): ProfileEdge[] {
+  const positions = new Map<string, Point2>([[ORIGIN_ID, [0, 0]]]);
+  for (const entity of sketch.entities) if (entity.type === 'point') positions.set(entity.id, [entity.x, entity.y]);
+  const vertices = new Vertices(1e-7 * sketchSize(positions, sketch.entities));
+  const { open, closed } = curvesOf(sketch, vertices);
+  return [...open, ...closed].map((curve) => curve.edge(true));
+}
+
 /** Where an edge starts or (`end`) ends. */
 export function edgePoint(edge: ProfileEdge, end: boolean): Point2 {
   switch (edge.kind) {

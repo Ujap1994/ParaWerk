@@ -109,6 +109,15 @@ export function helixSegments(helix: Extract<ReferenceGeometry, { kind: 'helix' 
   return out;
 }
 
+/** A projected or composite curve as line segments (pairs of points). */
+export function curveSegments(curve: Extract<ReferenceGeometry, { kind: 'curve' }>): number[] {
+  const out: number[] = [];
+  for (const line of curve.polylines) for (let i = 1; i < line.length; i++) out.push(...(line[i - 1] as Vec3Tuple), ...(line[i] as Vec3Tuple));
+  return out;
+}
+
+type Vec3Tuple = [number, number, number];
+
 interface Drawn {
   item: ReferenceItem;
   /** Pick target (plane fill, axis line or point sprite). */
@@ -307,8 +316,8 @@ export class ReferenceGeometryLayer {
         const axes = { lines, placement };
         this.placeAxes(axes);
         drawn = { item, target: sprite, objects: [lines, sprite], axes };
-      } else if (geometry.kind === 'helix') {
-        const segments = new LineSegmentsGeometry().setPositions(helixSegments(geometry));
+      } else if (geometry.kind === 'helix' || geometry.kind === 'curve') {
+        const segments = new LineSegmentsGeometry().setPositions(geometry.kind === 'helix' ? helixSegments(geometry) : curveSegments(geometry));
         const lines = new LineSegments2(segments, this.lines[item.style]);
         lines.renderOrder = 3;
         const through = new LineSegments2(segments, this.hiddenLines[item.style]);
