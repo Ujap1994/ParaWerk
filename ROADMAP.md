@@ -148,7 +148,8 @@ Marked complete for now: open points from hands-on testing are handled alongside
 ### Phase 2 – features complete, waiting for Gate 2
 
 First preview released as [v0.3.0-alpha.0](https://github.com/Ujap1994/ParaWerk/releases/tag/v0.3.0-alpha.0)
-(part modeling); thin features, coordinate systems and the remaining fillet types followed on 2026-10-26.
+(part modeling); thin features, coordinate systems and the remaining fillet types followed in
+[v0.3.0-alpha.1](https://github.com/Ujap1994/ParaWerk/releases/tag/v0.3.0-alpha.1) (2026-10-26).
 
 | Item | Status |
 |---|---|

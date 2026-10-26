@@ -7,6 +7,12 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+## [0.3.0-alpha.1] - 2026-10-26
+
+Completes the features of **Phase 2** (part modeling): thin features, coordinate systems, fillets and
+chamfers on whole faces, face fillets and full rounds. Still an alpha: not ready for productive use; see
+the disclaimer in the README.
+
 ### Added
 - Fillet types *Face fillet* and *Full round*. A face fillet rounds with a radius between two planar faces
   at a corner, also where they share no edge (a chamfer or step between them is rounded over, an inner
@@ -23,6 +29,10 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
   curves too – instead of the areas they enclose, to one side, the other or both. Lines and arcs are
   offset exactly and meet in sharp corners (an arc around very sharp outside corners); branching curves
   and walls too thick for their curves are reported. A sketch of open curves starts as a thin feature.
+
+### Changed
+- Part files with these features are saved as format version 7, like the other features since 0.3.
+- The German interface says "3D-Ansicht" everywhere (the measure hint said "3D-Fenster").
 
 ## [0.3.0-alpha.0] - 2026-10-26
 
@@ -309,7 +319,8 @@ First technical preview (Phase 0). Not ready for productive use; see the disclai
 ### Removed
 - DWG from the planned formats, because it is a closed, proprietary format. DXF covers 2D exchange.
 
-[Unreleased]: https://github.com/Ujap1994/ParaWerk/compare/v0.3.0-alpha.0...HEAD
+[Unreleased]: https://github.com/Ujap1994/ParaWerk/compare/v0.3.0-alpha.1...HEAD
+[0.3.0-alpha.1]: https://github.com/Ujap1994/ParaWerk/compare/v0.3.0-alpha.0...v0.3.0-alpha.1
 [0.3.0-alpha.0]: https://github.com/Ujap1994/ParaWerk/compare/v0.2.0-alpha.1...v0.3.0-alpha.0
 [0.2.0-alpha.1]: https://github.com/Ujap1994/ParaWerk/compare/v0.2.0-alpha.0...v0.2.0-alpha.1
 [0.2.0-alpha.0]: https://github.com/Ujap1994/ParaWerk/compare/v0.1.0-alpha.0...v0.2.0-alpha.0
