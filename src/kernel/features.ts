@@ -108,6 +108,7 @@ export function applyFeature(oc: OC, body: TopoDS_Shape | null, feature: KernelF
       case 'import':
       case 'combine':
       case 'deleteBody':
+      case 'thicken':
         throw new FeatureError('operation-failed', 'this feature needs the ParaWerk kernel');
     }
     return arena.keep(result);

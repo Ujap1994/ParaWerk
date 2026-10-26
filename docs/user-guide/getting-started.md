@@ -31,7 +31,7 @@ This walk-through builds a plate with a hole and rounded corners and exports it 
 1. **Create the base.** Click **Box** in the command bar. The property panel on the left shows the box
    parameters with a live preview. Set *Width* to `120`, *Depth* to `80` and *Height* to `20`, then
    confirm with **✓** (or press **Enter**).
-2. **Drill a hole.** Click **Cylinder**, choose **Remove material**, set *Radius* to `12` and
+2. **Drill a hole.** Open the arrow next to **Box**, click **Cylinder**, choose **Remove material**, set *Radius* to `12` and
    *Height* to `40`. Under *Position*, set *Z* to `-10` so the cylinder passes through the plate.
    Confirm with **✓**.
 3. **Round the corners.** Click **Fillet** and click the four vertical corner edges in the 3D view.

@@ -115,6 +115,7 @@ function referenceAspects(geometry: ReferenceGeometry): Aspects {
       // Its origin, and its XY plane with the Z axis.
       return { point: geometry.origin, center: geometry.origin, plane: { point: geometry.origin, normal: geometry.zDir }, axis: { point: geometry.origin, direction: geometry.zDir } };
     case 'curve':
+    case 'surface':
       return {};
   }
 }

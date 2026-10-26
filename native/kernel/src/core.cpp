@@ -27,6 +27,8 @@
 #include <BRepFilletAPI_MakeChamfer.hxx>
 #include <BRepFilletAPI_MakeFillet.hxx>
 #include <BRepBuilderAPI_MakeSolid.hxx>
+#include <BRepBuilderAPI_Sewing.hxx>
+#include <BRepClass3d_SolidClassifier.hxx>
 #include <BRepAlgoAPI_Common.hxx>
 #include <BRepPrimAPI_MakeHalfSpace.hxx>
 #include <BRepOffsetAPI_MakeOffsetShape.hxx>
@@ -1351,6 +1353,133 @@ int loftProfiles(const std::vector<double>& sections, bool ruled, const std::vec
   namer.assign(loft.LastShape(), faceName(name, "end"));
   namer.rest(faceName(name, "side"));
   return store().add(result, namer.take());
+}
+
+// ------------------------------------------------------------------ surfaces
+
+namespace {
+
+/** The faces of `shape` with their names, in TopExp::MapShapes order. */
+std::vector<std::pair<TopoDS_Face, std::string>> namedFaces(const StoredShape& shape) {
+  ShapeMap faces;
+  TopExp::MapShapes(shape.shape, TopAbs_FACE, faces);
+  std::vector<std::pair<TopoDS_Face, std::string>> out;
+  for (int f = 1; f <= faces.Extent(); ++f) out.emplace_back(TopoDS::Face(faces(f)), f <= static_cast<int>(shape.names.size()) ? shape.names[static_cast<size_t>(f - 1)] : std::string());
+  return out;
+}
+
+/** Faces sewn together where their edges meet; the sewn faces keep their names. */
+StoredShape sewFaces(const std::vector<std::pair<TopoDS_Face, std::string>>& faces, double tolerance) {
+  BRepBuilderAPI_Sewing sewing(tolerance);
+  for (const auto& [face, faceName] : faces) sewing.Add(face);
+  sewing.Perform();
+  const TopoDS_Shape sewn = sewing.SewedShape();
+  if (sewn.IsNull()) throw KernelError("operation-failed", "the faces could not be sewn");
+  FaceNamer namer(sewn);
+  for (const auto& [face, faceName] : faces) {
+    const TopoDS_Shape modified = sewing.IsModified(face) ? sewing.Modified(face) : face;
+    for (TopExp_Explorer it(modified, TopAbs_FACE); it.More(); it.Next()) namer.assign(it.Current(), faceName);
+  }
+  return {sewn, namer.take()};
+}
+
+}  // namespace
+
+int offsetSurface(int bodyId, const std::vector<int>& faceIndices, double distance, const std::string& name) {
+  const StoredShape& body = store().entry(bodyId);
+  const std::vector<std::pair<TopoDS_Face, std::string>> all = namedFaces(body);
+  std::vector<std::pair<TopoDS_Face, std::string>> chosen;
+  for (int index : faceIndices) {
+    if (index < 0 || index >= static_cast<int>(all.size())) throw KernelError("operation-failed", "no such face");
+    // The surface's faces are named after the faces they come from.
+    chosen.emplace_back(all[static_cast<size_t>(index)].first, faceName(name, all[static_cast<size_t>(index)].second));
+  }
+  if (chosen.empty()) throw KernelError("surface-faces", "pick the faces to offset");
+  // Copies, so the surface shares nothing with the body.
+  std::vector<std::pair<TopoDS_Face, std::string>> copies;
+  for (const auto& [face, faceName] : chosen) copies.emplace_back(TopoDS::Face(BRepBuilderAPI_Copy(face).Shape()), faceName);
+  const StoredShape sewn = sewFaces(copies, 1e-6);
+  if (std::abs(distance) < 1e-9) return store().add(sewn.shape, sewn.names);
+  BRepOffsetAPI_MakeOffsetShape offset;
+  offset.PerformByJoin(sewn.shape, distance, 1e-6);
+  if (!offset.IsDone()) throw KernelError("offset-failed", "the faces could not be offset by this distance");
+  FaceNamer namer(offset.Shape());
+  namer.inherit(offset, sewn.shape, sewn.names);
+  namer.rest(faceName(name, "face"));
+  return store().add(offset.Shape(), namer.take());
+}
+
+int knitSurfaces(const std::vector<int>& surfaceIds, double tolerance) {
+  std::vector<std::pair<TopoDS_Face, std::string>> faces;
+  for (int id : surfaceIds) {
+    for (auto& face : namedFaces(store().entry(id))) faces.push_back(std::move(face));
+  }
+  if (faces.empty()) throw KernelError("surface-faces", "choose the surfaces to knit");
+  const StoredShape sewn = sewFaces(faces, tolerance);
+  return store().add(sewn.shape, sewn.names);
+}
+
+int thickenSurface(int surfaceId, double thickness, int side, bool fill, const std::string& name) {
+  const StoredShape& surface = store().entry(surfaceId);
+  if (fill) {
+    // A closed surface: the volume it encloses.
+    ShapeMap shells;
+    TopExp::MapShapes(surface.shape, TopAbs_SHELL, shells);
+    if (shells.Extent() != 1 || !BRep_Tool::IsClosed(shells(1))) throw KernelError("surface-open", "the surface does not enclose a volume");
+    TopoDS_Solid solid = BRepBuilderAPI_MakeSolid(TopoDS::Shell(shells(1))).Solid();
+    BRepClass3d_SolidClassifier outside(solid);
+    outside.PerformInfinitePoint(1e-7);
+    if (outside.State() == TopAbs_IN) solid.Reverse();
+    requireValidSolid(solid, "solid");
+    FaceNamer namer(solid);
+    namer.keep(surface.shape, surface.names);
+    namer.rest(faceName(name, "face"));
+    return store().add(solid, namer.take());
+  }
+  if (!(thickness > 0)) throw KernelError("operation-failed", "the thickness must be above 0");
+  // Both sides: from half a thickness against the normal.
+  StoredShape source = surface;
+  double offset = side < 0 ? -thickness : thickness;
+  if (side == 0) {
+    BRepOffsetAPI_MakeOffsetShape half;
+    half.PerformByJoin(surface.shape, -thickness / 2, 1e-6);
+    if (!half.IsDone()) throw KernelError("thicken-failed", "the surface could not be thickened");
+    FaceNamer namer(half.Shape());
+    namer.inherit(half, surface.shape, surface.names);
+    source = {half.Shape(), namer.take()};
+    offset = thickness;
+  }
+  BRepOffsetAPI_MakeThickSolid maker;
+  maker.MakeThickSolidBySimple(source.shape, offset);
+  if (!maker.IsDone()) throw KernelError("thicken-failed", "the surface could not be thickened");
+  requireValidSolid(maker.Shape(), "thickened surface");
+  FaceNamer namer(maker.Shape());
+  namer.inherit(maker, source.shape, source.names);
+  namer.rest(faceName(name, "wall"));
+  // The solid comes out inside out when it grows against the surface's normal.
+  TopoDS_Shape solid = maker.Shape();
+  GProp_GProps props;
+  BRepGProp::VolumeProperties(solid, props);
+  if (props.Mass() < 0) solid.Reverse();
+  return store().add(solid, namer.take());
+}
+
+SurfaceInfo surfaceInfo(int id) {
+  const TopoDS_Shape& shape = store().get(id);
+  SurfaceInfo info;
+  GProp_GProps props;
+  BRepGProp::SurfaceProperties(shape, props);
+  info.area = props.Mass();
+  AncestorMap edgeFaces;
+  TopExp::MapShapesAndAncestors(shape, TopAbs_EDGE, TopAbs_FACE, edgeFaces);
+  info.closed = edgeFaces.Extent() > 0;
+  for (int e = 1; e <= edgeFaces.Extent(); ++e) {
+    if (!BRep_Tool::Degenerated(TopoDS::Edge(edgeFaces.FindKey(e))) && edgeFaces(e).Extent() < 2) info.closed = false;
+  }
+  ShapeMap faces;
+  TopExp::MapShapes(shape, TopAbs_FACE, faces);
+  info.faces = faces.Extent();
+  return info;
 }
 
 int loftAlongCurve(const std::vector<double>& sections, int centerlineId, const std::vector<std::string>& edgeNames, const std::string& name) {

@@ -62,7 +62,10 @@
       "modify": "Modify",
       "exchange": "Exchange",
       "part": "Part",
-      "evaluate": "Evaluate"
+      "evaluate": "Evaluate",
+      "surfaces": "Surfaces",
+      "curves": "Curves",
+      "bodies": "Bodies"
     },
     "new": "New",
     "open": "Open",
@@ -124,13 +127,17 @@
       "projectedCurve": "Project the curves of a sketch onto faces, or make a 3D curve where the curves of two sketches meet",
       "compositeCurve": "Join edges, sketch curves and other curves into one curve, as the path of a sweep",
       "combine": "Combine bodies of the part: fuse them, subtract them from a main body, or keep what they share",
-      "deleteBody": "Remove bodies from the part"
+      "deleteBody": "Remove bodies from the part",
+      "offsetSurface": "Make a surface from faces of the part, offset along their normals (0 for a copy)",
+      "knit": "Join surfaces into one where their edges meet",
+      "thicken": "Turn a surface into a solid: give it a thickness, or fill it when it encloses a volume"
     },
     "tabs": {
       "label": "Command tabs",
       "features": "Features",
       "sketch": "Sketch",
-      "evaluate": "Evaluate"
+      "evaluate": "Evaluate",
+      "surfaces": "Surfaces"
     },
     "sketchTools": {
       "line": "Line",
@@ -221,7 +228,11 @@
     "compositeCurve": "Composite curve",
     "combine": "Combine",
     "deleteBody": "Delete body",
-    "bodyFeatures": "Combine and delete bodies"
+    "offsetSurface": "Offset surface",
+    "knit": "Knit",
+    "thicken": "Thicken",
+    "primitives": "Box and cylinder",
+    "edgeFeatures": "Fillet and chamfer"
   },
   "features": {
     "plane": "Plane",
@@ -251,7 +262,10 @@
     "projectedCurve": "Projected curve",
     "compositeCurve": "Composite curve",
     "combine": "Combine",
-    "deleteBody": "Delete body"
+    "deleteBody": "Delete body",
+    "offsetSurface": "Offset surface",
+    "knit": "Knit",
+    "thicken": "Thicken"
   },
   "tree": {
     "title": "Feature tree",
@@ -469,7 +483,8 @@
     "noSweepSketches": "A sweep needs two sketches: one with a closed outline and one with the path.",
     "noLoftSketches": "A loft needs at least two sketches with a closed outline each.",
     "noHelixSketch": "Draw a circle in a sketch first: the helix winds around it.",
-    "noCurveSketch": "Draw the curves to project in a sketch first."
+    "noCurveSketch": "Draw the curves to project in a sketch first.",
+    "noSurface": "Make a surface first, for example with Offset surface."
   },
   "errors": {
     "no-body": "There is no body to modify yet.",
@@ -537,7 +552,12 @@
     "centerline-missing": "The centerline of the loft no longer exists. Choose another one, or none.",
     "centerline-gaps": "The centerline must be one chain of curves without gaps or branches.",
     "combine-bodies": "Pick at least two different bodies: click a face of each in the 3D view, the main body first.",
-    "body-missing": "A picked body no longer exists: an earlier change removed it. Edit the feature and pick the bodies again."
+    "body-missing": "A picked body no longer exists: an earlier change removed it. Edit the feature and pick the bodies again.",
+    "surface-faces": "Pick the faces of the surface, or choose the surfaces to join.",
+    "surface-missing": "The surface no longer exists. Choose another one.",
+    "surface-open": "Only a surface that encloses a volume can be filled. Knit its faces together first, or give it a thickness instead.",
+    "offset-failed": "The faces cannot be offset by this distance: a curved face may be smaller than the distance inwards.",
+    "thicken-failed": "The surface cannot be thickened like this; try a smaller thickness or the other side."
   },
   "warnings": {
     "edge-missing_one": "{{count}} selected edge no longer exists and is left out. Edit the feature to remove it or pick another edge.",
@@ -1155,5 +1175,26 @@
     "pick": "Click a face of each body in the 3D view.",
     "combineHint": "Click a face of each body, the main body first. Add fuses them into one body, Subtract removes the others from the main body, Common keeps only what they all share. Bodies not picked stay as they are.",
     "deleteHint": "Click a face of each body to remove from the part; the other bodies stay."
+  },
+  "surface": {
+    "distance": "Distance",
+    "offsetHint": "Click faces of the part in the 3D view. The surface follows them at the distance along their normals – outward for positive distances, inward for negative ones, a copy at 0. Surfaces do not change the part; thicken them to make solids.",
+    "summary_one": "Area {{area}}, one face.",
+    "summary_other": "Area {{area}}, {{count}} faces.",
+    "summaryClosed_one": "Area {{area}}, one face, encloses a volume.",
+    "summaryClosed_other": "Area {{area}}, {{count}} faces, encloses a volume.",
+    "surfaces": "Surfaces",
+    "add": "Add a surface",
+    "knitHint": "The surfaces are joined where their edges meet (within 0.01 mm). A knit surface that encloses a volume can be filled with Thicken.",
+    "surface": "Surface",
+    "fill": "Fill the enclosed volume (closed surfaces)",
+    "thickness": "Thickness",
+    "side": "Grows",
+    "sides": {
+      "normal": "Along the normal",
+      "reverse": "Against the normal",
+      "both": "Half each way"
+    },
+    "thickenHint": "The surface becomes a solid of the thickness, on the side you choose, and is added to the part like other features that add material."
   }
 }

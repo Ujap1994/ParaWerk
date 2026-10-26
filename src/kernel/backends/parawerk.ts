@@ -3,7 +3,7 @@ import { extrudeRange, revolveRange, type BooleanOperation, type Vec3 } from '..
 import { holeProfile, throughDepth } from '../../shared/model/hole.ts';
 import { transformDirection, transformPoint } from '../../shared/model/pattern.ts';
 import type { MeasuredDistance, MeasureTarget } from '../measure.ts';
-import type { CurveGeometry, GeometryBackend, KernelFeature, ResolvedCurve, ResolvedExtrude, ResolvedCopy, ResolvedHole, ShapeHandle, SketchCurves } from '../backend.ts';
+import type { CurveGeometry, GeometryBackend, KernelFeature, ResolvedCurve, ResolvedSurface, SurfaceGeometry, ResolvedExtrude, ResolvedCopy, ResolvedHole, ShapeHandle, SketchCurves } from '../backend.ts';
 import { displayQuality } from '../mesh-quality.ts';
 import type { SketchFrame } from '../../shared/model/sketch.ts';
 import { FeatureError } from '../feature-error.ts';
@@ -41,7 +41,7 @@ const SURFACE_KINDS: SurfaceKind[] = ['plane', 'cylinder', 'cone', 'sphere', 'to
 const CURVE_KINDS: CurveKind[] = ['line', 'circle', 'ellipse', 'bspline', 'other'];
 
 const FEATURE_ERROR_CODES = new Set<FeatureErrorCode>([
-  'no-body', 'no-edges', 'edge-missing', 'face-missing', 'plane-missing', 'reference-missing', 'reference-kind', 'reference-parallel', 'reference-not-parallel', 'reference-collinear', 'empty-result', 'first-must-add', 'sketch-missing', 'profile-empty', 'profile-crossing', 'axis-missing', 'axis-not-in-plane', 'hole-no-points', 'hole-invalid', 'pattern-empty', 'pattern-seed-missing', 'pattern-unsupported', 'shell-face-missing', 'end-behind', 'end-parallel', 'end-missed', 'thin-empty', 'thin-unsupported', 'thin-branching', 'thin-too-thick', 'round-faces', 'round-face-missing', 'round-sides', 'round-center', 'round-planes', 'round-radius', 'draft-faces', 'draft-face', 'draft-face-missing', 'path-empty', 'path-branching', 'path-gaps', 'sweep-failed', 'loft-sections', 'loft-profile', 'loft-failed', 'rib-curves', 'thread-face', 'thread-size', 'helix-circle', 'sweep-holes', 'curve-empty', 'pattern-too-many', 'guide-missing', 'guide-gaps', 'centerline-missing', 'centerline-gaps', 'combine-bodies', 'body-missing', 'curve-missed', 'curve-faces', 'curve-edge-missing', 'import-no-solid', 'profile-crosses-axis',
+  'no-body', 'no-edges', 'edge-missing', 'face-missing', 'plane-missing', 'reference-missing', 'reference-kind', 'reference-parallel', 'reference-not-parallel', 'reference-collinear', 'empty-result', 'first-must-add', 'sketch-missing', 'profile-empty', 'profile-crossing', 'axis-missing', 'axis-not-in-plane', 'hole-no-points', 'hole-invalid', 'pattern-empty', 'pattern-seed-missing', 'pattern-unsupported', 'shell-face-missing', 'end-behind', 'end-parallel', 'end-missed', 'thin-empty', 'thin-unsupported', 'thin-branching', 'thin-too-thick', 'round-faces', 'round-face-missing', 'round-sides', 'round-center', 'round-planes', 'round-radius', 'draft-faces', 'draft-face', 'draft-face-missing', 'path-empty', 'path-branching', 'path-gaps', 'sweep-failed', 'loft-sections', 'loft-profile', 'loft-failed', 'rib-curves', 'thread-face', 'thread-size', 'helix-circle', 'sweep-holes', 'curve-empty', 'pattern-too-many', 'guide-missing', 'guide-gaps', 'centerline-missing', 'centerline-gaps', 'combine-bodies', 'body-missing', 'surface-faces', 'surface-missing', 'surface-open', 'offset-failed', 'thicken-failed', 'curve-missed', 'curve-faces', 'curve-edge-missing', 'import-no-solid', 'profile-crosses-axis',
   'operation-failed', 'unknown',
 ]);
 
@@ -315,6 +315,10 @@ export class ParaWerkBackend implements GeometryBackend {
         return this.combine(body, this.tool(body, feature), feature.operation, feature.merge ?? true);
       case 'import':
         return this.combine(body, this.handle(k.importStepText(feature.data, feature.id)), feature.operation, feature.merge ?? true);
+      case 'thicken': {
+        const side = { normal: 1, reverse: -1, both: 0 }[feature.side];
+        return this.combine(body, this.handle(k.thickenSurface(this.id(feature.surfaceShape), feature.thickness, side, feature.fill, feature.id)), 'add', feature.merge ?? true);
+      }
       case 'combine':
         if (body === null) throw new FeatureError('no-body');
         return this.handle(k.combineBodies(this.id(body), feature.faceIndices, { add: 0, subtract: 1, common: 2 }[feature.operation], feature.id));
@@ -425,6 +429,19 @@ export class ParaWerkBackend implements GeometryBackend {
     } finally {
       for (const handle of temporary) this.release(handle);
     }
+  }
+
+  surface(body: ShapeHandle | null, surface: ResolvedSurface): ShapeHandle {
+    if (surface.kind === 'knit') return this.handle(this.kernel.knitSurfaces(surface.surfaces.map((handle) => this.id(handle)), 0.01));
+    if (!body) throw new FeatureError('no-body');
+    return this.handle(this.kernel.offsetSurface(this.id(body), surface.faces, surface.distance, surface.name));
+  }
+
+  surfaceGeometry(surface: ShapeHandle): SurfaceGeometry {
+    const { min, max } = this.boundingBox(surface);
+    const mesh = this.mesh(surface, displayQuality(Math.hypot(max[0] - min[0], max[1] - min[1], max[2] - min[2])), `surface:${this.id(surface)}`);
+    const info = check(this.kernel.surfaceInfo(this.id(surface)) as { ok: true; area: number; faces: number; closed: boolean } | Failure);
+    return { positions: mesh.positions, indices: mesh.indices, area: info.area, faces: info.faces, closed: info.closed };
   }
 
   curveGeometry(curve: ShapeHandle): CurveGeometry {

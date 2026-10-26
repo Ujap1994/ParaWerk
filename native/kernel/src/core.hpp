@@ -229,6 +229,29 @@ int sweepAlongHelix(const std::vector<double>& profile, const std::vector<double
  */
 int loftAlongCurve(const std::vector<double>& sections, int centerlineId, const std::vector<std::string>& edgeNames = {}, const std::string& name = "");
 
+// Surfaces: faces that are not part of a solid, kept in the store like curves.
+
+/** A surface offset from faces of a body by `distance` along their normals (0: a copy of them). Fails with "surface-faces" or "offset-failed". */
+int offsetSurface(int bodyId, const std::vector<int>& faceIndices, double distance, const std::string& name = "");
+
+/** Surfaces sewn together where their edges meet within `tolerance`, as one surface. */
+int knitSurfaces(const std::vector<int>& surfaceIds, double tolerance);
+
+/**
+ * A surface thickened into a solid: `thickness` along its normal (side 1), against it (-1) or half each
+ * way (0); with `fill` a closed surface becomes the solid it encloses. Fails with "thicken-failed" or
+ * "surface-open".
+ */
+int thickenSurface(int surfaceId, double thickness, int side, bool fill, const std::string& name = "");
+
+struct SurfaceInfo {
+  double area = 0;
+  int faces = 0;
+  /** Every edge lies between two faces: the surface encloses a volume. */
+  bool closed = false;
+};
+SurfaceInfo surfaceInfo(int id);
+
 /**
  * A solid through closed outlines on several planes, in order (`ruled`: flat between them). `sections`
  * holds their count, then per outline its plane (9 values, as `frame` of extrudeProfile) and the outline

@@ -85,7 +85,7 @@ export function referenceFits(ref: GeometryRef, role: ReferenceRole, state: AppS
       // A coordinate system is a point (its origin), a plane (XY) and an axis (Z) at once.
       // A helix stands for its axis; curves stand for nothing a reference field takes.
       if (kind === 'helix') return role === 'axis' || role === 'direction';
-      if (kind === 'curve' || kind === 'projectedCurve' || kind === 'compositeCurve') return false;
+      if (kind === 'curve' || kind === 'projectedCurve' || kind === 'compositeCurve' || kind === 'surface' || kind === 'offsetSurface' || kind === 'knit') return false;
       return kind === 'csys' || kind === role || (kind === 'point' && role === 'center') || (role === 'direction' && (kind === 'plane' || kind === 'axis'));
     }
     case 'vertex':

@@ -1,4 +1,4 @@
-import { COPYABLE_TYPES, type CombineFeature, type DeleteBodyFeature, type CurveFeature, isCopyFeature, isEdgeFeature, type CopyFeature, type DraftFeature, type LoftFeature, type RibFeature, type SweepFeature, type ThreadFeature, type EdgeFeature, type EdgeRef, type ExtrudeFeature, type Feature, type FilletFeature, roundFaceCount, type HoleFeature, type ShellFeature, type SketchFeature, type SolidModelingFeature, type Vec3 } from '../shared/model/feature.ts';
+import { COPYABLE_TYPES, type SurfaceFeature, type CombineFeature, type DeleteBodyFeature, type CurveFeature, isCopyFeature, isEdgeFeature, type CopyFeature, type DraftFeature, type LoftFeature, type RibFeature, type SweepFeature, type ThreadFeature, type EdgeFeature, type EdgeRef, type ExtrudeFeature, type Feature, type FilletFeature, roundFaceCount, type HoleFeature, type ShellFeature, type SketchFeature, type SolidModelingFeature, type Vec3 } from '../shared/model/feature.ts';
 import { circularTransforms, composeTransforms, IDENTITY, linearTransforms, mirrorTransform, sameTransform, type Transform } from '../shared/model/pattern.ts';
 import { holePositions, holeProblem } from '../shared/model/hole.ts';
 import { edgeFaceNames, edgeRefOf, faceRefOf, resolveEdgeRefs, resolveFaceRef, resolveFacePlane, type BodyNaming } from '../shared/model/naming.ts';
@@ -9,7 +9,7 @@ import type { GeometryRef, ReferenceGeometry } from '../shared/model/reference.t
 import { frameOf, frameOnPlane, ORIGIN_ID, toModel, toSketch, type SketchFrame, type SketchPlaneRef } from '../shared/model/sketch.ts';
 import type { Point2 } from '../shared/model/spline.ts';
 import { hashString } from '../shared/hash.ts';
-import type { KernelFeature, ResolvedBodies, ResolvedCurve, ShapeHandle, SketchCurves, ResolvedCopy, ResolvedDraft, ResolvedLoft, ResolvedRib, ResolvedSweep, ResolvedThread, ResolvedEdgeFeature, ResolvedExtrude, ResolvedHole, ResolvedShell } from './backend.ts';
+import type { KernelFeature, ResolvedSurface, ResolvedBodies, ResolvedCurve, ShapeHandle, SketchCurves, ResolvedCopy, ResolvedDraft, ResolvedLoft, ResolvedRib, ResolvedSweep, ResolvedThread, ResolvedEdgeFeature, ResolvedExtrude, ResolvedHole, ResolvedShell } from './backend.ts';
 import { FeatureError } from './feature-error.ts';
 import { axisOfReference, curvedFaceOfReference, referenceValue, type BodyQuery, type ReferenceContext } from './reference.ts';
 
@@ -497,6 +497,30 @@ export interface ResolveContext extends ReferenceContext {
   frames: ReadonlyMap<string, SketchFrame>;
   /** The projected and composite curves before the feature, by id. */
   curves?: ReadonlyMap<string, ShapeHandle>;
+  /** The offset and knit surfaces before the feature, by id. */
+  surfaces?: ReadonlyMap<string, ShapeHandle>;
+}
+
+/** What an offset or knit surface is built from: faces of the body, or earlier surfaces. Throws FeatureError. */
+export function resolveSurface(feature: SurfaceFeature, context: ResolveContext): ResolvedSurface {
+  if (feature.type === 'knit') {
+    if (feature.surfaces.length === 0) throw new FeatureError('surface-faces');
+    return {
+      kind: 'knit',
+      surfaces: feature.surfaces.map((id) => {
+        const surface = context.surfaces?.get(id);
+        if (!surface) throw new FeatureError('surface-missing');
+        return surface;
+      }),
+    };
+  }
+  const body = context.body;
+  if (!body) throw new FeatureError('no-body');
+  if (feature.faces.length === 0) throw new FeatureError('surface-faces');
+  const naming = body.naming();
+  const faces = feature.faces.flatMap((ref) => resolveFaceRef(ref, naming, (face, point) => Math.hypot(...minus(body.face(face).center, point)))?.index ?? []);
+  if (faces.length === 0) throw new FeatureError('face-missing');
+  return { kind: 'offset', faces: [...new Set(faces)], distance: feature.distance, name: feature.id };
 }
 
 /** The curves of a sketch before a feature (not construction geometry) on its plane. */
@@ -550,6 +574,11 @@ export function resolveFeature(feature: SolidModelingFeature, before: readonly F
   if (feature.type === 'rib') return resolveRib(feature, before, context);
   if (feature.type === 'thread') return resolveThread(feature, context);
   if (feature.type === 'combine' || feature.type === 'deleteBody') return resolveBodies(feature, context);
+  if (feature.type === 'thicken') {
+    const surfaceShape = context.surfaces?.get(feature.surface);
+    if (!surfaceShape) throw new FeatureError('surface-missing');
+    return { ...feature, surfaceShape };
+  }
   if (isEdgeFeature(feature)) {
     if (!context.body) throw new FeatureError('no-body');
     return resolveEdges(feature, context.body);

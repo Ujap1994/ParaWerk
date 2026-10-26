@@ -639,6 +639,32 @@ export const BodiesIcon = (p: P) => (
   </Icon>
 );
 
+/** Offset surface: a face and a dashed copy of it lifted along arrows. */
+export const OffsetSurfaceIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="M3 17.5 9 14l12 3.5-6 3.5z" />
+    <path d="M3 9.5 9 6l12 3.5-6 3.5z" strokeDasharray="2.2 2" />
+    <path d="M12 16v-5M10.5 12.5 12 11l1.5 1.5" opacity="0.7" />
+  </Icon>
+);
+
+/** Knit: two surface patches stitched along their common edge. */
+export const KnitIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="M3 8.5 11 5v13l-8 3.5zM13 5l8 3.5v13l-8-3.5z" />
+    <path d="M10 9h4M10 12.5h4M10 16h4" opacity="0.7" />
+  </Icon>
+);
+
+/** Thicken: a curved surface over the solid it becomes. */
+export const ThickenIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="M3 9c4-4 14-4 18 0" />
+    <path d="M3 9v6c4-4 14-4 18 0V9" opacity="0.55" />
+    <path d="M12 3v3M10.5 4.5 12 6l1.5-1.5" />
+  </Icon>
+);
+
 /** Configurations: stacked cards of one part, the front one with lines of values. */
 export const ConfigurationsIcon = (p: P) => (
   <Icon {...p}>
@@ -766,4 +792,7 @@ export const FEATURE_ICONS = {
   compositeCurve: CompositeCurveIcon,
   combine: CombineIcon,
   deleteBody: DeleteBodyIcon,
+  offsetSurface: OffsetSurfaceIcon,
+  knit: KnitIcon,
+  thicken: ThickenIcon,
 } as const;

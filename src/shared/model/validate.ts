@@ -1,4 +1,4 @@
-import { CHAMFER_METHODS, type ChamferMethod, EXPRESSION_FIELDS, FILLET_METHODS, COMBINE_OPERATIONS, type CombineOperation, MAX_HELIX_TURNS, MAX_TWIST, PROJECTION_METHODS, PROJECTION_SIDES, type ProjectionMethod, type ProjectionSide, RIB_DIRECTIONS, EXTRUDE_DIRECTIONS, MAX_DRAFT_ANGLE, REVOLVE_DIRECTIONS, type RevolveDirection, EXTRUDE_ENDS, HOLE_ENDS, type Axis, type BooleanOperation, type EdgeRef, type ExtrudeDirection, type ExtrudeEnd, type Feature, type FeatureType, type HoleEnd, type Variable, type Vec3 } from './feature.ts';
+import { CHAMFER_METHODS, type ChamferMethod, EXPRESSION_FIELDS, FILLET_METHODS, THICKEN_SIDES, type ThickenSide, COMBINE_OPERATIONS, type CombineOperation, MAX_HELIX_TURNS, MAX_TWIST, PROJECTION_METHODS, PROJECTION_SIDES, type ProjectionMethod, type ProjectionSide, RIB_DIRECTIONS, EXTRUDE_DIRECTIONS, MAX_DRAFT_ANGLE, REVOLVE_DIRECTIONS, type RevolveDirection, EXTRUDE_ENDS, HOLE_ENDS, type Axis, type BooleanOperation, type EdgeRef, type ExtrudeDirection, type ExtrudeEnd, type Feature, type FeatureType, type HoleEnd, type Variable, type Vec3 } from './feature.ts';
 import { HOLE_FITS, HOLE_KINDS } from './hole.ts';
 import { CUSTOM_MATERIAL, materialInfo, MAX_DENSITY, MIN_DENSITY, NO_PROPERTIES, type PartProperties } from './material.ts';
 import { MAX_PATTERN_COUNT } from './pattern.ts';
@@ -482,6 +482,23 @@ function parseFeatureFields(raw: Json, path: string): Feature {
       return { ...common, type: 'combine', operation: raw.operation as CombineOperation, bodies: faceRefs(raw.bodies, `${path}.bodies`) };
     case 'deleteBody':
       return { ...common, type: 'deleteBody', bodies: faceRefs(raw.bodies, `${path}.bodies`) };
+    case 'offsetSurface':
+      return { ...common, type: 'offsetSurface', faces: faceRefs(raw.faces, `${path}.faces`), distance: finiteNumber(raw.distance, `${path}.distance`) };
+    case 'knit': {
+      if (!Array.isArray(raw.surfaces) || raw.surfaces.length > 1000) throw new ValidationError('expected a list of surface ids', `${path}.surfaces`);
+      return { ...common, type: 'knit', surfaces: raw.surfaces.map((id, i) => sketchId(id, `${path}.surfaces[${i}]`)) };
+    }
+    case 'thicken':
+      if (!THICKEN_SIDES.includes(raw.side as ThickenSide)) throw new ValidationError('expected normal, reverse or both', `${path}.side`);
+      return {
+        ...common,
+        type: 'thicken',
+        surface: sketchId(raw.surface, `${path}.surface`),
+        thickness: positiveLength(raw.thickness, `${path}.thickness`),
+        side: raw.side as ThickenSide,
+        fill: flag(raw.fill, `${path}.fill`),
+        ...mergeOf(raw, path),
+      };
     case 'compositeCurve': {
       if (!Array.isArray(raw.curves) || raw.curves.length > 1000) throw new ValidationError('expected a list of curve ids', `${path}.curves`);
       const curves = raw.curves.map((id, i) => sketchId(id, `${path}.curves[${i}]`));

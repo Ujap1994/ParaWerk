@@ -167,7 +167,8 @@ test('chamfers an edge with two distances and with a distance and an angle', asy
   launched = await launchApp({ width: 1440, height: 900 });
   const { page } = launched;
   await createBox(page);
-  await page.click('[data-command="chamfer"]');
+  await page.click('[data-variants="edges"]');
+  await page.click('[data-entry="chamfer"]');
   await idle(page);
   await clickWorldPoint(page, [0, -30, 40]);
   await expect(page.locator('[data-testid="edge-count"]')).toContainText('1');
@@ -206,7 +207,8 @@ test('imports a STEP file as a body, keeps it in the part and cuts into it', asy
   expect((await state(page)).history.features.map((feature) => feature.type)).toEqual(['import']);
 
   // A bore through the imported body.
-  await page.click('[data-command="cylinder"]');
+  await page.click('[data-variants="primitives"]');
+  await page.click('[data-entry="cylinder"]');
   await page.getByRole('radio', { name: /Remove material/ }).click();
   await page.locator('[data-testid="cylinder-height"]').fill('60');
   await page.locator('[data-testid="position-z"]').fill('-10');
@@ -230,7 +232,8 @@ test('keeps a fillet on its edge when an earlier feature changes the topology', 
   const { page } = launched;
   await createBox(page);
   // A hole through the box: more faces and edges, numbered differently than in the plain box.
-  await page.click('[data-command="cylinder"]');
+  await page.click('[data-variants="primitives"]');
+  await page.click('[data-entry="cylinder"]');
   await updateDraft(page, { operation: 'cut', radius: 8, height: 60, position: [0, 0, -10] });
   await page.click('[data-testid="panel-ok"]');
   await idle(page);
@@ -259,7 +262,8 @@ test('marks fillet edges that an earlier change removed and lets them be removed
   launched = await launchApp({ width: 1440, height: 900 });
   const { page } = launched;
   await createBox(page);
-  await page.click('[data-command="cylinder"]');
+  await page.click('[data-variants="primitives"]');
+  await page.click('[data-entry="cylinder"]');
   await updateDraft(page, { operation: 'cut', radius: 8, height: 60, position: [0, 0, -10] });
   await page.click('[data-testid="panel-ok"]');
   await idle(page);
@@ -300,7 +304,8 @@ test('picks whole B-Rep faces and shows their exact geometry', async () => {
   launched = await launchApp({ width: 1440, height: 900 });
   const { page } = launched;
   await createBox(page);
-  await page.click('[data-command="cylinder"]');
+  await page.click('[data-variants="primitives"]');
+  await page.click('[data-entry="cylinder"]');
   await page.locator('[data-testid="cylinder-radius"]').fill('15');
   await page.locator('[data-testid="cylinder-height"]').fill('30');
   await page.locator('[data-testid="position-z"]').fill('40');
@@ -320,7 +325,8 @@ test('saves and reopens a part file', async () => {
   launched = await launchApp();
   const { page, outputDir } = launched;
   await createBox(page);
-  await page.click('[data-command="cylinder"]');
+  await page.click('[data-variants="primitives"]');
+  await page.click('[data-entry="cylinder"]');
   await page.getByRole('radio', { name: /Remove material|Material entfernen/ }).click();
   await page.click('[data-testid="panel-ok"]');
   const expected = await volume(page);
@@ -347,7 +353,8 @@ test('undo, redo and suppress', async () => {
   launched = await launchApp();
   const { page } = launched;
   await createBox(page);
-  await page.click('[data-command="cylinder"]');
+  await page.click('[data-variants="primitives"]');
+  await page.click('[data-entry="cylinder"]');
   await page.click('[data-testid="panel-ok"]');
   const both = await volume(page);
 
@@ -494,7 +501,8 @@ test('offers unsaved work after a crash, but not after a clean close', async () 
   const { userData } = launched;
   let page = launched.page;
   await createBox(page);
-  await page.click('[data-command="cylinder"]');
+  await page.click('[data-variants="primitives"]');
+  await page.click('[data-entry="cylinder"]');
   await page.click('[data-testid="panel-ok"]');
   await idle(page);
   const flush = (target: Page) => target.evaluate(() => (window as unknown as { __parawerk: { recovery: { flush(): Promise<void> } } }).__parawerk.recovery.flush());
@@ -545,7 +553,8 @@ test('rolls the part back with the rollback bar, inserts features there and reor
   await clickWorldPoint(page, [0, -30, 40]);
   await page.locator('[data-testid="fillet-radius"]').fill('5');
   await page.click('[data-testid="panel-ok"]');
-  await page.click('[data-command="cylinder"]');
+  await page.click('[data-variants="primitives"]');
+  await page.click('[data-entry="cylinder"]');
   await page.click('[data-testid="panel-ok"]');
   const full = await volume(page);
   const [boxId, filletId, cylinderId] = (await state(page)).history.features.map((feature) => feature.id);
@@ -558,7 +567,8 @@ test('rolls the part back with the rollback bar, inserts features there and reor
   await expect(page.locator(`[data-feature-id="${boxId}"]`)).not.toHaveClass(/is-rolled-back/);
 
   // A new feature goes in at the bar, which stays in front of the fillet.
-  await page.click('[data-command="cylinder"]');
+  await page.click('[data-variants="primitives"]');
+  await page.click('[data-entry="cylinder"]');
   await page.click('[data-testid="panel-ok"]');
   await idle(page);
   expect((await state(page)).history.features.map((feature) => feature.type)).toEqual(['box', 'cylinder', 'fillet', 'cylinder']);
@@ -1028,8 +1038,8 @@ test('adds a box as a body of its own and combines the bodies', async () => {
   await expect(page.locator('[data-testid="tree-bodies"]')).toContainText('2');
 
   // Combine: a minus the cube, picked by the tops of a and of the cube.
-  await page.click('[data-variants="bodies"]');
-  await page.click('[data-entry="combine"]');
+  await page.click('[data-tab="surfaces"]');
+  await page.click('[data-command="combine"]');
   await clickWorldPoint(page, [-20, 0, 40]);
   await idle(page);
   await clickWorldPoint(page, [50, 0, 60]);
@@ -1040,6 +1050,39 @@ test('adds a box as a body of its own and combines the bodies', async () => {
   expect(await volume(page)).toBeCloseTo(240_000 - 16_000, 2);
   await expect(page.locator('[data-testid="tree-body"]')).toHaveCount(0);
   expect((await state(page)).history.features[2]).toMatchObject({ type: 'combine', operation: 'subtract' });
+});
+
+test('offsets a face into a surface and thickens it into a solid', async () => {
+  launched = await launchApp({ width: 1000, height: 640 });
+  const { page } = launched;
+  await page.evaluate(() => {
+    const features = [{ id: 'a', type: 'box', operation: 'add', width: 100, depth: 60, height: 40, position: [0, 0, 0] }];
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features, past: [], future: [] }, savedFeatures: features, dirty: false });
+  });
+  await idle(page);
+  // The top face, 10 above it.
+  await page.click('[data-tab="surfaces"]');
+  await page.click('[data-command="offsetSurface"]');
+  await clickWorldPoint(page, [-20, 0, 40]);
+  await idle(page);
+  await expect(page.locator('[data-testid="surface-faces"]')).toContainText('1');
+  await page.locator('[data-testid="surface-distance"]').fill('10');
+  await page.locator('[data-testid="surface-distance"]').press('Tab');
+  await idle(page);
+  await expect(page.locator('[data-testid="surface-summary"]')).toContainText('6,000');
+  await page.click('[data-testid="panel-ok"]');
+  await idle(page);
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __parawerk: { viewport: { references(): number } } }).__parawerk.viewport.references())).toBe(1);
+  expect(await volume(page)).toBeCloseTo(240_000, 2);
+
+  // Thickened 5 upwards: a plate of its own above the box (it touches nothing).
+  await page.click('[data-command="thicken"]');
+  await expect(page.locator('[data-testid="thicken-surface"]')).toHaveValue((await state(page)).history.features[1]?.id ?? '');
+  await page.locator('[data-testid="thicken-thickness"]').fill('5');
+  await page.locator('[data-testid="thicken-thickness"]').press('Tab');
+  await page.click('[data-testid="panel-ok"]');
+  expect(await volume(page)).toBeCloseTo(240_000 + 30_000, 2);
+  await expect(page.locator('[data-testid="tree-body"]')).toHaveCount(2);
 });
 
 test('hollows a box out to a shell open at a picked face', async () => {

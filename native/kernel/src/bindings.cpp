@@ -336,6 +336,29 @@ val loftAlongCurve(val sections, int centerlineId, val edgeNames, std::string na
   return guarded([&] { return idResult(parawerk::loftAlongCurve(emscripten::convertJSArrayToNumberVector<double>(sections), centerlineId, toStringVector(edgeNames), name)); });
 }
 
+val offsetSurface(int bodyId, val faces, double distance, std::string name) {
+  return guarded([&] { return idResult(parawerk::offsetSurface(bodyId, toIntVector(faces), distance, name)); });
+}
+
+val knitSurfaces(val surfaces, double tolerance) {
+  return guarded([&] { return idResult(parawerk::knitSurfaces(toIntVector(surfaces), tolerance)); });
+}
+
+val thickenSurface(int surfaceId, double thickness, int side, bool fill, std::string name) {
+  return guarded([&] { return idResult(parawerk::thickenSurface(surfaceId, thickness, side, fill, name)); });
+}
+
+val surfaceInfo(int id) {
+  return guarded([&] {
+    const parawerk::SurfaceInfo info = parawerk::surfaceInfo(id);
+    val result = okObject();
+    result.set("area", info.area);
+    result.set("faces", info.faces);
+    result.set("closed", info.closed);
+    return result;
+  });
+}
+
 val combineBodies(int bodyId, val faces, int op, std::string name) {
   return guarded([&] { return idResult(parawerk::combineBodies(bodyId, toIntVector(faces), op, name)); });
 }
@@ -381,7 +404,7 @@ val importStepText(const std::string& text, const std::string& name) {
   return guarded([&] { return idResult(parawerk::importStep(text, name)); });
 }
 
-std::string version() { return "parawerk-kernel 0.22 / OCCT " PARAWERK_OCCT_VERSION; }
+std::string version() { return "parawerk-kernel 0.23 / OCCT " PARAWERK_OCCT_VERSION; }
 
 }  // namespace
 
@@ -427,6 +450,10 @@ EMSCRIPTEN_BINDINGS(parawerk_kernel) {
   emscripten::function("sweepAlongCurve", &sweepAlongCurve);
   emscripten::function("loftAlongCurve", &loftAlongCurve);
   emscripten::function("combineBodies", &combineBodies);
+  emscripten::function("offsetSurface", &offsetSurface);
+  emscripten::function("knitSurfaces", &knitSurfaces);
+  emscripten::function("thickenSurface", &thickenSurface);
+  emscripten::function("surfaceInfo", &surfaceInfo);
   emscripten::function("deleteBodies", &deleteBodies);
   emscripten::function("sketchWire", &sketchWire);
   emscripten::function("projectCurve", &projectCurve);

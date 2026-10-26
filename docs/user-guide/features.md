@@ -300,30 +300,50 @@ them under *Solid bodies*; click one to select all its faces.
   material stays a body of its own, even where it overlaps another body.
 - **Cuts** remove material from every body they reach, each body on its own; a body a cut removes
   completely is gone.
-- **Combine** (under the *Combine* button) joins bodies: click a face of each, the main body first.
+- **Combine** (in the *Surfaces* tab, group *Bodies*) joins bodies: click a face of each, the main body first.
   **Add** fuses them, **Subtract** removes the others from the main body, **Common** keeps only what they
   all share. Bodies you do not pick stay as they are.
-- **Delete body** removes the bodies you click a face of.
+- **Delete body** (next to it) removes the bodies you click a face of.
 
 Bodies are picked by one of their faces, which are remembered by name like the edges of a fillet, so the
 features follow the part when earlier features change. Mass properties and exports cover all bodies.
 
 ![Combine while it is edited: the block minus the cube that overlapped it, the bodies before it outlined in blue](../images/screenshots/bodies-combine.png)
 
+## Surfaces
+
+Surfaces are faces that do not belong to a solid – a skin over part of the model, a shape to thicken
+into a thin-walled solid. Like curves they do not change the part; they are drawn translucent in the 3D
+view and listed in the tree. The three tools are in the **Surfaces** tab of the command bar (group
+*Surfaces*), which also gathers the curves and the body commands:
+
+- **Offset surface**: click faces of the part; the surface follows them at the *Distance* along their
+  normals – outward for positive distances, inward for negative ones, a copy of the faces at 0. Where
+  faces meet at an edge, the offset rounds over it.
+- **Knit**: joins surfaces into one where their edges meet (within 0.01 mm). The panel tells when the
+  result encloses a volume.
+- **Thicken**: turns a surface into a solid – a *Thickness* along its normal, against it or half each way,
+  or, with **Fill the enclosed volume**, the solid a closed surface encloses. The solid is added like
+  other features that add material, merged with the bodies it touches unless **Merge result** is cleared.
+
+While a surface is edited, its panel shows its area and how many faces it has.
+
+![The top and front faces of a block offset 8 mm outwards: the surface rounds over their common edge](../images/screenshots/surface-offset.png)
+
 ## Box
 
-Adds or removes a box. *Width* (X), *Depth* (Y) and *Height* (Z) are in millimeters; *Position* is the
+**Box** (the *Box* button, which also offers **Cylinder** in its arrow) adds or removes a box. *Width* (X), *Depth* (Y) and *Height* (Z) are in millimeters; *Position* is the
 center of the bottom face. The first feature of a part always adds material.
 
 ## Cylinder
 
-Adds or removes a cylinder with *Radius*, *Height* and *Axis* (X, Y or Z). *Position* is the center of
+**Cylinder** (in the arrow of the *Box* button) adds or removes a cylinder with *Radius*, *Height* and *Axis* (X, Y or Z). *Position* is the center of
 the base circle. Use **Remove material** to drill holes; make the cylinder longer than the part so it
 cuts through.
 
 ## Fillet
 
-Rounds edges with a constant *Radius*. Click edges in the 3D view to add or remove them (selected edges
+**Fillet** (the *Fillet* button, which also offers **Chamfer** in its arrow) rounds edges with a constant *Radius*. Click edges in the 3D view to add or remove them (selected edges
 are orange). While you edit, the 3D view shows the result and draws the original edges as thin blue lines,
 so you can keep picking.
 
@@ -357,7 +377,7 @@ next; ✕ clears a field and the ones after it):
 
 ## Chamfer
 
-Bevels edges. Edge and face selection works like for fillets. *Size* decides the shape of the bevel:
+**Chamfer** (in the arrow of the *Fillet* button) bevels edges. Edge and face selection works like for fillets. *Size* decides the shape of the bevel:
 
 - **Distance:** the same distance on both faces of each edge (a 45° bevel).
 - **Two distances:** *Distance 1* along one face of the edge, *Distance 2* along the other.

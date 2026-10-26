@@ -1,4 +1,4 @@
-import { Box3, CanvasTexture, DoubleSide, Group, Matrix4, Mesh, MeshBasicMaterial, PlaneGeometry, Sprite, SpriteMaterial, Vector3, type Raycaster, type Vector2 } from 'three';
+import { Box3, BufferGeometry, CanvasTexture, DoubleSide, Float32BufferAttribute, Group, Uint32BufferAttribute, Matrix4, Mesh, MeshBasicMaterial, PlaneGeometry, Sprite, SpriteMaterial, Vector3, type Raycaster, type Vector2 } from 'three';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 import { LineSegments2 } from 'three/addons/lines/LineSegments2.js';
 import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js';
@@ -248,6 +248,8 @@ export class ReferenceGeometryLayer {
         this.group.remove(object);
         // Axes have geometry of their own (shared by their two lines); planes, points and coordinate systems share theirs.
         if (object instanceof LineSegments2 && object.geometry !== this.squareGeometry && object.geometry !== this.axesGeometry) object.geometry.dispose();
+        // Surfaces have triangles of their own.
+        if (object instanceof Mesh && object.geometry !== this.planeGeometry) object.geometry.dispose();
       }
     }
     this.drawn = [];
@@ -316,6 +318,13 @@ export class ReferenceGeometryLayer {
         const axes = { lines, placement };
         this.placeAxes(axes);
         drawn = { item, target: sprite, objects: [lines, sprite], axes };
+      } else if (geometry.kind === 'surface') {
+        const triangles = new BufferGeometry();
+        triangles.setAttribute('position', new Float32BufferAttribute(geometry.positions, 3));
+        triangles.setIndex(new Uint32BufferAttribute(geometry.indices, 1));
+        const fill = new Mesh(triangles, this.fills[item.style]);
+        fill.renderOrder = 3;
+        drawn = { item, target: fill, objects: [fill] };
       } else if (geometry.kind === 'helix' || geometry.kind === 'curve') {
         const segments = new LineSegmentsGeometry().setPositions(geometry.kind === 'helix' ? helixSegments(geometry) : curveSegments(geometry));
         const lines = new LineSegments2(segments, this.lines[item.style]);

@@ -22,7 +22,7 @@ export const PART_FORMAT = 'parawerk-part';
  * features, uneven chamfers (ParaWerk 0.3). 8: drafts, sweeps, lofts, ribs, modeled threads, helices,
  * variable radius fillets, configurations (ParaWerk 0.4). 9: projected and composite curves, patterns and
  * mirror images of patterns (0.4.0-alpha.1). 10: twisted and guided sweeps, lofts along a centerline,
- * separate bodies, combined and deleted bodies.
+ * separate bodies, combined and deleted bodies, surfaces.
  * Older versions are read unchanged.
  */
 export const PART_FORMAT_VERSION = 10;
@@ -34,7 +34,10 @@ export function formatVersionOf(features: readonly Feature[], properties: PartPr
     (feature.type === 'loft' && feature.centerline !== undefined) ||
     ('merge' in feature && feature.merge === false) ||
     feature.type === 'combine' ||
-    feature.type === 'deleteBody';
+    feature.type === 'deleteBody' ||
+    feature.type === 'offsetSurface' ||
+    feature.type === 'knit' ||
+    feature.type === 'thicken';
   if (features.some(tenth)) return 10;
   const copies = new Set(features.filter(isCopyFeature).map((feature) => feature.id));
   const ninth = (feature: Feature) =>

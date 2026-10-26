@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { formatQuantity } from '../format.ts';
-import { CHAMFER_METHODS, type DraftFeature, type CombineFeature, type DeleteBodyFeature, COMBINE_OPERATIONS, type CombineOperation, type SweepFeature, MAX_TWIST, type HelixFeature, type ProjectedCurveFeature, type CompositeCurveFeature, isCurveFeature, PROJECTION_METHODS, type ProjectionMethod, PROJECTION_SIDES, type ProjectionSide, MAX_HELIX_TURNS, type LoftFeature, RIB_DIRECTIONS, type RibDirection, type ThreadFeature, FILLET_METHODS, roundFaceCount, type FilletFeature, type FilletMethod, EXTRUDE_ENDS, extrudesOneWay, MAX_DRAFT_ANGLE, type RevolveDirection, hasReferenceSlots, isCopyFeature, type Axis, type BooleanOperation, type ChamferFeature, type ChamferMethod, type EdgeFeature, type ExtrudeDirection, type ExtrudeEnd, type ExtrudeFeature, type Feature, type RevolveFeature, type Vec3 } from '../../../shared/model/feature.ts';
+import { CHAMFER_METHODS, type DraftFeature, type KnitFeature, type ThickenFeature, type ThickenSide, THICKEN_SIDES, isSurfaceFeature, type CombineFeature, type DeleteBodyFeature, COMBINE_OPERATIONS, type CombineOperation, type SweepFeature, MAX_TWIST, type HelixFeature, type ProjectedCurveFeature, type CompositeCurveFeature, isCurveFeature, PROJECTION_METHODS, type ProjectionMethod, PROJECTION_SIDES, type ProjectionSide, MAX_HELIX_TURNS, type LoftFeature, RIB_DIRECTIONS, type RibDirection, type ThreadFeature, FILLET_METHODS, roundFaceCount, type FilletFeature, type FilletMethod, EXTRUDE_ENDS, extrudesOneWay, MAX_DRAFT_ANGLE, type RevolveDirection, hasReferenceSlots, isCopyFeature, type Axis, type BooleanOperation, type ChamferFeature, type ChamferMethod, type EdgeFeature, type ExtrudeDirection, type ExtrudeEnd, type ExtrudeFeature, type Feature, type RevolveFeature, type Vec3 } from '../../../shared/model/feature.ts';
 import { DEFAULT_THIN_THICKNESS, THIN_SIDES, type ThinSide } from '../../../shared/model/thin.ts';
 import { METRIC_SIZES } from '../../../shared/model/hole.ts';
 import type { GeometryRef } from '../../../shared/model/reference.ts';
@@ -399,6 +399,24 @@ function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
     case 'combine':
     case 'deleteBody':
       return <BodiesFields draft={draft} />;
+    case 'offsetSurface':
+      return (
+        <Section title={t('panel.parameters')}>
+          <div className="edge-summary">
+            <span data-testid="surface-faces">{draft.faces.length > 0 ? t('curve.faces', { count: draft.faces.length }) : t('curve.pickFaces')}</span>
+            <button type="button" className="text-button" disabled={draft.faces.length === 0} onClick={() => commands.updateDraft({ faces: [] })}>
+              {t('curve.clear')}
+            </button>
+          </div>
+          <NumberField label={t('surface.distance')} value={draft.distance} signed testId="surface-distance" {...equation(draft, 'distance')} onChange={(distance) => commands.updateDraft({ distance })} />
+          <SurfaceSummary id={draft.id} />
+          <p className="panel-hint">{t('surface.offsetHint')}</p>
+        </Section>
+      );
+    case 'knit':
+      return <KnitFields draft={draft} index={index} />;
+    case 'thicken':
+      return <ThickenFields draft={draft} index={index} firstFeature={firstFeature} />;
     case 'shell':
       return (
         <Section title={t('panel.parameters')}>
@@ -539,6 +557,111 @@ function HelixFields({ draft, index }: { draft: HelixFeature; index: number }) {
         {t('helix.leftHand')}
       </label>
       <p className="panel-hint">{t('helix.hint')}</p>
+    </Section>
+  );
+}
+
+/** The area of the edited surface, its number of faces and whether it encloses a volume, as the last rebuild built it. */
+function SurfaceSummary({ id }: { id: string }) {
+  const { t } = useTranslation();
+  const language = useAppState((state) => state.language);
+  const surface = useAppState((state) => state.rebuild?.results.find((result) => result.id === id)?.reference);
+  if (surface?.kind !== 'surface') return null;
+  return (
+    <p className="panel-hint" data-testid="surface-summary">
+      {t(surface.closed ? 'surface.summaryClosed' : 'surface.summary', { area: formatQuantity(surface.area, language, 'mm²'), count: surface.faces })}
+    </p>
+  );
+}
+
+/** Surface features before the edited one. */
+function useSurfaces(index: number): { id: string; name: string }[] {
+  const features = useAppState((state) => state.history.features);
+  const nameOf = useFeatureName();
+  return features.slice(0, index).flatMap((feature, i) => (isSurfaceFeature(feature) ? [{ id: feature.id, name: nameOf(features, i) }] : []));
+}
+
+/** A knit: the surfaces it joins. */
+function KnitFields({ draft, index }: { draft: KnitFeature; index: number }) {
+  const { t } = useTranslation();
+  const surfaces = useSurfaces(index);
+  const name = (id: string) => surfaces.find((surface) => surface.id === id)?.name ?? t('references.lost');
+  const available = surfaces.filter((surface) => !draft.surfaces.includes(surface.id));
+  return (
+    <Section title={t('panel.parameters')}>
+      <span className="field-label">{t('surface.surfaces')}</span>
+      <ol className="loft-list" data-testid="knit-surfaces">
+        {draft.surfaces.map((id) => (
+          <li key={id} className="loft-item">
+            <span>{name(id)}</span>
+            <button type="button" className="icon-button" title={t('references.clear')} aria-label={t('references.clear')} onClick={() => commands.updateDraft({ surfaces: draft.surfaces.filter((other) => other !== id) })}>
+              <CloseIcon />
+            </button>
+          </li>
+        ))}
+      </ol>
+      {available.length > 0 ? (
+        <label className="field">
+          <span className="field-label">{t('surface.add')}</span>
+          <select className="field-select" value="" data-testid="knit-add" onChange={(event) => event.target.value && commands.updateDraft({ surfaces: [...draft.surfaces, event.target.value] })}>
+            <option value="">{t('loft.choose')}</option>
+            {available.map((surface) => (
+              <option key={surface.id} value={surface.id}>
+                {surface.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+      <SurfaceSummary id={draft.id} />
+      <p className="panel-hint">{t('surface.knitHint')}</p>
+    </Section>
+  );
+}
+
+/** A thickened surface: which surface, how thick, to which side, or filled when it is closed. */
+function ThickenFields({ draft, index, firstFeature }: { draft: ThickenFeature; index: number; firstFeature: boolean }) {
+  const { t } = useTranslation();
+  const surfaces = useSurfaces(index);
+  return (
+    <Section title={t('panel.parameters')}>
+      <label className="field">
+        <span className="field-label">{t('surface.surface')}</span>
+        <select className="field-select" value={draft.surface} data-testid="thicken-surface" onChange={(event) => commands.updateDraft({ surface: event.target.value })}>
+          {surfaces.some((surface) => surface.id === draft.surface) ? null : <option value={draft.surface}>{t('references.lost')}</option>}
+          {surfaces.map((surface) => (
+            <option key={surface.id} value={surface.id}>
+              {surface.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="checkbox-field">
+        <input type="checkbox" checked={draft.fill} data-testid="thicken-fill" onChange={(event) => commands.updateDraft({ fill: event.target.checked })} />
+        {t('surface.fill')}
+      </label>
+      {draft.fill ? null : (
+        <>
+          <NumberField label={t('surface.thickness')} value={draft.thickness} step={0.5} testId="thicken-thickness" {...equation(draft, 'thickness')} onChange={(thickness) => commands.updateDraft({ thickness: Math.max(0.001, thickness) })} />
+          <label className="field">
+            <span className="field-label">{t('surface.side')}</span>
+            <select className="field-select" value={draft.side} data-testid="thicken-side" onChange={(event) => commands.updateDraft({ side: event.target.value as ThickenSide })}>
+              {THICKEN_SIDES.map((side) => (
+                <option key={side} value={side}>
+                  {t(`surface.sides.${side}`)}
+                </option>
+              ))}
+            </select>
+          </label>
+        </>
+      )}
+      {firstFeature ? null : (
+        <label className="checkbox-field">
+          <input type="checkbox" checked={draft.merge ?? true} data-testid="merge-result" onChange={(event) => commands.setMerge(event.target.checked)} />
+          {t('panel.merge')}
+        </label>
+      )}
+      <p className="panel-hint">{t('surface.thickenHint')}</p>
     </Section>
   );
 }

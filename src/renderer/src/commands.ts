@@ -2,7 +2,7 @@ import { resolveLanguage } from '../../shared/i18n.ts';
 import type { MenuCommand } from '../../shared/ipc.ts';
 import { PART_FILE_EXTENSION } from '../../shared/app-info.ts';
 import { hashString } from '../../shared/hash.ts';
-import { COPYABLE_TYPES, isCurveFeature, createFeatureId, type ImportFeature, defaultFeature, type BooleanOperation, hasReferenceSlots, isCopyFeature, isEdgeFeature, isReferenceFeature, sketchesUsedBy, type EdgeRef, type ExtrudeEnd, extrudesOneWay, type Feature, type FilletMethod, roundFaceCount, type FeatureType, type HoleFeature, type ReferenceFeature, type SketchFeature, type SlotFeature } from '../../shared/model/feature.ts';
+import { COPYABLE_TYPES, isCurveFeature, isSurfaceFeature, createFeatureId, type ImportFeature, defaultFeature, type BooleanOperation, hasReferenceSlots, isCopyFeature, isEdgeFeature, isReferenceFeature, sketchesUsedBy, type EdgeRef, type ExtrudeEnd, extrudesOneWay, type Feature, type FilletMethod, roundFaceCount, type FeatureType, type HoleFeature, type ReferenceFeature, type SketchFeature, type SlotFeature } from '../../shared/model/feature.ts';
 import { holePositions, METRIC_SIZES, metricSize, sizesFor, standardHoleDimensions, type MetricSize } from '../../shared/model/hole.ts';
 import { frameTransform } from '../../shared/model/frame.ts';
 import { sketchProfile } from '../../shared/model/profile.ts';
@@ -349,6 +349,21 @@ export function startFeature(type: FeatureType): void {
       }
       draft = { ...draft, operation, sketches: chosen.map((sketch) => sketch.id) };
     }
+  } else if (draft.type === 'offsetSurface') {
+    // Faces selected before starting are offset (select first, then act).
+    const naming = getState().display.body?.naming;
+    const faces = naming ? getState().selection.flatMap((pick) => (pick.kind === 'face' && pick.at ? (faceRefOf(naming, pick.index, pick.at) ?? []) : [])) : [];
+    draft = { ...draft, faces };
+  } else if (draft.type === 'knit' || draft.type === 'thicken') {
+    // The surfaces no feature uses yet: all of them knit, the newest one thickened.
+    const used = new Set(features.flatMap(sketchesUsedBy));
+    const surfaces = features.filter((feature) => isSurfaceFeature(feature) && !feature.suppressed);
+    const unused = surfaces.filter((surface) => !used.has(surface.id));
+    if (surfaces.length === 0) {
+      showToast('info', t('toasts.noSurface'));
+      return;
+    }
+    draft = draft.type === 'knit' ? { ...draft, surfaces: unused.map((surface) => surface.id) } : { ...draft, surface: (unused.at(-1) ?? surfaces.at(-1))?.id ?? '' };
   } else if (draft.type === 'combine' || draft.type === 'deleteBody') {
     // Faces selected before starting pick their bodies, one face each.
     const naming = getState().display.body?.naming;
@@ -938,7 +953,7 @@ export function toggleCurveEdge(index: number): void {
 export function toggleShellFace(pick: Pick): void {
   const { activeEdit: edit, display } = getState();
   const naming = display.body?.naming;
-  if ((edit?.draft.type !== 'shell' && edit?.draft.type !== 'draft' && edit?.draft.type !== 'projectedCurve') || !naming || pick.kind !== 'face' || !pick.at) return;
+  if ((edit?.draft.type !== 'shell' && edit?.draft.type !== 'draft' && edit?.draft.type !== 'projectedCurve' && edit?.draft.type !== 'offsetSurface') || !naming || pick.kind !== 'face' || !pick.at) return;
   // One entry per reference (also for faces that are gone), so the positions match the list.
   const open = edit.draft.faces.map((ref) => referencePicks([ref], getState())[0]?.index);
   const at = open.indexOf(pick.index);
@@ -1778,6 +1793,10 @@ export function handlePick(pick: Pick | null, additive: boolean): void {
   }
   if (edit?.draft.type === 'combine' || edit?.draft.type === 'deleteBody') {
     if (pick) toggleBody(pick);
+    return;
+  }
+  if (edit?.draft.type === 'offsetSurface') {
+    if (pick?.kind === 'face') toggleShellFace(pick);
     return;
   }
   if (edit?.draft.type === 'compositeCurve') {

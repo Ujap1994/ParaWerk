@@ -25,7 +25,7 @@ export interface Pick {
   at?: Vec3;
 }
 
-export type CommandTab = 'features' | 'sketch' | 'evaluate';
+export type CommandTab = 'features' | 'surfaces' | 'sketch' | 'evaluate';
 
 export type KernelStatus = 'loading' | 'ready' | 'busy' | 'error';
 

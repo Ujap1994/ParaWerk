@@ -1,4 +1,4 @@
-import { isCopyFeature, isCurveFeature, isEdgeFeature, isReferenceFeature } from '../../../shared/model/feature.ts';
+import { isCopyFeature, isCurveFeature, isSurfaceFeature, isEdgeFeature, isReferenceFeature } from '../../../shared/model/feature.ts';
 import type { FeatureResult, MassProperties, MeshPayload } from '../../../kernel/protocol.ts';
 import { t } from '../i18n.ts';
 import { KernelClient, KernelCrashedError } from '../kernel/kernel-client.ts';
@@ -139,7 +139,7 @@ function applyResult(
   ) {
     // Edges and faces are picked on the body before the feature; its result is shown as a preview.
     display = { body: meshes.get(activeEdit.index - 1) ?? null, preview: meshes.get(activeEdit.index) ?? null, pickable: true };
-  } else if (isReferenceFeature(activeEdit.draft) || isCurveFeature(activeEdit.draft)) {
+  } else if (isReferenceFeature(activeEdit.draft) || isCurveFeature(activeEdit.draft) || isSurfaceFeature(activeEdit.draft)) {
     // Reference geometry is built on faces, edges and vertices of the body before it (which it does not change).
     display = { body: meshes.get(activeEdit.index - 1) ?? null, preview: null, pickable: true };
   } else if (isCopyFeature(activeEdit.draft)) {

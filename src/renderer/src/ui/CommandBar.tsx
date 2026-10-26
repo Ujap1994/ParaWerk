@@ -1,7 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ComponentType, type SVGProps } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import type { FeatureType } from '../../../shared/model/feature.ts';
 import * as commands from '../commands.ts';
 import type { SketchToolName } from '../sketch/tools.ts';
 import { useAppState, type AppState, type CommandTab } from '../state/store.ts';
@@ -67,6 +66,9 @@ import {
   SettingsIcon,
   ShellIcon,
   CombineIcon,
+  OffsetSurfaceIcon,
+  KnitIcon,
+  ThickenIcon,
   DeleteBodyIcon,
   SketchIcon,
   ThreePointArcIcon,
@@ -138,12 +140,23 @@ function Group({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-const FEATURE_BUTTONS: { type: FeatureType; icon: IconType }[] = [
-  { type: 'box', icon: BoxIcon },
-  { type: 'cylinder', icon: CylinderIcon },
-  { type: 'fillet', icon: FilletIcon },
-  { type: 'chamfer', icon: ChamferIcon },
-];
+/** Box and cylinder. */
+const PRIMITIVE_ENTRIES: readonly SplitEntry[] = (['box', 'cylinder'] as const).map((type) => ({
+  id: type,
+  icon: { box: BoxIcon, cylinder: CylinderIcon }[type],
+  label: type,
+  start: () => commands.startFeature(type),
+  active: (state: AppState) => state.activeEdit?.mode === 'create' && state.activeEdit.draft.type === type,
+}));
+
+/** Fillet and chamfer. */
+const EDGE_ENTRIES: readonly SplitEntry[] = (['fillet', 'chamfer'] as const).map((type) => ({
+  id: type,
+  icon: { fillet: FilletIcon, chamfer: ChamferIcon }[type],
+  label: type,
+  start: () => commands.startFeature(type),
+  active: (state: AppState) => state.activeEdit?.mode === 'create' && state.activeEdit.draft.type === type,
+}));
 
 /** Holes and modeled threads. */
 const HOLE_ENTRIES: readonly SplitEntry[] = (['hole', 'thread'] as const).map((type) => ({
@@ -158,6 +171,24 @@ const HOLE_ENTRIES: readonly SplitEntry[] = (['hole', 'thread'] as const).map((t
 const SOLID_ENTRIES: readonly SplitEntry[] = (['revolve', 'sweep', 'loft'] as const).map((type) => ({
   id: type,
   icon: { revolve: RevolveIcon, sweep: SweepIcon, loft: LoftIcon }[type],
+  label: type,
+  start: () => commands.startFeature(type),
+  active: (state: AppState) => state.activeEdit?.mode === 'create' && state.activeEdit.draft.type === type,
+}));
+
+/** Curves in space: helix, projected and composite curves (also under the Plane button). */
+const CURVE_ENTRIES: readonly SplitEntry[] = (['helix', 'projectedCurve', 'compositeCurve'] as const).map((type) => ({
+  id: type,
+  icon: { helix: HelixIcon, projectedCurve: ProjectedCurveIcon, compositeCurve: CompositeCurveIcon }[type],
+  label: type,
+  start: () => commands.startFeature(type),
+  active: (state: AppState) => state.activeEdit?.mode === 'create' && state.activeEdit.draft.type === type,
+}));
+
+/** Surfaces: offset faces, knit surfaces, thicken them into solids. */
+const SURFACE_ENTRIES: readonly SplitEntry[] = (['offsetSurface', 'knit', 'thicken'] as const).map((type) => ({
+  id: type,
+  icon: { offsetSurface: OffsetSurfaceIcon, knit: KnitIcon, thicken: ThickenIcon }[type],
   label: type,
   start: () => commands.startFeature(type),
   active: (state: AppState) => state.activeEdit?.mode === 'create' && state.activeEdit.draft.type === type,
@@ -181,7 +212,7 @@ const FORM_ENTRIES: readonly SplitEntry[] = (['shell', 'draft', 'rib'] as const)
   active: (state: AppState) => state.activeEdit?.mode === 'create' && state.activeEdit.draft.type === type,
 }));
 
-const TABS: CommandTab[] = ['features', 'sketch', 'evaluate'];
+const TABS: CommandTab[] = ['features', 'surfaces', 'sketch', 'evaluate'];
 
 interface SplitEntry {
   id: string;
@@ -309,18 +340,8 @@ function FeaturesTab() {
       ))}
       <SplitFeatureButton entries={SOLID_ENTRIES} menuLabel={t('commands.solidFeatures')} variants="solid" disabled={sketching} />
       <SplitFeatureButton entries={HOLE_ENTRIES} menuLabel={t('commands.holeFeatures')} variants="holes" disabled={sketching || !hasFeatures} />
-      {FEATURE_BUTTONS.map(({ type, icon }) => (
-        <CommandButton
-          key={type}
-          id={type}
-          icon={icon}
-          label={t(`commands.${type}`)}
-          tooltip={t(`commands.tooltips.${type}`)}
-          active={activeType === type}
-          disabled={(sketching && type !== 'sketch') || ((type === 'fillet' || type === 'chamfer') && !hasFeatures)}
-          onClick={() => commands.startFeature(type)}
-        />
-      ))}
+      <SplitFeatureButton entries={PRIMITIVE_ENTRIES} menuLabel={t('commands.primitives')} variants="primitives" disabled={sketching} />
+      <SplitFeatureButton entries={EDGE_ENTRIES} menuLabel={t('commands.edgeFeatures')} variants="edges" disabled={sketching || !hasFeatures} />
       <SplitFeatureButton entries={FORM_ENTRIES} menuLabel={t('commands.formFeatures')} variants="form" disabled={sketching || !hasFeatures} />
       <CommandButton
         id="variables"
@@ -332,7 +353,6 @@ function FeaturesTab() {
         onClick={() => commands.startFeature('variables')}
       />
       <SplitFeatureButton entries={COPY_ENTRIES} menuLabel={t('commands.copyGeometry')} variants="copy" disabled={sketching || !hasFeatures} />
-      <SplitFeatureButton entries={BODY_ENTRIES} menuLabel={t('commands.bodyFeatures')} variants="bodies" disabled={sketching || !hasFeatures} />
       <SplitFeatureButton entries={REFERENCE_ENTRIES} menuLabel={t('commands.referenceGeometry')} variants="reference-geometry" disabled={sketching} />
     </Group>
   );
@@ -515,6 +535,39 @@ function SketchTab() {
 }
 
 /** The part as a whole: its material and color, and what it weighs. */
+/** Surfaces, curves in space and the bodies of the part. */
+function SurfacesTab() {
+  const { t } = useTranslation();
+  const activeType = useAppState((state) => (state.activeEdit?.mode === 'create' ? state.activeEdit.draft.type : null));
+  const sketching = useAppState((state) => state.sketch !== null || state.choosingSketchPlane);
+  const hasFeatures = useAppState((state) => state.history.features.length > 0);
+  const groups: { label: string; entries: readonly SplitEntry[]; needsBody: boolean }[] = [
+    { label: t('commands.groups.surfaces'), entries: SURFACE_ENTRIES, needsBody: true },
+    { label: t('commands.groups.curves'), entries: CURVE_ENTRIES, needsBody: false },
+    { label: t('commands.groups.bodies'), entries: BODY_ENTRIES, needsBody: true },
+  ];
+  return (
+    <>
+      {groups.map((group) => (
+        <Group key={group.label} label={group.label}>
+          {group.entries.map((entry) => (
+            <CommandButton
+              key={entry.id}
+              id={entry.id}
+              icon={entry.icon}
+              label={t(`commands.${entry.label}`)}
+              tooltip={t(`commands.tooltips.${entry.label}`)}
+              active={activeType === entry.id}
+              disabled={sketching || (group.needsBody && !hasFeatures)}
+              onClick={entry.start}
+            />
+          ))}
+        </Group>
+      ))}
+    </>
+  );
+}
+
 function EvaluateTab() {
   const { t } = useTranslation();
   const showMass = useAppState((state) => state.showMassProperties);
@@ -625,7 +678,7 @@ export function CommandBar() {
         ))}
       </div>
       <div className="command-tab-panel" id="command-tab-panel" role="tabpanel" aria-labelledby={`command-tab-${tab}`}>
-        {tab === 'features' ? <FeaturesTab /> : tab === 'sketch' ? <SketchTab /> : <EvaluateTab />}
+        {tab === 'features' ? <FeaturesTab /> : tab === 'surfaces' ? <SurfacesTab /> : tab === 'sketch' ? <SketchTab /> : <EvaluateTab />}
       </div>
       <div className="command-bar-spacer" />
       <Group label={t('commands.groups.exchange')}>

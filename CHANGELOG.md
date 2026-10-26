@@ -16,10 +16,16 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
   stays a body of its own, also where it overlaps others. Cuts work on every body they reach, body by
   body. **Combine** fuses bodies, subtracts them from a main body or keeps what they share; **Delete
   body** removes bodies. The tree lists the bodies of a part of several.
+- Surfaces: **Offset surface** (faces of the part offset along their normals, or copied), **Knit** (surfaces
+  joined where their edges meet) and **Thicken** (a surface made a solid of a thickness, or a closed
+  surface filled). Surfaces are drawn translucent and do not change the part.
 
 ### Changed
+- Command bar: a **Surfaces** tab holds the surface tools, the curves and the body commands; Box and
+  Cylinder, Fillet and Chamfer share a split button each, so the *Features* tab keeps its labels on
+  narrower screens.
 - Part files with twisted or guided sweeps, lofts along a centerline, separate bodies, combined or deleted
-  bodies are saved as format version 10, so ParaWerk 0.4.0-alpha.1 reports them as newer files.
+  bodies, or surfaces are saved as format version 10, so ParaWerk 0.4.0-alpha.1 reports them as newer files.
 
 ## [0.4.0-alpha.1] - 2026-10-26
 

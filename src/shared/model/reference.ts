@@ -79,6 +79,8 @@ export type ReferenceGeometry =
   | { kind: 'csys'; origin: Vec3; xDir: Vec3; yDir: Vec3; zDir: Vec3 }
   /** A projected or composite curve: points along its edges for drawing, its length, and whether it is one chain that closes. */
   | { kind: 'curve'; polylines: Vec3[][]; length: number; chains: number; closed: boolean }
+  /** An offset or knit surface: its triangles for drawing, its area, number of faces, and whether it encloses a volume. */
+  | { kind: 'surface'; positions: Float32Array; indices: Uint32Array; area: number; faces: number; closed: boolean }
   /**
    * A helix around `axis` (unit) through `center`, of `radius`, starting at center + radius · xDir and
    * rising `pitch` per turn along the axis; turning left-handed with `leftHand`.

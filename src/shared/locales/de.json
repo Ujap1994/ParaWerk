@@ -62,7 +62,10 @@
       "modify": "Ändern",
       "exchange": "Austausch",
       "part": "Teil",
-      "evaluate": "Auswerten"
+      "evaluate": "Auswerten",
+      "surfaces": "Flächen",
+      "curves": "Kurven",
+      "bodies": "Körper"
     },
     "new": "Neu",
     "open": "Öffnen",
@@ -124,13 +127,17 @@
       "projectedCurve": "Die Kurven einer Skizze auf Flächen projizieren oder eine 3D-Kurve dort erzeugen, wo sich die Kurven zweier Skizzen treffen",
       "compositeCurve": "Kanten, Skizzenkurven und andere Kurven zu einer Kurve verbinden, als Pfad einer Austragung",
       "combine": "Körper des Teils kombinieren: vereinigen, von einem Hauptkörper abziehen oder nur das Gemeinsame behalten",
-      "deleteBody": "Körper aus dem Teil entfernen"
+      "deleteBody": "Körper aus dem Teil entfernen",
+      "offsetSurface": "Eine Fläche aus Flächen des Teils erzeugen, entlang ihrer Normalen versetzt (0 für eine Kopie)",
+      "knit": "Flächen dort zu einer verbinden, wo ihre Kanten aufeinandertreffen",
+      "thicken": "Eine Fläche zu einem Volumen machen: ihr eine Dicke geben oder sie füllen, wenn sie ein Volumen umschließt"
     },
     "tabs": {
       "label": "Befehlsregister",
       "features": "Features",
       "sketch": "Skizze",
-      "evaluate": "Auswerten"
+      "evaluate": "Auswerten",
+      "surfaces": "Flächen"
     },
     "sketchTools": {
       "line": "Linie",
@@ -221,7 +228,11 @@
     "compositeCurve": "Zusammengesetzte Kurve",
     "combine": "Kombinieren",
     "deleteBody": "Körper löschen",
-    "bodyFeatures": "Körper kombinieren und löschen"
+    "offsetSurface": "Fläche versetzen",
+    "knit": "Zusammenfügen",
+    "thicken": "Verdicken",
+    "primitives": "Quader und Zylinder",
+    "edgeFeatures": "Verrundung und Fase"
   },
   "features": {
     "plane": "Ebene",
@@ -251,7 +262,10 @@
     "projectedCurve": "Projizierte Kurve",
     "compositeCurve": "Zusammengesetzte Kurve",
     "combine": "Kombinieren",
-    "deleteBody": "Körper löschen"
+    "deleteBody": "Körper löschen",
+    "offsetSurface": "Versetzte Fläche",
+    "knit": "Zusammengefügte Fläche",
+    "thicken": "Verdickung"
   },
   "tree": {
     "title": "Featurebaum",
@@ -469,7 +483,8 @@
     "noSweepSketches": "Eine Austragung braucht zwei Skizzen: eine mit geschlossener Kontur und eine mit dem Pfad.",
     "noLoftSketches": "Eine Ausformung braucht mindestens zwei Skizzen mit je einer geschlossenen Kontur.",
     "noHelixSketch": "Zeichne zuerst einen Kreis in eine Skizze: Die Wendel windet sich um ihn.",
-    "noCurveSketch": "Zeichne zuerst die zu projizierenden Kurven in eine Skizze."
+    "noCurveSketch": "Zeichne zuerst die zu projizierenden Kurven in eine Skizze.",
+    "noSurface": "Erzeuge zuerst eine Fläche, zum Beispiel mit „Fläche versetzen“."
   },
   "errors": {
     "no-body": "Es gibt noch keinen Körper, der verändert werden kann.",
@@ -537,7 +552,12 @@
     "centerline-missing": "Die Mittellinie der Ausformung existiert nicht mehr. Wähle eine andere oder keine.",
     "centerline-gaps": "Die Mittellinie muss ein Kurvenzug ohne Lücken und Verzweigungen sein.",
     "combine-bodies": "Wähle mindestens zwei verschiedene Körper: Klicke in der 3D-Ansicht je eine Fläche an, zuerst den Hauptkörper.",
-    "body-missing": "Ein gewählter Körper existiert nicht mehr, eine frühere Änderung hat ihn entfernt. Bearbeite das Feature und wähle die Körper neu."
+    "body-missing": "Ein gewählter Körper existiert nicht mehr, eine frühere Änderung hat ihn entfernt. Bearbeite das Feature und wähle die Körper neu.",
+    "surface-faces": "Wähle die Flächen der Fläche aus bzw. die Flächen, die verbunden werden sollen.",
+    "surface-missing": "Die Fläche existiert nicht mehr. Wähle eine andere.",
+    "surface-open": "Nur eine Fläche, die ein Volumen umschließt, kann gefüllt werden. Füge ihre Flächen zuerst zusammen oder gib ihr stattdessen eine Dicke.",
+    "offset-failed": "Die Flächen lassen sich nicht um diesen Abstand versetzen: Eine gekrümmte Fläche ist vielleicht kleiner als der Abstand nach innen.",
+    "thicken-failed": "Die Fläche lässt sich so nicht verdicken; versuche eine kleinere Dicke oder die andere Seite."
   },
   "warnings": {
     "edge-missing_one": "{{count}} ausgewählte Kante existiert nicht mehr und wird ausgelassen. Bearbeite das Feature, um sie zu entfernen oder eine andere Kante zu wählen.",
@@ -1155,5 +1175,26 @@
     "pick": "Klicke in der 3D-Ansicht je eine Fläche jedes Körpers an.",
     "combineHint": "Klicke je eine Fläche jedes Körpers an, zuerst den Hauptkörper. Hinzufügen vereinigt sie zu einem Körper, Abziehen entfernt die anderen vom Hauptkörper, Gemeinsam behält nur, was alle gemeinsam haben. Nicht gewählte Körper bleiben unverändert.",
     "deleteHint": "Klicke je eine Fläche der Körper an, die aus dem Teil entfernt werden; die anderen Körper bleiben."
+  },
+  "surface": {
+    "distance": "Abstand",
+    "offsetHint": "Klicke Flächen des Teils in der 3D-Ansicht an. Die neue Fläche folgt ihnen im Abstand entlang ihrer Normalen – nach außen bei positiven, nach innen bei negativen Abständen, als Kopie bei 0. Flächen verändern das Teil nicht; verdicke sie, um Volumen zu erhalten.",
+    "summary_one": "Flächeninhalt {{area}}, eine Fläche.",
+    "summary_other": "Flächeninhalt {{area}}, {{count}} Flächen.",
+    "summaryClosed_one": "Flächeninhalt {{area}}, eine Fläche, umschließt ein Volumen.",
+    "summaryClosed_other": "Flächeninhalt {{area}}, {{count}} Flächen, umschließt ein Volumen.",
+    "surfaces": "Flächen",
+    "add": "Fläche hinzufügen",
+    "knitHint": "Die Flächen werden dort verbunden, wo ihre Kanten aufeinandertreffen (innerhalb von 0,01 mm). Eine zusammengefügte Fläche, die ein Volumen umschließt, kann mit „Verdicken“ gefüllt werden.",
+    "surface": "Fläche",
+    "fill": "Umschlossenes Volumen füllen (geschlossene Flächen)",
+    "thickness": "Dicke",
+    "side": "Wächst",
+    "sides": {
+      "normal": "Entlang der Normalen",
+      "reverse": "Entgegen der Normalen",
+      "both": "Je zur Hälfte"
+    },
+    "thickenHint": "Die Fläche wird zu einem Volumen der Dicke, auf der gewählten Seite, und wird dem Teil hinzugefügt wie andere Features, die Material hinzufügen."
   }
 }

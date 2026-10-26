@@ -1,4 +1,4 @@
-import type { CombineFeature, DeleteBodyFeature, ProjectionSide, CopyFeature, DraftFeature, EdgeFeature, LoftFeature, RibFeature, SweepFeature, ThreadFeature, EdgeRef, ExtrudeFeature, HoleFeature, RevolveFeature, ShellFeature, SolidModelingFeature, Vec3 } from '../shared/model/feature.ts';
+import type { ThickenFeature, CombineFeature, DeleteBodyFeature, ProjectionSide, CopyFeature, DraftFeature, EdgeFeature, LoftFeature, RibFeature, SweepFeature, ThreadFeature, EdgeRef, ExtrudeFeature, HoleFeature, RevolveFeature, ShellFeature, SolidModelingFeature, Vec3 } from '../shared/model/feature.ts';
 import type { FaceNameRef, ReferenceGeometry } from '../shared/model/reference.ts';
 import type { BodyNaming } from '../shared/model/naming.ts';
 import type { Profile, ProfileEdge, ProfileLoop } from '../shared/model/profile.ts';
@@ -118,8 +118,9 @@ export type ResolvedEdgeFeature = EdgeFeature & {
 
 /** A feature as a backend builds it, with its references to earlier features resolved. */
 export type KernelFeature =
-  | Exclude<SolidModelingFeature, ExtrudeFeature | RevolveFeature | EdgeFeature | HoleFeature | CopyFeature | ShellFeature | DraftFeature | SweepFeature | LoftFeature | RibFeature | ThreadFeature | CombineFeature | DeleteBodyFeature>
+  | Exclude<SolidModelingFeature, ExtrudeFeature | RevolveFeature | EdgeFeature | HoleFeature | CopyFeature | ShellFeature | DraftFeature | SweepFeature | LoftFeature | RibFeature | ThreadFeature | CombineFeature | DeleteBodyFeature | ThickenFeature>
   | ResolvedBodies
+  | ResolvedThicken
   | ResolvedExtrude
   | ResolvedRevolve
   | ResolvedHole
@@ -146,6 +147,25 @@ export type ResolvedCurve =
   | { kind: 'intersection'; sketches: [SketchCurves, SketchCurves] }
   /** Edges of the body, curves of sketches and earlier curves joined into one chain. */
   | { kind: 'composite'; edges: number[]; sketches: SketchCurves[]; curves: ShapeHandle[] };
+
+/** An offset or knit surface as a backend builds it. */
+export type ResolvedSurface =
+  /** Faces of the body (topological indices) offset by `distance`. */
+  | { kind: 'offset'; faces: number[]; distance: number; name: string }
+  /** Earlier surfaces knit together. */
+  | { kind: 'knit'; surfaces: ShapeHandle[] };
+
+/** A surface as drawn: its triangles, its area, number of faces and whether it encloses a volume. */
+export interface SurfaceGeometry {
+  positions: Float32Array;
+  indices: Uint32Array;
+  area: number;
+  faces: number;
+  closed: boolean;
+}
+
+/** A thickened surface, with the surface it thickens. */
+export type ResolvedThicken = ThickenFeature & { surfaceShape: ShapeHandle };
 
 /** A curve as drawn: points along its edges, its length, how many chains it has and whether it closes. */
 export interface CurveGeometry {
@@ -191,6 +211,9 @@ export interface GeometryBackend {
   /** Builds a projected or composite curve (a shape that is not a body); throws FeatureError. The caller owns it. */
   curve?(body: ShapeHandle | null, curve: ResolvedCurve): ShapeHandle;
   curveGeometry?(curve: ShapeHandle): CurveGeometry;
+  /** Builds an offset or knit surface (a shape that is not a body); throws FeatureError. The caller owns it. */
+  surface?(body: ShapeHandle | null, surface: ResolvedSurface): ShapeHandle;
+  surfaceGeometry?(surface: ShapeHandle): SurfaceGeometry;
   heapBytes(): number;
   describeError(error: unknown): string;
 }

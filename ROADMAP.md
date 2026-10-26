@@ -208,7 +208,7 @@ patterns, curves; 2026-10-26).
 | Multi-body parts: separate bodies, combine (add, subtract, common), delete body | ✅ done |
 | Configurations and design tables (variables and suppression per configuration) | ✅ done |
 | Full equation support (functions of several values, conditions, pattern counts from equations) | ✅ done |
-| Surface tools (offset, knit, thicken) | open |
+| Surface tools (offset, knit, thicken) | ✅ done |
 
 ## 2. Guiding principles
 

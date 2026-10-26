@@ -1188,6 +1188,32 @@ test('draft screenshots', async () => {
   await app.close();
 });
 
+test('surface screenshot', async () => {
+  const { app, page } = await launchApp({ width: 1440, height: 900 });
+  // The top and front faces of a block offset 8 outwards: a surface that rounds over their edge.
+  const features = [
+    { id: 'block', type: 'box', name: 'Block', operation: 'add', width: 100, depth: 60, height: 40, position: [0, 0, 0] },
+    {
+      id: 'skin', type: 'offsetSurface', name: 'Skin', distance: 8,
+      faces: [{ kind: 'face', name: 'block:top', at: [0, 0, 40] }, { kind: 'face', name: 'block:front', at: [0, -30, 20] }],
+    },
+  ];
+  await page.evaluate(
+    (list) => (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features: list, past: [], future: [] }, savedFeatures: list, fileName: 'Surface' }),
+    features,
+  );
+  await idle(page);
+  await page.evaluate(() => (window as unknown as { __parawerk: { viewport: { zoomToFit(): void } } }).__parawerk.viewport.zoomToFit());
+  await page.locator('.feature-tree .tree-item[data-feature-id="skin"]').dblclick();
+  await idle(page);
+  const canvas = await page.locator('.viewport-canvas').boundingBox();
+  if (canvas) await page.mouse.move(canvas.x + canvas.width - 30, canvas.y + canvas.height - 30);
+  await page.waitForTimeout(600);
+  await page.screenshot({ path: out('surface-offset.png') });
+  await page.click('[data-testid="panel-ok"]');
+  await app.close();
+});
+
 test('bodies screenshot', async () => {
   const { app, page } = await launchApp({ width: 1440, height: 900 });
   // A block and a cube of its own overlapping it, combined: the block minus the cube.

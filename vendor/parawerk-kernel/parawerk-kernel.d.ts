@@ -49,6 +49,10 @@ interface EmbindModule {
   sweepAlongCurve(_0: any, _1: any, _2: number, _3: any, _4: EmbindString, _5: number, _6: number): any;
   loftAlongCurve(_0: any, _1: number, _2: any, _3: EmbindString): any;
   combineBodies(_0: number, _1: any, _2: number, _3: EmbindString): any;
+  offsetSurface(_0: number, _1: any, _2: number, _3: EmbindString): any;
+  knitSurfaces(_0: any, _1: number): any;
+  thickenSurface(_0: number, _1: number, _2: number, _3: boolean, _4: EmbindString): any;
+  surfaceInfo(_0: number): any;
   deleteBodies(_0: number, _1: any): any;
   sketchWire(_0: any, _1: any): any;
   projectCurve(_0: number, _1: number, _2: any, _3: any, _4: any, _5: number): any;
