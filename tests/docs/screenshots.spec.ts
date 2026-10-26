@@ -1296,3 +1296,33 @@ test('thread screenshots', async () => {
   await page.click('[data-testid="panel-ok"]');
   await app.close();
 });
+
+test('configurations screenshots', async () => {
+  const { app, page } = await launchApp({ width: 1440, height: 900 });
+  // A mounting plate in three sizes: its width, depth and thickness are variables.
+  await page.evaluate(() => {
+    const features = [
+      { id: 'vars', type: 'variables', variables: [{ name: 'width', expression: '120' }, { name: 'depth', expression: '80' }, { name: 'thickness', expression: '8' }] },
+      { id: 'plate', type: 'box', operation: 'add', width: 120, depth: 80, height: 8, position: [0, 0, 0], expressions: { width: 'width', depth: 'depth', height: 'thickness' } },
+      { id: 'bore', type: 'cylinder', operation: 'cut', radius: 10, height: 30, axis: 'z', position: [0, 0, -5] },
+    ];
+    const configurations = {
+      active: 'm',
+      list: [
+        { id: 's', name: 'Small', variables: { width: '80', depth: '50', thickness: '5' }, suppressed: ['bore'] },
+        { id: 'm', name: 'Medium', variables: { width: '120', depth: '80', thickness: '8' }, suppressed: [] },
+        { id: 'l', name: 'Large', variables: { width: '200', depth: '120', thickness: 'width / 20' }, suppressed: [] },
+      ],
+    };
+    const history = { features, properties: { configurations }, past: [], future: [] };
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history, savedFeatures: features, fileName: 'Mounting plate' });
+  });
+  await idle(page);
+  await page.evaluate(() => (window as unknown as { __parawerk: { viewport: { zoomToFit(): void } } }).__parawerk.viewport.zoomToFit());
+  await page.click('[data-tab="evaluate"]');
+  await page.click('[data-command="configurations"]');
+  await page.waitForTimeout(500);
+  await page.screenshot({ path: out('configurations.png') });
+  await page.click('[data-testid="configurations-dialog"] .modal-actions .is-primary');
+  await app.close();
+});

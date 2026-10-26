@@ -419,6 +419,26 @@ fixed value.
 Names start with a letter or `_` and may contain letters, digits and `_`; upper and lower case do not
 matter. Units and functions (`mm`, `in`, `sin`, `sqrt`, `pi`, …) cannot be used as names.
 
+## Configurations
+
+**Configurations** (in the *Evaluate* tab, group *Part*) are variants of one part in one file – a mounting
+plate in three sizes, a bracket with and without a hole. Each configuration remembers the values of the
+part's [variables](#variables-and-equations) and which features are suppressed.
+
+- **Add configuration** makes a copy of the part as it is now and shows it; the first time, the part as it
+  was is kept as *Default*. Change variables or suppress features as usual: the changes belong to the
+  configuration that is shown.
+- The **design table** in the dialog lists every configuration with its name and the expressions of all
+  variables; change a cell to change a configuration (equations work too, such as `width / 20`). The
+  radio button shows a configuration, the bin deletes one.
+- The switch at the top of the feature tree shows another configuration right away. Switching is one undo
+  step; exports, mass properties and drawings use the configuration that is shown.
+
+![The design table of a mounting plate in three sizes](../images/screenshots/configurations.png)
+
+Configurations work through variables: give the dimensions that change between the variants a variable
+(in feature parameters or sketch dimensions), then give each configuration its values.
+
 ## Editing features
 
 - **Edit:** double-click a feature in the tree or use the pencil icon. Features below it are rolled back

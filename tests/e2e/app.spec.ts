@@ -1210,6 +1210,38 @@ test('sweeps an outline along a path and lofts two outlines', async () => {
   expect((await state(page)).history.features[3]).toMatchObject({ type: 'loft', sketches: ['low', 'high'], ruled: true });
 });
 
+test('adds a configuration, changes its variable in the design table and switches between them', async () => {
+  launched = await launchApp({ width: 1000, height: 640 });
+  const { page } = launched;
+  // A box 10 × 10 whose height is the variable "length" (20).
+  await page.evaluate(() => {
+    const features = [
+      { id: 'vars', type: 'variables', variables: [{ name: 'length', expression: '20' }] },
+      { id: 'box', type: 'box', operation: 'add', width: 10, depth: 10, height: 20, position: [0, 0, 0], expressions: { height: 'length' } },
+    ];
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features, past: [], future: [] }, savedFeatures: features, dirty: false });
+  });
+  expect(await volume(page)).toBeCloseTo(2000, 3);
+  await page.click('[data-tab="evaluate"]');
+  await page.click('[data-command="configurations"]');
+  await expect(page.locator('[data-testid="configurations-none"]')).toBeVisible();
+  await page.click('[data-testid="configuration-add"]');
+  // "Default" keeps the part as it was; the new one is shown and starts as a copy.
+  await expect(page.locator('[data-testid="design-table"] tbody tr')).toHaveCount(2);
+  await page.locator('[data-testid="cell-Configuration 1-length"]').fill('50');
+  await page.locator('[data-testid="cell-Configuration 1-length"]').press('Enter');
+  await expect.poll(() => volume(page)).toBeCloseTo(5000, 3);
+  await page.click('[data-testid="configurations-dialog"] .modal-actions .is-primary');
+  // The switch in the tree shows Default again.
+  await page.selectOption('[data-testid="configuration-switch"]', { label: 'Default' });
+  await expect.poll(() => volume(page)).toBeCloseTo(2000, 3);
+  await page.selectOption('[data-testid="configuration-switch"]', { label: 'Configuration 1' });
+  await expect.poll(() => volume(page)).toBeCloseTo(5000, 3);
+  // Undo goes back to Default in one step.
+  await page.click('[data-command="undo"]');
+  await expect.poll(() => volume(page)).toBeCloseTo(2000, 3);
+});
+
 test('cuts a modeled thread into a bolt picked in the 3D view', async () => {
   launched = await launchApp({ width: 1000, height: 640 });
   const { page } = launched;

@@ -20,7 +20,7 @@ export const PART_FORMAT = 'parawerk-part';
  * patterns and mirror images, shells, extrusions up to a surface or vertex. 7: the part's material and color,
  * STEP imports, coordinate systems, extrusions in two directions, with a draft or up to the next face, thin
  * features, uneven chamfers (ParaWerk 0.3). 8: drafts, sweeps, lofts, ribs, modeled threads, variable
- * radius fillets.
+ * radius fillets, configurations.
  * Older versions are read unchanged.
  */
 export const PART_FORMAT_VERSION = 8;
@@ -34,7 +34,7 @@ export function formatVersionOf(features: readonly Feature[], properties: PartPr
     feature.type === 'rib' ||
     feature.type === 'thread' ||
     (feature.type === 'fillet' && feature.method === 'variable');
-  if (features.some(eighth)) return 8;
+  if (features.some(eighth) || properties.configurations !== undefined) return 8;
   const seventh = (feature: Feature) =>
     feature.type === 'import' ||
     feature.type === 'csys' ||
@@ -115,7 +115,7 @@ export function encodePartFile(document: PartDocument, meta: PartFileMeta): Uint
     version: formatVersionOf(document.features, document.properties),
     units: document.units,
     features,
-    ...(document.properties && (document.properties.material || document.properties.color) ? { properties: document.properties } : {}),
+    ...(document.properties && (document.properties.material || document.properties.color || document.properties.configurations) ? { properties: document.properties } : {}),
   };
   return zipSync(
     {

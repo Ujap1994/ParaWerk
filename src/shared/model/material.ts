@@ -3,6 +3,8 @@
  * its mass and moments of inertia; the color is how the part looks in the 3D view.
  */
 
+import type { Configurations } from './configurations.ts';
+
 export type MaterialCategory = 'metal' | 'plastic' | 'wood' | 'other';
 
 /** A material of the built-in library. Densities are typical values at room temperature. */
@@ -69,6 +71,8 @@ export interface PartProperties {
   material?: PartMaterial;
   /** The color of the part in the 3D view, '#rrggbb'; without it the material's color (or the theme's). */
   color?: string;
+  /** Variants of the part (src/shared/model/configurations.ts); without them the part has one. */
+  configurations?: Configurations;
 }
 
 export const NO_PROPERTIES: PartProperties = {};

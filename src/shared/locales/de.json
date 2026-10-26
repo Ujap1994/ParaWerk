@@ -118,7 +118,8 @@
       "sweep": "Die geschlossenen Konturen einer Skizze entlang der Kurven einer anderen Skizze austragen",
       "loft": "Einen Körper durch die Konturen mehrerer Skizzen der Reihe nach erzeugen",
       "rib": "Eine Wand von den offenen Kurven einer Skizze bis zum Körper hinzufügen, etwa eine Stützrippe in einer Ecke",
-      "thread": "Ein modelliertes ISO-Gewinde in einen Bolzen oder eine Bohrung schneiden"
+      "thread": "Ein modelliertes ISO-Gewinde in einen Bolzen oder eine Bohrung schneiden",
+      "configurations": "Varianten des Teils: zwischen ihnen umschalten und ihre Variablen in einer Konstruktionstabelle bearbeiten"
     },
     "tabs": {
       "label": "Befehlsregister",
@@ -208,7 +209,8 @@
     "solidFeatures": "Rotation, Austragung und Ausformung",
     "rib": "Rippe",
     "thread": "Gewinde",
-    "holeFeatures": "Bohrung und Gewinde"
+    "holeFeatures": "Bohrung und Gewinde",
+    "configurations": "Konfigurationen"
   },
   "features": {
     "plane": "Ebene",
@@ -1042,5 +1044,21 @@
     "reverse": "Am anderen Ende beginnen",
     "leftHand": "Linksgewinde",
     "hint": "Das Gewinde ist modelliert: Seine Rille wird in das Teil geschnitten, wie es der 3D-Druck braucht (zum Bohren und Gewindeschneiden ist eine Bohrung mit kosmetischem Gewinde leichter). Ein Bolzen behält seinen Durchmesser als Außendurchmesser des Gewindes; eine Bohrung sollte den Kernlochdurchmesser haben. Das Gewinde beginnt an einem Ende der Fläche, läuft dort aus und geht die Länge weit in die Fläche, höchstens bis zu ihrem anderen Ende. Die Berechnung dauert ein bis zwei Sekunden."
+  },
+  "configurations": {
+    "title": "Konfigurationen",
+    "hint": "Jede Konfiguration merkt sich die Werte der Variablen des Teils und welche Features unterdrückt sind. Die markierte wird angezeigt; Änderungen am Teil gehören zu ihr. Die Tabelle zeigt die Variablen aller Konfigurationen; ändere eine Zelle, um eine Konfiguration zu ändern.",
+    "shown": "Angezeigt",
+    "name": "Name",
+    "show": "{{name}} anzeigen",
+    "delete": "Konfiguration löschen",
+    "add": "Konfiguration hinzufügen",
+    "close": "Schließen",
+    "none": "Das Teil hat eine Konfiguration. Füge eine hinzu, um Varianten zu bilden – sie beginnt als Kopie des Teils, wie es jetzt ist.",
+    "noVariables": "Das Teil hat noch keine Variablen: Lege sie unter Features → Variablen an, damit Konfigurationen verschiedene Maße bekommen.",
+    "prefix": "Konfiguration",
+    "default": "Standard",
+    "active": "Konfiguration",
+    "nameTaken": "Eine andere Konfiguration hat diesen Namen schon."
   }
 }

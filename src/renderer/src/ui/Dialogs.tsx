@@ -6,10 +6,11 @@ import * as commands from '../commands.ts';
 import { coordinateSystems } from '../references.ts';
 import { featureName } from '../state/document.ts';
 import { discardRecovery, restoreRecovery } from '../state/recovery.ts';
-import { dismissToast, setState, useAppState } from '../state/store.ts';
-import { CloseIcon } from './icons.tsx';
+import { dismissToast, partProperties, setState, showToast, useAppState } from '../state/store.ts';
+import { configurationValue } from '../../../shared/model/configurations.ts';
+import { CloseIcon, TrashIcon } from './icons.tsx';
 
-function Modal({ open, title, onClose, children, testId }: { open: boolean; title: string; onClose(): void; children: ReactNode; testId: string }) {
+function Modal({ open, title, onClose, children, testId, wide = false }: { open: boolean; title: string; onClose(): void; children: ReactNode; testId: string; wide?: boolean }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const dialog = ref.current;
@@ -18,7 +19,7 @@ function Modal({ open, title, onClose, children, testId }: { open: boolean; titl
     if (!open && dialog.open) dialog.close();
   }, [open]);
   return (
-    <dialog ref={ref} className="modal" aria-label={title} data-testid={testId} onClose={onClose} onCancel={onClose}>
+    <dialog ref={ref} className={`modal${wide ? ' is-wide' : ''}`} aria-label={title} data-testid={testId} onClose={onClose} onCancel={onClose}>
       <header className="modal-header">
         <h2>{title}</h2>
         <button type="button" className="icon-button" aria-label="Close" onClick={onClose}>
@@ -146,6 +147,124 @@ export function AboutDialog() {
       <button type="button" className="text-button" onClick={() => void window.parawerk.openExternal(REPOSITORY_URL)}>
         {t('about.website')}
       </button>
+    </Modal>
+  );
+}
+
+/** A cell of the design table: shows a text and gives it back when it was changed (Enter or leaving the field). */
+function TableCell({ value, label, testId, onCommit }: { value: string; label: string; testId?: string; onCommit(text: string): void }) {
+  const [text, setText] = useState(value);
+  const [shown, setShown] = useState(value);
+  // A new value from outside (another cell changed the part, undo) replaces what is shown.
+  if (value !== shown) {
+    setShown(value);
+    setText(value);
+  }
+  const commit = () => {
+    if (text.trim() !== value && text.trim().length > 0) onCommit(text);
+    else setText(value);
+  };
+  return (
+    <input
+      className="table-input"
+      value={text}
+      aria-label={label}
+      data-testid={testId}
+      onChange={(event) => setText(event.target.value)}
+      onBlur={commit}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') (event.target as HTMLInputElement).blur();
+        if (event.key === 'Escape') setText(value);
+      }}
+    />
+  );
+}
+
+/**
+ * The configurations of the part and its design table: one row per configuration with its name and the
+ * expressions of the part's variables; the radio button shows a configuration.
+ */
+export function ConfigurationsDialog() {
+  const { t } = useTranslation();
+  const open = useAppState((state) => state.dialogs.configurations);
+  const configurations = useAppState((state) => partProperties(state.history).configurations);
+  const features = useAppState((state) => state.history.features);
+  const busy = useAppState((state) => state.activeEdit !== null || state.sketch !== null);
+  const variables = features.find((feature) => feature.type === 'variables')?.variables ?? [];
+  return (
+    <Modal open={open} title={t('configurations.title')} onClose={() => commands.closeDialog('configurations')} testId="configurations-dialog" wide>
+      <p className="setting-help">{t('configurations.hint')}</p>
+      {configurations ? (
+        <div className="design-table-wrap">
+          <table className="design-table" data-testid="design-table">
+            <thead>
+              <tr>
+                <th>{t('configurations.shown')}</th>
+                <th>{t('configurations.name')}</th>
+                {variables.map((variable) => (
+                  <th key={variable.name}>{variable.name}</th>
+                ))}
+                <th aria-label={t('configurations.delete')} />
+              </tr>
+            </thead>
+            <tbody>
+              {configurations.list.map((configuration) => {
+                const active = configuration.id === configurations.active;
+                return (
+                  <tr key={configuration.id} className={active ? 'is-active' : ''} data-configuration={configuration.name}>
+                    <td>
+                      <input
+                        type="radio"
+                        name="active-configuration"
+                        checked={active}
+                        disabled={busy}
+                        aria-label={t('configurations.show', { name: configuration.name })}
+                        onChange={() => void commands.activateConfiguration(configuration.id)}
+                      />
+                    </td>
+                    <td>
+                      <TableCell
+                        value={configuration.name}
+                        label={t('configurations.name')}
+                        onCommit={(name) => {
+                          if (!commands.renameConfiguration(configuration.id, name)) showToast('info', t('configurations.nameTaken'));
+                        }}
+                      />
+                    </td>
+                    {variables.map((variable) => (
+                      <td key={variable.name}>
+                        <TableCell
+                          // The shown configuration is the part itself; the others keep their values.
+                          value={active ? variable.expression : (configurationValue(configuration, variable.name) ?? variable.expression)}
+                          label={`${configuration.name}: ${variable.name}`}
+                          testId={`cell-${configuration.name}-${variable.name}`}
+                          onCommit={(text) => void commands.setConfigurationVariable(configuration.id, variable.name, text)}
+                        />
+                      </td>
+                    ))}
+                    <td>
+                      <button type="button" className="icon-button" title={t('configurations.delete')} aria-label={t('configurations.delete')} disabled={busy} onClick={() => void commands.deleteConfiguration(configuration.id)}>
+                        <TrashIcon />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <p data-testid="configurations-none">{t('configurations.none')}</p>
+      )}
+      {variables.length === 0 ? <p className="setting-help">{t('configurations.noVariables')}</p> : null}
+      <div className="modal-actions">
+        <button type="button" className="button" data-testid="configuration-add" disabled={busy} onClick={commands.addPartConfiguration}>
+          {t('configurations.add')}
+        </button>
+        <button type="button" className="button is-primary" onClick={() => commands.closeDialog('configurations')}>
+          {t('configurations.close')}
+        </button>
+      </div>
     </Modal>
   );
 }

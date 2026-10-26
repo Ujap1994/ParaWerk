@@ -198,7 +198,8 @@ what that turns up is fixed before Phase 3 starts.
 | Variable-radius fillets (from a start to an end radius along each edge) | ✅ done |
 | Modeled threads (ISO metric, external and internal, on cylindrical faces) | ✅ done |
 | Multi-body parts, curves (helix, projected, composite) | open |
-| Surface tools (offset, knit, thicken), configurations and design tables, full equation support | open |
+| Configurations and design tables (variables and suppression per configuration) | ✅ done |
+| Surface tools (offset, knit, thicken), full equation support | open |
 
 ## 2. Guiding principles
 

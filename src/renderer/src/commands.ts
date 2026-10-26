@@ -2,7 +2,7 @@ import { resolveLanguage } from '../../shared/i18n.ts';
 import type { MenuCommand } from '../../shared/ipc.ts';
 import { PART_FILE_EXTENSION } from '../../shared/app-info.ts';
 import { hashString } from '../../shared/hash.ts';
-import { COPYABLE_TYPES, type ImportFeature, defaultFeature, type BooleanOperation, hasReferenceSlots, isCopyFeature, isEdgeFeature, isReferenceFeature, sketchesUsedBy, type EdgeRef, type ExtrudeEnd, extrudesOneWay, type Feature, type FilletMethod, roundFaceCount, type FeatureType, type HoleFeature, type ReferenceFeature, type SketchFeature, type SlotFeature } from '../../shared/model/feature.ts';
+import { COPYABLE_TYPES, createFeatureId, type ImportFeature, defaultFeature, type BooleanOperation, hasReferenceSlots, isCopyFeature, isEdgeFeature, isReferenceFeature, sketchesUsedBy, type EdgeRef, type ExtrudeEnd, extrudesOneWay, type Feature, type FilletMethod, roundFaceCount, type FeatureType, type HoleFeature, type ReferenceFeature, type SketchFeature, type SlotFeature } from '../../shared/model/feature.ts';
 import { holePositions, METRIC_SIZES, metricSize, sizesFor, standardHoleDimensions, type MetricSize } from '../../shared/model/hole.ts';
 import { frameTransform } from '../../shared/model/frame.ts';
 import { sketchProfile } from '../../shared/model/profile.ts';
@@ -13,6 +13,7 @@ import { edgeRefOf, faceRefOf, resolveEdgeRefs } from '../../shared/model/naming
 import { decodePartFile, encodePartFile, PartFileError } from '../../shared/model/part-file.ts';
 import { frameOf, frameOnPlane, isDimension, ORIGIN_ID, STANDARD_PLANES, type SketchData, type SketchDimension, type SketchPlaneRef } from '../../shared/model/sketch.ts';
 import { CUSTOM_MATERIAL, DEFAULT_PART_COLOR, partColor, type PartMaterial, type PartProperties } from '../../shared/model/material.ts';
+import { addConfiguration, applyConfiguration, freeConfigurationName, switchConfiguration, type Configuration, type Configurations } from '../../shared/model/configurations.ts';
 import type { Settings } from '../../shared/settings.ts';
 import { changeLanguage, t } from './i18n.ts';
 import { SketchBuilder } from './sketch/builder.ts';
@@ -624,20 +625,110 @@ export function editVariables(): void {
  * dimensions change are solved again, all in one undo step.
  */
 async function commitVariables(edit: ActiveEdit): Promise<void> {
-  const before = getState().history;
-  const features = applyEdit(before.features, edit);
+  const features = applyEdit(getState().history.features, edit);
   setState({ activeEdit: null });
+  await commitRegenerated(features);
+}
+
+/**
+ * Commits features whose variables or suppression changed (and with them, optionally, new part
+ * properties): every expression is evaluated again and the sketches whose dimensions change are solved
+ * again, all in one undo step.
+ */
+async function commitRegenerated(features: Feature[], properties?: PartProperties): Promise<void> {
+  const before = getState().history;
   try {
     const { features: regenerated, failed } = await regenerate(features, async (sketch) => {
       const solution = await sketchSolver().solve(sketch, { analyze: false });
       return solution.converged && solution.unsatisfied.length === 0 ? solution.sketch : null;
     });
     if (getState().history !== before) return;
-    setHistory(commit(before, regenerated));
+    setHistory(commit(before, regenerated, properties ?? partProperties(before)));
     if (failed.length > 0) showToast('error', t('variables.sketchFailed', { count: failed.length }));
   } catch (error) {
     showToast('error', t('errors.unknown', { detail: error instanceof Error ? error.message : String(error) }));
   }
+}
+
+// ------------------------------------------------------------------ configurations
+
+/** Commits new configurations without changing the part (one undo step). */
+function commitConfigurations(configurations: Configurations | undefined): void {
+  const history = getState().history;
+  const { configurations: _old, ...rest } = partProperties(history);
+  setHistory(commit(history, history.features, configurations ? { ...rest, configurations } : rest));
+}
+
+/** Adds a configuration as a copy of the part as it is now and makes it the active one. */
+export function addPartConfiguration(): void {
+  const state = getState();
+  if (state.activeEdit || state.sketch) return;
+  const current = partProperties(state.history).configurations;
+  const configurations = addConfiguration(
+    state.history.features,
+    current,
+    { id: createFeatureId(), name: freeConfigurationName(current, t('configurations.prefix')) },
+    { id: createFeatureId(), name: t('configurations.default') },
+  );
+  commitConfigurations(configurations);
+}
+
+/** Shows configuration `id`: the active one keeps the part as it is now, the other one is applied. */
+export async function activateConfiguration(id: string): Promise<void> {
+  const state = getState();
+  const configurations = partProperties(state.history).configurations;
+  if (!configurations || configurations.active === id || state.activeEdit || state.sketch) return;
+  const switched = switchConfiguration(state.history.features, configurations, id);
+  if (!switched) return;
+  await commitRegenerated(switched.features, { ...partProperties(state.history), configurations: switched.configurations });
+}
+
+/** Renames a configuration; names are unique and not empty. */
+export function renameConfiguration(id: string, name: string): boolean {
+  const configurations = partProperties(getState().history).configurations;
+  const trimmed = name.trim();
+  if (!configurations || trimmed.length === 0 || configurations.list.some((other) => other.id !== id && other.name.toLowerCase() === trimmed.toLowerCase())) return false;
+  commitConfigurations({ ...configurations, list: configurations.list.map((configuration) => (configuration.id === id ? { ...configuration, name: trimmed } : configuration)) });
+  return true;
+}
+
+/** Deletes a configuration (the part shows the first other one if it was active); the last one ends configurations. */
+export async function deleteConfiguration(id: string): Promise<void> {
+  const state = getState();
+  const configurations = partProperties(state.history).configurations;
+  if (!configurations || state.activeEdit || state.sketch) return;
+  const rest = configurations.list.filter((configuration) => configuration.id !== id);
+  if (rest.length === 0) {
+    commitConfigurations(undefined);
+    return;
+  }
+  if (configurations.active !== id) {
+    commitConfigurations({ ...configurations, list: rest });
+    return;
+  }
+  const next = rest[0] as Configuration;
+  await commitRegenerated(applyConfiguration(state.history.features, next), { ...partProperties(state.history), configurations: { active: next.id, list: rest } });
+}
+
+/**
+ * Sets a variable in one configuration (the design table). In the active one it changes the part right
+ * away; the others keep it until they are shown.
+ */
+export async function setConfigurationVariable(id: string, name: string, expression: string): Promise<void> {
+  const state = getState();
+  const configurations = partProperties(state.history).configurations;
+  const text = expression.trim();
+  if (!configurations || text.length === 0 || state.activeEdit || state.sketch) return;
+  const list = configurations.list.map((configuration) => (configuration.id === id ? { ...configuration, variables: { ...configuration.variables, [name]: text } } : configuration));
+  const next = { ...configurations, list };
+  if (configurations.active !== id) {
+    commitConfigurations(next);
+    return;
+  }
+  const features = state.history.features.map((feature): Feature =>
+    feature.type === 'variables' ? { ...feature, variables: feature.variables.map((variable) => (variable.name.toLowerCase() === name.toLowerCase() ? { ...variable, expression: text } : variable)) } : feature,
+  );
+  await commitRegenerated(features, { ...partProperties(state.history), configurations: next });
 }
 
 export function updateDraft(patch: Partial<Feature>): void {
@@ -1653,11 +1744,11 @@ export function zoomToFit(): void {
   viewport()?.zoomToFit();
 }
 
-export function openDialog(dialog: 'settings' | 'about' | 'material'): void {
+export function openDialog(dialog: 'settings' | 'about' | 'material' | 'configurations'): void {
   setState((state) => ({ dialogs: { ...state.dialogs, [dialog]: true } }));
 }
 
-export function closeDialog(dialog: 'settings' | 'about' | 'material'): void {
+export function closeDialog(dialog: 'settings' | 'about' | 'material' | 'configurations'): void {
   setState((state) => ({ dialogs: { ...state.dialogs, [dialog]: false } }));
 }
 

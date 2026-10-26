@@ -8,7 +8,7 @@ import { featureName, rollbackIndex } from '../state/document.ts';
 import { dropRow, ROLLBACK_ROW, type TreeRow } from '../state/tree-order.ts';
 import { getState, partProperties, useAppState } from '../state/store.ts';
 import { materialName } from './MaterialDialog.tsx';
-import { AlertIcon, EditIcon, EyeIcon, EyeOffIcon, FEATURE_ICONS, MaterialIcon, OriginIcon, PlaneIcon, RollForwardIcon, SketchIcon, TrashIcon } from './icons.tsx';
+import { AlertIcon, ConfigurationsIcon, EditIcon, EyeIcon, EyeOffIcon, FEATURE_ICONS, MaterialIcon, OriginIcon, PlaneIcon, RollForwardIcon, SketchIcon, TrashIcon } from './icons.tsx';
 
 export function useFeatureName() {
   const { t } = useTranslation();
@@ -25,6 +25,37 @@ function MaterialItem({ locked }: { locked: boolean }) {
       <span className="tree-name">{t('material.treeLabel', { name: materialName(material, t) })}</span>
       <span className="tree-actions" hidden={locked}>
         <button type="button" className="icon-button" title={t('commands.tooltips.material')} aria-label={t('commands.tooltips.material')} onClick={() => commands.openDialog('material')}>
+          <EditIcon />
+        </button>
+      </span>
+    </li>
+  );
+}
+
+/** The configuration the part shows, with a quick switch between them (only for parts with configurations). */
+function ConfigurationItem({ locked }: { locked: boolean }) {
+  const { t } = useTranslation();
+  const configurations = useAppState((state) => partProperties(state.history).configurations);
+  if (!configurations) return null;
+  return (
+    <li className="tree-item is-static" role="treeitem" aria-selected={false} data-testid="tree-configuration" onDoubleClick={() => commands.openDialog('configurations')}>
+      <ConfigurationsIcon className="tree-icon" />
+      <select
+        className="tree-select"
+        value={configurations.active}
+        disabled={locked}
+        aria-label={t('configurations.active')}
+        data-testid="configuration-switch"
+        onChange={(event) => void commands.activateConfiguration(event.target.value)}
+      >
+        {configurations.list.map((configuration) => (
+          <option key={configuration.id} value={configuration.id}>
+            {configuration.name}
+          </option>
+        ))}
+      </select>
+      <span className="tree-actions" hidden={locked}>
+        <button type="button" className="icon-button" title={t('commands.tooltips.configurations')} aria-label={t('commands.tooltips.configurations')} onClick={() => commands.openDialog('configurations')}>
           <EditIcon />
         </button>
       </span>
@@ -340,6 +371,7 @@ export function FeatureTree() {
       <h2 className="panel-title">{t('tree.title')}</h2>
       <ul className="tree-list" role="tree" ref={listRef}>
         <MaterialItem locked={locked} />
+        <ConfigurationItem locked={locked} />
         <li
           className={`tree-item is-static${editingReference ? ' is-choice' : ''}`}
           role="treeitem"

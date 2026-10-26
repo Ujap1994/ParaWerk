@@ -16,6 +16,9 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
   another sketch (open or closed); the path runs from its end nearer to the outlines. Adds or cuts.
 - Loft: a solid through one closed outline from each of several sketches, in order, smooth or with flat
   faces between them; outlines with different edge counts (a square and a circle) are joined too.
+- Configurations: variants of a part in one file, each with its own values of the part's variables and
+  its own suppressed features; a design table lists the variables of all configurations for editing, and a
+  switch in the feature tree shows another one (one undo step). Saved in part format version 8.
 - Modeled threads: the groove of the ISO basic profile cut along a helix into a bolt or the wall of a hole
   (the size follows the picked cylindrical face, the pitch the size; length, start end and hand
   adjustable) – real thread geometry for 3D printing. Hole and Thread share a split button.

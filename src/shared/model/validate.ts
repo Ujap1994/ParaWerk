@@ -3,6 +3,7 @@ import { HOLE_FITS, HOLE_KINDS } from './hole.ts';
 import { CUSTOM_MATERIAL, materialInfo, MAX_DENSITY, MIN_DENSITY, NO_PROPERTIES, type PartProperties } from './material.ts';
 import { MAX_PATTERN_COUNT } from './pattern.ts';
 import { THIN_SIDES, type ThinSide } from './thin.ts';
+import { MAX_CONFIGURATION_NAME, MAX_CONFIGURATIONS, type Configuration, type Configurations } from './configurations.ts';
 import { AXIS_METHODS, CSYS_METHODS, PLANE_METHODS, POINT_METHODS, type FaceNameRef, type GeometryRef } from './reference.ts';
 import { parseSketchData, parsePlaneRef } from './validate-sketch.ts';
 
@@ -531,5 +532,32 @@ export function parsePartProperties(raw: unknown, path = 'properties'): PartProp
     if (typeof raw.color !== 'string' || !COLOR.test(raw.color)) throw new ValidationError('expected a color "#rrggbb"', `${path}.color`);
     properties.color = raw.color.toLowerCase();
   }
+  if (raw.configurations !== undefined) properties.configurations = parseConfigurations(raw.configurations, `${path}.configurations`);
   return properties;
+}
+
+/** The configurations of a part: unique ids and names, an active one among them. */
+function parseConfigurations(raw: unknown, path: string): Configurations {
+  if (!isObject(raw) || !Array.isArray(raw.list) || raw.list.length === 0 || raw.list.length > MAX_CONFIGURATIONS) {
+    throw new ValidationError(`expected 1 to ${MAX_CONFIGURATIONS} configurations`, path);
+  }
+  const ids = new Set<string>();
+  const names = new Set<string>();
+  const list = raw.list.map((item, i): Configuration => {
+    const where = `${path}.list[${i}]`;
+    if (!isObject(item)) throw new ValidationError('expected an object', where);
+    if (typeof item.id !== 'string' || item.id.length === 0 || item.id.length > 64 || ids.has(item.id)) throw new ValidationError('expected a unique id', `${where}.id`);
+    if (typeof item.name !== 'string' || item.name.trim().length === 0 || item.name.length > MAX_CONFIGURATION_NAME || names.has(item.name.toLowerCase())) {
+      throw new ValidationError('expected a unique name', `${where}.name`);
+    }
+    ids.add(item.id);
+    names.add(item.name.toLowerCase());
+    if (!isObject(item.variables)) throw new ValidationError('expected the variables', `${where}.variables`);
+    const variables: Record<string, string> = {};
+    for (const [name, expression] of Object.entries(item.variables)) variables[name] = expressionText(expression, `${where}.variables.${name}`);
+    if (!Array.isArray(item.suppressed) || item.suppressed.some((id) => typeof id !== 'string')) throw new ValidationError('expected feature ids', `${where}.suppressed`);
+    return { id: item.id, name: item.name, variables, suppressed: item.suppressed as string[] };
+  });
+  if (typeof raw.active !== 'string' || !ids.has(raw.active)) throw new ValidationError('expected the id of a configuration', `${path}.active`);
+  return { active: raw.active, list };
 }

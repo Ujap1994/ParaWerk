@@ -59,6 +59,7 @@ import {
   LoftIcon,
   RibIcon,
   ThreadIcon,
+  ConfigurationsIcon,
   CoordinateSystemIcon,
   SettingsIcon,
   ShellIcon,
@@ -503,11 +504,20 @@ function EvaluateTab() {
   const { t } = useTranslation();
   const showMass = useAppState((state) => state.showMassProperties);
   const materialOpen = useAppState((state) => state.dialogs.material);
+  const configurationsOpen = useAppState((state) => state.dialogs.configurations);
   const measuring = useAppState((state) => state.measuring);
   return (
     <>
       <Group label={t('commands.groups.part')}>
         <CommandButton id="material" icon={MaterialIcon} label={t('commands.material')} tooltip={t('commands.tooltips.material')} active={materialOpen} onClick={() => commands.openDialog('material')} />
+        <CommandButton
+          id="configurations"
+          icon={ConfigurationsIcon}
+          label={t('commands.configurations')}
+          tooltip={t('commands.tooltips.configurations')}
+          active={configurationsOpen}
+          onClick={() => commands.openDialog('configurations')}
+        />
       </Group>
       <Group label={t('commands.groups.evaluate')}>
         <CommandButton id="measure" icon={MeasureIcon} label={t('commands.measure')} tooltip={t('commands.tooltips.measure')} active={measuring} onClick={() => commands.toggleMeasure()} />

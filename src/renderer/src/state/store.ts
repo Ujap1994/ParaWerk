@@ -111,7 +111,7 @@ export interface AppState {
   display: DisplayMeshes;
 
   commandTab: CommandTab;
-  dialogs: { settings: boolean; about: boolean; material: boolean };
+  dialogs: { settings: boolean; about: boolean; material: boolean; configurations: boolean };
   /** The mass properties panel over the 3D view. */
   showMassProperties: boolean;
   /** The coordinate system (feature id) mass properties are given in; null: the model's own axes. */
@@ -163,7 +163,7 @@ export const initialState: AppState = {
   rebuild: null,
   display: { body: null, preview: null, pickable: true },
   commandTab: 'features',
-  dialogs: { settings: false, about: false, material: false },
+  dialogs: { settings: false, about: false, material: false, configurations: false },
   showMassProperties: false,
   massFrame: null,
   exporting: null,

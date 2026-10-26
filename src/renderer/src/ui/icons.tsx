@@ -587,6 +587,15 @@ export const ThreadIcon = (p: P) => (
   </Icon>
 );
 
+/** Configurations: stacked cards of one part, the front one with lines of values. */
+export const ConfigurationsIcon = (p: P) => (
+  <Icon {...p}>
+    <rect x="3" y="9" width="13" height="11" rx="1.5" />
+    <path d="M6.5 6h12a1.5 1.5 0 0 1 1.5 1.5V17M9.5 3h12" />
+    <path d="M6.5 13.5h6M6.5 16.5h4" />
+  </Icon>
+);
+
 /** Move up in a list. */
 export const MoveUpIcon = (p: P) => (
   <Icon {...p}>
