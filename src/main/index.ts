@@ -144,7 +144,8 @@ if (!app.requestSingleInstanceLock()) {
     const recovery = new RecoveryStore(path.join(app.getPath('userData'), 'recovery'));
     const sessions = new Set<string>();
     window.on('closed', () => {
-      for (const session of sessions) void recovery.discard(session);
+      // Synchronously: the app quits right after its window closed.
+      for (const session of sessions) recovery.discardOnClose(session);
     });
     registerIpc({
       main,

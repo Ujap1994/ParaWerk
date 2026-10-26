@@ -1,3 +1,4 @@
+import { rmSync } from 'node:fs';
 import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { RecoveryEntry } from '../shared/ipc.ts';
@@ -25,6 +26,8 @@ interface RecoveryMeta {
  */
 export class RecoveryStore {
   private readonly dir: string;
+  /** Sessions whose window closed cleanly: writes still under way for them are dropped. */
+  private readonly closed = new Set<string>();
 
   constructor(dir: string) {
     this.dir = dir;
@@ -40,6 +43,7 @@ export class RecoveryStore {
     if (!(data instanceof Uint8Array) || data.byteLength > MAX_BYTES) throw new Error('invalid recovery data');
     if (typeof name !== 'string' || name.length > MAX_NAME) throw new Error('invalid recovery name');
     if (documentPath !== null && typeof documentPath !== 'string') throw new Error('invalid recovery path');
+    if (this.closed.has(session)) return;
     await mkdir(this.dir, { recursive: true });
     const meta: RecoveryMeta = { name, path: documentPath, savedAt: new Date().toISOString() };
     for (const [target, content] of [
@@ -48,8 +52,24 @@ export class RecoveryStore {
     ] as const) {
       const temporary = `${target}.tmp`;
       await writeFile(temporary, content);
+      if (this.closed.has(session)) {
+        await rm(temporary, { force: true });
+        return;
+      }
       await rename(temporary, target);
     }
+    // The window may have closed while the files were renamed.
+    if (this.closed.has(session)) await this.discard(session);
+  }
+
+  /**
+   * Removes the copy of a session whose window closed cleanly, before the call returns: the process may
+   * end right after it. Writes still under way for the session are dropped.
+   */
+  discardOnClose(session: string): void {
+    if (!isValidSession(session)) return;
+    this.closed.add(session);
+    for (const extension of ['pwpart', 'json'] as const) rmSync(this.file(session, extension), { force: true });
   }
 
   async discard(session: string): Promise<void> {

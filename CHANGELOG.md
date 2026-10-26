@@ -45,6 +45,9 @@ full equations. Still an alpha: not ready for productive use; see the disclaimer
   damaged ones.
 
 ### Fixed
+- After a clean close, ParaWerk could still offer to restore the document at the next start (mostly on
+  Linux, where the program ended before the recovery copy was deleted); the copy is now removed before
+  the program ends.
 - Mass properties: the bounding box lies tight around curved faces (it was up to a millimeter too large
   around swept and lofted faces).
 

@@ -28,6 +28,19 @@ describe('recovery store', () => {
     expect((await readdir(dir)).sort()).toEqual(['session-two.json', 'session-two.pwpart']);
   });
 
+  it('removes the copy at a clean close at once and drops writes still under way', async () => {
+    const dir = path.join(await mkdtemp(path.join(tmpdir(), 'parawerk-recovery-')), 'recovery');
+    const store = new RecoveryStore(dir);
+    await store.write('session-one', 'Bracket', null, data('one'));
+    const late = store.write('session-one', 'Bracket', null, data('later'));
+    store.discardOnClose('session-one');
+    expect(await readdir(dir)).toEqual([]);
+    await late;
+    expect(await readdir(dir)).toEqual([]);
+    await store.write('session-one', 'Bracket', null, data('again'));
+    expect(await store.list()).toEqual([]);
+  });
+
   it('rejects session ids that could leave the folder and skips incomplete copies', async () => {
     expect(isValidSession('0f6c1c4e-9b1a-4c55-a2c1-3f8a2a1c9d10')).toBe(true);
     for (const bad of ['../evil', 'a/b', 'short', 'UPPER-CASE-ID', '', 42]) expect(isValidSession(bad)).toBe(false);
