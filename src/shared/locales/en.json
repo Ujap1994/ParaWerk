@@ -976,6 +976,7 @@
     "method": "Type",
     "methods": {
       "constant": "Constant radius",
+      "variable": "Variable radius",
       "faces": "Face fillet",
       "fullRound": "Full round"
     },
@@ -988,7 +989,11 @@
       "side2": "Side face 2"
     },
     "roundHint": "Click a side face, the face between the sides and the other side face. The face in the middle becomes half a cylinder touching all three; the side faces must be parallel planes (a rib, the end of a tab).",
-    "facesHint": "Click two planar faces that meet at a corner. The round of the radius runs between them, also where they share no edge: faces between them (a chamfer, a step) are rounded over, and an inner corner is filled."
+    "facesHint": "Click two planar faces that meet at a corner. The round of the radius runs between them, also where they share no edge: faces between them (a chamfer, a step) are rounded over, and an inner corner is filled.",
+    "startRadius": "Radius at the start",
+    "endRadius": "Radius at the end",
+    "swap": "Swap start and end",
+    "variableHint": "The radius changes evenly along each edge, from its start to its end. The start is the end with the smaller coordinates (left, front, bottom); Swap start and end turns that round."
   },
   "draft": {
     "neutralPlane": "Neutral plane",

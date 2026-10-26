@@ -43,6 +43,7 @@ interface EmbindModule {
   draftFaces(_0: number, _1: any, _2: any, _3: number, _4: EmbindString): any;
   sweepProfile(_0: any, _1: any, _2: any, _3: any, _4: any, _5: EmbindString): any;
   loftProfiles(_0: any, _1: boolean, _2: any, _3: EmbindString): any;
+  filletVariable(_0: number, _1: any, _2: number, _3: number, _4: boolean, _5: any, _6: EmbindString): any;
   limitBySurface(_0: number, _1: number, _2: number, _3: any, _4: number, _5: boolean, _6: EmbindString): any;
 }
 

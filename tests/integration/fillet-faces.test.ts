@@ -61,3 +61,28 @@ describe('fillets on faces', () => {
     expect(build([box, fillet({ faces: [gone] })]).features.at(-1)?.error?.code).toBe('edge-missing');
   });
 });
+
+describe('variable radius fillets', () => {
+  const edge: EdgeRef[] = [{ kind: 'edge', faces: ['b:front', 'b:top'], at: [0, -30, 40] }];
+  it('changes the radius evenly along the edge', () => {
+    // From 2 at the left end (x = −50) to 6 at the right end: cross sections r²(1 − π/4) across the edge
+    // integrate to L(r1² + r1·r2 + r2²)/3; the round leans slightly where its radius changes, so a little more goes.
+    const variable = volumeOf([box, fillet({ edges: edge, method: 'variable', radius: 2, radius2: 6 })]);
+    const estimate = (1 - Math.PI / 4) * ((100 * (4 + 12 + 36)) / 3);
+    expect(Math.abs(240_000 - variable - estimate) / estimate).toBeLessThan(0.03);
+    // Equal radii give the constant fillet; swapping the ends mirrors the round.
+    expect(volumeOf([box, fillet({ edges: edge, method: 'variable', radius: 4, radius2: 4 })])).toBeCloseTo(volumeOf([box, fillet({ edges: edge })]), 4);
+    const swapped = build([box, fillet({ edges: edge, method: 'variable', radius: 2, radius2: 6, swap: true })]);
+    expect(swapped.captures[0]?.properties?.volume).toBeCloseTo(variable, 3);
+    // The larger end is now on the left: the center of mass moves to the right.
+    const plain = build([box, fillet({ edges: edge, method: 'variable', radius: 2, radius2: 6 })]);
+    expect(swapped.captures[0]?.properties?.center[0] ?? NaN).toBeGreaterThan(plain.captures[0]?.properties?.center[0] ?? NaN);
+    // Whichever way an edge runs, the start is its left end: more goes on the right, the center moves left.
+    for (const faces of [['b:front', 'b:top'], ['b:back', 'b:top'], ['b:bottom', 'b:front'], ['b:back', 'b:bottom']] as const) {
+      const names: readonly string[] = faces;
+      const at: [number, number, number] = [0, names.includes('b:back') ? 30 : -30, names.includes('b:top') ? 40 : 0];
+      const result = build([box, fillet({ edges: [{ kind: 'edge', faces: [...faces], at }], method: 'variable', radius: 2, radius2: 6 })]);
+      expect(result.captures[0]?.properties?.center[0], faces.join(' ')).toBeLessThan(0);
+    }
+  });
+});

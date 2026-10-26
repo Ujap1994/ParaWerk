@@ -416,6 +416,8 @@ function parseFeatureFields(raw: Json, path: string): Feature {
         ...(raw.faces === undefined ? {} : { faces: faceRefs(raw.faces, `${path}.faces`) }),
         ...(raw.method === undefined ? {} : { method: method(raw.method, FILLET_METHODS, `${path}.method`) }),
         ...(raw.round === undefined ? {} : { round: faceRefs(raw.round, `${path}.round`, 3) }),
+        ...(raw.radius2 === undefined ? {} : { radius2: positiveLength(raw.radius2, `${path}.radius2`) }),
+        ...(raw.swap === undefined ? {} : { swap: flag(raw.swap, `${path}.swap`) }),
       };
     case 'chamfer': {
       const chamfer: Feature = {

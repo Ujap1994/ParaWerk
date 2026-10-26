@@ -1258,6 +1258,27 @@ test('drafts faces picked in the 3D view about a neutral plane picked in the tre
   expect((await state(page)).history.features[1]).toMatchObject({ type: 'draft', angle: 5, references: [{ kind: 'standard-plane', plane: 'top' }], faces: [{ kind: 'face' }, { kind: 'face' }] });
 });
 
+test('rounds an edge with a radius that changes along it', async () => {
+  launched = await launchApp({ width: 1000, height: 640 });
+  const { page } = launched;
+  await createBox(page);
+  await page.click('[data-command="fillet"]');
+  await page.getByRole('radio', { name: 'Variable radius' }).click();
+  await idle(page);
+  await clickWorldPoint(page, [0, -30, 40]);
+  await expect(page.locator('[data-testid="edge-count"]')).toContainText('1');
+  await page.locator('[data-testid="fillet-radius"]').fill('2');
+  await page.locator('[data-testid="fillet-radius"]').press('Tab');
+  await page.locator('[data-testid="fillet-radius2"]').fill('6');
+  await page.locator('[data-testid="fillet-radius2"]').press('Tab');
+  await page.click('[data-testid="panel-ok"]');
+  // Between a round of 2 and one of 6 all along the 100 mm edge.
+  const removed = 240_000 - (await volume(page));
+  expect(removed).toBeGreaterThan(4 * (1 - Math.PI / 4) * 100);
+  expect(removed).toBeLessThan(36 * (1 - Math.PI / 4) * 100);
+  expect((await state(page)).history.features[1]).toMatchObject({ type: 'fillet', method: 'variable', radius: 2, radius2: 6 });
+});
+
 test('rounds between two faces picked for a face fillet', async () => {
   launched = await launchApp({ width: 1000, height: 640 });
   const { page } = launched;

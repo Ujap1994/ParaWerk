@@ -210,6 +210,13 @@ int combineCopies(int bodyId, int toolId, const std::vector<double>& transforms,
  * where rounds meet) "<name>:corner".
  */
 int fillet(int bodyId, const std::vector<int>& edgeIndices, double radius, const std::vector<std::string>& edgeNames = {}, const std::string& name = "");
+/**
+ * Rounds edges with a radius that changes evenly from `startRadius` to `endRadius` along each edge. The
+ * start is the end of an edge with the smaller coordinates (x, then y, then z; the other one with `swap`).
+ * Faces are named as for fillet.
+ */
+int filletVariable(int bodyId, const std::vector<int>& edgeIndices, double startRadius, double endRadius, bool swap, const std::vector<std::string>& edgeNames = {},
+                   const std::string& name = "");
 /** Bevels the given edges; faces are named as for fillet. */
 int chamfer(int bodyId, const std::vector<int>& edgeIndices, double distance, const std::vector<std::string>& edgeNames = {}, const std::string& name = "");
 /**

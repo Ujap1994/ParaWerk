@@ -354,7 +354,23 @@ function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
             {draft.type === 'fillet' ? (
               <>
                 <FilletMethodField draft={draft} />
-                <NumberField label={t('panel.radius')} value={draft.radius} testId="fillet-radius" {...equation(draft, 'radius')} step={0.5} onChange={(radius) => commands.updateDraft({ radius })} />
+                <NumberField
+                  label={draft.method === 'variable' ? t('fillet.startRadius') : t('panel.radius')}
+                  value={draft.radius}
+                  testId="fillet-radius"
+                  {...equation(draft, 'radius')}
+                  step={0.5}
+                  onChange={(radius) => commands.updateDraft({ radius })}
+                />
+                {draft.method === 'variable' ? (
+                  <>
+                    <NumberField label={t('fillet.endRadius')} value={draft.radius2 ?? draft.radius} testId="fillet-radius2" {...equation(draft, 'radius2')} step={0.5} onChange={(radius2) => commands.updateDraft({ radius2 })} />
+                    <label className="checkbox-field">
+                      <input type="checkbox" checked={draft.swap ?? false} data-testid="fillet-swap" onChange={(event) => commands.updateDraft({ swap: event.target.checked })} />
+                      {t('fillet.swap')}
+                    </label>
+                  </>
+                ) : null}
               </>
             ) : (
               <ChamferFields draft={draft} />
@@ -382,6 +398,7 @@ function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
             </div>
             <MissingEdges draft={draft} />
             <p className="panel-hint">{t('panel.edgesHint')}</p>
+            {draft.type === 'fillet' && draft.method === 'variable' ? <p className="panel-hint">{t('fillet.variableHint')}</p> : null}
           </Section>
         </>
       );

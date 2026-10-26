@@ -195,7 +195,8 @@ what that turns up is fixed before Phase 3 starts.
 | Sweep (along a path of lines, arcs, ellipses and splines) and loft (through outlines of several sketches) | ✅ done |
 | Rib (within the sketch plane from lines, or normal to the sketch) | ✅ done |
 | Sweep with twist and guide curves, loft with guide curves | open |
-| Multi-body parts, variable-radius fillets, curves (helix, projected, composite), modeled threads | open |
+| Variable-radius fillets (from a start to an end radius along each edge) | ✅ done |
+| Multi-body parts, curves (helix, projected, composite), modeled threads | open |
 | Surface tools (offset, knit, thicken), configurations and design tables, full equation support | open |
 
 ## 2. Guiding principles

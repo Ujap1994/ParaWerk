@@ -1402,6 +1402,28 @@ int fillet(int bodyId, const std::vector<int>& edgeIndices, double radius, const
   return finishEdgeFeature(maker, bodyId, edges, edgeNames, name, "fillet", "fillet could not be computed (radius too large?)");
 }
 
+int filletVariable(int bodyId, const std::vector<int>& edgeIndices, double startRadius, double endRadius, bool swap, const std::vector<std::string>& edgeNames,
+                   const std::string& name) {
+  const TopoDS_Shape& body = store().get(bodyId);
+  BRepFilletAPI_MakeFillet maker(body, ChFi3d_Rational);
+  const std::vector<TopoDS_Edge> edges = selectEdges(body, edgeIndices);
+  for (const TopoDS_Edge& edge : edges) {
+    // The start is the end with the smaller coordinates (x, then y, then z), whichever way the edge runs.
+    // MakeFillet takes the radii in the direction of the edge's curve, so its orientation is left aside.
+    const gp_Pnt first = BRep_Tool::Pnt(TopExp::FirstVertex(edge, false));
+    const gp_Pnt last = BRep_Tool::Pnt(TopExp::LastVertex(edge, false));
+    const auto before = [](const gp_Pnt& a, const gp_Pnt& b) {
+      const double tolerance = 1e-7;
+      if (std::abs(a.X() - b.X()) > tolerance) return a.X() < b.X();
+      if (std::abs(a.Y() - b.Y()) > tolerance) return a.Y() < b.Y();
+      return a.Z() < b.Z();
+    };
+    const bool firstIsStart = before(first, last) != swap;
+    maker.Add(firstIsStart ? startRadius : endRadius, firstIsStart ? endRadius : startRadius, edge);
+  }
+  return finishEdgeFeature(maker, bodyId, edges, edgeNames, name, "fillet", "fillet could not be computed (radius too large?)");
+}
+
 int chamfer(int bodyId, const std::vector<int>& edgeIndices, double distance, const std::vector<std::string>& edgeNames, const std::string& name) {
   const TopoDS_Shape& body = store().get(bodyId);
   BRepFilletAPI_MakeChamfer maker(body);

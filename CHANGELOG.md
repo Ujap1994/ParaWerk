@@ -12,6 +12,8 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
   another sketch (open or closed); the path runs from its end nearer to the outlines. Adds or cuts.
 - Loft: a solid through one closed outline from each of several sketches, in order, smooth or with flat
   faces between them; outlines with different edge counts (a square and a circle) are joined too.
+- Variable radius fillets: the radius changes evenly along each edge from a start to an end value (the
+  start is the edge's left, front or bottom end; a switch swaps them).
 - Rib: a wall from open sketch lines to the body, within the sketch plane (a gusset between a line and the
   walls it leans against) or along the sketch normal, growing towards the material by itself. Shell,
   Draft and Rib share a split button.

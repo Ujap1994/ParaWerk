@@ -210,6 +210,10 @@ cut into it before the fillet, are rounded too. Seams of round faces are left ou
 picks the edge; click the face again to take it out. Faces and edges selected before choosing **Fillet**
 are taken over.
 
+**Variable radius** (under *Type*) rounds the picked edges with a radius that changes evenly along each
+edge, from *Radius at the start* to *Radius at the end*. The start is the end of an edge with the smaller
+coordinates – its left, front or bottom end; **Swap start and end** turns that round.
+
 *Type* offers two more kinds of rounds, which are picked as faces in order (the fields show which one is
 next; ✕ clears a field and the ones after it):
 

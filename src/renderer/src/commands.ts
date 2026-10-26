@@ -744,7 +744,11 @@ export function setFilletMethod(method: FilletMethod): void {
   const edit = getState().activeEdit;
   if (edit?.draft.type !== 'fillet') return;
   // The faces of one kind of round mean something else in the other: they are picked again.
-  updateDraft({ method, ...(roundFaceCount(method) > 0 && method !== edit.draft.method ? { round: [] } : {}) });
+  updateDraft({
+    method,
+    ...(roundFaceCount(method) > 0 && method !== edit.draft.method ? { round: [] } : {}),
+    ...(method === 'variable' && edit.draft.radius2 === undefined ? { radius2: edit.draft.radius * 2 } : {}),
+  });
 }
 
 /**

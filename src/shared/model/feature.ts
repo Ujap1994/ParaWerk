@@ -72,7 +72,7 @@ export const EXPRESSION_FIELDS: Readonly<Record<FeatureType, readonly string[]>>
   box: ['width', 'depth', 'height'],
   cylinder: ['radius', 'height'],
   import: [],
-  fillet: ['radius'],
+  fillet: ['radius', 'radius2'],
   chamfer: ['distance', 'distance2', 'angle'],
   shell: ['thickness'],
   draft: ['angle'],
@@ -130,12 +130,12 @@ export interface ImportFeature extends FeatureBase {
 }
 
 /**
- * How a fillet rounds: edges with a constant radius, a round of that radius between two planar faces
- * (also where they share no edge), or a full round between two side faces.
+ * How a fillet rounds: edges with a constant radius or one changing evenly along them, a round of the
+ * radius between two planar faces (also where they share no edge), or a full round between two side faces.
  */
-export type FilletMethod = 'constant' | 'faces' | 'fullRound';
+export type FilletMethod = 'constant' | 'variable' | 'faces' | 'fullRound';
 
-export const FILLET_METHODS: readonly FilletMethod[] = ['constant', 'faces', 'fullRound'];
+export const FILLET_METHODS: readonly FilletMethod[] = ['constant', 'variable', 'faces', 'fullRound'];
 
 /** How many faces a fillet of a method picks in order (face fillet: two, full round: three). */
 export function roundFaceCount(method: FilletMethod | undefined): number {
@@ -150,6 +150,10 @@ export interface FilletFeature extends FeatureBase {
   faces?: FaceNameRef[];
   /** Absent: constant. */
   method?: FilletMethod;
+  /** Variable radius: the radius at the end of each edge (`radius` is the one at its start). */
+  radius2?: number;
+  /** Variable radius: the start is the end of an edge with the larger coordinates instead of the smaller ones. */
+  swap?: boolean;
   /**
    * Face fillet: the two faces; full round: side face 1, the center face and side face 2 (as far as
    * picked). The center face of a full round is replaced by half a cylinder tangent to all three; the

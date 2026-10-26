@@ -976,6 +976,7 @@
     "method": "Art",
     "methods": {
       "constant": "Konstanter Radius",
+      "variable": "Variabler Radius",
       "faces": "Flächenverrundung",
       "fullRound": "Vollrundung"
     },
@@ -988,7 +989,11 @@
       "side2": "Seitenfläche 2"
     },
     "roundHint": "Eine Seitenfläche, die Fläche zwischen den Seiten und die andere Seitenfläche anklicken. Die mittlere Fläche wird zu einem halben Zylinder, der alle drei berührt; die Seitenflächen müssen parallele Ebenen sein (eine Rippe, das Ende einer Lasche).",
-    "facesHint": "Zwei ebene Flächen anklicken, die eine Ecke bilden. Die Rundung mit dem Radius verläuft zwischen ihnen, auch wenn sie keine gemeinsame Kante haben: Flächen dazwischen (eine Fase, eine Stufe) werden überrundet, eine Innenecke wird aufgefüllt."
+    "facesHint": "Zwei ebene Flächen anklicken, die eine Ecke bilden. Die Rundung mit dem Radius verläuft zwischen ihnen, auch wenn sie keine gemeinsame Kante haben: Flächen dazwischen (eine Fase, eine Stufe) werden überrundet, eine Innenecke wird aufgefüllt.",
+    "startRadius": "Radius am Anfang",
+    "endRadius": "Radius am Ende",
+    "swap": "Anfang und Ende tauschen",
+    "variableHint": "Der Radius ändert sich gleichmäßig entlang jeder Kante, vom Anfang bis zum Ende. Der Anfang ist das Ende mit den kleineren Koordinaten (links, vorne, unten); „Anfang und Ende tauschen“ dreht das um."
   },
   "draft": {
     "neutralPlane": "Neutrale Ebene",

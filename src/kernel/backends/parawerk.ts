@@ -337,6 +337,9 @@ export class ParaWerkBackend implements GeometryBackend {
         }
         if (feature.edgeIndices.length === 0) throw new FeatureError('no-edges');
         const { edgeIndices, edgeNames, id } = feature;
+        if (feature.type === 'fillet' && feature.method === 'variable') {
+          return this.handle(k.filletVariable(this.id(body), edgeIndices, feature.radius, feature.radius2 ?? feature.radius, feature.swap ?? false, edgeNames, id));
+        }
         if (feature.type === 'fillet') return this.handle(k.fillet(this.id(body), edgeIndices, feature.radius, edgeNames, id));
         // Two distances, or a distance and an angle, are measured from one of the two faces of each edge.
         if (feature.method === 'distances' || feature.method === 'angle') {
