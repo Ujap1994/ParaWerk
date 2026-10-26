@@ -1210,6 +1210,42 @@ test('sweeps an outline along a path and lofts two outlines', async () => {
   expect((await state(page)).history.features[3]).toMatchObject({ type: 'loft', sketches: ['low', 'high'], ruled: true });
 });
 
+test('creates a helix around a sketch circle and sweeps a spring along it', async () => {
+  launched = await launchApp({ width: 1000, height: 640 });
+  const { page } = launched;
+  // A circle of radius 10 on the top plane: the helix winds around it.
+  await page.evaluate(() => {
+    const features = [{ id: 'base', type: 'sketch', plane: { kind: 'standard', plane: 'top' }, sketch: { entities: [{ id: 'o', type: 'point', x: 0, y: 0 }, { id: 'c', type: 'circle', center: 'o', radius: 10 }], constraints: [] } }];
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features, past: [], future: [] }, savedFeatures: features, dirty: false });
+  });
+  await idle(page);
+  await page.click('[data-variants="reference-geometry"]');
+  await page.click('[data-entry="helix"]');
+  await expect(page.locator('[data-testid="feature-sketch"]')).toHaveValue('base');
+  await page.locator('[data-testid="helix-turns"]').fill('4');
+  await page.locator('[data-testid="helix-turns"]').press('Tab');
+  await expect(page.locator('[data-testid="helix-height"]')).toContainText('20');
+  await page.click('[data-testid="panel-ok"]');
+  await idle(page);
+  expect((await state(page)).history.features[1]).toMatchObject({ type: 'helix', sketch: 'base', pitch: 5, turns: 4 });
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __parawerk: { viewport: { references(): number } } }).__parawerk.viewport.references())).toBe(1);
+
+  // A wire of radius 1 on the front plane where the helix starts, swept along it.
+  await page.evaluate(() => {
+    const hooks = (window as unknown as { __parawerk: { getState(): { history: { features: unknown[] } }; setState(s: unknown): void } }).__parawerk;
+    const features = [...hooks.getState().history.features, { id: 'wire', type: 'sketch', plane: { kind: 'standard', plane: 'front' }, sketch: { entities: [{ id: 'm', type: 'point', x: 10, y: 0 }, { id: 'w', type: 'circle', center: 'm', radius: 1 }], constraints: [] } }];
+    hooks.setState({ history: { features, past: [], future: [] }, savedFeatures: features, dirty: false });
+  });
+  await idle(page);
+  await page.click('[data-variants="solid"]');
+  await page.click('[data-entry="sweep"]');
+  await expect(page.locator('[data-testid="sweep-profile"]')).toHaveValue('wire');
+  expect(await page.locator('[data-testid="sweep-path"]').inputValue()).toBe((await state(page)).history.features[1]?.id);
+  await page.click('[data-testid="panel-ok"]');
+  // The wire's area times the way its center goes around: π · 2π · 10 · 4.
+  expect(Math.abs((await volume(page)) / (Math.PI * 2 * Math.PI * 10 * 4) - 1)).toBeLessThan(1e-3);
+});
+
 test('adds a configuration, changes its variable in the design table and switches between them', async () => {
   launched = await launchApp({ width: 1000, height: 640 });
   const { page } = launched;

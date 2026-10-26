@@ -214,9 +214,9 @@ val counts(int id) {
   });
 }
 
-val boundingBox(int id) {
+val boundingBox(int id, bool tight) {
   return guarded([&] {
-    const parawerk::BoundingBox box = parawerk::boundingBox(id);
+    const parawerk::BoundingBox box = parawerk::boundingBox(id, tight);
     val result = okObject();
     result.set("min", point(box.min));
     result.set("max", point(box.max));
@@ -281,6 +281,13 @@ val sweepProfile(val profile, val frame, val path, val pathFrame, val edgeNames,
   });
 }
 
+val sweepAlongHelix(val profile, val frame, val helix, val edgeNames, std::string name) {
+  return guarded([&] {
+    const auto numbers = [](const val& array) { return emscripten::convertJSArrayToNumberVector<double>(array); };
+    return idResult(parawerk::sweepAlongHelix(numbers(profile), numbers(frame), numbers(helix), toStringVector(edgeNames), name));
+  });
+}
+
 val loftProfiles(val sections, bool ruled, val edgeNames, std::string name) {
   return guarded([&] { return idResult(parawerk::loftProfiles(emscripten::convertJSArrayToNumberVector<double>(sections), ruled, toStringVector(edgeNames), name)); });
 }
@@ -318,7 +325,7 @@ val importStepText(const std::string& text, const std::string& name) {
   return guarded([&] { return idResult(parawerk::importStep(text, name)); });
 }
 
-std::string version() { return "parawerk-kernel 0.17 / OCCT " PARAWERK_OCCT_VERSION; }
+std::string version() { return "parawerk-kernel 0.18 / OCCT " PARAWERK_OCCT_VERSION; }
 
 }  // namespace
 
@@ -360,5 +367,6 @@ EMSCRIPTEN_BINDINGS(parawerk_kernel) {
   emscripten::function("loftProfiles", &loftProfiles);
   emscripten::function("filletVariable", &filletVariable);
   emscripten::function("cutThread", &cutThread);
+  emscripten::function("sweepAlongHelix", &sweepAlongHelix);
   emscripten::function("limitBySurface", &limitBySurface);
 }

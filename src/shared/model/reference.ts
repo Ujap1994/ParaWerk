@@ -76,4 +76,9 @@ export type ReferenceGeometry =
   | { kind: 'axis'; point: Vec3; direction: Vec3 }
   | { kind: 'point'; point: Vec3 }
   /** Unit axes, perpendicular to each other and right-handed. */
-  | { kind: 'csys'; origin: Vec3; xDir: Vec3; yDir: Vec3; zDir: Vec3 };
+  | { kind: 'csys'; origin: Vec3; xDir: Vec3; yDir: Vec3; zDir: Vec3 }
+  /**
+   * A helix around `axis` (unit) through `center`, of `radius`, starting at center + radius · xDir and
+   * rising `pitch` per turn along the axis; turning left-handed with `leftHand`.
+   */
+  | { kind: 'helix'; center: Vec3; axis: Vec3; xDir: Vec3; radius: number; pitch: number; turns: number; leftHand: boolean };

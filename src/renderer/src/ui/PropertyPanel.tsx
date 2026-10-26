@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { formatQuantity } from '../format.ts';
-import { CHAMFER_METHODS, type DraftFeature, type LoftFeature, RIB_DIRECTIONS, type RibDirection, type ThreadFeature, FILLET_METHODS, roundFaceCount, type FilletFeature, type FilletMethod, EXTRUDE_ENDS, extrudesOneWay, MAX_DRAFT_ANGLE, type RevolveDirection, hasReferenceSlots, isCopyFeature, type Axis, type BooleanOperation, type ChamferFeature, type ChamferMethod, type EdgeFeature, type ExtrudeDirection, type ExtrudeEnd, type ExtrudeFeature, type Feature, type RevolveFeature, type Vec3 } from '../../../shared/model/feature.ts';
+import { CHAMFER_METHODS, type DraftFeature, type HelixFeature, MAX_HELIX_TURNS, type LoftFeature, RIB_DIRECTIONS, type RibDirection, type ThreadFeature, FILLET_METHODS, roundFaceCount, type FilletFeature, type FilletMethod, EXTRUDE_ENDS, extrudesOneWay, MAX_DRAFT_ANGLE, type RevolveDirection, hasReferenceSlots, isCopyFeature, type Axis, type BooleanOperation, type ChamferFeature, type ChamferMethod, type EdgeFeature, type ExtrudeDirection, type ExtrudeEnd, type ExtrudeFeature, type Feature, type RevolveFeature, type Vec3 } from '../../../shared/model/feature.ts';
 import { DEFAULT_THIN_THICKNESS, THIN_SIDES, type ThinSide } from '../../../shared/model/thin.ts';
 import { METRIC_SIZES } from '../../../shared/model/hole.ts';
 import type { GeometryRef } from '../../../shared/model/reference.ts';
@@ -66,11 +66,26 @@ function OperationField({ value, firstFeature }: { value: BooleanOperation; firs
 }
 
 /** The sketches before the feature, to choose the one an extrusion uses. */
-function SketchField({ value, index, label, testId = 'feature-sketch', onChange = commands.chooseFeatureSketch }: { value: string; index: number; label?: string; testId?: string; onChange?(id: string): void }) {
+function SketchField({
+  value,
+  index,
+  label,
+  testId = 'feature-sketch',
+  helices = false,
+  onChange = commands.chooseFeatureSketch,
+}: {
+  value: string;
+  index: number;
+  label?: string;
+  testId?: string;
+  /** Helices can be chosen as well (the path of a sweep). */
+  helices?: boolean;
+  onChange?(id: string): void;
+}) {
   const { t } = useTranslation();
   const features = useAppState((state) => state.history.features);
   const nameOf = useFeatureName();
-  const sketches = features.slice(0, index).flatMap((feature, i) => (feature.type === 'sketch' ? [{ id: feature.id, name: nameOf(features, i) }] : []));
+  const sketches = features.slice(0, index).flatMap((feature, i) => (feature.type === 'sketch' || (helices && feature.type === 'helix') ? [{ id: feature.id, name: nameOf(features, i) }] : []));
   return (
     <label className="field">
       <span className="field-label">{label ?? t('panel.sketch')}</span>
@@ -299,7 +314,7 @@ function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
       return (
         <Section title={t('panel.parameters')}>
           <SketchField value={draft.sketch} index={index} label={t('sweep.profile')} testId="sweep-profile" onChange={(sketch) => commands.updateDraft({ sketch })} />
-          <SketchField value={draft.path} index={index} label={t('sweep.path')} testId="sweep-path" onChange={(path) => commands.updateDraft({ path })} />
+          <SketchField value={draft.path} index={index} label={t('sweep.path')} testId="sweep-path" helices onChange={(path) => commands.updateDraft({ path })} />
           <OperationField value={draft.operation} firstFeature={firstFeature} />
           <p className="panel-hint">{t('sweep.hint')}</p>
         </Section>
@@ -308,6 +323,8 @@ function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
       return <LoftFields draft={draft} index={index} firstFeature={firstFeature} />;
     case 'thread':
       return <ThreadFields draft={draft} />;
+    case 'helix':
+      return <HelixFields draft={draft} index={index} />;
     case 'rib':
       return (
         <Section title={t('panel.parameters')}>
@@ -443,6 +460,32 @@ function ThreadFields({ draft }: { draft: ThreadFeature }) {
         {t('thread.leftHand')}
       </label>
       <p className="panel-hint">{t('thread.hint')}</p>
+    </Section>
+  );
+}
+
+/** A helix: the sketch of its circle, pitch, turns, where it starts and which way it winds. */
+function HelixFields({ draft, index }: { draft: HelixFeature; index: number }) {
+  const { t } = useTranslation();
+  const language = useAppState((state) => state.language);
+  return (
+    <Section title={t('panel.parameters')}>
+      <SketchField value={draft.sketch} index={index} label={t('helix.sketch')} />
+      <NumberField label={t('helix.pitch')} value={draft.pitch} step={0.5} testId="helix-pitch" {...equation(draft, 'pitch')} onChange={(pitch) => commands.updateDraft({ pitch: Math.max(0.01, pitch) })} />
+      <NumberField label={t('helix.turns')} value={draft.turns} step={0.5} unit="" testId="helix-turns" {...equation(draft, 'turns')} onChange={(turns) => commands.updateDraft({ turns: Math.min(MAX_HELIX_TURNS, Math.max(0.01, turns)) })} />
+      <NumberField label={t('helix.startAngle')} value={draft.startAngle} unit="°" step={15} signed testId="helix-start" {...equation(draft, 'startAngle')} onChange={(startAngle) => commands.updateDraft({ startAngle })} />
+      <p className="panel-hint" data-testid="helix-height">
+        {t('helix.height', { height: formatQuantity(draft.pitch * draft.turns, language, 'mm') })}
+      </p>
+      <label className="checkbox-field">
+        <input type="checkbox" checked={draft.reverse} data-testid="helix-reverse" onChange={(event) => commands.updateDraft({ reverse: event.target.checked })} />
+        {t('helix.reverse')}
+      </label>
+      <label className="checkbox-field">
+        <input type="checkbox" checked={draft.leftHand} data-testid="helix-left" onChange={(event) => commands.updateDraft({ leftHand: event.target.checked })} />
+        {t('helix.leftHand')}
+      </label>
+      <p className="panel-hint">{t('helix.hint')}</p>
     </Section>
   );
 }

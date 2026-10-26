@@ -106,16 +106,44 @@ the curves of another sketch – handles, tubes, wires, grooves along a curve wi
 
 - *Profile*: the sketch with the closed outlines. They are swept as they lie, so draw them across the
   start of the path – usually on a plane at a right angle to it, through its first point.
-- *Path*: a sketch with one chain of lines, arcs, ellipses or splines, open or closed. Curves that
-  branch or do not connect are reported. The path runs from its end nearer to the outlines, so it does not
-  matter in which direction it was drawn.
-- Sweep starts with the newest sketch with closed outlines as profile and the newest one without as
-  path, if no feature uses them yet.
+- *Path*: a sketch with one chain of lines, arcs, ellipses or splines, open or closed, or a
+  [helix](#helix-and-springs). Curves that branch or do not connect are reported. The path runs from its
+  end nearer to the outlines, so it does not matter in which direction it was drawn.
+- Sweep starts with the newest sketch with closed outlines as profile and the newest helix or sketch
+  without closed outlines as path, if no feature uses them yet.
 
 ![A handle: a circle swept along a path of lines and two arcs](../images/screenshots/sweep.png)
 
 The profile keeps its angle to the path as it follows it. Where the path bends tighter than the profile is
 wide, the sweep would cross itself and is reported.
+
+## Helix and springs
+
+**Helix** (in the arrow of the **Plane** button) is a curve that winds around the axis of a circle:
+the path for springs, coils and spiral grooves. It does not change the body; it is drawn as a line in
+the 3D view and listed in the tree like reference geometry.
+
+- *Sketch with the circle*: the helix takes the first circle of the sketch (not a construction circle):
+  its center and the sketch normal give the axis, its radius the radius of the helix. Helix starts with the
+  newest sketch with a circle that no feature uses yet.
+- *Pitch*: how far the helix rises in one turn. *Turns*: how many turns it makes, also parts of a turn
+  (0.25 is a quarter turn). The panel shows the height, pitch × turns. All three take equations.
+- *Start angle*: where on the circle the helix starts, measured from the X axis of the sketch.
+- **Wind to the other side of the sketch** lets the helix rise against the sketch normal instead.
+- **Left-hand (counterclockwise)** winds it the other way round; by default it is right-handed like most
+  springs and threads.
+
+![A helix of 6 turns around a circle of radius 15, previewed in teal while it is edited](../images/screenshots/helix.png)
+
+For a **spring**, draw the cross-section of the wire in a sketch on a plane through the axis of the helix,
+at the point where the helix starts – for a helix around the origin on the top plane with start angle 0,
+a circle on the front plane centered at (radius, 0). Then click **Sweep** and choose the helix as the path.
+Along a helix the profile keeps its angle to the axis as it winds around it, so the cross-section of the
+spring is the profile in every plane through the axis. **Remove material** cuts a helical groove into
+the body instead. Along a helix, profiles take outlines without holes (for a tube, sweep the outer outline
+and cut the inner one).
+
+![A compression spring: a wire of Ø3 swept along the helix](../images/screenshots/sweep-spring.png)
 
 ## Loft
 
@@ -341,7 +369,8 @@ rounded now, and click **Remove** to drop the lost ones. With **✓** the warnin
 Planes, axes, points and coordinate systems that are not faces of the part: a plane at an angle to
 sketch on, an axis through the middle of a bore, a point to build a plane through, a coordinate system
 to give mass properties in or to export in. They do not change the body. Create them with the **Plane**
-button in the *Features* tab; its arrow offers **Axis**, **Point** and **Coordinate system** as well.
+button in the *Features* tab; its arrow offers **Axis**, **Point** and **Coordinate system** as well, and
+the [Helix](#helix-and-springs). Where a field takes an axis, a helix gives its axis.
 
 ![A plane at 30° to the front plane through the axis of the bore: the new plane is drawn in teal, what it is built on in orange](../images/screenshots/reference-plane.png)
 

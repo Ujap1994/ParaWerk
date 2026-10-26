@@ -197,7 +197,8 @@ what that turns up is fixed before Phase 3 starts.
 | Sweep with twist and guide curves, loft with guide curves | open |
 | Variable-radius fillets (from a start to an end radius along each edge) | ✅ done |
 | Modeled threads (ISO metric, external and internal, on cylindrical faces) | ✅ done |
-| Multi-body parts, curves (helix, projected, composite) | open |
+| Helix (pitch, turns, start angle, hand) as the path of sweeps: springs, coils, helical grooves | ✅ done |
+| Multi-body parts, curves (projected, composite) | open |
 | Configurations and design tables (variables and suppression per configuration) | ✅ done |
 | Full equation support (functions of several values, conditions, pattern counts from equations) | ✅ done |
 | Surface tools (offset, knit, thicken) | open |

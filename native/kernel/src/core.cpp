@@ -798,6 +798,41 @@ int sweepProfile(const std::vector<double>& profile, const std::vector<double>& 
   return store().add(result.shape, std::move(result.names));
 }
 
+int sweepAlongHelix(const std::vector<double>& profile, const std::vector<double>& frame, const std::vector<double>& helix, const std::vector<std::string>& edgeNames,
+                    const std::string& name) {
+  if (helix.size() != 13) throw KernelError("operation-failed", "a helix needs 13 values");
+  const gp_Pnt center(helix[0], helix[1], helix[2]);
+  const gp_Dir axis(helix[3], helix[4], helix[5]);
+  const gp_Dir xDir(helix[6], helix[7], helix[8]);
+  const double radius = helix[9], pitch = helix[10], turns = helix[11];
+  const bool leftHand = helix[12] != 0;
+  if (!(radius > 0) || !(pitch > 0) || !(turns > 0)) throw KernelError("operation-failed", "the helix needs a radius, a pitch and turns above 0");
+  // The helix as a line on a cylinder: one turn of 2π rises one pitch.
+  const occ::handle<Geom_CylindricalSurface> surface = new Geom_CylindricalSurface(gp_Ax3(center, axis, xDir), radius);
+  const occ::handle<Geom2d_Line> line = new Geom2d_Line(gp_Pnt2d(0, 0), gp_Dir2d(leftHand ? -2 * M_PI : 2 * M_PI, pitch));
+  TopoDS_Edge edge = BRepBuilderAPI_MakeEdge(line, surface, 0, turns * std::hypot(2 * M_PI, pitch)).Edge();
+  BRepLib::BuildCurves3d(edge, 1e-5, GeomAbs_C1, 14, std::max(16, static_cast<int>(turns * 4)));
+  const TopoDS_Wire spine = BRepBuilderAPI_MakeWire(edge).Wire();
+  NamedEdges named{edgeNames, {}};
+  std::vector<StoredShape> solids;
+  for (const TopoDS_Face& face : readFaces(profile, framePlane(frame), named)) {
+    ShapeMap wires;
+    TopExp::MapShapes(face, TopAbs_WIRE, wires);
+    if (wires.Extent() != 1) throw KernelError("sweep-holes", "a sweep along a helix takes outlines without holes");
+    // The outlines keep their angle to the axis as they wind around it.
+    BRepOffsetAPI_MakePipeShell pipe(spine);
+    pipe.SetMode(axis);
+    pipe.SetTolerance(1e-4, 1e-4, 1e-2);
+    pipe.Add(BRepTools::OuterWire(face));
+    pipe.Build();
+    if (!pipe.IsDone() || !pipe.MakeSolid()) throw KernelError("sweep-failed", "the profile could not be swept along the helix");
+    requireValidSolid(pipe.Shape(), "sweep");
+    solids.push_back({pipe.Shape(), sweepNames(pipe, named, name)});
+  }
+  StoredShape result = joinRegions(solids, "swept");
+  return store().add(result.shape, std::move(result.names));
+}
+
 int loftProfiles(const std::vector<double>& sections, bool ruled, const std::vector<std::string>& edgeNames, const std::string& name) {
   // The sections in order: their count, then per section its plane (9 values) and its outline.
   ProfileReader in(sections);
@@ -2029,9 +2064,12 @@ Counts counts(int id) {
   return {faces.Extent(), edges.Extent(), countSolids(shape)};
 }
 
-BoundingBox boundingBox(int id) {
+BoundingBox boundingBox(int id, bool tight) {
   Bnd_Box box;
-  BRepBndLib::Add(store().get(id), box, false);
+  if (tight)
+    BRepBndLib::AddOptimal(store().get(id), box, false, false);
+  else
+    BRepBndLib::Add(store().get(id), box, false);
   BoundingBox result;
   if (box.IsVoid()) return result;
   const gp_Pnt min = box.CornerMin();

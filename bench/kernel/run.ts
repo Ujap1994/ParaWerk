@@ -183,6 +183,14 @@ if (backendName === 'parawerk') {
     { id: 'thread', type: 'thread', faces: [{ kind: 'face', name: 'shank:side', at: [5, 0, 10] }], size: 'M10', pitch: 1.5, length, reverse: false, leftHand: false },
   ];
   cases['thread.m10x20.rebuild'] = measure((i) => kernel.rebuild(request(screw(20 + (i + 1) * 0.01))), { iterations: 3, warmup: 1 });
+  // A compression spring: a wire of Ø2 swept along a helix of 10 turns around a circle of Ø20, with its properties.
+  const spring = (pitch: number): Feature[] => [
+    { id: 'base', type: 'sketch', plane: { kind: 'standard', plane: 'top' }, sketch: { entities: [{ id: 'o', type: 'point', x: 0, y: 0 }, { id: 'c', type: 'circle', center: 'o', radius: 10 }], constraints: [] } },
+    { id: 'helix', type: 'helix', sketch: 'base', pitch, turns: 10, startAngle: 0, leftHand: false, reverse: false },
+    { id: 'wire', type: 'sketch', plane: { kind: 'standard', plane: 'front' }, sketch: { entities: [{ id: 'm', type: 'point', x: 10, y: 0 }, { id: 'w', type: 'circle', center: 'm', radius: 1 }], constraints: [] } },
+    { id: 'spring', type: 'sweep', operation: 'add', sketch: 'wire', path: 'helix' },
+  ];
+  cases['sweep.spring10turns.rebuildWithProperties'] = measure((i) => kernel.rebuild(request(spring(5 + (i + 1) * 0.01), true)), { iterations: 3, warmup: 1 });
   kernel.rebuild(request(lidHoles(5)));
   cases['extrude.upToNext.cut25outlines'] = measure((i) => kernel.rebuild(request(lidHoles(5 + (i + 1) * 0.01))), { iterations: 5, warmup: 1 });
 }

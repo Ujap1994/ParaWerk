@@ -149,6 +149,16 @@ int sweepProfile(const std::vector<double>& profile, const std::vector<double>& 
                  const std::vector<std::string>& edgeNames = {}, const std::string& name = "");
 
 /**
+ * The solid swept by the regions of `profile` (as for sweepProfile; outlines without holes) along a helix:
+ * `helix` holds its center and unit axis, the unit x direction it starts in (perpendicular to the axis),
+ * its radius, pitch and number of turns and 1 for left-handed (13 values). The outlines keep their angle
+ * to the axis as they wind around it, so draw them in a plane through the axis at the start of the helix.
+ * Faces are named as for extrudeProfile. Fails with "sweep-holes" or "sweep-failed".
+ */
+int sweepAlongHelix(const std::vector<double>& profile, const std::vector<double>& frame, const std::vector<double>& helix, const std::vector<std::string>& edgeNames = {},
+                    const std::string& name = "");
+
+/**
  * A solid through closed outlines on several planes, in order (`ruled`: flat between them). `sections`
  * holds their count, then per outline its plane (9 values, as `frame` of extrudeProfile) and the outline
  * (edge count, then edges, as one loop of extrudeProfile). Side faces are named after the edges of the first
@@ -286,7 +296,11 @@ struct Distance {
 Distance distance(int id, int kindA, int indexA, int kindB, int indexB);
 
 Counts counts(int id);
-BoundingBox boundingBox(int id);
+/**
+ * The box around a shape: quick and a little larger than the shape (its curved faces by their control
+ * points), or `tight`ly around its faces (slower; for what is shown as the size of the part).
+ */
+BoundingBox boundingBox(int id, bool tight = false);
 MassProperties massProperties(int id);
 /** Display mesh with edges and exact face/edge geometry; keeps triangulations of unchanged faces. */
 MeshData mesh(int id, double linear, double angular);

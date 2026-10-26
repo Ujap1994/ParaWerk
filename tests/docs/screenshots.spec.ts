@@ -1227,6 +1227,15 @@ test('sweep and loft screenshots', async () => {
     'sweep.png',
     'Handle',
   );
+  // A compression spring: a wire of Ø3 along a helix of 6 turns around a circle of radius 15.
+  const spring = [
+    { id: 'base', type: 'sketch', name: 'Base circle', plane: { kind: 'standard', plane: 'top' }, sketch: { entities: [P('o', 0, 0), { id: 'c', type: 'circle', center: 'o', radius: 15 }], constraints: [] } },
+    { id: 'helix', type: 'helix', name: 'Helix', sketch: 'base', pitch: 8, turns: 6, startAngle: 0, leftHand: false, reverse: false },
+    { id: 'wire', type: 'sketch', name: 'Wire', plane: { kind: 'standard', plane: 'front' }, sketch: { entities: [P('m', 15, 0), { id: 'w', type: 'circle', center: 'm', radius: 1.5 }], constraints: [] } },
+    { id: 'spring', type: 'sweep', name: 'Spring', operation: 'add', sketch: 'wire', path: 'helix' },
+  ];
+  await show(spring, 'helix', 'helix.png', 'Spring');
+  await show(spring, 'spring', 'sweep-spring.png', 'Spring');
   // A transition from a square duct to a round one.
   const square = (p: string, half: number) => [
     P(`${p}1`, -half, -half), P(`${p}2`, half, -half), P(`${p}3`, half, half), P(`${p}4`, -half, half),

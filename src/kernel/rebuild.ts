@@ -1,5 +1,5 @@
 import { hashString } from '../shared/hash.ts';
-import { isEdgeFeature, isReferenceFeature, sketchesUsedBy, type Feature, type SketchFeature, type Vec3 } from '../shared/model/feature.ts';
+import { hasReferenceGeometry, isEdgeFeature, isReferenceFeature, sketchesUsedBy, type Feature, type SketchFeature, type Vec3 } from '../shared/model/feature.ts';
 import type { BodyNaming } from '../shared/model/naming.ts';
 import type { ReferenceGeometry } from '../shared/model/reference.ts';
 import type { SketchFrame, SketchPlaneRef } from '../shared/model/sketch.ts';
@@ -7,7 +7,7 @@ import type { GeometryBackend, ResolvedHole, ShapeHandle } from './backend.ts';
 import { holeThreads, throughDepth, type CosmeticThread } from '../shared/model/hole.ts';
 import { FeatureError } from './feature-error.ts';
 import type { FeatureResult } from './protocol.ts';
-import { computeReference, type BodyQuery } from './reference.ts';
+import { computeReference, helixGeometry, type BodyQuery } from './reference.ts';
 import { placeSketch, resolveFeature } from './resolve.ts';
 
 interface CacheEntry {
@@ -185,12 +185,12 @@ export class Rebuilder implements Disposable {
         continue;
       }
 
-      // Reference planes, axes and points do not change the body either.
-      if (isReferenceFeature(feature) && !feature.suppressed) {
+      // Reference planes, axes, points and helices do not change the body either.
+      if (hasReferenceGeometry(feature) && !feature.suppressed) {
         let result: FeatureResult;
         let reference: ReferenceGeometry | undefined;
         try {
-          const computed = computeReference(feature, { body: input ? query(input) : null, references });
+          const computed = feature.type === 'helix' ? { geometry: helixGeometry(feature, features.slice(0, i), frames) } : computeReference(feature, { body: input ? query(input) : null, references });
           reference = computed.geometry;
           references.set(feature.id, reference);
           result = { id: feature.id, status: 'ok', timeMs: 0, cached: false, reference, ...(computed.healed ? { healedReferences: computed.healed } : {}) };
@@ -207,7 +207,7 @@ export class Rebuilder implements Disposable {
       }
 
       // Variables do not change the body either.
-      if (feature.suppressed || feature.type === 'sketch' || feature.type === 'variables' || isReferenceFeature(feature)) {
+      if (feature.suppressed || feature.type === 'sketch' || feature.type === 'variables' || hasReferenceGeometry(feature)) {
         this.entries.push({
           key,
           shapeKey: inputKey,

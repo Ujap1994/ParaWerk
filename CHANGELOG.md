@@ -12,6 +12,11 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
   format version 8, so ParaWerk 0.3 reports them as newer files instead of damaged ones.
 
 ### Added
+- Helix: a curve winding around the axis of a sketch circle, with pitch, turns (also parts of a turn),
+  start angle, direction and hand (in the arrow of the **Plane** button). A sweep follows it with the
+  profile keeping its angle to the axis – springs, coils and helical grooves.
+- Mass properties: the bounding box lies tight around curved faces (it was up to a millimeter too large
+  around swept and lofted faces).
 - Sweep: the closed outlines of a sketch along a path, one chain of lines, arcs, ellipses or splines in
   another sketch (open or closed); the path runs from its end nearer to the outlines. Adds or cuts.
 - Loft: a solid through one closed outline from each of several sketches, in order, smooth or with flat

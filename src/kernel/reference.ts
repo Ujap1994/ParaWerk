@@ -1,7 +1,7 @@
-import type { ReferenceFeature, Vec3 } from '../shared/model/feature.ts';
+import type { Feature, HelixFeature, ReferenceFeature, SketchFeature, Vec3 } from '../shared/model/feature.ts';
 import { edgeRefOf, faceRefOf, resolveEdgeRefs, resolveFaceRef, resolveVertexRef, vertexPosition, vertexRefOf, type BodyNaming } from '../shared/model/naming.ts';
 import { REFERENCE_ROLES, type GeometryRef, type ReferenceGeometry, type ReferenceRole } from '../shared/model/reference.ts';
-import { frameOnPlane, STANDARD_FRAMES } from '../shared/model/sketch.ts';
+import { frameOf, frameOnPlane, ORIGIN_ID, STANDARD_FRAMES, toModel, type SketchFrame } from '../shared/model/sketch.ts';
 import { FeatureError } from './feature-error.ts';
 import type { EdgeGeometry, FaceGeometry } from './protocol.ts';
 
@@ -108,6 +108,9 @@ function referenceAspects(geometry: ReferenceGeometry): Aspects {
       return { axis: { point: geometry.point, direction: geometry.direction } };
     case 'point':
       return { point: geometry.point, center: geometry.point };
+    case 'helix':
+      // Its axis, and the center of its base circle.
+      return { axis: { point: geometry.center, direction: geometry.axis }, center: geometry.center };
     case 'csys':
       // Its origin, and its XY plane with the Z axis.
       return { point: geometry.origin, center: geometry.origin, plane: { point: geometry.origin, normal: geometry.zDir }, axis: { point: geometry.origin, direction: geometry.zDir } };
@@ -175,6 +178,31 @@ export function curvedFaceOfReference(ref: GeometryRef | undefined, slot: number
   const match = resolveFaceRef(ref, body.naming(), (face, point) => length(sub(body.face(face).center, point)));
   if (!match) throw new FeatureError('reference-missing', String(slot + 1));
   return body.face(match.index).plane ? null : match.index;
+}
+
+/**
+ * Where a helix lies: around the axis of the first circle of its sketch, from the point at its start
+ * angle on that circle. Throws FeatureError when the sketch is missing or has no circle.
+ */
+export function helixGeometry(feature: HelixFeature, before: readonly Feature[], frames: ReadonlyMap<string, SketchFrame>): ReferenceGeometry {
+  const sketch = before.find((candidate): candidate is SketchFeature => candidate.type === 'sketch' && candidate.id === feature.sketch);
+  if (!sketch || sketch.suppressed) throw new FeatureError('sketch-missing');
+  const circle = sketch.sketch.entities.find((entity) => entity.type === 'circle' && !entity.construction);
+  const center = circle?.type === 'circle' ? sketch.sketch.entities.find((entity) => entity.type === 'point' && entity.id === circle.center) : undefined;
+  const at = circle?.type === 'circle' && circle.center === ORIGIN_ID ? { x: 0, y: 0 } : center?.type === 'point' ? center : null;
+  if (circle?.type !== 'circle' || !at) throw new FeatureError('helix-circle');
+  const frame = frames.get(sketch.id) ?? frameOf(sketch.plane);
+  const angle = (feature.startAngle * Math.PI) / 180;
+  return {
+    kind: 'helix',
+    center: toModel(frame, at.x, at.y),
+    axis: scale(frame.normal, feature.reverse ? -1 : 1),
+    xDir: add(scale(frame.xDir, Math.cos(angle)), scale(frame.yDir, Math.sin(angle))),
+    radius: circle.radius,
+    pitch: feature.pitch,
+    turns: feature.turns,
+    leftHand: feature.leftHand,
+  };
 }
 
 /** The axis a reference provides (a reference axis, a straight or circular edge, a cylindrical face). */

@@ -1,4 +1,4 @@
-import { CHAMFER_METHODS, type ChamferMethod, EXPRESSION_FIELDS, FILLET_METHODS, RIB_DIRECTIONS, EXTRUDE_DIRECTIONS, MAX_DRAFT_ANGLE, REVOLVE_DIRECTIONS, type RevolveDirection, EXTRUDE_ENDS, HOLE_ENDS, type Axis, type BooleanOperation, type EdgeRef, type ExtrudeDirection, type ExtrudeEnd, type Feature, type FeatureType, type HoleEnd, type Variable, type Vec3 } from './feature.ts';
+import { CHAMFER_METHODS, type ChamferMethod, EXPRESSION_FIELDS, FILLET_METHODS, MAX_HELIX_TURNS, RIB_DIRECTIONS, EXTRUDE_DIRECTIONS, MAX_DRAFT_ANGLE, REVOLVE_DIRECTIONS, type RevolveDirection, EXTRUDE_ENDS, HOLE_ENDS, type Axis, type BooleanOperation, type EdgeRef, type ExtrudeDirection, type ExtrudeEnd, type Feature, type FeatureType, type HoleEnd, type Variable, type Vec3 } from './feature.ts';
 import { HOLE_FITS, HOLE_KINDS } from './hole.ts';
 import { CUSTOM_MATERIAL, materialInfo, MAX_DENSITY, MIN_DENSITY, NO_PROPERTIES, type PartProperties } from './material.ts';
 import { MAX_PATTERN_COUNT } from './pattern.ts';
@@ -443,6 +443,18 @@ function parseFeatureFields(raw: Json, path: string): Feature {
       }
       return chamfer;
     }
+    case 'helix':
+      if (typeof raw.turns !== 'number' || !(raw.turns > 0 && raw.turns <= MAX_HELIX_TURNS)) throw new ValidationError('expected 0 to 1000 turns', `${path}.turns`);
+      return {
+        ...common,
+        type: 'helix',
+        sketch: sketchId(raw.sketch, `${path}.sketch`),
+        pitch: positiveLength(raw.pitch, `${path}.pitch`),
+        turns: raw.turns,
+        startAngle: finiteNumber(raw.startAngle, `${path}.startAngle`, 360),
+        leftHand: flag(raw.leftHand, `${path}.leftHand`),
+        reverse: flag(raw.reverse, `${path}.reverse`),
+      };
     case 'thread':
       if (typeof raw.size !== 'string' || raw.size.length > 20) throw new ValidationError('expected a size', `${path}.size`);
       return {

@@ -1,5 +1,5 @@
 import type { CopyFeature, DraftFeature, EdgeFeature, LoftFeature, RibFeature, SweepFeature, ThreadFeature, EdgeRef, ExtrudeFeature, HoleFeature, RevolveFeature, ShellFeature, SolidModelingFeature, Vec3 } from '../shared/model/feature.ts';
-import type { FaceNameRef } from '../shared/model/reference.ts';
+import type { FaceNameRef, ReferenceGeometry } from '../shared/model/reference.ts';
 import type { BodyNaming } from '../shared/model/naming.ts';
 import type { Profile, ProfileLoop } from '../shared/model/profile.ts';
 import type { SketchPath } from '../shared/model/path.ts';
@@ -27,8 +27,10 @@ export interface ResolvedExtrude extends ExtrudeFeature {
 export interface ResolvedSweep extends SweepFeature {
   profile: Profile;
   frame: SketchFrame;
-  spine: SketchPath;
-  spineFrame: SketchFrame;
+  /** A path of a sketch and its plane, or a helix. */
+  spine?: SketchPath;
+  spineFrame?: SketchFrame;
+  helix?: Extract<ReferenceGeometry, { kind: 'helix' }>;
 }
 
 /** A loft with the outline and plane of each of its sketches, in order. */

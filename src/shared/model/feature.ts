@@ -11,7 +11,7 @@ import type { ThinSide } from './thin.ts';
 
 export type Vec3 = [number, number, number];
 
-export type FeatureType = 'variables' | 'sketch' | 'plane' | 'axis' | 'point' | 'csys' | 'extrude' | 'revolve' | 'hole' | 'pattern' | 'mirror' | 'box' | 'cylinder' | 'import' | 'fillet' | 'chamfer' | 'shell' | 'draft' | 'sweep' | 'loft' | 'rib' | 'thread';
+export type FeatureType = 'variables' | 'sketch' | 'plane' | 'axis' | 'point' | 'csys' | 'extrude' | 'revolve' | 'hole' | 'pattern' | 'mirror' | 'box' | 'cylinder' | 'import' | 'fillet' | 'chamfer' | 'shell' | 'draft' | 'sweep' | 'loft' | 'rib' | 'thread' | 'helix';
 
 /** How a solid-creating feature combines with the existing body. */
 export type BooleanOperation = 'add' | 'cut';
@@ -80,6 +80,7 @@ export const EXPRESSION_FIELDS: Readonly<Record<FeatureType, readonly string[]>>
   loft: [],
   rib: ['thickness'],
   thread: ['pitch', 'length'],
+  helix: ['pitch', 'turns', 'startAngle'],
 };
 
 /** A named value of the part; its expression may use other variables. */
@@ -270,6 +271,11 @@ export type ReferenceFeature = PlaneFeature | AxisFeature | PointFeature | CsysF
 
 export function isReferenceFeature(feature: Feature): feature is ReferenceFeature {
   return feature.type === 'plane' || feature.type === 'axis' || feature.type === 'point' || feature.type === 'csys';
+}
+
+/** Features shown as reference geometry, which do not change the body: reference geometry and helices. */
+export function hasReferenceGeometry(feature: Feature): feature is ReferenceFeature | HelixFeature {
+  return isReferenceFeature(feature) || feature.type === 'helix';
 }
 
 /** Which way an extrusion goes from its sketch plane: along the plane normal, against it, or half each way. */
@@ -528,9 +534,27 @@ export interface ThreadFeature extends FeatureBase {
   leftHand: boolean;
 }
 
+/** The most turns a helix can have. */
+export const MAX_HELIX_TURNS = 1000;
+
+/**
+ * A helix: a curve winding around the axis of a circle of a sketch (its first circle), starting on the
+ * circle at `startAngle` (degrees from the sketch's x axis) and rising `pitch` per turn along the sketch
+ * normal (against it with `reverse`). A path for sweeps, for springs and coils. It does not change the body.
+ */
+export interface HelixFeature extends FeatureBase {
+  type: 'helix';
+  sketch: string;
+  pitch: number;
+  turns: number;
+  startAngle: number;
+  leftHand: boolean;
+  reverse: boolean;
+}
+
 /** The sketches a feature is built from (their curves belong to its geometry). */
 export function sketchesUsedBy(feature: Feature): string[] {
-  if (isSketchBased(feature) || feature.type === 'rib') return [feature.sketch];
+  if (isSketchBased(feature) || feature.type === 'rib' || feature.type === 'helix') return [feature.sketch];
   if (feature.type === 'sweep') return [feature.sketch, feature.path];
   if (feature.type === 'loft') return feature.sketches;
   return [];
@@ -558,10 +582,11 @@ export type Feature =
   | SweepFeature
   | LoftFeature
   | RibFeature
-  | ThreadFeature;
+  | ThreadFeature
+  | HelixFeature;
 
-/** Features that build or modify the solid body (everything except variables, sketches and reference geometry). */
-export type SolidModelingFeature = Exclude<Feature, SketchFeature | VariablesFeature | ReferenceFeature>;
+/** Features that build or modify the solid body (everything except variables, sketches, reference geometry and curves). */
+export type SolidModelingFeature = Exclude<Feature, SketchFeature | VariablesFeature | ReferenceFeature | HelixFeature>;
 
 export type EdgeFeature = FilletFeature | ChamferFeature;
 
@@ -573,7 +598,7 @@ export function isSolidFeature(feature: Feature): feature is BoxFeature | Cylind
   return feature.type === 'box' || feature.type === 'cylinder';
 }
 
-export const FEATURE_TYPES: readonly FeatureType[] = ['variables', 'sketch', 'plane', 'axis', 'point', 'csys', 'extrude', 'revolve', 'hole', 'pattern', 'mirror', 'box', 'cylinder', 'import', 'fillet', 'chamfer', 'shell', 'draft', 'sweep', 'loft', 'rib', 'thread'];
+export const FEATURE_TYPES: readonly FeatureType[] = ['variables', 'sketch', 'plane', 'axis', 'point', 'csys', 'extrude', 'revolve', 'hole', 'pattern', 'mirror', 'box', 'cylinder', 'import', 'fillet', 'chamfer', 'shell', 'draft', 'sweep', 'loft', 'rib', 'thread', 'helix'];
 
 /** Features that make a body from nothing (the first feature with material must be one of them, adding). */
 export const BODY_TYPES: ReadonlySet<FeatureType> = new Set(['box', 'cylinder', 'extrude', 'revolve', 'import', 'sweep', 'loft']);
@@ -649,5 +674,7 @@ export function defaultFeature(type: FeatureType, id: string = createFeatureId()
       return { id, type, sketch: '', thickness: 3, direction: 'parallel', flip: false };
     case 'thread':
       return { id, type, faces: [], size: 'M6', pitch: 1, length: 10, reverse: false, leftHand: false };
+    case 'helix':
+      return { id, type, sketch: '', pitch: 5, turns: 5, startAngle: 0, leftHand: false, reverse: false };
   }
 }

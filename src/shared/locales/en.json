@@ -119,7 +119,8 @@
       "loft": "Make a solid through the outlines of several sketches, in order",
       "rib": "Add a wall from the open curves of a sketch to the body, such as a gusset in a corner",
       "thread": "Cut a modeled ISO metric thread into a bolt or a hole",
-      "configurations": "Variants of the part: switch between them and edit their variables in a design table"
+      "configurations": "Variants of the part: switch between them and edit their variables in a design table",
+      "helix": "Create a helix around the circle of a sketch, as the path of a spring or a coil"
     },
     "tabs": {
       "label": "Command tabs",
@@ -210,7 +211,8 @@
     "rib": "Rib",
     "thread": "Thread",
     "holeFeatures": "Hole and thread",
-    "configurations": "Configurations"
+    "configurations": "Configurations",
+    "helix": "Helix"
   },
   "features": {
     "plane": "Plane",
@@ -235,7 +237,8 @@
     "sweep": "Sweep",
     "loft": "Loft",
     "rib": "Rib",
-    "thread": "Thread"
+    "thread": "Thread",
+    "helix": "Helix"
   },
   "tree": {
     "title": "Feature tree",
@@ -450,7 +453,8 @@
     "noHoleSketch": "Place points for the holes in a sketch on the face first.",
     "importFailed": "Import failed: {{message}}",
     "noSweepSketches": "A sweep needs two sketches: one with a closed outline and one with the path.",
-    "noLoftSketches": "A loft needs at least two sketches with a closed outline each."
+    "noLoftSketches": "A loft needs at least two sketches with a closed outline each.",
+    "noHelixSketch": "Draw a circle in a sketch first: the helix winds around it."
   },
   "errors": {
     "no-body": "There is no body to modify yet.",
@@ -505,7 +509,9 @@
     "loft-failed": "The profiles could not be joined. Check that they lie one after the other and are not twisted against each other.",
     "rib-curves": "A rib within its sketch plane follows lines only; {{detail}} is another curve.",
     "thread-face": "Pick the cylindrical face of a bolt or a hole for the thread.",
-    "thread-size": "Pitch and length of the thread must be above 0."
+    "thread-size": "Pitch and length of the thread must be above 0.",
+    "helix-circle": "The sketch of the helix needs a circle: the helix winds around its center with its radius.",
+    "sweep-holes": "Along a helix, the profile takes outlines without holes."
   },
   "warnings": {
     "edge-missing_one": "{{count}} selected edge no longer exists and is left out. Edit the feature to remove it or pick another edge.",
@@ -1016,7 +1022,7 @@
   "sweep": {
     "profile": "Profile (closed outlines)",
     "path": "Path",
-    "hint": "The outlines are swept as they lie, so draw them across the start of the path. The path is one chain of lines, arcs, ellipses or splines in another sketch, open or closed; it runs from its end nearer to the outlines."
+    "hint": "The outlines are swept as they lie, so draw them across the start of the path. The path is one chain of lines, arcs, ellipses or splines in another sketch, open or closed, or a helix; it runs from its end nearer to the outlines. Along a helix, draw the outlines in a plane through its axis, at its start point."
   },
   "loft": {
     "profiles": "Profiles, in order",
@@ -1060,5 +1066,15 @@
     "default": "Default",
     "active": "Configuration",
     "nameTaken": "Another configuration has that name already."
+  },
+  "helix": {
+    "sketch": "Sketch with the circle",
+    "pitch": "Pitch",
+    "turns": "Turns",
+    "startAngle": "Start angle",
+    "height": "Height {{height}} (pitch × turns).",
+    "reverse": "Wind to the other side of the sketch",
+    "leftHand": "Left-hand (counterclockwise)",
+    "hint": "The helix winds around the first circle of the sketch, with its radius, starting on the circle at the start angle (from the sketch X axis). Sweep a profile along it for a spring or a coil: draw the profile in a plane through the axis of the helix, at its start point."
   }
 }

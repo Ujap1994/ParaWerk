@@ -119,7 +119,8 @@
       "loft": "Einen Körper durch die Konturen mehrerer Skizzen der Reihe nach erzeugen",
       "rib": "Eine Wand von den offenen Kurven einer Skizze bis zum Körper hinzufügen, etwa eine Stützrippe in einer Ecke",
       "thread": "Ein modelliertes ISO-Gewinde in einen Bolzen oder eine Bohrung schneiden",
-      "configurations": "Varianten des Teils: zwischen ihnen umschalten und ihre Variablen in einer Konstruktionstabelle bearbeiten"
+      "configurations": "Varianten des Teils: zwischen ihnen umschalten und ihre Variablen in einer Konstruktionstabelle bearbeiten",
+      "helix": "Eine Wendel um den Kreis einer Skizze erzeugen, als Pfad einer Feder oder Spirale"
     },
     "tabs": {
       "label": "Befehlsregister",
@@ -210,7 +211,8 @@
     "rib": "Rippe",
     "thread": "Gewinde",
     "holeFeatures": "Bohrung und Gewinde",
-    "configurations": "Konfigurationen"
+    "configurations": "Konfigurationen",
+    "helix": "Wendel"
   },
   "features": {
     "plane": "Ebene",
@@ -235,7 +237,8 @@
     "sweep": "Austragung",
     "loft": "Ausformung",
     "rib": "Rippe",
-    "thread": "Gewinde"
+    "thread": "Gewinde",
+    "helix": "Wendel"
   },
   "tree": {
     "title": "Featurebaum",
@@ -450,7 +453,8 @@
     "noHoleSketch": "Setze zuerst Punkte für die Bohrungen in einer Skizze auf der Fläche.",
     "importFailed": "Import fehlgeschlagen: {{message}}",
     "noSweepSketches": "Eine Austragung braucht zwei Skizzen: eine mit geschlossener Kontur und eine mit dem Pfad.",
-    "noLoftSketches": "Eine Ausformung braucht mindestens zwei Skizzen mit je einer geschlossenen Kontur."
+    "noLoftSketches": "Eine Ausformung braucht mindestens zwei Skizzen mit je einer geschlossenen Kontur.",
+    "noHelixSketch": "Zeichne zuerst einen Kreis in eine Skizze: Die Wendel windet sich um ihn."
   },
   "errors": {
     "no-body": "Es gibt noch keinen Körper, der verändert werden kann.",
@@ -505,7 +509,9 @@
     "loft-failed": "Die Profile ließen sich nicht verbinden. Prüfe, ob sie hintereinander liegen und nicht gegeneinander verdreht sind.",
     "rib-curves": "Eine Rippe in der Skizzenebene folgt nur Linien; {{detail}} ist eine andere Kurve.",
     "thread-face": "Wähle für das Gewinde die zylindrische Fläche eines Bolzens oder einer Bohrung.",
-    "thread-size": "Steigung und Länge des Gewindes müssen größer als 0 sein."
+    "thread-size": "Steigung und Länge des Gewindes müssen größer als 0 sein.",
+    "helix-circle": "Die Skizze der Wendel braucht einen Kreis: Die Wendel windet sich mit seinem Radius um seinen Mittelpunkt.",
+    "sweep-holes": "Entlang einer Wendel nimmt das Profil nur Umrisse ohne Löcher."
   },
   "warnings": {
     "edge-missing_one": "{{count}} ausgewählte Kante existiert nicht mehr und wird ausgelassen. Bearbeite das Feature, um sie zu entfernen oder eine andere Kante zu wählen.",
@@ -1016,7 +1022,7 @@
   "sweep": {
     "profile": "Profil (geschlossene Konturen)",
     "path": "Pfad",
-    "hint": "Die Konturen werden so ausgetragen, wie sie liegen; zeichne sie also quer zum Anfang des Pfads. Der Pfad ist ein Kurvenzug aus Linien, Bögen, Ellipsen oder Splines in einer anderen Skizze, offen oder geschlossen; er beginnt an seinem Ende, das näher an den Konturen liegt."
+    "hint": "Die Konturen werden so ausgetragen, wie sie liegen; zeichne sie also quer zum Anfang des Pfads. Der Pfad ist ein Kurvenzug aus Linien, Bögen, Ellipsen oder Splines in einer anderen Skizze, offen oder geschlossen, oder eine Wendel; er beginnt an seinem Ende, das näher an den Konturen liegt. Für eine Wendel zeichne die Konturen in einer Ebene durch ihre Achse, an ihrem Startpunkt."
   },
   "loft": {
     "profiles": "Profile der Reihe nach",
@@ -1060,5 +1066,15 @@
     "default": "Standard",
     "active": "Konfiguration",
     "nameTaken": "Eine andere Konfiguration hat diesen Namen schon."
+  },
+  "helix": {
+    "sketch": "Skizze mit dem Kreis",
+    "pitch": "Steigung",
+    "turns": "Windungen",
+    "startAngle": "Startwinkel",
+    "height": "Höhe {{height}} (Steigung × Windungen).",
+    "reverse": "Zur anderen Seite der Skizze winden",
+    "leftHand": "Linksgängig (gegen den Uhrzeigersinn)",
+    "hint": "Die Wendel windet sich um den ersten Kreis der Skizze, mit seinem Radius, und beginnt auf dem Kreis beim Startwinkel (von der X-Achse der Skizze aus). Trage ein Profil entlang der Wendel aus, um eine Feder oder Spirale zu erhalten: Zeichne das Profil in einer Ebene durch die Achse der Wendel, an ihrem Startpunkt."
   }
 }

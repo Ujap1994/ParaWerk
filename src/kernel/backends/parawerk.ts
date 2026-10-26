@@ -39,7 +39,7 @@ const SURFACE_KINDS: SurfaceKind[] = ['plane', 'cylinder', 'cone', 'sphere', 'to
 const CURVE_KINDS: CurveKind[] = ['line', 'circle', 'ellipse', 'bspline', 'other'];
 
 const FEATURE_ERROR_CODES = new Set<FeatureErrorCode>([
-  'no-body', 'no-edges', 'edge-missing', 'face-missing', 'plane-missing', 'reference-missing', 'reference-kind', 'reference-parallel', 'reference-not-parallel', 'reference-collinear', 'empty-result', 'first-must-add', 'sketch-missing', 'profile-empty', 'profile-crossing', 'axis-missing', 'axis-not-in-plane', 'hole-no-points', 'hole-invalid', 'pattern-empty', 'pattern-seed-missing', 'pattern-unsupported', 'shell-face-missing', 'end-behind', 'end-parallel', 'end-missed', 'thin-empty', 'thin-unsupported', 'thin-branching', 'thin-too-thick', 'round-faces', 'round-face-missing', 'round-sides', 'round-center', 'round-planes', 'round-radius', 'draft-faces', 'draft-face', 'draft-face-missing', 'path-empty', 'path-branching', 'path-gaps', 'sweep-failed', 'loft-sections', 'loft-profile', 'loft-failed', 'rib-curves', 'thread-face', 'thread-size', 'import-no-solid', 'profile-crosses-axis',
+  'no-body', 'no-edges', 'edge-missing', 'face-missing', 'plane-missing', 'reference-missing', 'reference-kind', 'reference-parallel', 'reference-not-parallel', 'reference-collinear', 'empty-result', 'first-must-add', 'sketch-missing', 'profile-empty', 'profile-crossing', 'axis-missing', 'axis-not-in-plane', 'hole-no-points', 'hole-invalid', 'pattern-empty', 'pattern-seed-missing', 'pattern-unsupported', 'shell-face-missing', 'end-behind', 'end-parallel', 'end-missed', 'thin-empty', 'thin-unsupported', 'thin-branching', 'thin-too-thick', 'round-faces', 'round-face-missing', 'round-sides', 'round-center', 'round-planes', 'round-radius', 'draft-faces', 'draft-face', 'draft-face-missing', 'path-empty', 'path-branching', 'path-gaps', 'sweep-failed', 'loft-sections', 'loft-profile', 'loft-failed', 'rib-curves', 'thread-face', 'thread-size', 'helix-circle', 'sweep-holes', 'import-no-solid', 'profile-crosses-axis',
   'operation-failed', 'unknown',
 ]);
 
@@ -212,9 +212,14 @@ export class ParaWerkBackend implements GeometryBackend {
       }
       case 'sweep': {
         const frame = (f: { origin: Vec3; xDir: Vec3; normal: Vec3 }) => [...f.origin, ...f.xDir, ...f.normal];
-        return this.handle(
-          k.sweepProfile(encodeProfile(feature.profile), frame(feature.frame), encodeEdges(feature.spine.edges), frame(feature.spineFrame), profileEdgeNames(feature.profile), feature.id),
-        );
+        const profile = encodeProfile(feature.profile);
+        const names = profileEdgeNames(feature.profile);
+        if (feature.helix) {
+          const { center, axis, xDir, radius, pitch, turns, leftHand } = feature.helix;
+          return this.handle(k.sweepAlongHelix(profile, frame(feature.frame), [...center, ...axis, ...xDir, radius, pitch, turns, leftHand ? 1 : 0], names, feature.id));
+        }
+        if (!feature.spine || !feature.spineFrame) throw new FeatureError('path-empty');
+        return this.handle(k.sweepProfile(profile, frame(feature.frame), encodeEdges(feature.spine.edges), frame(feature.spineFrame), names, feature.id));
       }
       case 'loft': {
         const data: number[] = [feature.sections.length];
@@ -365,7 +370,7 @@ export class ParaWerkBackend implements GeometryBackend {
   }
 
   boundingBox(handle: ShapeHandle): { min: Vec3; max: Vec3 } {
-    const result = check(this.kernel.boundingBox(this.id(handle)) as { ok: true; min: Vec3; max: Vec3 } | Failure);
+    const result = check(this.kernel.boundingBox(this.id(handle), false) as { ok: true; min: Vec3; max: Vec3 } | Failure);
     return { min: result.min, max: result.max };
   }
 
@@ -424,7 +429,8 @@ export class ParaWerkBackend implements GeometryBackend {
     const props = check(
       this.kernel.massProperties(this.id(handle)) as { ok: true; volume: number; area: number; center: Vec3; inertia: MassProperties['inertia'] } | Failure,
     );
-    const bbox = this.boundingBox(handle);
+    // The size of the part is shown: tight around its faces.
+    const bbox = check(this.kernel.boundingBox(this.id(handle), true) as { ok: true; min: Vec3; max: Vec3 } | Failure);
     return { volume: props.volume, area: props.area, center: props.center, bboxMin: bbox.min, bboxMax: bbox.max, ...(props.inertia ? { inertia: props.inertia } : {}) };
   }
 

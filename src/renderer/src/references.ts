@@ -2,7 +2,7 @@
  * Reference geometry in the UI: turning picks into references, checking that they fit a field, showing
  * the reference planes, axes and points and highlighting what the edited feature refers to.
  */
-import { hasReferenceSlots, isReferenceFeature, type ExtrudeFeature, type Feature, type SlotFeature } from '../../shared/model/feature.ts';
+import { hasReferenceGeometry, hasReferenceSlots, type ExtrudeFeature, type Feature, type SlotFeature } from '../../shared/model/feature.ts';
 import { edgeRefOf, faceRefOf, resolveEdgeRefs, resolveFaceRef, resolveVertexRef, vertexRefOf } from '../../shared/model/naming.ts';
 import { REFERENCE_ROLES, type GeometryRef, type ReferenceGeometry, type ReferenceRole } from '../../shared/model/reference.ts';
 import { STANDARD_PLANES } from '../../shared/model/sketch.ts';
@@ -83,6 +83,8 @@ export function referenceFits(ref: GeometryRef, role: ReferenceRole, state: AppS
     case 'feature': {
       const kind = referenceGeometry(state, ref.feature)?.kind ?? state.history.features.find((feature) => feature.id === ref.feature)?.type;
       // A coordinate system is a point (its origin), a plane (XY) and an axis (Z) at once.
+      // A helix stands for its axis.
+      if (kind === 'helix') return role === 'axis' || role === 'direction';
       return kind === 'csys' || kind === role || (kind === 'point' && role === 'center') || (role === 'direction' && (kind === 'plane' || kind === 'axis'));
     }
     case 'vertex':
@@ -162,7 +164,7 @@ export function referenceItems(state: AppState): ReferenceItem[] {
   const hovered = state.hover?.kind === 'reference' ? state.hover.index : null;
   const items: ReferenceItem[] = [];
   const add = (feature: Feature, index: number, preview: boolean) => {
-    if (!isReferenceFeature(feature) || feature.suppressed) return;
+    if (!hasReferenceGeometry(feature) || feature.suppressed) return;
     const geometry = results.get(feature.id)?.reference;
     if (!geometry) return;
     const style = preview ? 'preview' : hovered === index ? 'hovered' : selected.has(index) || referenced.has(index) ? 'selected' : 'normal';

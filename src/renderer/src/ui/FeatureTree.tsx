@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { COPYABLE_TYPES, hasReferenceSlots, isCopyFeature, isReferenceFeature, type Feature } from '../../../shared/model/feature.ts';
+import { COPYABLE_TYPES, hasReferenceGeometry, hasReferenceSlots, isCopyFeature, type Feature } from '../../../shared/model/feature.ts';
 import { STANDARD_PLANES } from '../../../shared/model/sketch.ts';
 import * as commands from '../commands.ts';
 import { picksReferences } from '../references.ts';
@@ -242,7 +242,7 @@ export function FeatureTree() {
     const rolledBack = activeEdit !== null ? index > activeEdit.index || (activeEdit.mode === 'create' && index >= activeEdit.index) : index >= rollback;
     const editing = activeEdit?.mode === 'edit' && activeEdit.index === index;
     // Reference geometry is picked in the tree like in the 3D view (to select it, or to build on it).
-    const reference = isReferenceFeature(feature) && !feature.suppressed && !rolledBack && !editing;
+    const reference = hasReferenceGeometry(feature) && !feature.suppressed && !rolledBack && !editing;
     const seed = copying !== null && !rolledBack && !editing && COPYABLE_TYPES.has(feature.type) && !feature.suppressed;
     const selected = (reference && selection.some((pick) => pick.kind === 'reference' && pick.index === index)) || (seed && copying.includes(feature.id));
     const hovered = reference && hover?.kind === 'reference' && hover.index === index;

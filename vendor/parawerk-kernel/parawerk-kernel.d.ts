@@ -28,7 +28,7 @@ interface EmbindModule {
   edgeGeometry(_0: number, _1: number): any;
   distance(_0: number, _1: number, _2: number, _3: number, _4: number): any;
   counts(_0: number): any;
-  boundingBox(_0: number): any;
+  boundingBox(_0: number, _1: boolean): any;
   massProperties(_0: number): any;
   mesh(_0: number, _1: number, _2: number): any;
   exportMesh(_0: number, _1: number, _2: number): any;
@@ -45,6 +45,7 @@ interface EmbindModule {
   loftProfiles(_0: any, _1: boolean, _2: any, _3: EmbindString): any;
   filletVariable(_0: number, _1: any, _2: number, _3: number, _4: boolean, _5: any, _6: EmbindString): any;
   cutThread(_0: number, _1: number, _2: number, _3: number, _4: boolean, _5: boolean, _6: EmbindString): any;
+  sweepAlongHelix(_0: any, _1: any, _2: any, _3: any, _4: EmbindString): any;
   limitBySurface(_0: number, _1: number, _2: number, _3: any, _4: number, _5: boolean, _6: EmbindString): any;
 }
 

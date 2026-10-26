@@ -81,6 +81,34 @@ function dashDot(a: Vector3, b: Vector3, dash: number, gap: number, dot: number)
   return out;
 }
 
+/** Segments per turn of a drawn helix, and at most this many in all. */
+const HELIX_SEGMENTS = 72;
+const MAX_HELIX_SEGMENTS = 20_000;
+
+/** A helix as line segments (pairs of points), wound as the kernel winds it. */
+export function helixSegments(helix: Extract<ReferenceGeometry, { kind: 'helix' }>): number[] {
+  const center = new Vector3(...helix.center);
+  const axis = new Vector3(...helix.axis).normalize();
+  const xDir = new Vector3(...helix.xDir).normalize();
+  const yDir = axis.clone().cross(xDir);
+  const count = Math.max(8, Math.min(MAX_HELIX_SEGMENTS, Math.ceil(helix.turns * HELIX_SEGMENTS)));
+  const sign = helix.leftHand ? -1 : 1;
+  const points: Vector3[] = [];
+  for (let i = 0; i <= count; i++) {
+    const angle = (2 * Math.PI * helix.turns * i) / count;
+    points.push(
+      center
+        .clone()
+        .addScaledVector(axis, (helix.pitch * angle) / (2 * Math.PI))
+        .addScaledVector(xDir, helix.radius * Math.cos(angle))
+        .addScaledVector(yDir, sign * helix.radius * Math.sin(angle)),
+    );
+  }
+  const out: number[] = [];
+  for (let i = 1; i < points.length; i++) out.push(...(points[i - 1] as Vector3).toArray(), ...(points[i] as Vector3).toArray());
+  return out;
+}
+
 interface Drawn {
   item: ReferenceItem;
   /** Pick target (plane fill, axis line or point sprite). */
@@ -279,6 +307,14 @@ export class ReferenceGeometryLayer {
         const axes = { lines, placement };
         this.placeAxes(axes);
         drawn = { item, target: sprite, objects: [lines, sprite], axes };
+      } else if (geometry.kind === 'helix') {
+        const segments = new LineSegmentsGeometry().setPositions(helixSegments(geometry));
+        const lines = new LineSegments2(segments, this.lines[item.style]);
+        lines.renderOrder = 3;
+        const through = new LineSegments2(segments, this.hiddenLines[item.style]);
+        through.renderOrder = 2;
+        through.raycast = () => undefined;
+        drawn = { item, target: lines, objects: [lines, through] };
       } else {
         const sprite = new Sprite(this.points[item.style]);
         sprite.position.set(...geometry.point);

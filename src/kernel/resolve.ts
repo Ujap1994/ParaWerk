@@ -329,6 +329,13 @@ function resolveSweep(feature: SweepFeature, before: readonly Feature[], context
   const sketch = sketchBefore(before, feature.sketch);
   const profile = profileOf(sketch);
   const frame = context.frames.get(sketch.id) ?? frameOf(sketch.plane);
+  // Along a helix: where the rebuild found it.
+  const helix = before.find((candidate) => candidate.id === feature.path && candidate.type === 'helix' && !candidate.suppressed);
+  if (helix) {
+    const geometry = context.references.get(helix.id);
+    if (geometry?.kind !== 'helix') throw new FeatureError('path-empty');
+    return { ...feature, profile, frame, helix: geometry };
+  }
   const pathSketch = sketchBefore(before, feature.path);
   const spineFrame = context.frames.get(pathSketch.id) ?? frameOf(pathSketch.plane);
   const found = sketchPath(pathSketch.sketch);

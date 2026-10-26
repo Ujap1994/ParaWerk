@@ -134,6 +134,8 @@ export type FeatureErrorCode =
   | 'rib-curves'
   | 'thread-face'
   | 'thread-size'
+  | 'helix-circle'
+  | 'sweep-holes'
   | 'import-no-solid'
   | 'cut-nothing'
   | 'profile-crosses-axis'

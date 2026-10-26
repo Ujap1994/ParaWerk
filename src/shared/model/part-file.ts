@@ -33,6 +33,7 @@ export function formatVersionOf(features: readonly Feature[], properties: PartPr
     feature.type === 'loft' ||
     feature.type === 'rib' ||
     feature.type === 'thread' ||
+    feature.type === 'helix' ||
     (feature.type === 'fillet' && feature.method === 'variable');
   if (features.some(eighth) || properties.configurations !== undefined) return 8;
   const seventh = (feature: Feature) =>

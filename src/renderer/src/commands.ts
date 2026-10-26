@@ -331,7 +331,9 @@ export function startFeature(type: FeatureType): void {
     const outlined = (sketch: SketchFeature) => sketchProfile(sketch.sketch).regions.length > 0;
     if (draft.type === 'sweep') {
       const profile = unused.findLast(outlined) ?? sketches.findLast(outlined);
-      const path = unused.findLast((sketch) => sketch !== profile && !outlined(sketch)) ?? sketches.findLast((sketch) => sketch !== profile && !outlined(sketch));
+      // The path: the newest helix or sketch of open curves no other sweep follows yet.
+      const paths = features.filter((feature) => !feature.suppressed && ((feature.type === 'sketch' && feature !== profile && !outlined(feature)) || feature.type === 'helix'));
+      const path = paths.findLast((feature) => !used.has(feature.id)) ?? paths.at(-1);
       if (!profile || !path) {
         showToast('info', t('toasts.noSweepSketches'));
         return;
@@ -346,6 +348,16 @@ export function startFeature(type: FeatureType): void {
       }
       draft = { ...draft, operation, sketches: chosen.map((sketch) => sketch.id) };
     }
+  } else if (draft.type === 'helix') {
+    // Around the circle of the newest sketch with one that no feature uses yet.
+    const used = new Set(features.flatMap(sketchesUsedBy));
+    const circled = features.filter((feature): feature is SketchFeature => feature.type === 'sketch' && !feature.suppressed && feature.sketch.entities.some((entity) => entity.type === 'circle' && !entity.construction));
+    const sketch = circled.findLast((candidate) => !used.has(candidate.id)) ?? circled.at(-1);
+    if (!sketch) {
+      showToast('info', t('toasts.noHelixSketch'));
+      return;
+    }
+    draft = { ...draft, sketch: sketch.id };
   } else if (draft.type === 'hole') {
     const sketch = holeSketchToUse(features);
     if (!sketch) {
@@ -445,7 +457,7 @@ export function chooseRevolveAxis(value: string): void {
 /** Chooses the sketch of the extrusion or revolution being edited (a revolution also takes its centerline). */
 export function chooseFeatureSketch(id: string): void {
   const draft = getState().activeEdit?.draft;
-  if (draft?.type === 'extrude' || draft?.type === 'hole' || draft?.type === 'sweep' || draft?.type === 'rib') updateDraft({ sketch: id });
+  if (draft?.type === 'extrude' || draft?.type === 'hole' || draft?.type === 'sweep' || draft?.type === 'rib' || draft?.type === 'helix') updateDraft({ sketch: id });
   if (draft?.type !== 'revolve') return;
   const sketch = getState().history.features.find((feature): feature is SketchFeature => feature.type === 'sketch' && feature.id === id);
   updateDraft({ sketch: id, axis: sketch ? defaultAxis(sketch) : '' });

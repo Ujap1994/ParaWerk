@@ -587,6 +587,14 @@ export const ThreadIcon = (p: P) => (
   </Icon>
 );
 
+/** Helix: a coil seen from the side, its far half lighter. */
+export const HelixIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="M5 3.5q7 4.5 14 2.25M5 8q7 4.5 14 2.25M5 12.5q7 4.5 14 2.25M5 17q7 4.5 14 2.25" />
+    <path d="M19 5.75Q12 4 5 8M19 10.25Q12 8.5 5 12.5M19 14.75Q12 13 5 17" opacity="0.45" />
+  </Icon>
+);
+
 /** Configurations: stacked cards of one part, the front one with lines of values. */
 export const ConfigurationsIcon = (p: P) => (
   <Icon {...p}>
@@ -709,4 +717,5 @@ export const FEATURE_ICONS = {
   loft: LoftIcon,
   rib: RibIcon,
   thread: ThreadIcon,
+  helix: HelixIcon,
 } as const;
