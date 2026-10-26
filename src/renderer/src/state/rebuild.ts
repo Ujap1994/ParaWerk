@@ -128,7 +128,7 @@ function applyResult(
     display = { body: meshes.get(last) ?? null, preview: null, pickable: false };
   } else if (!activeEdit) {
     display = { body: meshes.get(last) ?? null, preview: null, pickable: true };
-  } else if (isEdgeFeature(activeEdit.draft) || activeEdit.draft.type === 'shell' || extrudesUpTo(activeEdit.draft)) {
+  } else if (isEdgeFeature(activeEdit.draft) || activeEdit.draft.type === 'shell' || activeEdit.draft.type === 'draft' || extrudesUpTo(activeEdit.draft)) {
     // Edges and faces are picked on the body before the feature; its result is shown as a preview.
     display = { body: meshes.get(activeEdit.index - 1) ?? null, preview: meshes.get(activeEdit.index) ?? null, pickable: true };
   } else if (isReferenceFeature(activeEdit.draft)) {
@@ -185,7 +185,7 @@ function takeOverHealedEdges(plan: RebuildPlan, results: FeatureResult[]): void 
       changed = true;
       return { ...feature, plane: result.healedPlane };
     }
-    if (result?.healedFaces && feature.type === 'shell' && JSON.stringify(result.healedFaces) !== JSON.stringify(feature.faces)) {
+    if (result?.healedFaces && (feature.type === 'shell' || feature.type === 'draft') && JSON.stringify(result.healedFaces) !== JSON.stringify(feature.faces)) {
       changed = true;
       return { ...feature, faces: result.healedFaces };
     }

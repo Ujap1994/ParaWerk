@@ -570,6 +570,15 @@ export const ReferencePointIcon = (p: P) => (
   </Icon>
 );
 
+/** Draft: a block whose sides lean in, over a dashed neutral line, with the pull direction above it. */
+export const DraftIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="M5.5 19 8.5 8.5h7l3 10.5" />
+    <path d="M2.5 19h19" strokeDasharray="2.2 2" />
+    <path d="M12 6.5V2.5M10 4.5l2-2 2 2" />
+  </Icon>
+);
+
 /** Coordinate system: three arrows from an origin point, up, to the right and towards the viewer. */
 export const CoordinateSystemIcon = (p: P) => (
   <Icon {...p}>
@@ -644,4 +653,5 @@ export const FEATURE_ICONS = {
   fillet: FilletIcon,
   chamfer: ChamferIcon,
   shell: ShellIcon,
+  draft: DraftIcon,
 } as const;

@@ -1,4 +1,4 @@
-import { COPYABLE_TYPES, isCopyFeature, isEdgeFeature, type CopyFeature, type EdgeFeature, type EdgeRef, type ExtrudeFeature, type Feature, type FilletFeature, roundFaceCount, type HoleFeature, type ShellFeature, type SketchFeature, type SolidModelingFeature, type Vec3 } from '../shared/model/feature.ts';
+import { COPYABLE_TYPES, isCopyFeature, isEdgeFeature, type CopyFeature, type DraftFeature, type EdgeFeature, type EdgeRef, type ExtrudeFeature, type Feature, type FilletFeature, roundFaceCount, type HoleFeature, type ShellFeature, type SketchFeature, type SolidModelingFeature, type Vec3 } from '../shared/model/feature.ts';
 import { circularTransforms, linearTransforms, mirrorTransform, type Transform } from '../shared/model/pattern.ts';
 import { holePositions, holeProblem } from '../shared/model/hole.ts';
 import { edgeFaceNames, edgeRefOf, faceRefOf, resolveEdgeRefs, resolveFaceRef, resolveFacePlane, type BodyNaming } from '../shared/model/naming.ts';
@@ -8,7 +8,7 @@ import type { GeometryRef, ReferenceGeometry } from '../shared/model/reference.t
 import { frameOf, frameOnPlane, ORIGIN_ID, toModel, toSketch, type SketchFrame, type SketchPlaneRef } from '../shared/model/sketch.ts';
 import type { Point2 } from '../shared/model/spline.ts';
 import { hashString } from '../shared/hash.ts';
-import type { KernelFeature, ResolvedCopy, ResolvedEdgeFeature, ResolvedExtrude, ResolvedHole, ResolvedShell } from './backend.ts';
+import type { KernelFeature, ResolvedCopy, ResolvedDraft, ResolvedEdgeFeature, ResolvedExtrude, ResolvedHole, ResolvedShell } from './backend.ts';
 import { FeatureError } from './feature-error.ts';
 import { axisOfReference, curvedFaceOfReference, referenceValue, type BodyQuery, type ReferenceContext } from './reference.ts';
 
@@ -293,6 +293,24 @@ function resolveShell(feature: ShellFeature, context: ResolveContext): ResolvedS
   return { ...feature, faceIndices, ...(missing > 0 ? { missingFaces: missing } : {}), ...(healed ? { healedFaces } : {}) };
 }
 
+/**
+ * The faces of a draft in the body it tilts and its neutral plane; the pull direction is the plane's
+ * normal (or the other way with `flip`). Faces that are gone are left out and counted, as for shells.
+ */
+function resolveDraft(feature: DraftFeature, context: ResolveContext): ResolvedDraft {
+  const plane = referenceValue(feature.references[0], 'plane', 0, context);
+  const pull: Vec3 = feature.flip ? [-plane.normal[0], -plane.normal[1], -plane.normal[2]] : plane.normal;
+  if (feature.faces.length === 0) throw new FeatureError('draft-faces');
+  const { faceIndices, missingFaces, healedFaces } = resolveShell({ id: feature.id, type: 'shell', thickness: 1, outward: false, faces: feature.faces }, context);
+  return {
+    ...feature,
+    faceIndices,
+    plane: [...plane.point, ...pull],
+    ...(missingFaces ? { missingFaces } : {}),
+    ...(healedFaces ? { healedFaces } : {}),
+  };
+}
+
 /** What features are resolved against: the body before them, where sketches lie and where reference features lie. */
 export interface ResolveContext extends ReferenceContext {
   frames: ReadonlyMap<string, SketchFrame>;
@@ -307,6 +325,7 @@ export interface ResolveContext extends ReferenceContext {
 export function resolveFeature(feature: SolidModelingFeature, before: readonly Feature[], context: ResolveContext): KernelFeature {
   if (isCopyFeature(feature)) return resolveCopy(feature, before, context);
   if (feature.type === 'shell') return resolveShell(feature, context);
+  if (feature.type === 'draft') return resolveDraft(feature, context);
   if (isEdgeFeature(feature)) {
     if (!context.body) throw new FeatureError('no-body');
     return resolveEdges(feature, context.body);

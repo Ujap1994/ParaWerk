@@ -187,6 +187,15 @@ full rounds are ParaWerk's own constructions, since OCCT has no such operations;
 faces. **Open for Gate 2:** the owner models a set of their own real-world parts without workarounds;
 what that turns up is fixed before Phase 3 starts.
 
+### Phase 3 – started (2026-10-26, alongside the owner's Gate 2 tests)
+
+| Item | Status |
+|---|---|
+| Draft (faces about a neutral plane) | ✅ done |
+| Sweep, loft, rib | open |
+| Multi-body parts, variable-radius fillets, curves (helix, projected, composite), modeled threads | open |
+| Surface tools (offset, knit, thicken), configurations and design tables, full equation support | open |
+
 ## 2. Guiding principles
 
 1. **Not a clone, a focused tool.** Full parity with commercial CAD suites, which represent thousands of

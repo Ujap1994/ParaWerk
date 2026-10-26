@@ -1164,6 +1164,29 @@ test('rounds all edges of a face picked in the 3D view', async () => {
   await expect(page.locator('[data-testid="face-count"]')).toHaveCount(0);
 });
 
+test('drafts faces picked in the 3D view about a neutral plane picked in the tree', async () => {
+  launched = await launchApp({ width: 1000, height: 640 });
+  const { page } = launched;
+  await createBox(page);
+  await page.click('[data-variants="form"]');
+  await page.click('[data-entry="draft"]');
+  // The top plane (z = 0) is the neutral plane; then the front and the right face are tilted by 5°.
+  await page.click('.feature-tree .tree-item:has-text("Top plane")');
+  await expect(page.locator('[data-testid="draft-faces"]')).toHaveClass(/is-active/);
+  await clickWorldPoint(page, [0, -30, 20]);
+  await clickWorldPoint(page, [50, 0, 20]);
+  await expect(page.locator('[data-testid="draft-faces"]')).toContainText('2 faces');
+  await page.locator('[data-testid="draft-angle"]').fill('5');
+  await page.locator('[data-testid="draft-angle"]').press('Tab');
+  await page.click('[data-testid="panel-ok"]');
+  // Two sides lean in towards the top: less material than the plain box, more than with four sides.
+  const shrink = 40 * Math.tan((5 * Math.PI) / 180);
+  const drafted = await volume(page);
+  expect(drafted).toBeLessThan(240_000 - 0.9 * (100 + 60) * 20 * shrink);
+  expect(drafted).toBeGreaterThan(240_000 - (100 + 60) * 20 * shrink);
+  expect((await state(page)).history.features[1]).toMatchObject({ type: 'draft', angle: 5, references: [{ kind: 'standard-plane', plane: 'top' }], faces: [{ kind: 'face' }, { kind: 'face' }] });
+});
+
 test('rounds between two faces picked for a face fillet', async () => {
   launched = await launchApp({ width: 1000, height: 640 });
   const { page } = launched;

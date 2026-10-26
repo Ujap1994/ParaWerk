@@ -41,6 +41,8 @@ function visibleSelection(state: AppState): Pick[] {
   if (edit?.draft.type === 'shell') return state.display.preview ? [] : referencePicks(edit.draft.faces, state);
   if (edit && hasReferenceSlots(edit.draft)) {
     const picks = referencePicks(edit.draft.references, state).filter((pick) => pick.kind === 'face' || pick.kind === 'edge' || pick.kind === 'vertex');
+    // The faces a draft tilts, until the preview shows them tilted (the highlight would cover it).
+    if (edit.draft.type === 'draft' && !state.display.preview) picks.push(...referencePicks(edit.draft.faces, state));
     // The faces of the features a pattern or mirror copies are highlighted (faces are named after their feature).
     if (isCopyFeature(edit.draft)) {
       const seeds = new Set(edit.draft.features);

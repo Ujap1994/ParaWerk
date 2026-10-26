@@ -266,6 +266,10 @@ val transformShape(int id, val transform) {
   return guarded([&] { return idResult(parawerk::transformShape(id, emscripten::convertJSArrayToNumberVector<double>(transform))); });
 }
 
+val draftFaces(int bodyId, val faceIndices, val plane, double angle, std::string name) {
+  return guarded([&] { return idResult(parawerk::draftFaces(bodyId, toIntVector(faceIndices), emscripten::convertJSArrayToNumberVector<double>(plane), angle, name)); });
+}
+
 val faceFillet(int bodyId, int faceA, int faceB, double radius, std::string name) {
   return guarded([&] { return idResult(parawerk::faceFillet(bodyId, faceA, faceB, radius, name)); });
 }
@@ -295,7 +299,7 @@ val importStepText(const std::string& text, const std::string& name) {
   return guarded([&] { return idResult(parawerk::importStep(text, name)); });
 }
 
-std::string version() { return "parawerk-kernel 0.13 / OCCT " PARAWERK_OCCT_VERSION; }
+std::string version() { return "parawerk-kernel 0.14 / OCCT " PARAWERK_OCCT_VERSION; }
 
 }  // namespace
 
@@ -332,5 +336,6 @@ EMSCRIPTEN_BINDINGS(parawerk_kernel) {
   emscripten::function("transformShape", &transformShape);
   emscripten::function("fullRound", &fullRound);
   emscripten::function("faceFillet", &faceFillet);
+  emscripten::function("draftFaces", &draftFaces);
   emscripten::function("limitBySurface", &limitBySurface);
 }

@@ -209,6 +209,14 @@ int chamferUneven(int bodyId, const std::vector<int>& edgeIndices, double distan
 int transformShape(int id, const std::vector<double>& transform);
 
 /**
+ * Tilts faces of a body by `angle` (radians) about the neutral plane (`plane`: a point and the pull
+ * direction, 6 values): positive angles make the body narrower along the pull direction. Faces keep their
+ * names. Fails with "draft-face" (detail: the position of the face in the list) when a face cannot be
+ * tilted (for example one at a right angle to the pull direction).
+ */
+int draftFaces(int bodyId, const std::vector<int>& faceIndices, const std::vector<double>& plane, double angle, const std::string& name = "");
+
+/**
  * A face fillet: a round of `radius` between two planar faces at an angle, also where they share no
  * edge (faces between them, such as a chamfer, are rounded over). At an outer corner the material outside
  * the round is cut away, at an inner corner the corner is filled. The round face is named "<name>:round".

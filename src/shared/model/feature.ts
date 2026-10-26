@@ -11,7 +11,7 @@ import type { ThinSide } from './thin.ts';
 
 export type Vec3 = [number, number, number];
 
-export type FeatureType = 'variables' | 'sketch' | 'plane' | 'axis' | 'point' | 'csys' | 'extrude' | 'revolve' | 'hole' | 'pattern' | 'mirror' | 'box' | 'cylinder' | 'import' | 'fillet' | 'chamfer' | 'shell';
+export type FeatureType = 'variables' | 'sketch' | 'plane' | 'axis' | 'point' | 'csys' | 'extrude' | 'revolve' | 'hole' | 'pattern' | 'mirror' | 'box' | 'cylinder' | 'import' | 'fillet' | 'chamfer' | 'shell' | 'draft';
 
 /** How a solid-creating feature combines with the existing body. */
 export type BooleanOperation = 'add' | 'cut';
@@ -75,6 +75,7 @@ export const EXPRESSION_FIELDS: Readonly<Record<FeatureType, readonly string[]>>
   fillet: ['radius'],
   chamfer: ['distance', 'distance2', 'angle'],
   shell: ['thickness'],
+  draft: ['angle'],
 };
 
 /** A named value of the part; its expression may use other variables. */
@@ -174,6 +175,21 @@ export interface ChamferFeature extends FeatureBase {
   flip?: boolean;
   /** Faces whose edges are all beveled too, also edges they get later. */
   faces?: FaceNameRef[];
+}
+
+/**
+ * Tilts faces of the body by `angle` (degrees) for molding and casting: they turn about the line where
+ * they cross the neutral plane, so the part gets narrower along the pull direction (the plane's normal,
+ * or against it with `flip`).
+ */
+export interface DraftFeature extends FeatureBase {
+  type: 'draft';
+  method: 'neutralPlane';
+  /** The neutral plane. */
+  references: GeometryRef[];
+  faces: FaceNameRef[];
+  angle: number;
+  flip: boolean;
 }
 
 /**
@@ -433,11 +449,11 @@ export function isCopyFeature(feature: Feature): feature is CopyFeature {
   return feature.type === 'pattern' || feature.type === 'mirror';
 }
 
-/** Features whose references are chosen in fields of the side panel (reference geometry, patterns, mirror). */
-export type SlotFeature = ReferenceFeature | CopyFeature;
+/** Features whose references are chosen in fields of the side panel (reference geometry, patterns, mirror, draft). */
+export type SlotFeature = ReferenceFeature | CopyFeature | DraftFeature;
 
 export function hasReferenceSlots(feature: Feature): feature is SlotFeature {
-  return isReferenceFeature(feature) || isCopyFeature(feature);
+  return isReferenceFeature(feature) || isCopyFeature(feature) || feature.type === 'draft';
 }
 
 /** The feature types a pattern or mirror can copy: those that add or cut material with a tool of their own. */
@@ -467,7 +483,8 @@ export type Feature =
   | ImportFeature
   | FilletFeature
   | ChamferFeature
-  | ShellFeature;
+  | ShellFeature
+  | DraftFeature;
 
 /** Features that build or modify the solid body (everything except variables, sketches and reference geometry). */
 export type SolidModelingFeature = Exclude<Feature, SketchFeature | VariablesFeature | ReferenceFeature>;
@@ -482,7 +499,7 @@ export function isSolidFeature(feature: Feature): feature is BoxFeature | Cylind
   return feature.type === 'box' || feature.type === 'cylinder';
 }
 
-export const FEATURE_TYPES: readonly FeatureType[] = ['variables', 'sketch', 'plane', 'axis', 'point', 'csys', 'extrude', 'revolve', 'hole', 'pattern', 'mirror', 'box', 'cylinder', 'import', 'fillet', 'chamfer', 'shell'];
+export const FEATURE_TYPES: readonly FeatureType[] = ['variables', 'sketch', 'plane', 'axis', 'point', 'csys', 'extrude', 'revolve', 'hole', 'pattern', 'mirror', 'box', 'cylinder', 'import', 'fillet', 'chamfer', 'shell', 'draft'];
 
 /** Features that make a body from nothing (the first feature with material must be one of them, adding). */
 export const BODY_TYPES: ReadonlySet<FeatureType> = new Set(['box', 'cylinder', 'extrude', 'revolve', 'import']);
@@ -548,5 +565,7 @@ export function defaultFeature(type: FeatureType, id: string = createFeatureId()
       return { id, type, distance: 3, edges: [] };
     case 'shell':
       return { id, type, thickness: 2, faces: [], outward: false };
+    case 'draft':
+      return { id, type, method: 'neutralPlane', references: [], faces: [], angle: 3, flip: false };
   }
 }

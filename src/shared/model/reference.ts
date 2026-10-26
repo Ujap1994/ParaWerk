@@ -58,6 +58,7 @@ export const REFERENCE_ROLES = {
   csys: { position: [], references: ['point', 'direction', 'direction'] },
   pattern: { linear: ['direction'], circular: ['axis'] },
   mirror: { plane: ['plane'] },
+  draft: { neutralPlane: ['plane'] },
 } as const satisfies {
   plane: Record<PlaneMethod, readonly ReferenceRole[]>;
   axis: Record<AxisMethod, readonly ReferenceRole[]>;
@@ -65,6 +66,7 @@ export const REFERENCE_ROLES = {
   csys: Record<CsysMethod, readonly ReferenceRole[]>;
   pattern: Record<'linear' | 'circular', readonly ReferenceRole[]>;
   mirror: Record<'plane', readonly ReferenceRole[]>;
+  draft: Record<'neutralPlane', readonly ReferenceRole[]>;
 };
 
 /** Where a reference feature lies, as the last rebuild computed it. */

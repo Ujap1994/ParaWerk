@@ -54,6 +54,7 @@ import {
   ReferenceAxisIcon,
   ReferencePlaneIcon,
   ReferencePointIcon,
+  DraftIcon,
   CoordinateSystemIcon,
   SettingsIcon,
   ShellIcon,
@@ -136,9 +137,16 @@ const FEATURE_BUTTONS: { type: FeatureType; icon: IconType }[] = [
   { type: 'cylinder', icon: CylinderIcon },
   { type: 'fillet', icon: FilletIcon },
   { type: 'chamfer', icon: ChamferIcon },
-  { type: 'shell', icon: ShellIcon },
-  { type: 'variables', icon: VariablesIcon },
 ];
+
+/** Features that shape the walls of the body: shell and draft. */
+const FORM_ENTRIES: readonly SplitEntry[] = (['shell', 'draft'] as const).map((type) => ({
+  id: type,
+  icon: { shell: ShellIcon, draft: DraftIcon }[type],
+  label: type,
+  start: () => commands.startFeature(type),
+  active: (state: AppState) => state.activeEdit?.mode === 'create' && state.activeEdit.draft.type === type,
+}));
 
 const TABS: CommandTab[] = ['features', 'sketch', 'evaluate'];
 
@@ -262,10 +270,20 @@ function FeaturesTab() {
           label={t(`commands.${type}`)}
           tooltip={t(`commands.tooltips.${type}`)}
           active={activeType === type}
-          disabled={(sketching && type !== 'sketch') || ((type === 'fillet' || type === 'chamfer' || type === 'hole' || type === 'shell') && !hasFeatures)}
+          disabled={(sketching && type !== 'sketch') || ((type === 'fillet' || type === 'chamfer' || type === 'hole') && !hasFeatures)}
           onClick={() => commands.startFeature(type)}
         />
       ))}
+      <SplitFeatureButton entries={FORM_ENTRIES} menuLabel={t('commands.formFeatures')} variants="form" disabled={sketching || !hasFeatures} />
+      <CommandButton
+        id="variables"
+        icon={VariablesIcon}
+        label={t('commands.variables')}
+        tooltip={t('commands.tooltips.variables')}
+        active={activeType === 'variables'}
+        disabled={sketching}
+        onClick={() => commands.startFeature('variables')}
+      />
       <SplitFeatureButton entries={COPY_ENTRIES} menuLabel={t('commands.copyGeometry')} variants="copy" disabled={sketching || !hasFeatures} />
       <SplitFeatureButton entries={REFERENCE_ENTRIES} menuLabel={t('commands.referenceGeometry')} variants="reference-geometry" disabled={sketching} />
     </Group>

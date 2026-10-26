@@ -15,7 +15,7 @@
 4. [Sketches](sketches.md): planes, sketch mode, drawing and editing tools, snapping, relations,
    dimensions, definition status, DXF, and a step-by-step example
 5. [Modeling features](features.md): extrude, revolve, holes, patterns and mirror, box, cylinder, fillet,
-   chamfer, shell, reference geometry, variables, editing and undo
+   chamfer, shell, draft, reference geometry, variables, editing and undo
 6. [Material and evaluation](evaluate.md): material and density, color, mass, center of mass,
    moments of inertia, and the measure tool
 7. [Files, import and export](files.md): `.pwpart` files, recovery after a crash, STEP import, STEP, STL and 3MF export, sketches as DXF

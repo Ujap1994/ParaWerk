@@ -113,7 +113,8 @@
       "measure": "Measure distances, angles, lengths and areas of faces, edges and vertices",
       "exportThreeMf": "Export as 3MF for 3D printing, with material and color",
       "importStep": "Import a STEP file as a body",
-      "csys": "Create a coordinate system: at a position, or at a point with its axes along edges, axes or plane normals"
+      "csys": "Create a coordinate system: at a position, or at a point with its axes along edges, axes or plane normals",
+      "draft": "Tilt faces by an angle about a neutral plane, for molding and casting"
     },
     "tabs": {
       "label": "Command tabs",
@@ -195,7 +196,9 @@
     "exportThreeMf": "3MF",
     "importStep": "Import",
     "exportFormats": "Export formats",
-    "csys": "Coordinate system"
+    "csys": "Coordinate system",
+    "draft": "Draft",
+    "formFeatures": "Shell and draft"
   },
   "features": {
     "plane": "Plane",
@@ -215,7 +218,8 @@
     "mirror": "Mirror",
     "shell": "Shell",
     "import": "Import",
-    "csys": "Coordinate system"
+    "csys": "Coordinate system",
+    "draft": "Draft"
   },
   "tree": {
     "title": "Feature tree",
@@ -470,14 +474,19 @@
     "reference-parallel": "The references are parallel, so they do not meet. Choose references that cross each other.",
     "reference-not-parallel": "The axis must lie parallel to the plane: the new plane turns around it.",
     "reference-collinear": "The points lie on one line or on each other, so they do not define the plane or axis.",
-    "import-no-solid": "The STEP file contains no solid body (only surfaces or wireframes)."
+    "import-no-solid": "The STEP file contains no solid body (only surfaces or wireframes).",
+    "draft-faces": "Pick the faces to draft.",
+    "draft-face": "Face {{detail}} cannot be drafted: it must run along the pull direction (not across it).",
+    "draft-face-missing": "{{detail}} of the faces to draft no longer exist: an earlier change removed them. Edit the draft and pick them again."
   },
   "warnings": {
     "edge-missing_one": "{{count}} selected edge no longer exists and is left out. Edit the feature to remove it or pick another edge.",
     "edge-missing_other": "{{count}} selected edges no longer exist and are left out. Edit the feature to remove them or pick other edges.",
     "shell-face-missing_one": "{{count}} face to open no longer exists and is left out. Edit the shell to pick another face.",
     "shell-face-missing_other": "{{count}} faces to open no longer exist and are left out. Edit the shell to pick other faces.",
-    "cut-nothing": "This cut does not touch the part, so it removes nothing. Try the other direction (for a sketch on a face: Reversed, into the part)."
+    "cut-nothing": "This cut does not touch the part, so it removes nothing. Try the other direction (for a sketch on a face: Reversed, into the part).",
+    "draft-face-missing_one": "{{count}} face to draft no longer exists and is left out. Edit the draft to pick another face.",
+    "draft-face-missing_other": "{{count}} faces to draft no longer exist and are left out. Edit the draft to pick other faces."
   },
   "fileErrors": {
     "not-a-zip": "This is not a ParaWerk part file.",
@@ -716,6 +725,9 @@
       "csys": {
         "position": "Position and angle",
         "references": "Point and two directions"
+      },
+      "draft": {
+        "neutralPlane": "Neutral plane"
       }
     },
     "roles": {
@@ -957,5 +969,15 @@
     },
     "roundHint": "Click a side face, the face between the sides and the other side face. The face in the middle becomes half a cylinder touching all three; the side faces must be parallel planes (a rib, the end of a tab).",
     "facesHint": "Click two planar faces that meet at a corner. The round of the radius runs between them, also where they share no edge: faces between them (a chamfer, a step) are rounded over, and an inner corner is filled."
+  },
+  "draft": {
+    "neutralPlane": "Neutral plane",
+    "faces": "Faces to draft",
+    "facesCount_one": "{{count}} face",
+    "facesCount_other": "{{count}} faces",
+    "pickFaces": "Click faces in the 3D view",
+    "angle": "Draft angle",
+    "flip": "Pull the other way",
+    "hint": "Pick the neutral plane, then the faces to tilt (click again to take one out). The faces turn about the line where they cross the neutral plane, so the part gets narrower along the pull direction, the normal of the plane."
   }
 }

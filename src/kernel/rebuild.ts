@@ -80,7 +80,7 @@ function withoutTakenOver(result: FeatureResult, feature: Feature | undefined): 
   const edgesNew = healedEdges && !(feature && isEdgeFeature(feature) && stableStringify(feature.edges) === stableStringify(healedEdges));
   const planeNew = healedPlane && !(feature?.type === 'sketch' && stableStringify(feature.plane) === stableStringify(healedPlane));
   const referencesNew = healedReferences && !(feature && isReferenceFeature(feature) && stableStringify(feature.references) === stableStringify(healedReferences));
-  const facesNew = healedFaces && !(feature?.type === 'shell' && stableStringify(feature.faces) === stableStringify(healedFaces));
+  const facesNew = healedFaces && !((feature?.type === 'shell' || feature?.type === 'draft') && stableStringify(feature.faces) === stableStringify(healedFaces));
   return {
     ...rest,
     ...(edgesNew ? { healedEdges } : {}),
@@ -237,7 +237,7 @@ export class Rebuilder implements Disposable {
             ...(healed ? { healedEdges: healed } : {}),
             ...(missing ? { warning: { code: 'edge-missing' as const, detail: String(missing) } } : {}),
             ...(healedFaces ? { healedFaces } : {}),
-            ...(missingFaces ? { warning: { code: 'shell-face-missing' as const, detail: String(missingFaces) } } : {}),
+            ...(missingFaces ? { warning: { code: resolved.type === 'draft' ? ('draft-face-missing' as const) : ('shell-face-missing' as const), detail: String(missingFaces) } } : {}),
             ...(missed ? { warning: { code: 'cut-nothing' as const } } : {}),
             ...(threads.length > 0 ? { threads } : {}),
           },

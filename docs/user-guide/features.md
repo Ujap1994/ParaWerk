@@ -221,6 +221,22 @@ If the walls are too thick for the part – thicker than half its narrowest plac
 made and is marked in red. Open faces are remembered like edges: when an earlier change removes one, the
 shell leaves it out and warns.
 
+## Draft
+
+**Draft** (in the arrow of the **Shell** button) tilts faces by a *Draft angle*, as molded and cast parts
+need to come out of their mold. First pick the **neutral plane** – a standard plane, a planar face or a
+reference plane – then click the faces to tilt (click again to take one out). Each face turns about the
+line where it crosses the neutral plane, so the part gets narrower along the pull direction, the normal
+of the neutral plane; **Pull the other way** reverses it. The 3D view previews the tilted faces and draws
+the original edges as thin blue lines.
+
+![A block whose four sides are drafted by 6° about the top plane](../images/screenshots/draft.png)
+
+A face across the pull direction (such as the top of a block pulled upwards) cannot be tilted and is
+reported. The faces keep their names, so fillets on them stay put; faces that an earlier change removed
+are left out with a warning, as for shells. For extrusions, *Draft while extruding* in the extrusion
+itself is often simpler.
+
 ## How features remember their edges
 
 A fillet or chamfer remembers each edge by the two faces it lies between – for example "the top face of

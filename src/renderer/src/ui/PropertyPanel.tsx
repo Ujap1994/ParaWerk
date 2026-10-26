@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { formatQuantity } from '../format.ts';
-import { CHAMFER_METHODS, FILLET_METHODS, roundFaceCount, type FilletFeature, type FilletMethod, EXTRUDE_ENDS, extrudesOneWay, MAX_DRAFT_ANGLE, type RevolveDirection, hasReferenceSlots, isCopyFeature, type Axis, type BooleanOperation, type ChamferFeature, type ChamferMethod, type EdgeFeature, type ExtrudeDirection, type ExtrudeEnd, type ExtrudeFeature, type Feature, type RevolveFeature, type Vec3 } from '../../../shared/model/feature.ts';
+import { CHAMFER_METHODS, type DraftFeature, FILLET_METHODS, roundFaceCount, type FilletFeature, type FilletMethod, EXTRUDE_ENDS, extrudesOneWay, MAX_DRAFT_ANGLE, type RevolveDirection, hasReferenceSlots, isCopyFeature, type Axis, type BooleanOperation, type ChamferFeature, type ChamferMethod, type EdgeFeature, type ExtrudeDirection, type ExtrudeEnd, type ExtrudeFeature, type Feature, type RevolveFeature, type Vec3 } from '../../../shared/model/feature.ts';
 import { DEFAULT_THIN_THICKNESS, THIN_SIDES, type ThinSide } from '../../../shared/model/thin.ts';
 import type { GeometryRef } from '../../../shared/model/reference.ts';
 import { referenceRoles } from '../references.ts';
@@ -11,7 +11,7 @@ import { useAppState } from '../state/store.ts';
 import { useFeatureName } from './FeatureTree.tsx';
 import { CheckIcon, CloseIcon, FEATURE_ICONS } from './icons.tsx';
 import { NumberField } from './NumberField.tsx';
-import { ReferenceFields, useReferenceName } from './ReferencePanel.tsx';
+import { ReferenceFields, ReferenceSlots, useReferenceName } from './ReferencePanel.tsx';
 import { HoleFields } from './HolePanel.tsx';
 import { CopyFields } from './CopyPanel.tsx';
 import { Segmented } from './Segmented.tsx';
@@ -292,6 +292,8 @@ function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
       return <ReferenceFields draft={draft} />;
     case 'hole':
       return <HoleFields draft={draft} index={index} />;
+    case 'draft':
+      return <DraftFields draft={draft} />;
     case 'pattern':
     case 'mirror':
       return <CopyFields draft={draft} />;
@@ -358,6 +360,40 @@ function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
 }
 
 /** The size of a chamfer: one distance, two distances, or a distance and an angle. */
+/** A draft: its neutral plane, the faces to tilt (picked while their field is active), the angle and the pull direction. */
+function DraftFields({ draft }: { draft: DraftFeature }) {
+  const { t } = useTranslation();
+  const active = useAppState((state) => state.referenceSlot === commands.FEATURES_SLOT);
+  return (
+    <>
+      <Section title={t('references.definition')}>
+        <ReferenceSlots draft={draft} />
+        <div className={`reference-slot${active ? ' is-active' : ''}${draft.faces.length > 0 ? ' is-filled' : ''}`} data-testid="draft-faces">
+          <button type="button" className="reference-slot-button" disabled={draft.references.length === 0} onClick={() => commands.setReferenceSlot(commands.FEATURES_SLOT)}>
+            <span className="reference-slot-role">{t('draft.faces')}</span>
+            <span className="reference-slot-value">
+              {draft.faces.length > 0 ? t('draft.facesCount', { count: draft.faces.length }) : active ? t('draft.pickFaces') : t('references.empty')}
+            </span>
+          </button>
+          {draft.faces.length > 0 ? (
+            <button type="button" className="icon-button" title={t('references.clear')} aria-label={t('references.clear')} onClick={() => commands.updateDraft({ faces: [] })}>
+              <CloseIcon />
+            </button>
+          ) : null}
+        </div>
+      </Section>
+      <Section title={t('panel.parameters')}>
+        <NumberField label={t('draft.angle')} unit="°" step={1} value={draft.angle} testId="draft-angle" {...equation(draft, 'angle')} onChange={(angle) => commands.updateDraft({ angle: Math.min(89, Math.max(0.01, angle)) })} />
+        <label className="checkbox-field">
+          <input type="checkbox" checked={draft.flip} data-testid="draft-flip" onChange={(event) => commands.updateDraft({ flip: event.target.checked })} />
+          {t('draft.flip')}
+        </label>
+        <p className="panel-hint">{t('draft.hint')}</p>
+      </Section>
+    </>
+  );
+}
+
 /** Constant radius or full round. */
 function FilletMethodField({ draft }: { draft: FilletFeature }) {
   const { t } = useTranslation();

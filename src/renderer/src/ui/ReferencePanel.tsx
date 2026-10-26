@@ -8,7 +8,7 @@ import { useFeatureName } from './FeatureTree.tsx';
 import { CloseIcon } from './icons.tsx';
 import { NumberField } from './NumberField.tsx';
 
-const METHODS = { plane: PLANE_METHODS, axis: AXIS_METHODS, point: POINT_METHODS, csys: CSYS_METHODS, pattern: ['linear', 'circular'], mirror: ['plane'] } as const;
+const METHODS = { plane: PLANE_METHODS, axis: AXIS_METHODS, point: POINT_METHODS, csys: CSYS_METHODS, pattern: ['linear', 'circular'], mirror: ['plane'], draft: ['neutralPlane'] } as const;
 
 /** What the fields of a coordinate system stand for. */
 const CSYS_SLOTS = ['origin', 'xAxis', 'yAxis'] as const;
@@ -79,7 +79,9 @@ export function ReferenceSlots({ draft }: { draft: SlotFeature }) {
             return (
               <li key={index} className={`reference-slot${active ? ' is-active' : ''}${ref ? ' is-filled' : ''}`} data-testid={`reference-slot-${index}`}>
                 <button type="button" className="reference-slot-button" disabled={index > draft.references.length} onClick={() => commands.setReferenceSlot(index)}>
-                  <span className="reference-slot-role">{draft.type === 'csys' ? t(`references.csysSlots.${CSYS_SLOTS[index] ?? 'origin'}`) : t(`references.roles.${role}`)}</span>
+                  <span className="reference-slot-role">
+                    {draft.type === 'csys' ? t(`references.csysSlots.${CSYS_SLOTS[index] ?? 'origin'}`) : draft.type === 'draft' ? t('draft.neutralPlane') : t(`references.roles.${role}`)}
+                  </span>
                   <span className="reference-slot-value">{ref ? nameOf(ref) : active ? t('references.pick') : t('references.empty')}</span>
                 </button>
                 {ref ? (

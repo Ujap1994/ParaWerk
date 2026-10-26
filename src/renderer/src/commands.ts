@@ -443,6 +443,8 @@ function withSelectedReferences(draft: ReferenceFeature, selection: readonly Pic
  */
 function firstEmptySlot(feature: SlotFeature): number {
   if (isCopyFeature(feature) && feature.features.length === 0) return FEATURES_SLOT;
+  // A draft takes its neutral plane first, then any number of faces.
+  if (feature.type === 'draft') return feature.references.length === 0 ? 0 : FEATURES_SLOT;
   const roles = referenceRoles(feature);
   const empty = roles.findIndex((_, slot) => feature.references[slot] === undefined);
   return empty >= 0 ? empty : Math.max(0, roles.length - 1);
@@ -454,7 +456,7 @@ export function startCircularPattern(): void {
   if (getState().activeEdit?.draft.type === 'pattern') setReferenceMethod('circular');
 }
 
-/** The "field" of a pattern's or mirror's features to copy, in state.referenceSlot. */
+/** The "field" of a pattern's or mirror's features to copy (a draft's faces to tilt), in state.referenceSlot. */
 export const FEATURES_SLOT = -1;
 
 /** The feature a face of the shown body comes from, if a pattern or mirror can copy it (faces are named after their feature). */
@@ -690,7 +692,7 @@ export function pickExtrudeEnd(pick: Pick | 'origin'): void {
 export function toggleShellFace(pick: Pick): void {
   const { activeEdit: edit, display } = getState();
   const naming = display.body?.naming;
-  if (edit?.draft.type !== 'shell' || !naming || pick.kind !== 'face' || !pick.at) return;
+  if ((edit?.draft.type !== 'shell' && edit?.draft.type !== 'draft') || !naming || pick.kind !== 'face' || !pick.at) return;
   // One entry per reference (also for faces that are gone), so the positions match the list.
   const open = edit.draft.faces.map((ref) => referencePicks([ref], getState())[0]?.index);
   const at = open.indexOf(pick.index);
@@ -1482,6 +1484,12 @@ export function handlePick(pick: Pick | null, additive: boolean): void {
   }
   if (edit?.draft.type === 'shell') {
     if (pick) toggleShellFace(pick);
+    return;
+  }
+  // A draft: the neutral plane first, then the faces to tilt.
+  if (edit?.draft.type === 'draft') {
+    if (pick && state.referenceSlot === FEATURES_SLOT) toggleShellFace(pick);
+    else if (pick) assignReference(pick);
     return;
   }
   if (edit && extrudesUpTo(edit.draft)) {

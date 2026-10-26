@@ -434,6 +434,18 @@ function parseFeatureFields(raw: Json, path: string): Feature {
       }
       return chamfer;
     }
+    case 'draft':
+      if (typeof raw.flip !== 'boolean') throw new ValidationError('expected true or false', `${path}.flip`);
+      if (typeof raw.angle !== 'number' || !(raw.angle > 0 && raw.angle < 90)) throw new ValidationError('expected an angle between 0° and 90°', `${path}.angle`);
+      return {
+        ...common,
+        type: 'draft',
+        method: method(raw.method, ['neutralPlane'] as const, `${path}.method`),
+        references: geometryRefs(raw.references, `${path}.references`),
+        faces: faceRefs(raw.faces, `${path}.faces`),
+        angle: raw.angle,
+        flip: raw.flip,
+      };
     case 'shell': {
       if (typeof raw.outward !== 'boolean') throw new ValidationError('expected true or false', `${path}.outward`);
       return { ...common, type: 'shell', thickness: positiveLength(raw.thickness, `${path}.thickness`), faces: faceRefs(raw.faces, `${path}.faces`), outward: raw.outward };

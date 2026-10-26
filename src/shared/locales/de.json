@@ -113,7 +113,8 @@
       "measure": "Abstände, Winkel, Längen und Flächen von Flächen, Kanten und Ecken messen",
       "exportThreeMf": "Als 3MF für den 3D-Druck exportieren, mit Material und Farbe",
       "importStep": "Eine STEP-Datei als Körper importieren",
-      "csys": "Koordinatensystem erzeugen: an einer Position oder an einem Punkt mit Achsen entlang von Kanten, Achsen oder Ebenennormalen"
+      "csys": "Koordinatensystem erzeugen: an einer Position oder an einem Punkt mit Achsen entlang von Kanten, Achsen oder Ebenennormalen",
+      "draft": "Flächen um einen Winkel zu einer neutralen Ebene neigen, für Guss- und Spritzgussteile"
     },
     "tabs": {
       "label": "Befehlsregister",
@@ -195,7 +196,9 @@
     "exportThreeMf": "3MF",
     "importStep": "Import",
     "exportFormats": "Exportformate",
-    "csys": "Koordinatensystem"
+    "csys": "Koordinatensystem",
+    "draft": "Formschräge",
+    "formFeatures": "Schale und Formschräge"
   },
   "features": {
     "plane": "Ebene",
@@ -215,7 +218,8 @@
     "mirror": "Spiegelung",
     "shell": "Schale",
     "import": "Import",
-    "csys": "Koordinatensystem"
+    "csys": "Koordinatensystem",
+    "draft": "Formschräge"
   },
   "tree": {
     "title": "Featurebaum",
@@ -470,14 +474,19 @@
     "reference-parallel": "Die Referenzen sind parallel und treffen sich deshalb nicht. Wähle Referenzen, die sich schneiden.",
     "reference-not-parallel": "Die Achse muss parallel zur Ebene liegen: Die neue Ebene dreht sich um sie.",
     "reference-collinear": "Die Punkte liegen auf einer Linie oder aufeinander und legen deshalb keine Ebene oder Achse fest.",
-    "import-no-solid": "Die STEP-Datei enthält keinen Volumenkörper (nur Flächen oder Drahtmodelle)."
+    "import-no-solid": "Die STEP-Datei enthält keinen Volumenkörper (nur Flächen oder Drahtmodelle).",
+    "draft-faces": "Wähle die Flächen, die geneigt werden sollen.",
+    "draft-face": "Fläche {{detail}} lässt sich nicht neigen: Sie muss entlang der Zugrichtung verlaufen (nicht quer dazu).",
+    "draft-face-missing": "{{detail}} der zu neigenden Flächen gibt es nicht mehr: Eine frühere Änderung hat sie entfernt. Bearbeite die Formschräge und wähle sie neu."
   },
   "warnings": {
     "edge-missing_one": "{{count}} ausgewählte Kante existiert nicht mehr und wird ausgelassen. Bearbeite das Feature, um sie zu entfernen oder eine andere Kante zu wählen.",
     "edge-missing_other": "{{count}} ausgewählte Kanten existieren nicht mehr und werden ausgelassen. Bearbeite das Feature, um sie zu entfernen oder andere Kanten zu wählen.",
     "shell-face-missing_one": "{{count}} zu öffnende Fläche existiert nicht mehr und wird ausgelassen. Bearbeite die Schale, um eine andere Fläche zu wählen.",
     "shell-face-missing_other": "{{count}} zu öffnende Flächen existieren nicht mehr und werden ausgelassen. Bearbeite die Schale, um andere Flächen zu wählen.",
-    "cut-nothing": "Dieser Schnitt berührt das Teil nicht und entfernt nichts. Versuche die andere Richtung (bei einer Skizze auf einer Fläche: Umkehren, ins Teil hinein)."
+    "cut-nothing": "Dieser Schnitt berührt das Teil nicht und entfernt nichts. Versuche die andere Richtung (bei einer Skizze auf einer Fläche: Umkehren, ins Teil hinein).",
+    "draft-face-missing_one": "{{count}} zu neigende Fläche gibt es nicht mehr; sie wird ausgelassen. Bearbeite die Formschräge, um eine andere Fläche zu wählen.",
+    "draft-face-missing_other": "{{count}} zu neigende Flächen gibt es nicht mehr; sie werden ausgelassen. Bearbeite die Formschräge, um andere Flächen zu wählen."
   },
   "fileErrors": {
     "not-a-zip": "Das ist keine ParaWerk-Teiledatei.",
@@ -716,6 +725,9 @@
       "csys": {
         "position": "Position und Winkel",
         "references": "Punkt und zwei Richtungen"
+      },
+      "draft": {
+        "neutralPlane": "Neutrale Ebene"
       }
     },
     "roles": {
@@ -957,5 +969,15 @@
     },
     "roundHint": "Eine Seitenfläche, die Fläche zwischen den Seiten und die andere Seitenfläche anklicken. Die mittlere Fläche wird zu einem halben Zylinder, der alle drei berührt; die Seitenflächen müssen parallele Ebenen sein (eine Rippe, das Ende einer Lasche).",
     "facesHint": "Zwei ebene Flächen anklicken, die eine Ecke bilden. Die Rundung mit dem Radius verläuft zwischen ihnen, auch wenn sie keine gemeinsame Kante haben: Flächen dazwischen (eine Fase, eine Stufe) werden überrundet, eine Innenecke wird aufgefüllt."
+  },
+  "draft": {
+    "neutralPlane": "Neutrale Ebene",
+    "faces": "Zu neigende Flächen",
+    "facesCount_one": "{{count}} Fläche",
+    "facesCount_other": "{{count}} Flächen",
+    "pickFaces": "Flächen in der 3D-Ansicht anklicken",
+    "angle": "Formschrägenwinkel",
+    "flip": "In die andere Richtung ziehen",
+    "hint": "Erst die neutrale Ebene wählen, dann die zu neigenden Flächen (erneutes Klicken nimmt eine heraus). Die Flächen drehen sich um die Linie, an der sie die neutrale Ebene schneiden, sodass das Teil in Zugrichtung, der Normalen der Ebene, schmaler wird."
   }
 }

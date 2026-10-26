@@ -7,6 +7,11 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### Added
+- Draft as a feature (Phase 3): faces picked in the 3D view tilt by an angle about a neutral plane (a
+  standard plane, planar face or reference plane), for molded and cast parts; the faces keep their names.
+  Shell and Draft share a split button in the *Features* tab.
+
 ## [0.3.0-alpha.1] - 2026-10-26
 
 Completes the features of **Phase 2** (part modeling): thin features, coordinate systems, fillets and

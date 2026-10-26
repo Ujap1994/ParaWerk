@@ -40,6 +40,7 @@ interface EmbindModule {
   transformShape(_0: number, _1: any): any;
   fullRound(_0: number, _1: number, _2: number, _3: number, _4: EmbindString): any;
   faceFillet(_0: number, _1: number, _2: number, _3: number, _4: EmbindString): any;
+  draftFaces(_0: number, _1: any, _2: any, _3: number, _4: EmbindString): any;
   limitBySurface(_0: number, _1: number, _2: number, _3: any, _4: number, _5: boolean, _6: EmbindString): any;
 }
 

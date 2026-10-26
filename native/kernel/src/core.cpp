@@ -1373,6 +1373,41 @@ int chamferUneven(int bodyId, const std::vector<int>& edgeIndices, double distan
   return finishEdgeFeature(maker, bodyId, edges, edgeNames, name, "chamfer", "chamfer could not be computed (distance too large?)");
 }
 
+int draftFaces(int bodyId, const std::vector<int>& faceIndices, const std::vector<double>& plane, double angle, const std::string& name) {
+  if (plane.size() != 6) throw KernelError("operation-failed", "a plane needs a point and a normal");
+  if (faceIndices.empty()) throw KernelError("draft-faces", "no faces to draft");
+  const StoredShape& body = store().entry(bodyId);
+  const gp_Dir pull(plane[3], plane[4], plane[5]);
+  const gp_Pln neutral(gp_Pnt(plane[0], plane[1], plane[2]), pull);
+  ShapeMap faces;
+  TopExp::MapShapes(body.shape, TopAbs_FACE, faces);
+  BRepOffsetAPI_DraftAngle draft(body.shape);
+  for (size_t k = 0; k < faceIndices.size(); ++k) {
+    const int index = faceIndices[k];
+    if (index < 0 || index >= faces.Extent()) throw KernelError("face-missing", "face " + std::to_string(index) + " does not exist");
+    draft.Add(TopoDS::Face(faces(index + 1)), pull, angle, neutral);
+    if (!draft.AddDone()) throw KernelError("draft-face", std::to_string(k + 1));
+  }
+  draft.Build();
+  if (!draft.IsDone()) throw KernelError("operation-failed", "the draft could not be computed");
+  const TopoDS_Shape result = draft.Shape();
+  requireValidSolid(result, "draft");
+  FaceNamer namer(result);
+  // Tilted faces are reported by ModifiedShape(), not Modified(): every face keeps its name.
+  for (int f = 1; f <= faces.Extent(); ++f) {
+    const std::string& faceName = f <= static_cast<int>(body.names.size()) ? body.names[static_cast<size_t>(f - 1)] : std::string();
+    const NCollection_List<TopoDS_Shape>& modified = draft.Modified(faces(f));
+    if (!modified.IsEmpty()) {
+      for (const TopoDS_Shape& piece : modified) namer.assign(piece, faceName);
+    } else {
+      const TopoDS_Shape& moved = draft.ModifiedShape(faces(f));
+      namer.assign(moved.IsNull() ? faces(f) : moved, faceName);
+    }
+  }
+  namer.rest(faceName(name, "other"));
+  return store().add(result, namer.take());
+}
+
 namespace {
 
 /** The outward normal of a face where it is nearest to its center of area. */

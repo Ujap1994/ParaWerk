@@ -1161,3 +1161,29 @@ test('face fillet screenshots', async () => {
   await page.click('[data-testid="panel-ok"]');
   await app.close();
 });
+
+test('draft screenshots', async () => {
+  const { app, page } = await launchApp({ width: 1440, height: 900 });
+  // A molded block: its four sides lean in by 6° from the bottom up.
+  await page.evaluate(() => {
+    const face = (name: string, at: number[]) => ({ kind: 'face', name, at });
+    const features = [
+      { id: 'b', type: 'box', operation: 'add', width: 100, depth: 70, height: 40, position: [0, 0, 0] },
+      {
+        id: 'draft', type: 'draft', method: 'neutralPlane', name: 'Draft', angle: 6, flip: false, references: [{ kind: 'standard-plane', plane: 'top' }],
+        faces: [face('b:front', [0, -35, 20]), face('b:right', [50, 0, 20]), face('b:back', [0, 35, 20]), face('b:left', [-50, 0, 20])],
+      },
+    ];
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features, past: [], future: [] }, savedFeatures: features, fileName: 'Molded block' });
+  });
+  await idle(page);
+  await page.evaluate(() => (window as unknown as { __parawerk: { viewport: { zoomToFit(): void } } }).__parawerk.viewport.zoomToFit());
+  await page.locator('.feature-tree .tree-item[data-feature-id="draft"]').dblclick();
+  await idle(page);
+  const canvas = await page.locator('.viewport-canvas').boundingBox();
+  if (canvas) await page.mouse.move(canvas.x + canvas.width - 30, canvas.y + canvas.height - 30);
+  await page.waitForTimeout(600);
+  await page.screenshot({ path: out('draft.png') });
+  await page.click('[data-testid="panel-ok"]');
+  await app.close();
+});

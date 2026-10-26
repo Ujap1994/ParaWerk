@@ -29,6 +29,7 @@ export function formatVersionOf(features: readonly Feature[], properties: PartPr
   const seventh = (feature: Feature) =>
     feature.type === 'import' ||
     feature.type === 'csys' ||
+    feature.type === 'draft' ||
     (feature.type === 'extrude' && (feature.end === 'upToNext' || feature.direction === 'two' || (feature.draft ?? 0) > 0)) ||
     ((feature.type === 'extrude' || feature.type === 'revolve') && feature.thin !== undefined) ||
     (feature.type === 'chamfer' && feature.method !== undefined && feature.method !== 'equal') ||
