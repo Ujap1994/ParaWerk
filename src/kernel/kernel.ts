@@ -101,8 +101,19 @@ export class Kernel implements Disposable {
 
   exportModel(request: ExportRequest): Uint8Array {
     this.rebuilder.rebuild(request.features);
-    const shape = this.rebuilder.shapeAfter(request.features.length - 1);
-    if (!shape) throw new NothingToExportError();
+    const built = this.rebuilder.shapeAfter(request.features.length - 1);
+    if (!built) throw new NothingToExportError();
+    if (!request.transform || !this.backend.transformed) return this.exportShape(built, request);
+    // In a coordinate system: a moved copy of the body, released again.
+    const moved = this.backend.transformed(built, request.transform);
+    try {
+      return this.exportShape(moved, request);
+    } finally {
+      this.backend.release(moved);
+    }
+  }
+
+  private exportShape(shape: ShapeHandle, request: ExportRequest): Uint8Array {
     if (request.format === 'step') return this.backend.exportStep(shape);
     const mesh = this.backend.exportMesh(shape, exportQuality(diagonalOf(this.backend.boundingBox(shape))));
     if (request.format === '3mf') {

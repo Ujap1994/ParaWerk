@@ -4,10 +4,11 @@ import { PART_FILE_EXTENSION } from '../../shared/app-info.ts';
 import { hashString } from '../../shared/hash.ts';
 import { COPYABLE_TYPES, type ImportFeature, defaultFeature, type BooleanOperation, hasReferenceSlots, isCopyFeature, isEdgeFeature, isReferenceFeature, isSketchBased, type EdgeRef, type ExtrudeEnd, extrudesOneWay, type Feature, type FeatureType, type HoleFeature, type ReferenceFeature, type SketchFeature, type SlotFeature } from '../../shared/model/feature.ts';
 import { holePositions, metricSize, sizesFor, standardHoleDimensions } from '../../shared/model/hole.ts';
+import { frameTransform } from '../../shared/model/frame.ts';
 import { sketchProfile } from '../../shared/model/profile.ts';
 import { DEFAULT_THIN_THICKNESS, type ThinSide } from '../../shared/model/thin.ts';
-import { AXIS_METHODS, PLANE_METHODS, POINT_METHODS, REFERENCE_ROLES, type GeometryRef, type ReferenceRole } from '../../shared/model/reference.ts';
-import { extrudesUpTo, referenceFits, referenceGeometry, referenceOfPick, referencePicks, referenceRoles } from './references.ts';
+import { AXIS_METHODS, CSYS_METHODS, PLANE_METHODS, POINT_METHODS, REFERENCE_ROLES, type GeometryRef, type ReferenceRole } from '../../shared/model/reference.ts';
+import { coordinateSystems, extrudesUpTo, referenceFits, referenceGeometry, referenceOfPick, referencePicks, referenceRoles } from './references.ts';
 import { edgeRefOf, faceRefOf, resolveEdgeRefs } from '../../shared/model/naming.ts';
 import { decodePartFile, encodePartFile, PartFileError } from '../../shared/model/part-file.ts';
 import { frameOf, frameOnPlane, isDimension, ORIGIN_ID, STANDARD_PLANES, type SketchData, type SketchDimension, type SketchPlaneRef } from '../../shared/model/sketch.ts';
@@ -175,8 +176,27 @@ const EXPORT_FILES = {
 } as const;
 
 export async function exportModel(format: 'step' | 'stl' | '3mf'): Promise<void> {
+  // With coordinate systems in the part, the export asks which one the file is in.
+  if (coordinateSystems(getState()).length > 0) {
+    setState({ exporting: format });
+    return;
+  }
+  await writeExport(format, null);
+}
+
+/** Exports in the chosen coordinate system (feature id; null: the model's own axes), or (cancel) not at all. */
+export async function confirmExport(frameId: string | null | 'cancel'): Promise<void> {
+  const format = getState().exporting;
+  setState({ exporting: null });
+  if (!format || frameId === 'cancel') return;
+  setState({ exportFrame: frameId });
+  await writeExport(format, frameId);
+}
+
+async function writeExport(format: 'step' | 'stl' | '3mf', frameId: string | null): Promise<void> {
   const state = getState();
   const features = state.history.features;
+  const frame = frameId ? coordinateSystems(state).find((system) => system.id === frameId)?.frame : undefined;
   let data: Uint8Array;
   try {
     await whenIdle();
@@ -185,6 +205,7 @@ export async function exportModel(format: 'step' | 'stl' | '3mf'): Promise<void>
       features,
       format,
       ...(format === '3mf' ? { title: documentName(), application: `ParaWerk ${state.appInfo?.version ?? ''}`.trim(), ...(material ? { material } : {}) } : {}),
+      ...(frame ? { transform: frameTransform(frame) } : {}),
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -379,7 +400,7 @@ export function chooseFeatureSketch(id: string): void {
 
 // ------------------------------------------------------------------ reference geometry
 
-const METHODS = { plane: PLANE_METHODS, axis: AXIS_METHODS, point: POINT_METHODS } as const;
+const METHODS = { plane: PLANE_METHODS, axis: AXIS_METHODS, point: POINT_METHODS, csys: CSYS_METHODS } as const;
 
 /** The first method of the feature's type whose references fit `refs` in this order. */
 function methodFor(type: ReferenceFeature['type'], refs: readonly { ref: GeometryRef; pick: Pick }[]): string | null {
@@ -876,6 +897,11 @@ export function toggleMeasure(on = !getState().measuring): void {
 /** Shows or hides the mass properties panel over the 3D view. */
 export function toggleMassProperties(show = !getState().showMassProperties): void {
   setState({ showMassProperties: show });
+}
+
+/** Gives mass properties in a coordinate system (feature id), or (null) in the model's own axes. */
+export function setMassFrame(id: string | null): void {
+  setState({ massFrame: id });
 }
 
 /** Gives the part its own color in the 3D view (null: the material's color); one undo step. */

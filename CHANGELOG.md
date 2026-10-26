@@ -8,6 +8,10 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### Added
+- Coordinate systems (reference geometry): at a position turned around Z, or at a point with their X axis
+  along a direction and their Y axis towards a second one; drawn as three colored arrows. Mass properties
+  can be given relative to one (center of mass and inertia tensor), and exports (STEP, STL, 3MF) written in
+  its coordinates – for example to put a part on the build plate the right way up.
 - Thin features: extrusions and revolutions of walls of a thickness along the curves of a sketch – open
   curves too – instead of the areas they enclose, to one side, the other or both. Lines and arcs are
   offset exactly and meet in sharp corners (an arc around very sharp outside corners); branching curves

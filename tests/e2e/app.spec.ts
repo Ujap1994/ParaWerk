@@ -1101,6 +1101,43 @@ test('extrudes open curves as a thin feature and switches the side of the walls'
   expect((await state(page)).rebuild?.results[1]?.error?.code).toBe('profile-empty');
 });
 
+test('creates a coordinate system, gives mass properties in it and exports in it', async () => {
+  launched = await launchApp({ width: 1000, height: 640 });
+  const { page, outputDir } = launched;
+  await createBox(page);
+  // On the top face of the 100 × 60 × 40 box, turned by 90°.
+  await page.click('[data-variants="reference-geometry"]');
+  await page.click('[data-entry="csys"]');
+  await page.locator('[data-testid="csys-z"]').fill('40');
+  await page.locator('[data-testid="csys-z"]').press('Tab');
+  await page.locator('[data-testid="csys-angle"]').fill('90');
+  await page.locator('[data-testid="csys-angle"]').press('Tab');
+  await page.click('[data-testid="panel-ok"]');
+  await idle(page);
+  expect((await state(page)).history.features[1]).toMatchObject({ type: 'csys', method: 'position', z: 40, angle: 90 });
+
+  // The center of mass (0, 0, 20) lies 20 below its origin.
+  await page.click('[data-tab="evaluate"]');
+  await page.click('[data-command="mass-properties"]');
+  await expect(page.locator('[data-testid="mass-center"]')).toContainText('0 ; 0 ; 20 mm');
+  await page.selectOption('[data-testid="mass-frame"]', { index: 1 });
+  await expect(page.locator('[data-testid="mass-center"]')).toContainText('0 ; 0 ; -20 mm');
+  await page.click('[data-testid="mass-properties"] .mass-panel-header .icon-button');
+
+  // Exports ask for the coordinate system; in it, the box lies below its origin.
+  await page.click('[data-variants="export"]');
+  await page.click('[data-entry="export-stl"]');
+  await expect(page.locator('[data-testid="export-frame-dialog"]')).toBeVisible();
+  await page.selectOption('[data-testid="export-frame"]', { index: 1 });
+  await page.click('[data-testid="export-frame-ok"]');
+  await expect(page.locator('[data-testid="toast-success"]').last()).toContainText('.stl');
+  const stl = await readFile(path.join(outputDir, `${await page.evaluate(() => document.title.split(' – ')[0]?.replace(' •', ''))}.stl`));
+  const view = new DataView(stl.buffer, stl.byteOffset, stl.byteLength);
+  let top = -Infinity;
+  for (let t = 0; t < view.getUint32(80, true); t++) for (let v = 0; v < 3; v++) top = Math.max(top, view.getFloat32(84 + 50 * t + 12 + 12 * v + 8, true));
+  expect(top).toBeCloseTo(0, 4);
+});
+
 test('cutting from a sketch on a face goes into the part, and a cut that misses warns', async () => {
   launched = await launchApp({ width: 1440, height: 900 });
   const { page } = launched;

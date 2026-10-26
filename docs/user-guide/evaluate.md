@@ -33,10 +33,16 @@ part as it was. Material and color are saved in the part file (format version 7)
 | Material, density | Click the material to change it. |
 | Mass | Volume × density, in grams below 1 kg, otherwise in kilograms. Also shown in the status bar. |
 | Volume, surface area | Integrated exactly over the B-Rep faces (not over the display mesh). |
-| Center of mass | In model coordinates, mm. |
+| Center of mass | In model coordinates, mm (or in a coordinate system, see below). |
 | Bounding box | Size of the part along X, Y and Z. |
 | Principal moments of inertia | I₁ ≤ I₂ ≤ I₃ about the principal axes through the center of mass, in kg·mm². |
 | Inertia tensor | In axes through the center of mass, parallel to the model axes, in kg·mm². The diagonal holds the moments about X, Y and Z; the other terms are the negative products of inertia (−∫xy dm). |
+
+When the part has [coordinate systems](features.md#reference-geometry), **Relative to** at the top of
+the panel gives the center of mass in the coordinates of one of them and the inertia tensor about its
+axes; the principal moments do not depend on it. The bounding box stays along the model axes.
+
+![Mass properties relative to a coordinate system on top of the boss](../images/screenshots/mass-properties-csys.png)
 
 The values are for the part as it is built: while the part is rolled back, they are for the features
 above the rollback bar; while a feature or sketch is edited, the panel keeps the last values until the

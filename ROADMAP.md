@@ -175,7 +175,8 @@ First preview released as [v0.3.0-alpha.0](https://github.com/Ujap1994/ParaWerk/
 | Benchmarks of parts with 100 and 301 features (full rebuild, editing the last feature) | ✅ done |
 | Extrude up to next and up to curved surfaces (with offset) | ✅ done |
 | Thin feature (extrude and revolve; lines, arcs and circles) | ✅ done |
-| Face fillet, full round, coordinate systems | open |
+| Coordinate systems (mass properties and exports in them) | ✅ done |
+| Face fillet, full round | open |
 
 ## 2. Guiding principles
 

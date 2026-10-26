@@ -1082,3 +1082,29 @@ test('thin feature screenshots', async () => {
   await page.click('[data-testid="panel-ok"]');
   await app.close();
 });
+
+test('coordinate system screenshots', async () => {
+  const { app, page } = await launchApp({ width: 1440, height: 900 });
+  // The flange of the mass properties screenshots with a coordinate system on top of its boss.
+  await page.evaluate(() => {
+    const features = [
+      { id: 'plate', type: 'box', operation: 'add', width: 100, depth: 70, height: 15, position: [0, 0, 0] },
+      { id: 'boss', type: 'cylinder', operation: 'add', radius: 22, height: 30, axis: 'z', position: [0, 0, 15] },
+      { id: 'bore', type: 'cylinder', operation: 'cut', radius: 12, height: 60, axis: 'z', position: [0, 0, -5] },
+      { id: 'top', type: 'csys', name: 'Boss top', method: 'position', references: [], x: 0, y: 0, z: 45, angle: 30, flipX: false, flipY: false },
+    ];
+    const history = { features, past: [], future: [], properties: { material: { id: 'aluminium-6061', density: 2700 } } };
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history, savedFeatures: features, fileName: 'Flange' });
+  });
+  await idle(page);
+  await page.evaluate(() => (window as unknown as { __parawerk: { viewport: { zoomToFit(): void } } }).__parawerk.viewport.zoomToFit());
+  await page.click('[data-tab="evaluate"]');
+  await page.click('[data-command="mass-properties"]');
+  await page.selectOption('[data-testid="mass-frame"]', 'top');
+  await idle(page);
+  const canvas = await page.locator('.viewport-canvas').boundingBox();
+  if (canvas) await page.mouse.move(canvas.x + 30, canvas.y + canvas.height - 30);
+  await page.waitForTimeout(600);
+  await page.screenshot({ path: out('mass-properties-csys.png') });
+  await app.close();
+});

@@ -1,5 +1,5 @@
 /**
- * Reference geometry: planes, axes and points that other features are built on (sketches on a plane at
+ * Reference geometry: planes, axes, points and coordinate systems that other features are built on (sketches on a plane at
  * an angle, an axis to revolve around, ...). They do not change the body. Their references to faces,
  * edges and vertices of the body use persistent names (docs/adr/0002-persistent-naming.md), so they
  * follow the body when earlier features change.
@@ -43,22 +43,26 @@ export type ReferenceRole = 'plane' | 'axis' | 'point' | 'center' | 'direction';
 export type PlaneMethod = 'offset' | 'angle' | 'threePoints' | 'midPlane' | 'throughPoint';
 export type AxisMethod = 'reference' | 'twoPlanes' | 'twoPoints' | 'normal';
 export type PointMethod = 'coordinates' | 'center' | 'intersection';
+export type CsysMethod = 'position' | 'references';
 
 export const PLANE_METHODS: readonly PlaneMethod[] = ['offset', 'angle', 'threePoints', 'midPlane', 'throughPoint'];
 export const AXIS_METHODS: readonly AxisMethod[] = ['reference', 'twoPlanes', 'twoPoints', 'normal'];
 export const POINT_METHODS: readonly PointMethod[] = ['coordinates', 'center', 'intersection'];
+export const CSYS_METHODS: readonly CsysMethod[] = ['position', 'references'];
 
 /** The references each method takes, in order. */
 export const REFERENCE_ROLES = {
   plane: { offset: ['plane'], angle: ['plane', 'axis'], threePoints: ['point', 'point', 'point'], midPlane: ['plane', 'plane'], throughPoint: ['plane', 'point'] },
   axis: { reference: ['axis'], twoPlanes: ['plane', 'plane'], twoPoints: ['point', 'point'], normal: ['plane', 'point'] },
   point: { coordinates: [], center: ['center'], intersection: ['axis', 'plane'] },
+  csys: { position: [], references: ['point', 'direction', 'direction'] },
   pattern: { linear: ['direction'], circular: ['axis'] },
   mirror: { plane: ['plane'] },
 } as const satisfies {
   plane: Record<PlaneMethod, readonly ReferenceRole[]>;
   axis: Record<AxisMethod, readonly ReferenceRole[]>;
   point: Record<PointMethod, readonly ReferenceRole[]>;
+  csys: Record<CsysMethod, readonly ReferenceRole[]>;
   pattern: Record<'linear' | 'circular', readonly ReferenceRole[]>;
   mirror: Record<'plane', readonly ReferenceRole[]>;
 };
@@ -68,4 +72,6 @@ export type ReferenceGeometry =
   /** The frame follows the same rules as a sketch on a face (frameOnPlane), so sketches on it get it. */
   | { kind: 'plane'; frame: SketchFrame }
   | { kind: 'axis'; point: Vec3; direction: Vec3 }
-  | { kind: 'point'; point: Vec3 };
+  | { kind: 'point'; point: Vec3 }
+  /** Unit axes, perpendicular to each other and right-handed. */
+  | { kind: 'csys'; origin: Vec3; xDir: Vec3; yDir: Vec3; zDir: Vec3 };

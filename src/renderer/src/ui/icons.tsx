@@ -570,6 +570,15 @@ export const ReferencePointIcon = (p: P) => (
   </Icon>
 );
 
+/** Coordinate system: three arrows from an origin point, up, to the right and towards the viewer. */
+export const CoordinateSystemIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="M9 15V4M9 15h12M9 15l-5.5 5.5" />
+    <path d="m7 6.5 2-2.5 2 2.5M18.5 13l2.5 2-2.5 2M3.5 17.3v3.2h3.2" />
+    {dot(9, 15, 1.6)}
+  </Icon>
+);
+
 /** Hole: a plate in section with a counterbored hole and its dashed axis. */
 export const HoleIcon = (p: P) => (
   <Icon {...p}>
@@ -623,6 +632,7 @@ export const FEATURE_ICONS = {
   plane: ReferencePlaneIcon,
   axis: ReferenceAxisIcon,
   point: ReferencePointIcon,
+  csys: CoordinateSystemIcon,
   extrude: ExtrudeIcon,
   revolve: RevolveIcon,
   hole: HoleIcon,

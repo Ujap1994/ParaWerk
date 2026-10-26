@@ -35,6 +35,14 @@ function span(box: Box3, origin: Vector3, direction: Vector3): [number, number] 
 }
 
 const SQUARE = [-1, -1, 0, 1, -1, 0, 1, -1, 0, 1, 1, 0, 1, 1, 0, -1, 1, 0, -1, 1, 0, -1, -1, 0];
+/** The three axes of a coordinate system, unit length, with small arrow heads; colored like the axis triad. */
+const AXES = [0, 0, 0, 1, 0, 0, 1, 0, 0, 0.82, 0.07, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0.07, 0.82, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0.07, 0, 0.82];
+const AXIS_COLORS = [0xe5484d, 0x30a46c, 0x3e63dd].flatMap((hex) => {
+  const color = [(hex >> 16) & 255, (hex >> 8) & 255, hex & 255].map((c) => c / 255);
+  return [...color, ...color, ...color, ...color];
+});
+/** Length of coordinate system axes on screen, in CSS pixels. */
+const AXIS_LENGTH_PX = 64;
 /** Point symbols on screen, in CSS pixels; how close the pointer must come to pick one. */
 const POINT_SIZE_PX = 16;
 const POINT_PICK_PX = 9;
@@ -78,9 +86,11 @@ interface Drawn {
   /** Pick target (plane fill, axis line or point sprite). */
   target: Mesh | LineSegments2 | Sprite;
   objects: (Mesh | LineSegments2 | Sprite)[];
+  /** Coordinate systems: the axes and where they stand (scaled to the same size on screen). */
+  axes?: { lines: LineSegments2; placement: Matrix4 };
 }
 
-/** Reference planes, axes and points of the part (src/shared/model/reference.ts). */
+/** Reference planes, axes, points and coordinate systems of the part (src/shared/model/reference.ts). */
 export class ReferenceGeometryLayer {
   readonly group = new Group();
   private readonly fills: Record<ReferenceStyle, MeshBasicMaterial>;
@@ -88,7 +98,10 @@ export class ReferenceGeometryLayer {
   /** Axes behind or inside the part show through it, dimmed. */
   private readonly hiddenLines: Record<ReferenceStyle, LineMaterial>;
   private readonly points: Record<ReferenceStyle, SpriteMaterial>;
+  /** Coordinate system axes: in the axis colors, or all in the hover or selection color. */
+  private readonly axisLines: Record<ReferenceStyle, LineMaterial>;
   private readonly squareGeometry = new LineSegmentsGeometry().setPositions(SQUARE);
+  private readonly axesGeometry = new LineSegmentsGeometry().setPositions(AXES).setColors(AXIS_COLORS);
   private readonly planeGeometry = new PlaneGeometry(2, 2);
   private drawn: Drawn[] = [];
   private items: readonly ReferenceItem[] = [];
@@ -105,6 +118,8 @@ export class ReferenceGeometryLayer {
     const texture = pointTexture();
     const point = () => new SpriteMaterial({ map: texture, depthTest: false, depthWrite: false, transparent: true });
     this.points = { normal: point(), hovered: point(), selected: point(), preview: point() };
+    const axis = (linewidth: number, vertexColors: boolean) => new LineMaterial({ linewidth, worldUnits: false, vertexColors, transparent: true, depthTest: false, depthWrite: false });
+    this.axisLines = { normal: axis(2.6, true), hovered: axis(3.4, false), selected: axis(3.4, false), preview: axis(3.4, true) };
   }
 
   setPalette(palette: ViewportPalette): void {
@@ -115,10 +130,12 @@ export class ReferenceGeometryLayer {
       this.hiddenLines[style].color.setHex(colors[style]);
       this.points[style].color.setHex(colors[style]);
     }
+    this.axisLines.hovered.color.setHex(palette.hover);
+    this.axisLines.selected.color.setHex(palette.selected);
   }
 
   setResolution(resolution: Vector2): void {
-    for (const material of [...Object.values(this.lines), ...Object.values(this.hiddenLines)]) material.resolution.copy(resolution);
+    for (const material of [...Object.values(this.lines), ...Object.values(this.hiddenLines), ...Object.values(this.axisLines)]) material.resolution.copy(resolution);
   }
 
   set(items: readonly ReferenceItem[]): void {
@@ -137,7 +154,14 @@ export class ReferenceGeometryLayer {
     this.mmPerPixel = mmPerPixel;
     for (const drawn of this.drawn) {
       if (drawn.target instanceof Sprite) drawn.target.scale.setScalar(POINT_SIZE_PX * mmPerPixel);
+      if (drawn.axes) this.placeAxes(drawn.axes);
     }
+  }
+
+  private placeAxes(axes: { lines: LineSegments2; placement: Matrix4 }): void {
+    const length = AXIS_LENGTH_PX * this.mmPerPixel;
+    axes.lines.matrix.copy(axes.placement).multiply(new Matrix4().makeScale(length, length, length));
+    axes.lines.updateMatrixWorld(true);
   }
 
   get count(): number {
@@ -175,17 +199,18 @@ export class ReferenceGeometryLayer {
   dispose(): void {
     this.clear();
     this.squareGeometry.dispose();
+    this.axesGeometry.dispose();
     this.planeGeometry.dispose();
     this.points.normal.map?.dispose();
-    for (const material of [...Object.values(this.fills), ...Object.values(this.lines), ...Object.values(this.hiddenLines), ...Object.values(this.points)]) material.dispose();
+    for (const material of [...Object.values(this.fills), ...Object.values(this.lines), ...Object.values(this.hiddenLines), ...Object.values(this.points), ...Object.values(this.axisLines)]) material.dispose();
   }
 
   private clear(): void {
     for (const drawn of this.drawn) {
       for (const object of drawn.objects) {
         this.group.remove(object);
-        // Axes have geometry of their own (shared by their two lines); planes and points share theirs.
-        if (object instanceof LineSegments2 && object.geometry !== this.squareGeometry) object.geometry.dispose();
+        // Axes have geometry of their own (shared by their two lines); planes, points and coordinate systems share theirs.
+        if (object instanceof LineSegments2 && object.geometry !== this.squareGeometry && object.geometry !== this.axesGeometry) object.geometry.dispose();
       }
     }
     this.drawn = [];
@@ -240,6 +265,20 @@ export class ReferenceGeometryLayer {
         through.renderOrder = 2;
         through.raycast = () => undefined;
         drawn = { item, target: lines, objects: [lines, through] };
+      } else if (geometry.kind === 'csys') {
+        // Its origin as a point (what is picked) and its axes, the same size on screen at every zoom.
+        const sprite = new Sprite(this.points[item.style]);
+        sprite.position.set(...geometry.origin);
+        sprite.renderOrder = 12;
+        sprite.scale.setScalar(POINT_SIZE_PX * this.mmPerPixel);
+        const lines = new LineSegments2(this.axesGeometry, this.axisLines[item.style]);
+        lines.matrixAutoUpdate = false;
+        lines.renderOrder = 12;
+        lines.raycast = () => undefined;
+        const placement = new Matrix4().makeBasis(new Vector3(...geometry.xDir), new Vector3(...geometry.yDir), new Vector3(...geometry.zDir)).setPosition(...geometry.origin);
+        const axes = { lines, placement };
+        this.placeAxes(axes);
+        drawn = { item, target: sprite, objects: [lines, sprite], axes };
       } else {
         const sprite = new Sprite(this.points[item.style]);
         sprite.position.set(...geometry.point);

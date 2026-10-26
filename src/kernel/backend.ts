@@ -103,6 +103,8 @@ export interface GeometryBackend {
   /** Fine mesh for STL export; does not change the display triangulation. */
   exportMesh(shape: ShapeHandle, quality: MeshQuality): { positions: Float32Array; indices: Uint32Array };
   exportStep(shape: ShapeHandle): Uint8Array;
+  /** A copy of the shape moved by a transformation (12 values, rows of a 3 × 4 matrix); the caller releases it. */
+  transformed?(shape: ShapeHandle, transform: readonly number[]): ShapeHandle;
   importStep(bytes: Uint8Array): ShapeHandle;
   heapBytes(): number;
   describeError(error: unknown): string;

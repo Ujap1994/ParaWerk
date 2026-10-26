@@ -112,7 +112,8 @@
       "massProperties": "Show mass, center of mass and moments of inertia of the part",
       "measure": "Measure distances, angles, lengths and areas of faces, edges and vertices",
       "exportThreeMf": "Export as 3MF for 3D printing, with material and color",
-      "importStep": "Import a STEP file as a body"
+      "importStep": "Import a STEP file as a body",
+      "csys": "Create a coordinate system: at a position, or at a point with its axes along edges, axes or plane normals"
     },
     "tabs": {
       "label": "Command tabs",
@@ -193,7 +194,8 @@
     "measure": "Measure",
     "exportThreeMf": "3MF",
     "importStep": "Import",
-    "exportFormats": "Export formats"
+    "exportFormats": "Export formats",
+    "csys": "Coordinate system"
   },
   "features": {
     "plane": "Plane",
@@ -212,7 +214,8 @@
     "pattern": "Pattern",
     "mirror": "Mirror",
     "shell": "Shell",
-    "import": "Import"
+    "import": "Import",
+    "csys": "Coordinate system"
   },
   "tree": {
     "title": "Feature tree",
@@ -401,7 +404,14 @@
     "importDxfTitle": "Import DXF",
     "dxfFiles": "DXF drawings",
     "threeMfFiles": "3MF files",
-    "importTitle": "Import STEP"
+    "importTitle": "Import STEP",
+    "exportFrame": {
+      "title": "Export",
+      "frame": "Coordinate system",
+      "hint": "The file uses the coordinates of this coordinate system: its origin becomes 0, 0, 0, and its axes become X, Y and Z (for 3D printing, Z points up from the build plate).",
+      "export": "Export",
+      "modelOrigin": "Model origin"
+    }
   },
   "toasts": {
     "saved": "Saved “{{name}}”.",
@@ -694,6 +704,10 @@
       },
       "mirror": {
         "plane": "Through a plane"
+      },
+      "csys": {
+        "position": "Position and angle",
+        "references": "Point and two directions"
       }
     },
     "roles": {
@@ -719,7 +733,15 @@
       "point": "Choose a point here: a vertex, the origin or a reference point.",
       "center": "Choose an edge or a face here."
     },
-    "useOrigin": "Use origin"
+    "useOrigin": "Use origin",
+    "csysSlots": {
+      "origin": "Origin",
+      "xAxis": "X axis",
+      "yAxis": "Y axis (direction)"
+    },
+    "csysAngle": "Turned around Z",
+    "flipX": "X axis the other way",
+    "flipY": "Y axis the other way"
   },
   "hole": {
     "type": "Hole",
@@ -836,11 +858,14 @@
     "principal": "Principal moments of inertia",
     "tensor": "Inertia tensor at the center of mass",
     "tensorHint": "Axes through the center of mass, parallel to the model axes; the off-diagonal terms are the negative products of inertia.",
+    "tensorHintFrame": "Axes through the center of mass, parallel to the axes of the coordinate system; the off-diagonal terms are the negative products of inertia.",
     "noMaterial": "Choose a material to get the mass and the moments of inertia.",
     "choose": "Choose material…",
     "empty": "There is no body yet.",
     "rolledBack": "Rolled back: the values are for the part above the rollback bar.",
-    "editing": "The values are updated when the edit is finished."
+    "editing": "The values are updated when the edit is finished.",
+    "relativeTo": "Relative to",
+    "modelOrigin": "Model origin"
   },
   "measure": {
     "title": "Measure",

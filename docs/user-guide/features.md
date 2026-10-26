@@ -227,9 +227,10 @@ rounded now, and click **Remove** to drop the lost ones. With **✓** the warnin
 
 ## Reference geometry
 
-Planes, axes and points that are not faces of the part: a plane at an angle to sketch on, an axis through
-the middle of a bore, a point to build a plane through. They do not change the body. Create them with the
-**Plane** button in the *Features* tab; its arrow offers **Axis** and **Point** as well.
+Planes, axes, points and coordinate systems that are not faces of the part: a plane at an angle to
+sketch on, an axis through the middle of a bore, a point to build a plane through, a coordinate system
+to give mass properties in or to export in. They do not change the body. Create them with the **Plane**
+button in the *Features* tab; its arrow offers **Axis**, **Point** and **Coordinate system** as well.
 
 ![A plane at 30° to the front plane through the axis of the bore: the new plane is drawn in teal, what it is built on in orange](../images/screenshots/reference-plane.png)
 
@@ -262,6 +263,18 @@ highlighted in orange; **✓** becomes available when all fields are filled.
 | Center of an edge or face | the center of a circle or arc, the middle of any other edge, or the center of a face's area |
 | Where an axis meets a plane | an axis and a plane that is not parallel to it |
 
+| Coordinate system | Built from |
+|---|---|
+| Position and angle | the *X*, *Y* and *Z* of its origin and an angle it is *Turned around Z* (also as equations); its axes are otherwise those of the model |
+| Point and two directions | an *Origin* (a vertex, a point or the origin), an *X axis* (an edge, an axis or the normal of a plane) and a *Y axis*: the second direction, made perpendicular to X |
+
+*X axis the other way* and *Y axis the other way* turn an axis round; Z always follows from X and Y, so
+the axes stay right-handed. A coordinate system is drawn as three short arrows in the colors of the axis
+triad (X red, Y green, Z blue), the same size at every zoom. [Mass properties](evaluate.md#mass-properties)
+can be given in it, and [exports](files.md#export) written in its coordinates – for example so that a
+part lies on the build plate of a 3D printer the right way up. Where a field takes a point, a plane or an
+axis, a coordinate system gives its origin, its XY plane or its Z axis.
+
 Selecting the references first and then clicking **Plane**, **Axis** or **Point** fills the fields right
 away and chooses the type that fits – a planar face gives an offset plane, two vertices an axis through
 them.
@@ -269,7 +282,7 @@ them.
 Reference geometry follows the part: it remembers faces, edges and vertices by name (see
 [How features remember their edges](#how-features-remember-their-edges)), so a plane offset from the top
 face moves up when the part gets taller. If something it is built on is gone, it is marked in red in the
-tree. Planes, axes and points can be selected in the tree and in the 3D view; a reference plane has a
+tree. Planes, axes, points and coordinate systems can be selected in the tree and in the 3D view; a reference plane has a
 **Sketch on this plane** button in the tree, and sketches on it follow it as well.
 
 ![Reference geometry of a part: an axis through the bore, a plane through it and a point at the center of a hole](../images/screenshots/reference-geometry.png)

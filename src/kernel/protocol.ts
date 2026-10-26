@@ -198,6 +198,8 @@ export interface ExportRequest {
   title?: string;
   application?: string;
   material?: { name: string; color: string };
+  /** Export in a coordinate system: the transformation from model coordinates into it (12 values, rows of a 3 × 4 matrix). */
+  transform?: number[];
 }
 
 export interface MemoryStats {

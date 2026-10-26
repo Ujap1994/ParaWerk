@@ -7,6 +7,7 @@ import { edgeRefOf, faceRefOf, resolveEdgeRefs, resolveFaceRef, resolveVertexRef
 import { REFERENCE_ROLES, type GeometryRef, type ReferenceGeometry, type ReferenceRole } from '../../shared/model/reference.ts';
 import { STANDARD_PLANES } from '../../shared/model/sketch.ts';
 import type { CosmeticThread } from '../../shared/model/hole.ts';
+import type { Frame } from '../../shared/model/frame.ts';
 import { modelEnd, type AppState, type Pick } from './state/store.ts';
 import type { ReferenceItem } from './viewport/reference-geometry.ts';
 
@@ -31,6 +32,15 @@ export function builtOn(feature: Feature): GeometryRef[] {
 /** The roles of the references the feature's method takes, in order. */
 export function referenceRoles(feature: SlotFeature): readonly ReferenceRole[] {
   return (REFERENCE_ROLES[feature.type] as Record<string, readonly ReferenceRole[]>)[feature.method] ?? [];
+}
+
+/** The coordinate systems of the built part (up to the rollback bar): feature ids with where they lie. */
+export function coordinateSystems(state: AppState): { id: string; index: number; frame: Frame }[] {
+  const end = modelEnd(state);
+  return state.history.features.flatMap((feature, index) => {
+    const geometry = index < end && !feature.suppressed ? referenceGeometry(state, feature.id) : undefined;
+    return geometry?.kind === 'csys' ? [{ id: feature.id, index, frame: geometry }] : [];
+  });
 }
 
 /** Where reference feature `id` lies, as the last rebuild computed it. */
@@ -72,7 +82,8 @@ export function referenceFits(ref: GeometryRef, role: ReferenceRole, state: AppS
       return role === 'point' || role === 'center';
     case 'feature': {
       const kind = referenceGeometry(state, ref.feature)?.kind ?? state.history.features.find((feature) => feature.id === ref.feature)?.type;
-      return kind === role || (kind === 'point' && role === 'center') || (role === 'direction' && (kind === 'plane' || kind === 'axis'));
+      // A coordinate system is a point (its origin), a plane (XY) and an axis (Z) at once.
+      return kind === 'csys' || kind === role || (kind === 'point' && role === 'center') || (role === 'direction' && (kind === 'plane' || kind === 'axis'));
     }
     case 'vertex':
       return role === 'point' || role === 'center';

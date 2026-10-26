@@ -5,13 +5,13 @@
  * (see docs/adr/0004-coordinate-system-and-units.md).
  */
 
-import type { AxisMethod, FaceNameRef, GeometryRef, PlaneMethod, PointMethod } from './reference.ts';
+import type { AxisMethod, CsysMethod, FaceNameRef, GeometryRef, PlaneMethod, PointMethod } from './reference.ts';
 import type { SketchData, SketchPlaneRef } from './sketch.ts';
 import type { ThinSide } from './thin.ts';
 
 export type Vec3 = [number, number, number];
 
-export type FeatureType = 'variables' | 'sketch' | 'plane' | 'axis' | 'point' | 'extrude' | 'revolve' | 'hole' | 'pattern' | 'mirror' | 'box' | 'cylinder' | 'import' | 'fillet' | 'chamfer' | 'shell';
+export type FeatureType = 'variables' | 'sketch' | 'plane' | 'axis' | 'point' | 'csys' | 'extrude' | 'revolve' | 'hole' | 'pattern' | 'mirror' | 'box' | 'cylinder' | 'import' | 'fillet' | 'chamfer' | 'shell';
 
 /** How a solid-creating feature combines with the existing body. */
 export type BooleanOperation = 'add' | 'cut';
@@ -63,6 +63,7 @@ export const EXPRESSION_FIELDS: Readonly<Record<FeatureType, readonly string[]>>
   plane: ['distance', 'angle'],
   axis: [],
   point: ['x', 'y', 'z'],
+  csys: ['x', 'y', 'z', 'angle'],
   extrude: ['depth', 'depth2', 'draft', 'endOffset', 'thickness'],
   revolve: ['angle', 'thickness'],
   hole: ['diameter', 'depth', 'counterboreDiameter', 'counterboreDepth', 'countersinkDiameter', 'countersinkAngle', 'threadDepth'],
@@ -198,10 +199,28 @@ export interface PointFeature extends FeatureBase {
   z: number;
 }
 
-export type ReferenceFeature = PlaneFeature | AxisFeature | PointFeature;
+/**
+ * A coordinate system: an origin and three perpendicular axes, at a position turned around Z by `angle`
+ * (degrees), or at a point with its X axis along a direction and its Y axis towards a second one.
+ * Mass properties can be given and exports written relative to it.
+ */
+export interface CsysFeature extends FeatureBase {
+  type: 'csys';
+  method: CsysMethod;
+  references: GeometryRef[];
+  x: number;
+  y: number;
+  z: number;
+  angle: number;
+  /** The X axis, or the Y axis, the other way round (Z follows from both). */
+  flipX: boolean;
+  flipY: boolean;
+}
+
+export type ReferenceFeature = PlaneFeature | AxisFeature | PointFeature | CsysFeature;
 
 export function isReferenceFeature(feature: Feature): feature is ReferenceFeature {
-  return feature.type === 'plane' || feature.type === 'axis' || feature.type === 'point';
+  return feature.type === 'plane' || feature.type === 'axis' || feature.type === 'point' || feature.type === 'csys';
 }
 
 /** Which way an extrusion goes from its sketch plane: along the plane normal, against it, or half each way. */
@@ -412,6 +431,7 @@ export type Feature =
   | PlaneFeature
   | AxisFeature
   | PointFeature
+  | CsysFeature
   | ExtrudeFeature
   | RevolveFeature
   | HoleFeature
@@ -437,7 +457,7 @@ export function isSolidFeature(feature: Feature): feature is BoxFeature | Cylind
   return feature.type === 'box' || feature.type === 'cylinder';
 }
 
-export const FEATURE_TYPES: readonly FeatureType[] = ['variables', 'sketch', 'plane', 'axis', 'point', 'extrude', 'revolve', 'hole', 'pattern', 'mirror', 'box', 'cylinder', 'import', 'fillet', 'chamfer', 'shell'];
+export const FEATURE_TYPES: readonly FeatureType[] = ['variables', 'sketch', 'plane', 'axis', 'point', 'csys', 'extrude', 'revolve', 'hole', 'pattern', 'mirror', 'box', 'cylinder', 'import', 'fillet', 'chamfer', 'shell'];
 
 /** Features that make a body from nothing (the first feature with material must be one of them, adding). */
 export const BODY_TYPES: ReadonlySet<FeatureType> = new Set(['box', 'cylinder', 'extrude', 'revolve', 'import']);
@@ -463,6 +483,8 @@ export function defaultFeature(type: FeatureType, id: string = createFeatureId()
       return { id, type, method: 'reference', references: [] };
     case 'point':
       return { id, type, method: 'coordinates', references: [], x: 0, y: 0, z: 0 };
+    case 'csys':
+      return { id, type, method: 'position', references: [], x: 0, y: 0, z: 0, angle: 0, flipX: false, flipY: false };
     case 'extrude':
       return { id, type, operation: 'add', sketch: '', depth: 20, direction: 'normal', end: 'blind' };
     case 'revolve':

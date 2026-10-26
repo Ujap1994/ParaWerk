@@ -53,3 +53,10 @@ of the session that created them.
   features as they were built, builds each one's tool once and combines moved (or, for a mirror, copied
   and mirrored) instances with the body in one boolean operation (`combineCopies`); holes are drilled again
   at the transformed centers. Faces of copy *i* of feature *s* are named `<pattern id>:<s>:<i>:<face name>`.
+- Coordinate systems (`csys`, 2026-10-26) are reference features too: an origin and three right-handed
+  unit axes, either at a position turned around Z or from a point and two directions (Y made
+  perpendicular to X). Where a field takes a point, a plane or an axis, they give their origin, their XY
+  plane or their Z axis. They are consumed outside the feature list: mass properties are transformed into
+  them in the renderer (center and inertia tensor, `src/shared/model/frame.ts`), and exports move a copy of
+  the body into them in the kernel (`transformShape`, a location, so faces keep their names). Part files
+  with coordinate systems are format version 7.

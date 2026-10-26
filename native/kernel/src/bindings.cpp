@@ -262,6 +262,10 @@ val importStep(val bytes) {
   });
 }
 
+val transformShape(int id, val transform) {
+  return guarded([&] { return idResult(parawerk::transformShape(id, emscripten::convertJSArrayToNumberVector<double>(transform))); });
+}
+
 val limitToNext(int toolId, int bodyId, int op, val direction, bool reversed, std::string name) {
   return guarded([&] {
     return idResult(parawerk::limitToNext(toolId, bodyId, op, emscripten::convertJSArrayToNumberVector<double>(direction), reversed, name));
@@ -283,7 +287,7 @@ val importStepText(const std::string& text, const std::string& name) {
   return guarded([&] { return idResult(parawerk::importStep(text, name)); });
 }
 
-std::string version() { return "parawerk-kernel 0.11 / OCCT " PARAWERK_OCCT_VERSION; }
+std::string version() { return "parawerk-kernel 0.12 / OCCT " PARAWERK_OCCT_VERSION; }
 
 }  // namespace
 
@@ -317,5 +321,6 @@ EMSCRIPTEN_BINDINGS(parawerk_kernel) {
   emscripten::function("importStepText", &importStepText);
   emscripten::function("draftSides", &draftSides);
   emscripten::function("limitToNext", &limitToNext);
+  emscripten::function("transformShape", &transformShape);
   emscripten::function("limitBySurface", &limitBySurface);
 }

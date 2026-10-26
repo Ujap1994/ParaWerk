@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import type { Feature, ReferenceFeature, SlotFeature } from '../../../shared/model/feature.ts';
-import { AXIS_METHODS, PLANE_METHODS, POINT_METHODS, type GeometryRef } from '../../../shared/model/reference.ts';
+import { AXIS_METHODS, CSYS_METHODS, PLANE_METHODS, POINT_METHODS, type GeometryRef } from '../../../shared/model/reference.ts';
 import * as commands from '../commands.ts';
 import { referencePicks, referenceRoles } from '../references.ts';
 import { useAppState } from '../state/store.ts';
@@ -8,7 +8,10 @@ import { useFeatureName } from './FeatureTree.tsx';
 import { CloseIcon } from './icons.tsx';
 import { NumberField } from './NumberField.tsx';
 
-const METHODS = { plane: PLANE_METHODS, axis: AXIS_METHODS, point: POINT_METHODS, pattern: ['linear', 'circular'], mirror: ['plane'] } as const;
+const METHODS = { plane: PLANE_METHODS, axis: AXIS_METHODS, point: POINT_METHODS, csys: CSYS_METHODS, pattern: ['linear', 'circular'], mirror: ['plane'] } as const;
+
+/** What the fields of a coordinate system stand for. */
+const CSYS_SLOTS = ['origin', 'xAxis', 'yAxis'] as const;
 
 /** "Top plane", "Plane1", "Face 4", "Edge 7", "Vertex 2" – what a reference field holds. */
 export function useReferenceName() {
@@ -76,7 +79,7 @@ export function ReferenceSlots({ draft }: { draft: SlotFeature }) {
             return (
               <li key={index} className={`reference-slot${active ? ' is-active' : ''}${ref ? ' is-filled' : ''}`} data-testid={`reference-slot-${index}`}>
                 <button type="button" className="reference-slot-button" disabled={index > draft.references.length} onClick={() => commands.setReferenceSlot(index)}>
-                  <span className="reference-slot-role">{t(`references.roles.${role}`)}</span>
+                  <span className="reference-slot-role">{draft.type === 'csys' ? t(`references.csysSlots.${CSYS_SLOTS[index] ?? 'origin'}`) : t(`references.roles.${role}`)}</span>
                   <span className="reference-slot-value">{ref ? nameOf(ref) : active ? t('references.pick') : t('references.empty')}</span>
                 </button>
                 {ref ? (
@@ -104,7 +107,7 @@ export function ReferenceSlots({ draft }: { draft: SlotFeature }) {
   );
 }
 
-/** How a reference plane, axis or point is defined: its method, its reference fields and its values. */
+/** How a reference plane, axis, point or coordinate system is defined: its method, its reference fields and its values. */
 export function ReferenceFields({ draft }: { draft: ReferenceFeature }) {
   const { t } = useTranslation();
   const flipLabel =
@@ -128,6 +131,37 @@ export function ReferenceFields({ draft }: { draft: ReferenceFeature }) {
           <label className="checkbox-field">
             <input type="checkbox" checked={draft.flip} data-testid="plane-flip" onChange={(event) => commands.updateDraft({ flip: event.target.checked })} />
             {flipLabel}
+          </label>
+        </fieldset>
+      ) : null}
+      {draft.type === 'csys' ? (
+        <fieldset className="panel-section">
+          <legend className="panel-section-title">{t('panel.parameters')}</legend>
+          {draft.method === 'position' ? (
+            <>
+              <div className="field-row">
+                {(['x', 'y', 'z'] as const).map((axis) => (
+                  <NumberField
+                    key={axis}
+                    label={axis.toUpperCase()}
+                    signed
+                    value={draft[axis]}
+                    testId={`csys-${axis}`}
+                    {...equation(draft, axis)}
+                    onChange={(value) => commands.updateDraft({ [axis]: value })}
+                  />
+                ))}
+              </div>
+              <NumberField label={t('references.csysAngle')} unit="°" step={15} signed value={draft.angle} testId="csys-angle" {...equation(draft, 'angle')} onChange={(angle) => commands.updateDraft({ angle })} />
+            </>
+          ) : null}
+          <label className="checkbox-field">
+            <input type="checkbox" checked={draft.flipX} data-testid="csys-flip-x" onChange={(event) => commands.updateDraft({ flipX: event.target.checked })} />
+            {t('references.flipX')}
+          </label>
+          <label className="checkbox-field">
+            <input type="checkbox" checked={draft.flipY} data-testid="csys-flip-y" onChange={(event) => commands.updateDraft({ flipY: event.target.checked })} />
+            {t('references.flipY')}
           </label>
         </fieldset>
       ) : null}

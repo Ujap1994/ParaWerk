@@ -423,6 +423,10 @@ export class ParaWerkBackend implements GeometryBackend {
     return { positions: raw.positions, indices: raw.indices };
   }
 
+  transformed(handle: ShapeHandle, transform: readonly number[]): ShapeHandle {
+    return this.handle(this.kernel.transformShape(this.id(handle), [...transform]));
+  }
+
   exportStep(handle: ShapeHandle): Uint8Array {
     return check(this.kernel.exportStep(this.id(handle)) as { ok: true; data: Uint8Array } | Failure).data;
   }

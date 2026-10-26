@@ -202,6 +202,12 @@ int chamfer(int bodyId, const std::vector<int>& edgeIndices, double distance, co
  */
 int chamferUneven(int bodyId, const std::vector<int>& edgeIndices, double distance, double second, bool byAngle, bool flip,
                   const std::vector<std::string>& edgeNames = {}, const std::string& name = "");
+/**
+ * A copy of a body moved and turned by `transform` (12 values: the rows of a 3 × 4 matrix of a rotation
+ * and a translation); the faces keep their names. Used to export in a coordinate system.
+ */
+int transformShape(int id, const std::vector<double>& transform);
+
 void release(int id);
 int shapeCount();
 

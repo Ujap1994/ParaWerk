@@ -5,7 +5,7 @@ import type { AppInfo, RecoveryEntry } from '../../../shared/ipc.ts';
 import type { Feature, Vec3 } from '../../../shared/model/feature.ts';
 import { NO_PROPERTIES, type PartProperties } from '../../../shared/model/material.ts';
 import { DEFAULT_SETTINGS, type Settings } from '../../../shared/settings.ts';
-import type { FeatureResult, MassProperties, MeshPayload } from '../../../kernel/protocol.ts';
+import type { ExportFormat, FeatureResult, MassProperties, MeshPayload } from '../../../kernel/protocol.ts';
 import type { MeasureResult } from '../../../kernel/measure.ts';
 import type { SectionSettings } from '../section.ts';
 import type { SketchSession } from '../sketch/session.ts';
@@ -114,6 +114,12 @@ export interface AppState {
   dialogs: { settings: boolean; about: boolean; material: boolean };
   /** The mass properties panel over the 3D view. */
   showMassProperties: boolean;
+  /** The coordinate system (feature id) mass properties are given in; null: the model's own axes. */
+  massFrame: string | null;
+  /** The export waiting for the choice of a coordinate system (asked only when the part has any). */
+  exporting: ExportFormat | null;
+  /** The coordinate system (feature id) the last export used; null: the model's own axes. */
+  exportFrame: string | null;
   /** Recovery copies offered at the start (see state/recovery.ts). */
   recovery: RecoveryEntry[];
   /** The section view (null: the whole part is shown). */
@@ -159,6 +165,9 @@ export const initialState: AppState = {
   commandTab: 'features',
   dialogs: { settings: false, about: false, material: false },
   showMassProperties: false,
+  massFrame: null,
+  exporting: null,
+  exportFrame: null,
   recovery: [],
   section: null,
   measuring: false,

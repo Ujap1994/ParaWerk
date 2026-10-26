@@ -112,7 +112,8 @@
       "massProperties": "Masse, Schwerpunkt und Trägheitsmomente des Teils anzeigen",
       "measure": "Abstände, Winkel, Längen und Flächen von Flächen, Kanten und Ecken messen",
       "exportThreeMf": "Als 3MF für den 3D-Druck exportieren, mit Material und Farbe",
-      "importStep": "Eine STEP-Datei als Körper importieren"
+      "importStep": "Eine STEP-Datei als Körper importieren",
+      "csys": "Koordinatensystem erzeugen: an einer Position oder an einem Punkt mit Achsen entlang von Kanten, Achsen oder Ebenennormalen"
     },
     "tabs": {
       "label": "Befehlsregister",
@@ -193,7 +194,8 @@
     "measure": "Messen",
     "exportThreeMf": "3MF",
     "importStep": "Import",
-    "exportFormats": "Exportformate"
+    "exportFormats": "Exportformate",
+    "csys": "Koordinatensystem"
   },
   "features": {
     "plane": "Ebene",
@@ -212,7 +214,8 @@
     "pattern": "Muster",
     "mirror": "Spiegelung",
     "shell": "Schale",
-    "import": "Import"
+    "import": "Import",
+    "csys": "Koordinatensystem"
   },
   "tree": {
     "title": "Featurebaum",
@@ -401,7 +404,14 @@
     "importDxfTitle": "DXF importieren",
     "dxfFiles": "DXF-Zeichnungen",
     "threeMfFiles": "3MF-Dateien",
-    "importTitle": "STEP importieren"
+    "importTitle": "STEP importieren",
+    "exportFrame": {
+      "title": "Exportieren",
+      "frame": "Koordinatensystem",
+      "hint": "Die Datei verwendet die Koordinaten dieses Koordinatensystems: Sein Ursprung wird zu 0, 0, 0, seine Achsen werden X, Y und Z (beim 3D-Druck zeigt Z von der Druckplatte nach oben).",
+      "export": "Exportieren",
+      "modelOrigin": "Modellursprung"
+    }
   },
   "toasts": {
     "saved": "„{{name}}“ gespeichert.",
@@ -694,6 +704,10 @@
       },
       "mirror": {
         "plane": "An einer Ebene"
+      },
+      "csys": {
+        "position": "Position und Winkel",
+        "references": "Punkt und zwei Richtungen"
       }
     },
     "roles": {
@@ -719,7 +733,15 @@
       "point": "Hier einen Punkt wählen: einen Eckpunkt, den Ursprung oder einen Referenzpunkt.",
       "center": "Hier eine Kante oder Fläche wählen."
     },
-    "useOrigin": "Ursprung nehmen"
+    "useOrigin": "Ursprung nehmen",
+    "csysSlots": {
+      "origin": "Ursprung",
+      "xAxis": "X-Achse",
+      "yAxis": "Y-Achse (Richtung)"
+    },
+    "csysAngle": "Gedreht um Z",
+    "flipX": "X-Achse umkehren",
+    "flipY": "Y-Achse umkehren"
   },
   "hole": {
     "type": "Bohrung",
@@ -836,11 +858,14 @@
     "principal": "Hauptträgheitsmomente",
     "tensor": "Trägheitstensor im Schwerpunkt",
     "tensorHint": "Achsen durch den Schwerpunkt, parallel zu den Modellachsen; außerhalb der Diagonale stehen die negativen Deviationsmomente.",
+    "tensorHintFrame": "Achsen durch den Schwerpunkt, parallel zu den Achsen des Koordinatensystems; außerhalb der Diagonale stehen die negativen Deviationsmomente.",
     "noMaterial": "Wählen Sie ein Material, um Masse und Trägheitsmomente zu erhalten.",
     "choose": "Material wählen…",
     "empty": "Es gibt noch keinen Körper.",
     "rolledBack": "Zurückgesetzt: Die Werte gelten für das Teil über der Rollback-Leiste.",
-    "editing": "Die Werte werden nach der Bearbeitung aktualisiert."
+    "editing": "Die Werte werden nach der Bearbeitung aktualisiert.",
+    "relativeTo": "Bezogen auf",
+    "modelOrigin": "Modellursprung"
   },
   "measure": {
     "title": "Messen",

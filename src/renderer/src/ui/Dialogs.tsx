@@ -1,8 +1,10 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { REPOSITORY_URL } from '../../../shared/app-info.ts';
 import type { LanguageSetting, NavigationPreset, Projection, ThemeSetting } from '../../../shared/settings.ts';
 import * as commands from '../commands.ts';
+import { coordinateSystems } from '../references.ts';
+import { featureName } from '../state/document.ts';
 import { discardRecovery, restoreRecovery } from '../state/recovery.ts';
 import { dismissToast, setState, useAppState } from '../state/store.ts';
 import { CloseIcon } from './icons.tsx';
@@ -145,6 +147,52 @@ export function AboutDialog() {
         {t('about.website')}
       </button>
     </Modal>
+  );
+}
+
+/** Asks which coordinate system an export is in (only when the part has coordinate systems). */
+export function ExportFrameDialog() {
+  const { t } = useTranslation();
+  const format = useAppState((state) => state.exporting);
+  return (
+    <Modal open={format !== null} title={t('dialogs.exportFrame.title')} onClose={() => void commands.confirmExport('cancel')} testId="export-frame-dialog">
+      {/* Mounted while open, so every export starts from the last choice. */}
+      {format ? <ExportFrameChoice /> : null}
+    </Modal>
+  );
+}
+
+function ExportFrameChoice() {
+  const { t } = useTranslation();
+  const last = useAppState((state) => state.exportFrame);
+  const features = useAppState((state) => state.history.features);
+  const systemsText = useAppState((state) => JSON.stringify(coordinateSystems(state).map(({ id, index }) => ({ id, index }))));
+  const systems = useMemo(() => JSON.parse(systemsText) as { id: string; index: number }[], [systemsText]);
+  // The last choice again, while it still exists.
+  const [choice, setChoice] = useState(() => (last && systems.some((system) => system.id === last) ? last : ''));
+  return (
+    <>
+      <label className="field">
+        <span className="field-label">{t('dialogs.exportFrame.frame')}</span>
+        <select className="field-select" value={choice} data-testid="export-frame" onChange={(event) => setChoice(event.target.value)}>
+          <option value="">{t('dialogs.exportFrame.modelOrigin')}</option>
+          {systems.map((system) => (
+            <option key={system.id} value={system.id}>
+              {featureName(features, system.index, t)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <p className="setting-help">{t('dialogs.exportFrame.hint')}</p>
+      <div className="modal-actions">
+        <button type="button" className="button" onClick={() => void commands.confirmExport('cancel')}>
+          {t('dialogs.cancel')}
+        </button>
+        <button type="button" className="button is-primary" data-testid="export-frame-ok" onClick={() => void commands.confirmExport(choice || null)}>
+          {t('dialogs.exportFrame.export')}
+        </button>
+      </div>
+    </>
   );
 }
 

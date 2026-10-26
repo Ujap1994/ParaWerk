@@ -288,6 +288,7 @@ function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
     case 'plane':
     case 'axis':
     case 'point':
+    case 'csys':
       return <ReferenceFields draft={draft} />;
     case 'hole':
       return <HoleFields draft={draft} index={index} />;

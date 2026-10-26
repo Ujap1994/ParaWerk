@@ -54,6 +54,7 @@ import {
   ReferenceAxisIcon,
   ReferencePlaneIcon,
   ReferencePointIcon,
+  CoordinateSystemIcon,
   SettingsIcon,
   ShellIcon,
   SketchIcon,
@@ -151,9 +152,9 @@ interface SplitEntry {
   active(state: AppState): boolean;
 }
 
-const REFERENCE_ENTRIES: readonly SplitEntry[] = (['plane', 'axis', 'point'] as const).map((type) => ({
+const REFERENCE_ENTRIES: readonly SplitEntry[] = (['plane', 'axis', 'point', 'csys'] as const).map((type) => ({
   id: type,
-  icon: { plane: ReferencePlaneIcon, axis: ReferenceAxisIcon, point: ReferencePointIcon }[type],
+  icon: { plane: ReferencePlaneIcon, axis: ReferenceAxisIcon, point: ReferencePointIcon, csys: CoordinateSystemIcon }[type],
   label: type,
   start: () => commands.startFeature(type),
   active: (state: AppState) => state.activeEdit?.mode === 'create' && state.activeEdit.draft.type === type,

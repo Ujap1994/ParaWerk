@@ -3,7 +3,7 @@ import { HOLE_FITS, HOLE_KINDS } from './hole.ts';
 import { CUSTOM_MATERIAL, materialInfo, MAX_DENSITY, MIN_DENSITY, NO_PROPERTIES, type PartProperties } from './material.ts';
 import { MAX_PATTERN_COUNT } from './pattern.ts';
 import { THIN_SIDES, type ThinSide } from './thin.ts';
-import { AXIS_METHODS, PLANE_METHODS, POINT_METHODS, type GeometryRef } from './reference.ts';
+import { AXIS_METHODS, CSYS_METHODS, PLANE_METHODS, POINT_METHODS, type GeometryRef } from './reference.ts';
 import { parseSketchData, parsePlaneRef } from './validate-sketch.ts';
 
 export class ValidationError extends Error {
@@ -258,6 +258,19 @@ function parseFeatureFields(raw: Json, path: string): Feature {
         x: coordinate(raw.x, `${path}.x`),
         y: coordinate(raw.y, `${path}.y`),
         z: coordinate(raw.z, `${path}.z`),
+      };
+    case 'csys':
+      return {
+        ...common,
+        type: 'csys',
+        method: method(raw.method, CSYS_METHODS, `${path}.method`),
+        references: geometryRefs(raw.references, `${path}.references`),
+        x: coordinate(raw.x, `${path}.x`),
+        y: coordinate(raw.y, `${path}.y`),
+        z: coordinate(raw.z, `${path}.z`),
+        angle: finiteNumber(raw.angle, `${path}.angle`, 360),
+        flipX: flag(raw.flipX, `${path}.flipX`),
+        flipY: flag(raw.flipY, `${path}.flipY`),
       };
     case 'extrude': {
       // An empty or unknown sketch id is kept: the rebuild reports the missing sketch at the feature.

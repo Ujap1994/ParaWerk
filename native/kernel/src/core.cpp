@@ -1371,6 +1371,16 @@ int chamferUneven(int bodyId, const std::vector<int>& edgeIndices, double distan
   return finishEdgeFeature(maker, bodyId, edges, edgeNames, name, "chamfer", "chamfer could not be computed (distance too large?)");
 }
 
+int transformShape(int id, const std::vector<double>& transform) {
+  if (transform.size() != 12) throw KernelError("operation-failed", "a transformation needs 12 values");
+  const StoredShape& body = store().entry(id);
+  const double* m = transform.data();
+  gp_Trsf trsf;
+  trsf.SetValues(m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8], m[9], m[10], m[11]);
+  // Moving keeps the shared geometry and the order of the faces, so the names stay valid.
+  return store().add(body.shape.Moved(TopLoc_Location(trsf)), body.names);
+}
+
 void release(int id) { store().release(id); }
 
 int shapeCount() { return store().size(); }

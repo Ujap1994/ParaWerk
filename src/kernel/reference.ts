@@ -108,6 +108,9 @@ function referenceAspects(geometry: ReferenceGeometry): Aspects {
       return { axis: { point: geometry.point, direction: geometry.direction } };
     case 'point':
       return { point: geometry.point, center: geometry.point };
+    case 'csys':
+      // Its origin, and its XY plane with the Z axis.
+      return { point: geometry.origin, center: geometry.origin, plane: { point: geometry.origin, normal: geometry.zDir }, axis: { point: geometry.origin, direction: geometry.zDir } };
   }
 }
 
@@ -276,6 +279,25 @@ export function computeReference(feature: ReferenceFeature, context: ReferenceCo
         case 'normal': {
           const [plane, point] = [get(0, 'plane'), get(1, 'point')];
           return result({ kind: 'axis', point, direction: plane.normal });
+        }
+      }
+      break;
+    case 'csys':
+      switch (feature.method) {
+        case 'position': {
+          const angle = (feature.angle * Math.PI) / 180;
+          const xDir = scale([Math.cos(angle), Math.sin(angle), 0], feature.flipX ? -1 : 1);
+          const yDir = scale([-Math.sin(angle), Math.cos(angle), 0], feature.flipY ? -1 : 1);
+          return result({ kind: 'csys', origin: [feature.x, feature.y, feature.z], xDir, yDir, zDir: cross(xDir, yDir) });
+        }
+        case 'references': {
+          const [origin, first, second] = [get(0, 'point'), get(1, 'direction'), get(2, 'direction')];
+          const xDir = scale(unit(first), feature.flipX ? -1 : 1);
+          // Y is the second direction made perpendicular to X.
+          const across = sub(second, scale(xDir, dot(second, xDir)));
+          if (length(across) < 1e-6 * length(second)) throw new FeatureError('reference-parallel');
+          const yDir = scale(unit(across), feature.flipY ? -1 : 1);
+          return result({ kind: 'csys', origin, xDir, yDir, zDir: cross(xDir, yDir) });
         }
       }
       break;
