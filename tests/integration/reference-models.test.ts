@@ -563,6 +563,48 @@ const MODELS: Model[] = [
       ['thicker plate', set('plate', { height: 14 })],
     ],
   },
+  {
+    name: 'column extruded up to the next face, joining a plate to a roof',
+    build() {
+      const base = [box('b', 100, 60, 10), box('roof', 100, 60, 8, [0, 0, 40])];
+      const column = [sketch('s', onFace(base, 'b:top'), C('k', 0, 0, 8)), extrude('col', 's', 10, { end: 'upToNext' })];
+      const joined = [...base, ...column];
+      return [...joined, fillet('foot', 2, edges(joined, ['col:side:k', 'b:top']))];
+    },
+    edits: [
+      ['higher roof', set('roof', { position: [0, 0, 50] })],
+      ['thicker plate', set('b', { height: 14 })],
+      ['wider column', setCircle('s', 'k', 11)],
+    ],
+  },
+  {
+    name: 'filling hole cut up to the next face through the lid of a closed box',
+    build() {
+      const base = [box('b', 70, 50, 40)];
+      const hollow = [...base, shell('cavity', [], 4)];
+      const fill = [sketch('s', onFace(base, 'b:top'), C('k', 10, 0, 5)), extrude('fill', 's', 5, { operation: 'cut', direction: 'reverse', end: 'upToNext' })];
+      const all = [...hollow, ...fill];
+      return [...all, chamfer('rim', 1, edges(all, ['fill:side:k', 'b:top']))];
+    },
+    edits: [
+      ['thicker walls', set('cavity', { thickness: 6 })],
+      ['taller box', set('b', { height: 50 })],
+    ],
+  },
+  {
+    name: 'boss extruded up to the curved surface of a shaft',
+    build() {
+      const base = [box('b', 80, 60, 10), cylinder('shaft', 15, 60, [0, -30, 45], 'add', 'y')];
+      const boss = [sketch('s', onFace(base, 'b:top'), rect('q', -6, -6, 6, 6)), extrude('boss', 's', 10, { end: 'upToSurface', endRef: { kind: 'face', name: 'shaft:side', at: [0, 0, 30] } })];
+      const all = [...base, ...boss];
+      return [...all, fillet('foot', 1.5, edges(all, ['boss:side:qa', 'b:top']))];
+    },
+    edits: [
+      ['thicker shaft', set('shaft', { radius: 18 })],
+      ['lower shaft', set('shaft', { position: [0, -30, 40] })],
+      ['gap of 3', set('boss', { endOffset: 3 })],
+    ],
+  },
 ];
 
 describe('reference models', () => {

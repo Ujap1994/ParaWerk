@@ -15,6 +15,11 @@ export interface ResolvedExtrude extends ExtrudeFeature {
   range?: [number, number];
   /** Up to a plane at an angle: the plane the extrusion is cut off at (point and normal; the side the normal points to goes). */
   trim?: [number, number, number, number, number, number];
+  /**
+   * Up to the next face of the body, or up to a curved face of it (topological index; `offset` towards
+   * the sketch, negative past the face): the extrusion goes past the body and is stopped there.
+   */
+  limit?: { kind: 'next' } | { kind: 'face'; face: number; offset: number };
 }
 
 /** A revolution with the outlines and plane of its sketch and its axis in sketch coordinates. */

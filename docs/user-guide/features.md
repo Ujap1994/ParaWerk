@@ -14,12 +14,20 @@ chooses another one.
   or a [variable](#variables-and-equations). **Through all** goes past the whole body in the chosen
   direction – the usual choice for holes and cut-outs through a plate – and still does when the body
   grows later. It needs a body to go through.
-- **Up to surface** extrudes until a plane: a planar face of the part, a [reference plane](#reference-geometry)
-  or a standard plane, picked in the 3D view or the tree. The plane may lie at an angle – the extrusion then
-  ends in a sloped face along it. *Offset* stops that far before the plane, or past it with **Past the
+- **Up to next** extrudes until the outline meets the body: a column from a plate up to a roof, a rib up
+  to a wall. The end follows the shape of what it meets – a step, a slope or a curved face. With **Remove
+  material** it cuts through the first material each outline meets and stops where that material ends: a
+  hole through the lid of a closed box, not through its floor as well. Every outline of the sketch finds
+  its own first wall. When the body does not stop the whole outline (part of it would go on without end),
+  the feature reports it.
+- **Up to surface** extrudes until a face of the part – planar or curved, such as the round side of a
+  shaft – or until a [reference plane](#reference-geometry) or a standard plane, picked in the 3D view or
+  the tree. A plane may lie at an angle – the extrusion then ends in a sloped face along it; a curved face
+  gives a curved end, and the face counts as going on past its edges (a cylinder all the way round and
+  further along its axis). *Offset* stops that far before the surface, or past it with **Past the
   surface**. When the face moves later, the extrusion follows it.
 - **Up to vertex** extrudes until the height of a vertex of the part or a reference point, measured along
-  the extrusion. Both up-to ends go one way (**Normal** or **Reversed**).
+  the extrusion. All up-to ends go one way (**Normal** or **Reversed**).
 - *Direction*: **Normal** extrudes along the normal of the sketch plane (out of the face for a sketch on a
   face), **Reversed** the other way (into the body, as a pocket usually needs), **Mid-plane** half the
   depth to each side, **Two directions** the *Depth* along the normal and *Depth 2* against it. For a
@@ -44,6 +52,8 @@ and editing the sketch (double-click it in the feature tree) rebuilds the extrus
 ![Extruding a plate with two holes: the side panel with sketch, depth and direction](../images/screenshots/extrude-plate.png)
 
 ![A pocket cut from a sketch on the top face of the plate](../images/screenshots/extrude-pocket.png)
+
+![A rib extruded up to the curved face of a shaft: the side panel shows the face it goes up to](../images/screenshots/extrude-up-to-surface.png)
 
 ## Revolve
 

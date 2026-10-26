@@ -17,14 +17,19 @@ export const PART_FORMAT = 'parawerk-part';
  * 2: sketch features. 3: variables, parameter and dimension expressions, splines. 4: extrusions and
  * revolutions. 5: edges and sketch faces referenced by persistent names (docs/adr/0002-persistent-naming.md).
  * 6: reference planes, axes and points, sketches on reference planes, revolutions around reference axes, holes,
- * patterns and mirror images, shells, extrusions up to a surface or vertex. 7: the part's material and color.
+ * patterns and mirror images, shells, extrusions up to a surface or vertex. 7: the part's material and color,
+ * STEP imports, extrusions in two directions, with a draft or up to the next face, uneven chamfers.
  * Older versions are read unchanged.
  */
 export const PART_FORMAT_VERSION = 7;
 
 /** The oldest format version that can hold the document, so older ParaWerk versions can still open it. */
 export function formatVersionOf(features: readonly Feature[], properties: PartProperties = NO_PROPERTIES): number {
-  if (properties.material !== undefined || properties.color !== undefined || features.some((feature) => feature.type === 'import')) return 7;
+  const seventh = (feature: Feature) =>
+    feature.type === 'import' ||
+    (feature.type === 'extrude' && (feature.end === 'upToNext' || feature.direction === 'two' || (feature.draft ?? 0) > 0)) ||
+    (feature.type === 'chamfer' && feature.method !== undefined && feature.method !== 'equal');
+  if (properties.material !== undefined || properties.color !== undefined || features.some(seventh)) return 7;
   const reference = (feature: Feature) =>
     isReferenceFeature(feature) ||
     isCopyFeature(feature) ||

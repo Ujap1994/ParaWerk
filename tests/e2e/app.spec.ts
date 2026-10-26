@@ -1029,6 +1029,47 @@ test('extrudes up to a reference plane picked in the tree, with an offset', asyn
   expect((await state(page)).history.features[2]).toMatchObject({ type: 'extrude', end: 'upToSurface', endRef: { kind: 'feature', feature: 'plane' }, endOffset: 5 });
 });
 
+test('extrudes up to the next face and up to a curved face picked in the 3D view', async () => {
+  launched = await launchApp({ width: 1000, height: 640 });
+  const { page } = launched;
+  // A shaft of radius 20 along y, its axis 60 above the top plane, and a 10 × 10 square on the top plane.
+  await page.evaluate(() => {
+    const P = (id: string, x: number, y: number) => ({ id, type: 'point', x, y });
+    const L = (id: string, p1: string, p2: string) => ({ id, type: 'line', p1, p2 });
+    const features = [
+      { id: 'shaft', type: 'cylinder', operation: 'add', radius: 20, height: 60, axis: 'y', position: [0, -30, 60] },
+      {
+        id: 'square', type: 'sketch', plane: { kind: 'standard', plane: 'top' },
+        sketch: { entities: [P('a', 0, 0), P('b', 10, 0), P('c', 10, 10), P('d', 0, 10), L('ab', 'a', 'b'), L('bc', 'b', 'c'), L('cd', 'c', 'd'), L('da', 'd', 'a')], constraints: [] },
+      },
+    ];
+    const history = { features, past: [], future: [] };
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history, savedFeatures: features, dirty: false });
+  });
+  await idle(page);
+  const cylinder = Math.PI * 400 * 60;
+  // The volume under the shaft (a circle of radius r around z = 60) over the square.
+  const column = (r: number) => 10 * (600 - (5 * Math.sqrt(r * r - 100) + ((r * r) / 2) * Math.asin(10 / r)));
+
+  await page.click('[data-command="extrude"]');
+  await page.selectOption('[data-testid="extrude-end"]', 'upToNext');
+  await expect(page.locator('.panel-hint').first()).toContainText('until the outline meets the body');
+  await page.click('[data-testid="panel-ok"]');
+  expect(await volume(page)).toBeCloseTo(cylinder + column(20), 1);
+
+  // Up to the shaft's curved face, 5 mm short of it.
+  await page.locator('.feature-tree .tree-item[data-feature-id]').nth(2).dblclick();
+  await page.selectOption('[data-testid="extrude-end"]', 'upToSurface');
+  await idle(page);
+  await clickWorldPoint(page, [0, -20, 80]);
+  await expect(page.locator('[data-testid="extrude-end-ref"]')).not.toContainText('Select in the 3D view');
+  await page.locator('[data-testid="extrude-end-offset"]').fill('5');
+  await page.locator('[data-testid="extrude-end-offset"]').press('Tab');
+  await page.click('[data-testid="panel-ok"]');
+  expect(await volume(page)).toBeCloseTo(cylinder + column(25), 1);
+  expect((await state(page)).history.features[2]).toMatchObject({ type: 'extrude', end: 'upToSurface', endRef: { kind: 'face', name: 'shaft:side' }, endOffset: 5 });
+});
+
 test('cutting from a sketch on a face goes into the part, and a cut that misses warns', async () => {
   launched = await launchApp({ width: 1440, height: 900 });
   const { page } = launched;

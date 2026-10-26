@@ -155,6 +155,26 @@ int cutHoles(int bodyId, const std::vector<double>& profile, const std::vector<d
 int trimByPlane(int shapeId, const std::vector<double>& plane, const std::string& name = "");
 
 /**
+ * Up to next: the part of a long extrusion (`toolId`, faces named as by extrudeProfile, from the sketch
+ * plane on along `direction`; `reversed`: against the plane's normal, so its "start" face is the far one)
+ * that reaches up to the body. Adding (op 0) keeps the pieces outside the body that start at the
+ * sketch; cutting (op 1) keeps, per outline (solid of the tool), the first material of the body it passes
+ * through. Fails with "end-missed" when the body does not stop an outline that it adds, or when the
+ * extrusion does not reach the body at all.
+ */
+int limitToNext(int toolId, int bodyId, int op, const std::vector<double>& direction, bool reversed, const std::string& name = "");
+
+/**
+ * Up to a surface: cuts a long extrusion (`toolId`, as for limitToNext, going along `direction`) off where
+ * it meets the surface of face `faceIndex` of the body, extended past the face's bounds and moved by
+ * `offset` towards the sketch (negative: past the surface). Keeps the pieces that start at the sketch; their
+ * faces along the surface are named like the far end ("<name>:end", or "<name>:start" when reversed). Fails with "end-missed" when the surface does not stop
+ * the whole profile.
+ */
+int limitBySurface(int toolId, int bodyId, int faceIndex, const std::vector<double>& direction, double offset, bool reversed,
+                   const std::string& name = "");
+
+/**
  * Hollows a body out to walls of `thickness`, inside the body or (`outward`) around it. The faces in
  * `openFaces` are removed so the shell is open there; without any, the body gets a closed cavity. The
  * wall faces made from face f are named "<name>:<name of f>", faces along the openings "<name>:rim".

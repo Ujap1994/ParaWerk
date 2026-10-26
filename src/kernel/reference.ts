@@ -161,6 +161,19 @@ function rawAspectsOf(ref: GeometryRef, context: ReferenceContext, missing: () =
   }
 }
 
+/**
+ * The face of the body a face reference stands for when it is curved (topological index); null for
+ * other references and planar faces (those provide a plane).
+ */
+export function curvedFaceOfReference(ref: GeometryRef | undefined, slot: number, context: ReferenceContext): number | null {
+  if (ref?.kind !== 'face') return null;
+  const body = context.body;
+  if (!body) throw new FeatureError('reference-missing', String(slot + 1));
+  const match = resolveFaceRef(ref, body.naming(), (face, point) => length(sub(body.face(face).center, point)));
+  if (!match) throw new FeatureError('reference-missing', String(slot + 1));
+  return body.face(match.index).plane ? null : match.index;
+}
+
 /** The axis a reference provides (a reference axis, a straight or circular edge, a cylindrical face). */
 export function axisOfReference(ref: GeometryRef, context: ReferenceContext): Line {
   const axis = aspectsOf(ref, 0, context).aspects.axis;

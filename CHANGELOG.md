@@ -8,6 +8,11 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### Added
+- Extrude *Up to next*: adding material goes until each outline meets the body, cutting goes through the
+  first material each outline meets (a lid, not the whole box). The end follows steps, slopes and curved
+  faces; an outline the body does not stop is reported.
+- Extrude *Up to surface* also goes up to curved faces (cylinders, cones, spheres, tori, B-spline faces),
+  extended past their edges, with an offset before or past them.
 - Extrude in two directions with their own depths, and draft while extruding (inward or outward, each
   side of a two-way extrusion towards its own end); drafted faces keep their names.
 - Chamfers with two distances, or a distance and an angle, measured from one face of each edge (with a

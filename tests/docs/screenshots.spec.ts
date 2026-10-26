@@ -974,3 +974,30 @@ test('STEP import screenshots', async () => {
   await page.click('[data-testid="panel-ok"]');
   await app.close();
 });
+
+test('extrude end screenshots', async () => {
+  const { app, page } = await launchApp({ width: 1440, height: 900 });
+  // A plate with a shaft above it; a square boss on the plate goes up to the shaft's curved face.
+  await page.evaluate(() => {
+    const P = (id: string, x: number, y: number) => ({ id, type: 'point', x, y });
+    const L = (id: string, p1: string, p2: string) => ({ id, type: 'line', p1, p2 });
+    const features = [
+      { id: 'plate', type: 'box', operation: 'add', width: 90, depth: 70, height: 10, position: [0, 0, 0] },
+      { id: 'shaft', type: 'cylinder', operation: 'add', radius: 15, height: 70, axis: 'y', position: [0, -35, 45] },
+      {
+        id: 'square', type: 'sketch', plane: { kind: 'face', face: 5, name: 'plate:top', frame: { origin: [0, 0, 10], xDir: [1, 0, 0], yDir: [0, 1, 0], normal: [0, 0, 1] } },
+        sketch: { entities: [P('a', -8, -20), P('b', 8, -20), P('c', 8, 20), P('d', -8, 20), L('ab', 'a', 'b'), L('bc', 'b', 'c'), L('cd', 'c', 'd'), L('da', 'd', 'a')], constraints: [] },
+      },
+      { id: 'rib', type: 'extrude', operation: 'add', sketch: 'square', depth: 10, direction: 'normal', end: 'upToSurface', endRef: { kind: 'face', name: 'shaft:side', at: [0, 0, 30] }, name: 'Rib' },
+    ];
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features, past: [], future: [] }, savedFeatures: features, fileName: 'Shaft support' });
+  });
+  await idle(page);
+  await page.evaluate(() => (window as unknown as { __parawerk: { viewport: { zoomToFit(): void } } }).__parawerk.viewport.zoomToFit());
+  await page.locator('.feature-tree .tree-item[data-feature-id="rib"]').dblclick();
+  await idle(page);
+  await page.waitForTimeout(600);
+  await page.screenshot({ path: out('extrude-up-to-surface.png') });
+  await page.click('[data-testid="panel-ok"]');
+  await app.close();
+});

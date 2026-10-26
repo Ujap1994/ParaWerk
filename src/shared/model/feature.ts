@@ -226,12 +226,19 @@ export type HoleEnd = 'blind' | 'throughAll';
 export const HOLE_ENDS: readonly HoleEnd[] = ['blind', 'throughAll'];
 
 /**
- * How far an extrusion goes: a given depth, through the whole body in its direction, up to a plane
- * (a planar face, a reference or standard plane; at an angle too) or up to a point (a vertex).
+ * How far an extrusion goes: a given depth, through the whole body in its direction, up to the next
+ * face of the body (adding: until it meets the body; cutting: through the first material), up to a
+ * surface (a face, planar or curved, or a reference or standard plane; at an angle too) or up to a
+ * point (a vertex).
  */
-export type ExtrudeEnd = HoleEnd | 'upToSurface' | 'upToVertex';
+export type ExtrudeEnd = HoleEnd | 'upToNext' | 'upToSurface' | 'upToVertex';
 
-export const EXTRUDE_ENDS: readonly ExtrudeEnd[] = ['blind', 'throughAll', 'upToSurface', 'upToVertex'];
+export const EXTRUDE_ENDS: readonly ExtrudeEnd[] = ['blind', 'throughAll', 'upToNext', 'upToSurface', 'upToVertex'];
+
+/** End conditions that go one way from the sketch plane (along its normal or, reversed, against it). */
+export function extrudesOneWay(end: ExtrudeEnd): boolean {
+  return end === 'upToNext' || end === 'upToSurface' || end === 'upToVertex';
+}
 
 /** Extrudes the closed outlines of a sketch (adding material) or cuts them out of the body. */
 export interface ExtrudeFeature extends FeatureBase {
@@ -249,9 +256,9 @@ export interface ExtrudeFeature extends FeatureBase {
   /** The side faces widen towards the far end instead. */
   draftOutward?: boolean;
   end: ExtrudeEnd;
-  /** Up to surface: the plane; up to vertex: the point. */
+  /** Up to surface: the plane or face; up to vertex: the point. */
   endRef?: GeometryRef;
-  /** Up to surface: how far before the plane the extrusion stops (after it, with `endBeyond`). */
+  /** Up to surface: how far before the surface the extrusion stops (after it, with `endBeyond`). */
   endOffset?: number;
   endBeyond?: boolean;
 }

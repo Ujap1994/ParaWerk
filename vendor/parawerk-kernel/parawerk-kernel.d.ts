@@ -36,6 +36,8 @@ interface EmbindModule {
   importStep(_0: any): any;
   importStepText(_0: EmbindString, _1: EmbindString): any;
   draftSides(_0: number, _1: any, _2: number, _3: EmbindString): any;
+  limitToNext(_0: number, _1: number, _2: number, _3: any, _4: boolean, _5: EmbindString): any;
+  limitBySurface(_0: number, _1: number, _2: number, _3: any, _4: number, _5: boolean, _6: EmbindString): any;
 }
 
 export type MainModule = WasmModule & typeof RuntimeExports & EmbindModule;

@@ -170,7 +170,8 @@ Marked complete for now: open points from hands-on testing are handled alongside
 | Extrude in two directions, draft while extruding | ✅ done |
 | Reference suite for Gate 2: 30 parts edited at early features | ✅ done |
 | Benchmarks of parts with 100 and 301 features (full rebuild, editing the last feature) | ✅ done |
-| Extrude up to next, up to curved surfaces, thin feature | open |
+| Extrude up to next and up to curved surfaces (with offset) | ✅ done |
+| Thin feature | open |
 
 ## 2. Guiding principles
 
@@ -358,7 +359,7 @@ CAD system; over-defined sketches explain which relations conflict.
 **Exit criteria (Gate 2)**
 - The owner models a set of their own real-world parts without workarounds
 - Editing early features does not break later features in a reference suite of at least 30 models
-  (in place since 2026-10-25: `tests/integration/reference-models.test.ts`, 30 parts, 70 edits)
+  (in place since 2026-10-25: `tests/integration/reference-models.test.ts`, 33 parts, 78 edits)
 
 **Performance focus:** parts with 10 → 100 → 300 features; incremental rebuilds; tessellation in workers;
 no main-thread block longer than 100 ms.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { defaultFeature, FEATURE_TYPES, type Feature, type SketchFeature } from '../../src/shared/model/feature.ts';
-import { decodePartFile, encodePartFile, PartFileError, PART_FORMAT } from '../../src/shared/model/part-file.ts';
+import { decodePartFile, encodePartFile, formatVersionOf, PartFileError, PART_FORMAT } from '../../src/shared/model/part-file.ts';
 import { parseFeature, parseFeatures, ValidationError } from '../../src/shared/model/validate.ts';
 import { strToU8, unzipSync, zipSync } from 'fflate';
 
@@ -112,6 +112,18 @@ describe('part file', () => {
     expect(versionOf(withSketch)).toBe(2);
     const bytes = encodePartFile({ units: 'mm', features: withSketch }, { appVersion: '1', savedAt: '' });
     expect(decodePartFile(bytes).document.features).toEqual(withSketch);
+  });
+
+  it('needs version 7 for the extrusion and chamfer options of Phase 2', () => {
+    const extrude = { ...defaultFeature('extrude', 'e'), sketch: 's' } as Feature;
+    expect(formatVersionOf([extrude])).toBe(4);
+    for (const options of [{ end: 'upToNext' }, { direction: 'two', depth2: 5 }, { draft: 3 }]) {
+      const feature = parseFeature({ ...extrude, ...options });
+      expect(formatVersionOf([feature]), JSON.stringify(options)).toBe(7);
+    }
+    const chamfer = { id: 'c', type: 'chamfer', distance: 1, edges: [] } as Feature;
+    expect(formatVersionOf([chamfer])).toBe(1);
+    expect(formatVersionOf([{ ...chamfer, method: 'angle', angle: 30 } as Feature])).toBe(7);
   });
 
   function zipWith(document: unknown): Uint8Array {

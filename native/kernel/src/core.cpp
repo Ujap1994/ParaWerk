@@ -6,6 +6,15 @@
 #include <BRepAdaptor_Surface.hxx>
 #include <BRepAlgoAPI_Cut.hxx>
 #include <BRepAlgoAPI_Fuse.hxx>
+#include <BRepAlgoAPI_Splitter.hxx>
+#include <BRepTools.hxx>
+#include <GeomAPI_IntCS.hxx>
+#include <GeomAPI_ProjectPointOnSurf.hxx>
+#include <GeomLProp_SLProps.hxx>
+#include <Geom_ConicalSurface.hxx>
+#include <Geom_Line.hxx>
+#include <Geom_OffsetSurface.hxx>
+#include <Geom_RectangularTrimmedSurface.hxx>
 #include <BRepBndLib.hxx>
 #include <BRepBuilderAPI_Copy.hxx>
 #include <BRepBuilderAPI_MakeShape.hxx>
@@ -893,6 +902,282 @@ int trimByPlane(int shapeId, const std::vector<double>& plane, const std::string
   namer.inherit(common, shape.shape, shape.names);
   namer.rest(faceName(name, "end"));
   return store().add(result, namer.take());
+}
+
+namespace {
+
+/** The faces of a shape that carry `name` (names in TopExp::MapShapes order of `shape`). */
+bool hasFaceNamed(const TopoDS_Shape& piece, const ShapeMap& faces, const FaceNames& names, const std::string& name) {
+  ShapeMap own;
+  TopExp::MapShapes(piece, TopAbs_FACE, own);
+  for (int f = 1; f <= own.Extent(); ++f) {
+    const int index = faces.FindIndex(own(f));
+    if (index > 0 && index <= static_cast<int>(names.size()) && names[static_cast<size_t>(index - 1)] == name) return true;
+  }
+  return false;
+}
+
+/** Some solids of a named shape as one shape, their faces named as in `from`; unnamed faces get `fallback`. */
+StoredShape namedSolids(const std::vector<TopoDS_Shape>& solids, const ShapeMap& faces, const FaceNames& names, const std::string& fallback) {
+  TopoDS_Shape shape = solids.front();
+  if (solids.size() > 1) {
+    TopoDS_Compound compound;
+    BRep_Builder builder;
+    builder.MakeCompound(compound);
+    for (const TopoDS_Shape& solid : solids) builder.Add(compound, solid);
+    shape = compound;
+  }
+  FaceNamer namer(shape);
+  ShapeMap own;
+  TopExp::MapShapes(shape, TopAbs_FACE, own);
+  for (int f = 1; f <= own.Extent(); ++f) {
+    const int index = faces.FindIndex(own(f));
+    if (index > 0 && index <= static_cast<int>(names.size()) && !names[static_cast<size_t>(index - 1)].empty()) {
+      namer.assign(own(f), names[static_cast<size_t>(index - 1)]);
+    }
+  }
+  namer.rest(fallback);
+  return {shape, namer.take()};
+}
+
+std::vector<TopoDS_Shape> solidsOf(const TopoDS_Shape& shape) {
+  ShapeMap solids;
+  TopExp::MapShapes(shape, TopAbs_SOLID, solids);
+  std::vector<TopoDS_Shape> result;
+  for (int s = 1; s <= solids.Extent(); ++s) result.push_back(solids(s));
+  return result;
+}
+
+double diagonal(const TopoDS_Shape& shape) {
+  Bnd_Box box;
+  BRepBndLib::Add(shape, box);
+  return box.IsVoid() ? 0 : std::sqrt(box.SquareExtent());
+}
+
+/**
+ * The surface of a face beyond the face's bounds, `size` further where the surface goes on without end
+ * (planes, cylinders, cones, extrusions) and as far as it goes otherwise (whole turns, B-spline patches).
+ */
+TopoDS_Face extendedFace(const occ::handle<Geom_Surface>& surface, const TopoDS_Face& face, double size) {
+  double fu1, fu2, fv1, fv2;
+  BRepTools::UVBounds(face, fu1, fu2, fv1, fv2);
+  double u1, u2, v1, v2;
+  surface->Bounds(u1, u2, v1, v2);
+  if (!surface->IsUPeriodic()) {
+    if (Precision::IsInfinite(u1)) u1 = fu1 - size;
+    if (Precision::IsInfinite(u2)) u2 = fu2 + size;
+  }
+  if (!surface->IsVPeriodic()) {
+    if (Precision::IsInfinite(v1)) v1 = fv1 - size;
+    if (Precision::IsInfinite(v2)) v2 = fv2 + size;
+  }
+  // A cone ends at its apex: going on past it would let the surface cross itself.
+  if (const auto cone = occ::down_cast<Geom_ConicalSurface>(surface)) {
+    const double apex = -cone->RefRadius() / std::sin(cone->SemiAngle());
+    const double margin = 1e-6 * std::max(1.0, size);
+    if (fv1 >= apex) v1 = std::max(v1, apex + margin);
+    else v2 = std::min(v2, apex - margin);
+  }
+  BRepBuilderAPI_MakeFace maker(surface, u1, u2, v1, v2, Precision::Confusion());
+  if (!maker.IsDone()) throw KernelError("operation-failed", "the surface could not be extended");
+  return maker.Face();
+}
+
+/** The untrimmed surface of a face, in place (its location applied). */
+occ::handle<Geom_Surface> faceSurface(const TopoDS_Face& face) {
+  occ::handle<Geom_Surface> surface = BRep_Tool::Surface(face);
+  if (const auto trimmed = occ::down_cast<Geom_RectangularTrimmedSurface>(surface)) surface = trimmed->BasisSurface();
+  return surface;
+}
+
+/**
+ * The surface moved by `offset` towards where a ray from `from` along `direction` comes from (negative:
+ * away from it, past the surface); analytic surfaces stay analytic.
+ */
+occ::handle<Geom_Surface> offsetTowards(const occ::handle<Geom_Surface>& surface, const TopoDS_Face& face, const gp_Pnt& from, const gp_Dir& direction, double offset) {
+  if (offset == 0) return surface;
+  // Which way the surface's own normal points where the extrusion meets it.
+  double u = 0, v = 0;
+  bool found = false;
+  GeomAPI_IntCS hits(new Geom_Line(from, direction), surface);
+  if (hits.IsDone()) {
+    double nearest = std::numeric_limits<double>::infinity();
+    for (int i = 1; i <= hits.NbPoints(); ++i) {
+      double hu, hv, w;
+      hits.Parameters(i, hu, hv, w);
+      if (w > -Precision::Confusion() && w < nearest) {
+        nearest = w;
+        u = hu;
+        v = hv;
+        found = true;
+      }
+    }
+  }
+  if (!found) {
+    // The ray misses: the face's center decides.
+    GProp_GProps props;
+    BRepGProp::SurfaceProperties(face, props);
+    GeomAPI_ProjectPointOnSurf projection(props.CentreOfMass(), surface);
+    if (projection.NbPoints() == 0) throw KernelError("operation-failed", "the offset side of the surface is unclear");
+    projection.LowerDistanceParameters(u, v);
+  }
+  GeomLProp_SLProps props(surface, u, v, 1, Precision::Confusion());
+  if (!props.IsNormalDefined()) throw KernelError("operation-failed", "the surface has no normal where the extrusion meets it");
+  const double along = props.Normal().Dot(direction);
+  occ::handle<Geom_OffsetSurface> moved = new Geom_OffsetSurface(surface, along > 0 ? -offset : offset);
+  const occ::handle<Geom_Surface> analytic = moved->Surface();
+  return analytic.IsNull() ? occ::handle<Geom_Surface>(moved) : analytic;
+}
+
+}  // namespace
+
+int limitToNext(int toolId, int bodyId, int op, const std::vector<double>& direction, bool reversed, const std::string& name) {
+  if (direction.size() != 3) throw KernelError("operation-failed", "a direction needs 3 values");
+  const gp_Dir along(direction[0], direction[1], direction[2]);
+  const StoredShape& tool = store().entry(toolId);
+  const StoredShape& body = store().entry(bodyId);
+  // The end at the sketch plane and the far one (a reversed extrusion starts at its far end).
+  const std::string start = faceName(name, reversed ? "end" : "start");
+  const std::string end = faceName(name, reversed ? "start" : "end");
+  const auto pieces = [&](BRepAlgoAPI_BooleanOperation& algorithm) -> StoredShape {
+    configure(algorithm, tool.shape, body.shape);
+    if (algorithm.HasErrors()) throw KernelError("operation-failed", "the extrusion could not be stopped at the body");
+    FaceNamer namer(algorithm.Shape());
+    namer.inherit(algorithm, tool.shape, tool.names);
+    namer.inherit(algorithm, body.shape, body.names);
+    return {algorithm.Shape(), namer.take()};
+  };
+  StoredShape split;
+  if (op == 0) {
+    BRepAlgoAPI_Cut outside;
+    split = pieces(outside);
+  } else {
+    BRepAlgoAPI_Common inside;
+    split = pieces(inside);
+  }
+  ShapeMap faces;
+  TopExp::MapShapes(split.shape, TopAbs_FACE, faces);
+  const std::vector<TopoDS_Shape> found = solidsOf(split.shape);
+  std::vector<TopoDS_Shape> kept;
+  if (op == 0) {
+    // Adding: the pieces outside the body that start at the sketch; the body must stop each of them.
+    for (const TopoDS_Shape& piece : found) {
+      if (!hasFaceNamed(piece, faces, split.names, start)) continue;
+      if (hasFaceNamed(piece, faces, split.names, end)) throw KernelError("end-missed", "the body does not stop the whole outline");
+      kept.push_back(piece);
+    }
+  } else {
+    // Cutting: per outline (a solid of the tool) the first material it passes through.
+    const double tolerance = 1e-6 * std::max(1.0, diagonal(tool.shape));
+    std::vector<TopoDS_Shape> outlines = solidsOf(tool.shape);
+    std::vector<Bnd_Box> boxes;
+    for (const TopoDS_Shape& outline : outlines) {
+      Bnd_Box box;
+      BRepBndLib::Add(outline, box);
+      box.Enlarge(tolerance);
+      boxes.push_back(box);
+    }
+    // Coordinates with the z axis along the extrusion: the low end of a piece's tight box there is where
+    // it begins (much cheaper than the exact distance from the sketch, and as exact for planar faces).
+    gp_Trsf toAlong;
+    toAlong.SetTransformation(gp_Ax3(gp_Pnt(0, 0, 0), along));
+    const auto beginsAt = [&](const TopoDS_Shape& piece) {
+      Bnd_Box box;
+      BRepBndLib::AddOptimal(piece.Moved(TopLoc_Location(toAlong)), box, false, false);
+      double x0, y0, z0, x1, y1, z1;
+      box.Get(x0, y0, z0, x1, y1, z1);
+      return z0;
+    };
+    // The outline each piece lies in, and where along the extrusion it begins.
+    std::vector<std::pair<size_t, double>> placed;
+    std::vector<double> nearest(outlines.size(), std::numeric_limits<double>::infinity());
+    for (const TopoDS_Shape& piece : found) {
+      Bnd_Box box;
+      BRepBndLib::Add(piece, box);
+      std::vector<size_t> candidates;
+      for (size_t o = 0; o < outlines.size(); ++o) {
+        if (!boxes[o].IsOut(box)) candidates.push_back(o);
+      }
+      if (candidates.empty()) {
+        for (size_t o = 0; o < outlines.size(); ++o) candidates.push_back(o);
+      }
+      size_t owner = candidates.front();
+      double best = std::numeric_limits<double>::infinity();
+      for (const size_t o : candidates) {
+        if (candidates.size() == 1) break;
+        BRepExtrema_DistShapeShape gap(piece, outlines[o], Extrema_ExtFlag_MIN);
+        const double value = gap.IsDone() ? gap.Value() : std::numeric_limits<double>::infinity();
+        if (value < best) {
+          best = value;
+          owner = o;
+        }
+      }
+      const double begin = beginsAt(piece);
+      placed.emplace_back(owner, begin);
+      nearest[owner] = std::min(nearest[owner], begin);
+    }
+    for (size_t p = 0; p < found.size(); ++p) {
+      const auto [owner, begin] = placed[p];
+      if (begin <= nearest[owner] + 10 * tolerance) kept.push_back(found[p]);
+    }
+  }
+  if (kept.empty()) throw KernelError("end-missed", "the extrusion does not reach the body");
+  StoredShape result = namedSolids(kept, faces, split.names, faceName(name, "other"));
+  return store().add(result.shape, std::move(result.names));
+}
+
+int limitBySurface(int toolId, int bodyId, int faceIndex, const std::vector<double>& direction, double offset, bool reversed, const std::string& name) {
+  if (direction.size() != 3) throw KernelError("operation-failed", "a direction needs 3 values");
+  const StoredShape& tool = store().entry(toolId);
+  const TopoDS_Shape& body = store().get(bodyId);
+  ShapeMap bodyFaces;
+  TopExp::MapShapes(body, TopAbs_FACE, bodyFaces);
+  if (faceIndex < 0 || faceIndex >= bodyFaces.Extent()) throw KernelError("face-missing", "face " + std::to_string(faceIndex) + " does not exist");
+  const TopoDS_Face target = TopoDS::Face(bodyFaces(faceIndex + 1));
+  const gp_Dir along(direction[0], direction[1], direction[2]);
+  const std::string start = faceName(name, reversed ? "end" : "start");
+  const std::string end = faceName(name, reversed ? "start" : "end");
+
+  // Where the extrusion starts: the middle of its first face on the sketch plane.
+  ShapeMap toolFaces;
+  TopExp::MapShapes(tool.shape, TopAbs_FACE, toolFaces);
+  gp_Pnt from;
+  for (int f = 1; f <= toolFaces.Extent(); ++f) {
+    if (f <= static_cast<int>(tool.names.size()) && tool.names[static_cast<size_t>(f - 1)] == start) {
+      GProp_GProps props;
+      BRepGProp::SurfaceProperties(toolFaces(f), props);
+      from = props.CentreOfMass();
+      break;
+    }
+  }
+  const occ::handle<Geom_Surface> surface = offsetTowards(faceSurface(target), target, from, along, offset);
+  const TopoDS_Face cutter = extendedFace(surface, target, diagonal(tool.shape) + diagonal(body));
+
+  BRepAlgoAPI_Splitter splitter;
+  NCollection_List<TopoDS_Shape> arguments;
+  arguments.Append(tool.shape);
+  NCollection_List<TopoDS_Shape> tools;
+  tools.Append(cutter);
+  splitter.SetArguments(arguments);
+  splitter.SetTools(tools);
+  splitter.SetRunParallel(parallel);
+  splitter.Build();
+  if (splitter.HasErrors()) throw KernelError("operation-failed", "the extrusion could not be cut off at the surface");
+  FaceNamer namer(splitter.Shape());
+  namer.inherit(splitter, tool.shape, tool.names);
+  const FaceNames names = namer.take();
+  ShapeMap faces;
+  TopExp::MapShapes(splitter.Shape(), TopAbs_FACE, faces);
+  // The pieces between the sketch and the surface; the surface must stop each of them.
+  std::vector<TopoDS_Shape> kept;
+  for (const TopoDS_Shape& piece : solidsOf(splitter.Shape())) {
+    if (!hasFaceNamed(piece, faces, names, start)) continue;
+    if (hasFaceNamed(piece, faces, names, end)) throw KernelError("end-missed", "the surface does not stop the whole outline");
+    kept.push_back(piece);
+  }
+  if (kept.empty()) throw KernelError("end-missed", "the extrusion does not reach the surface");
+  StoredShape result = namedSolids(kept, faces, names, end);
+  return store().add(result.shape, std::move(result.names));
 }
 
 int combineCopies(int bodyId, int toolId, const std::vector<double>& transforms, int op, const std::string& name) {

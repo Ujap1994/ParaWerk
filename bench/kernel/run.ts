@@ -160,6 +160,25 @@ if (backendName === 'parawerk') {
     ];
   };
   cases['revolve.spline100.rebuildWithProperties'] = measure((i) => kernel.rebuild(request(vase(100 + (i % 2)), true)), { iterations: 5, warmup: 1 });
+  // Up to next: 25 holes cut through the lid of a closed box (not its floor), from a plane above it.
+  // Only the sketch and the cut change between runs: the box and its cavity come from the cache.
+  const lidHoles = (radius: number): Feature[] => {
+    const entities: Extract<Feature, { type: 'sketch' }>['sketch']['entities'] = [];
+    for (let i = 0; i < 25; i++) {
+      entities.push({ id: `m${i}`, type: 'point', x: -120 + (i % 5) * 60, y: -120 + Math.floor(i / 5) * 60 });
+      entities.push({ id: `h${i}`, type: 'circle', center: `m${i}`, radius });
+    }
+    const above = { origin: [0, 0, 60] as Vec3, xDir: [1, 0, 0] as Vec3, yDir: [0, 1, 0] as Vec3, normal: [0, 0, 1] as Vec3 };
+    return [
+      { id: 'box', type: 'box', operation: 'add', width: 300, depth: 300, height: 40, position: [0, 0, 0] },
+      { id: 'cavity', type: 'shell', thickness: 4, faces: [], outward: false },
+      { id: 'plane', type: 'plane', method: 'offset', references: [{ kind: 'standard-plane', plane: 'top' }], distance: 60, angle: 45, flip: false },
+      { id: 'sketch', type: 'sketch', plane: { kind: 'feature', feature: 'plane', frame: above }, sketch: { entities, constraints: [] } },
+      { id: 'cut', type: 'extrude', operation: 'cut', sketch: 'sketch', depth: 10, direction: 'reverse', end: 'upToNext' },
+    ];
+  };
+  kernel.rebuild(request(lidHoles(5)));
+  cases['extrude.upToNext.cut25outlines'] = measure((i) => kernel.rebuild(request(lidHoles(5 + (i + 1) * 0.01))), { iterations: 5, warmup: 1 });
 }
 
 // A part with many features as users build them: per boss a sketch on the plate's top face, the extrusion

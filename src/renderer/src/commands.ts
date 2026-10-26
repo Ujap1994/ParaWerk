@@ -2,7 +2,7 @@ import { resolveLanguage } from '../../shared/i18n.ts';
 import type { MenuCommand } from '../../shared/ipc.ts';
 import { PART_FILE_EXTENSION } from '../../shared/app-info.ts';
 import { hashString } from '../../shared/hash.ts';
-import { COPYABLE_TYPES, type ImportFeature, defaultFeature, type BooleanOperation, hasReferenceSlots, isCopyFeature, isEdgeFeature, isReferenceFeature, isSketchBased, type EdgeRef, type ExtrudeEnd, type Feature, type FeatureType, type HoleFeature, type ReferenceFeature, type SketchFeature, type SlotFeature } from '../../shared/model/feature.ts';
+import { COPYABLE_TYPES, type ImportFeature, defaultFeature, type BooleanOperation, hasReferenceSlots, isCopyFeature, isEdgeFeature, isReferenceFeature, isSketchBased, type EdgeRef, type ExtrudeEnd, extrudesOneWay, type Feature, type FeatureType, type HoleFeature, type ReferenceFeature, type SketchFeature, type SlotFeature } from '../../shared/model/feature.ts';
 import { holePositions, metricSize, sizesFor, standardHoleDimensions } from '../../shared/model/hole.ts';
 import { AXIS_METHODS, PLANE_METHODS, POINT_METHODS, REFERENCE_ROLES, type GeometryRef, type ReferenceRole } from '../../shared/model/reference.ts';
 import { extrudesUpTo, referenceFits, referenceGeometry, referenceOfPick, referencePicks, referenceRoles } from './references.ts';
@@ -615,14 +615,20 @@ export function toggleDraftEdge(index: number): void {
   updateDraft({ edges: added ? [...kept, added] : kept });
 }
 
-/** Changes how far the edited extrusion goes; up to a surface or vertex goes one way only. */
+/** Whether a reference can be what an extrusion goes up to: any face or a plane for a surface, a point for a vertex. */
+function fitsExtrudeEnd(ref: GeometryRef, end: ExtrudeEnd, state: AppState, pick?: Pick): boolean {
+  if (end === 'upToSurface') return ref.kind === 'face' || referenceFits(ref, 'plane', state, pick);
+  return end === 'upToVertex' && referenceFits(ref, 'point', state, pick);
+}
+
+/** Changes how far the edited extrusion goes; up to the next face, a surface or a vertex goes one way only. */
 export function setExtrudeEnd(end: ExtrudeEnd): void {
   const edit = getState().activeEdit;
   if (edit?.draft.type !== 'extrude') return;
-  const oneWay = (end === 'upToSurface' || end === 'upToVertex') && (edit.draft.direction === 'both' || edit.draft.direction === 'two');
+  const oneWay = extrudesOneWay(end) && (edit.draft.direction === 'both' || edit.draft.direction === 'two');
   // A plane does not fit an up-to-vertex end (and the other way round).
   const { endRef: _ref, ...rest } = edit.draft;
-  const keep = edit.draft.endRef && referenceFits(edit.draft.endRef, end === 'upToVertex' ? 'point' : 'plane', getState());
+  const keep = edit.draft.endRef && fitsExtrudeEnd(edit.draft.endRef, end, getState());
   setState({ activeEdit: { ...edit, draft: { ...rest, end, ...(oneWay ? { direction: 'normal' as const } : {}), ...(keep && edit.draft.endRef ? { endRef: edit.draft.endRef } : {}) } } });
 }
 
@@ -633,9 +639,8 @@ export function pickExtrudeEnd(pick: Pick | 'origin'): void {
   if (!edit || !extrudesUpTo(edit.draft)) return;
   const ref: GeometryRef | null = pick === 'origin' ? { kind: 'origin' } : referenceOfPick(pick, state);
   if (!ref) return;
-  const role = edit.draft.end === 'upToVertex' ? 'point' : 'plane';
-  if (!referenceFits(ref, role, state, pick === 'origin' ? undefined : pick)) {
-    showToast('info', t(`references.unsuitable.${role}`));
+  if (!fitsExtrudeEnd(ref, edit.draft.end, state, pick === 'origin' ? undefined : pick)) {
+    showToast('info', t(edit.draft.end === 'upToVertex' ? 'references.unsuitable.point' : 'references.unsuitable.surface'));
     return;
   }
   updateDraft({ endRef: ref });

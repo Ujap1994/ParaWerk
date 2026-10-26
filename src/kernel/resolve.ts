@@ -7,9 +7,9 @@ import type { GeometryRef, ReferenceGeometry } from '../shared/model/reference.t
 import { frameOf, frameOnPlane, ORIGIN_ID, toModel, toSketch, type SketchFrame, type SketchPlaneRef } from '../shared/model/sketch.ts';
 import type { Point2 } from '../shared/model/spline.ts';
 import { hashString } from '../shared/hash.ts';
-import type { KernelFeature, ResolvedCopy, ResolvedEdgeFeature, ResolvedHole, ResolvedShell } from './backend.ts';
+import type { KernelFeature, ResolvedCopy, ResolvedEdgeFeature, ResolvedExtrude, ResolvedHole, ResolvedShell } from './backend.ts';
 import { FeatureError } from './feature-error.ts';
-import { axisOfReference, referenceValue, type ReferenceContext } from './reference.ts';
+import { axisOfReference, curvedFaceOfReference, referenceValue, type ReferenceContext } from './reference.ts';
 
 const coordinate = (value: number) => String(Math.round(value * 100) / 100);
 
@@ -137,9 +137,14 @@ const minus = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]
 
 /**
  * Where an extrusion up to a surface or vertex ends: a range along the sketch normal, and for a plane at
- * an angle to the sketch also the plane to cut it off at. Blind and through-all extrusions need neither.
+ * an angle to the sketch also the plane to cut it off at. Up to the next face and up to a curved face the
+ * backend finds the end in the body (`limit`). Blind and through-all extrusions need none of it.
  */
-function extrudeEnd(feature: ExtrudeFeature, profile: Profile, frame: SketchFrame, context: ResolveContext): { range?: [number, number]; trim?: [number, number, number, number, number, number] } {
+function extrudeEnd(feature: ExtrudeFeature, profile: Profile, frame: SketchFrame, context: ResolveContext): Pick<ResolvedExtrude, 'range' | 'trim' | 'limit'> {
+  if (feature.end === 'upToNext') {
+    if (!context.body) throw new FeatureError('no-body');
+    return { limit: { kind: 'next' } };
+  }
   if (feature.end !== 'upToSurface' && feature.end !== 'upToVertex') return {};
   // Up to something goes one way: along the normal, or against it when reversed.
   const sign = feature.direction === 'reverse' ? -1 : 1;
@@ -152,6 +157,8 @@ function extrudeEnd(feature: ExtrudeFeature, profile: Profile, frame: SketchFram
     const point = referenceValue(feature.endRef, 'point', 0, context);
     return { range: range(dot3(minus(point, frame.origin), d)) };
   }
+  const curved = curvedFaceOfReference(feature.endRef, 0, context);
+  if (curved !== null) return { limit: { kind: 'face', face: curved, offset: (feature.endBeyond ? -1 : 1) * (feature.endOffset ?? 0) } };
   const plane = referenceValue(feature.endRef, 'plane', 0, context);
   const along = dot3(d, plane.normal);
   if (Math.abs(along) < 1e-9) throw new FeatureError('end-parallel');

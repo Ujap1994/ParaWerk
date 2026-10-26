@@ -39,7 +39,7 @@ const SURFACE_KINDS: SurfaceKind[] = ['plane', 'cylinder', 'cone', 'sphere', 'to
 const CURVE_KINDS: CurveKind[] = ['line', 'circle', 'ellipse', 'bspline', 'other'];
 
 const FEATURE_ERROR_CODES = new Set<FeatureErrorCode>([
-  'no-body', 'no-edges', 'edge-missing', 'face-missing', 'plane-missing', 'reference-missing', 'reference-kind', 'reference-parallel', 'reference-not-parallel', 'reference-collinear', 'empty-result', 'first-must-add', 'sketch-missing', 'profile-empty', 'profile-crossing', 'axis-missing', 'axis-not-in-plane', 'hole-no-points', 'hole-invalid', 'pattern-empty', 'pattern-seed-missing', 'pattern-unsupported', 'shell-face-missing', 'end-behind', 'end-parallel', 'import-no-solid', 'profile-crosses-axis',
+  'no-body', 'no-edges', 'edge-missing', 'face-missing', 'plane-missing', 'reference-missing', 'reference-kind', 'reference-parallel', 'reference-not-parallel', 'reference-collinear', 'empty-result', 'first-must-add', 'sketch-missing', 'profile-empty', 'profile-crossing', 'axis-missing', 'axis-not-in-plane', 'hole-no-points', 'hole-invalid', 'pattern-empty', 'pattern-seed-missing', 'pattern-unsupported', 'shell-face-missing', 'end-behind', 'end-parallel', 'end-missed', 'import-no-solid', 'profile-crosses-axis',
   'operation-failed', 'unknown',
 ]);
 
@@ -153,7 +153,8 @@ export class ParaWerkBackend implements GeometryBackend {
       case 'extrude': {
         const { origin, xDir, normal } = feature.frame;
         let extent: [number, number] | undefined;
-        if (feature.end === 'throughAll') {
+        const limit = feature.limit;
+        if (feature.end === 'throughAll' || limit) {
           // Through all goes past the body: its extent along the normal, from the corners of its box.
           if (body === null) throw new FeatureError('no-body');
           const { min, max } = this.boundingBox(body);
@@ -163,7 +164,16 @@ export class ParaWerkBackend implements GeometryBackend {
           });
           extent = [Math.min(...along), Math.max(...along)];
         }
-        const [from, to] = feature.range ?? extrudeRange(feature, extent);
+        const sign = feature.direction === 'reverse' ? -1 : 1;
+        let range = feature.range;
+        if (limit && extent) {
+          // Up to the next face or a curved face: one way, past the body (and past an offset beyond the face).
+          const margin = 1 + 0.01 * (extent[1] - extent[0]);
+          const reach = (sign > 0 ? extent[1] : -extent[0]) + margin + (limit.kind === 'face' ? Math.max(0, -limit.offset) : 0);
+          if (!(reach > 1e-9)) throw new FeatureError('end-behind');
+          range = sign > 0 ? [0, reach] : [-reach, 0];
+        }
+        const [from, to] = range ?? extrudeRange(feature, extent);
         const plane = [...origin, ...xDir, ...normal];
         const prism = (a: number, b: number) => this.handle(k.extrudeProfile(encodeProfile(feature.profile), plane, a, b, profileEdgeNames(feature.profile), feature.id));
         let tool: ShapeHandle;
@@ -180,6 +190,17 @@ export class ParaWerkBackend implements GeometryBackend {
           }
         } else {
           tool = this.drafted(prism(from, to), plane, to > 0 ? 1 : -1, feature);
+        }
+        if (limit && body !== null) {
+          // Stopped where it meets the body (up to next) or the surface.
+          const direction: Vec3 = [sign * normal[0], sign * normal[1], sign * normal[2]];
+          try {
+            return limit.kind === 'next'
+              ? this.handle(k.limitToNext(this.id(tool), this.id(body), feature.operation === 'add' ? 0 : 1, direction, sign < 0, feature.id))
+              : this.handle(k.limitBySurface(this.id(tool), this.id(body), limit.face, direction, limit.offset, sign < 0, feature.id));
+          } finally {
+            this.release(tool);
+          }
         }
         if (!feature.trim) return tool;
         // Up to a plane at an angle: cut the extrusion off at the plane.

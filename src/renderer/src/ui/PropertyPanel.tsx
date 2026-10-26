@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { formatQuantity } from '../format.ts';
-import { CHAMFER_METHODS, EXTRUDE_ENDS, MAX_DRAFT_ANGLE, type RevolveDirection, hasReferenceSlots, isCopyFeature, type Axis, type BooleanOperation, type ChamferFeature, type ChamferMethod, type EdgeFeature, type ExtrudeDirection, type ExtrudeEnd, type ExtrudeFeature, type Feature, type Vec3 } from '../../../shared/model/feature.ts';
+import { CHAMFER_METHODS, EXTRUDE_ENDS, extrudesOneWay, MAX_DRAFT_ANGLE, type RevolveDirection, hasReferenceSlots, isCopyFeature, type Axis, type BooleanOperation, type ChamferFeature, type ChamferMethod, type EdgeFeature, type ExtrudeDirection, type ExtrudeEnd, type ExtrudeFeature, type Feature, type Vec3 } from '../../../shared/model/feature.ts';
 import type { GeometryRef } from '../../../shared/model/reference.ts';
 import { referenceRoles } from '../references.ts';
 import { resolveEdgeRefs } from '../../../shared/model/naming.ts';
@@ -145,8 +145,8 @@ function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
             <span className="field-label">{t('panel.end')}</span>
             <select className="field-select" value={draft.end ?? 'blind'} data-testid="extrude-end" onChange={(event) => commands.setExtrudeEnd(event.target.value as ExtrudeEnd)}>
               {EXTRUDE_ENDS.map((end) => (
-                // Through all needs a body to go through.
-                <option key={end} value={end} disabled={end === 'throughAll' && firstFeature}>
+                // Through all and up to next need a body to go through or up to.
+                <option key={end} value={end} disabled={(end === 'throughAll' || end === 'upToNext') && firstFeature}>
                   {t(`panel.ends.${end}`)}
                 </option>
               ))}
@@ -156,14 +156,15 @@ function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
             <NumberField label={t('panel.extrudeDepth')} value={draft.depth} testId="extrude-depth" {...equation(draft, 'depth')} onChange={(depth) => commands.updateDraft({ depth })} />
           ) : null}
           {draft.end === 'upToSurface' || draft.end === 'upToVertex' ? <ExtrudeEndFields draft={draft} /> : null}
+          {draft.end === 'upToNext' ? <p className="panel-hint">{t('panel.endNextHint')}</p> : null}
           <Segmented<ExtrudeDirection>
             label={t('panel.direction')}
             value={draft.direction}
             options={[
               { value: 'normal', label: t('panel.directionNormal') },
               { value: 'reverse', label: t('panel.directionReverse') },
-              // Up to a surface or vertex goes one way.
-              ...(draft.end === 'upToSurface' || draft.end === 'upToVertex'
+              // Up to the next face, a surface or a vertex goes one way.
+              ...(extrudesOneWay(draft.end)
                 ? []
                 : [
                     { value: 'both' as const, label: t('panel.directionBoth') },
