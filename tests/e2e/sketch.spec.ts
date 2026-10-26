@@ -1332,6 +1332,8 @@ test('dimensions a circle center to an edge of the part', async () => {
     ];
     (window as unknown as { __parawerk: Hooks }).__parawerk.setState({ history: { features, past: [], future: [] }, savedFeatures: features, dirty: false });
   });
+  // The first body fits the view; the sketch is opened after that, so it turns the view to its plane.
+  await idle(page);
   await page.dblclick('.tree-item[data-feature-id="s"]');
   await expectNormalView(page, [1, 0, 0], [0, 1, 0]);
   const canvas = await page.locator('.viewport-canvas').boundingBox();

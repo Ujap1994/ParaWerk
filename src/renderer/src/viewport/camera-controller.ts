@@ -117,8 +117,11 @@ export class CameraController {
     this.state.height = nextHeight;
   }
 
-  /** View state that shows the whole sphere, optionally from a new direction. */
-  fitState(bounds: Sphere, aspect: number, quaternion: Quaternion = this.state.quaternion): ViewState {
+  /**
+   * View state that shows the whole sphere, optionally from a new direction; by default from the
+   * direction the view looks in or, while it turns, the one it is turning to.
+   */
+  fitState(bounds: Sphere, aspect: number, quaternion: Quaternion = this.animation?.to.quaternion ?? this.state.quaternion): ViewState {
     const radius = Math.max(bounds.radius, 1);
     const height = (2 * radius * FIT_MARGIN) / Math.min(1, aspect);
     return { target: bounds.center.clone(), quaternion: quaternion.clone(), height };

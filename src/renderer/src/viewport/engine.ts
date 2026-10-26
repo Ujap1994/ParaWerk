@@ -616,7 +616,8 @@ export class ViewportEngine {
   zoomToFit(animate = true): void {
     this.updateBounds();
     const target = this.controller.fitState(this.bounds, this.aspect());
-    this.controller.animateTo(target, animate ? 320 : 0);
+    // A view that is turning (to a sketch plane, say) goes on turning to the fitted view.
+    this.controller.animateTo(target, animate || this.controller.animating ? 320 : 0);
     this.requestRender();
   }
 

@@ -30,6 +30,8 @@ disclaimer in the README.
 - After a clean close, ParaWerk could still offer to restore the document at the next start (mostly on
   Linux, where the program ended before the recovery copy was deleted); the copy is now removed before
   the program ends.
+- A sketch opened while a part was still being built (right after opening a file) could leave the view
+  turned only part of the way to the sketch plane.
 
 ## [0.4.0-alpha.0] - 2026-10-26
 
