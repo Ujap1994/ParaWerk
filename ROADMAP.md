@@ -199,7 +199,8 @@ what that turns up is fixed before Phase 3 starts.
 | Modeled threads (ISO metric, external and internal, on cylindrical faces) | ✅ done |
 | Multi-body parts, curves (helix, projected, composite) | open |
 | Configurations and design tables (variables and suppression per configuration) | ✅ done |
-| Surface tools (offset, knit, thicken), full equation support | open |
+| Full equation support (functions of several values, conditions, pattern counts from equations) | ✅ done |
+| Surface tools (offset, knit, thicken) | open |
 
 ## 2. Guiding principles
 

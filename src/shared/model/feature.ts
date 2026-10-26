@@ -67,7 +67,7 @@ export const EXPRESSION_FIELDS: Readonly<Record<FeatureType, readonly string[]>>
   extrude: ['depth', 'depth2', 'draft', 'endOffset', 'thickness'],
   revolve: ['angle', 'thickness'],
   hole: ['diameter', 'depth', 'counterboreDiameter', 'counterboreDepth', 'countersinkDiameter', 'countersinkAngle', 'threadDepth'],
-  pattern: ['spacing', 'angle'],
+  pattern: ['spacing', 'angle', 'count'],
   mirror: [],
   box: ['width', 'depth', 'height'],
   cylinder: ['radius', 'height'],

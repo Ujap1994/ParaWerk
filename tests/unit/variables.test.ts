@@ -135,3 +135,12 @@ describe('file format', () => {
     expect(decodePartFile(bytes).document.features).toEqual(features);
   });
 });
+
+describe('pattern counts from equations', () => {
+  it('rounds to a whole number of at least 2', async () => {
+    const { withEvaluatedParameters } = await import('../../src/renderer/src/variables.ts');
+    const pattern = { id: 'p', type: 'pattern' as const, method: 'linear' as const, references: [], features: [], count: 3, spacing: 10, angle: 360, flip: false, expressions: { count: 'length / 10' } };
+    expect(withEvaluatedParameters(pattern, new Map([['length', 47]])).count).toBe(5);
+    expect(withEvaluatedParameters(pattern, new Map([['length', 5]])).count).toBe(3);
+  });
+});

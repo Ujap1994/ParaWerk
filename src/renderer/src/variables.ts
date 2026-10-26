@@ -5,6 +5,7 @@
  */
 
 import { EXPRESSION_FIELDS, type Feature, type Variable, type VariablesFeature } from '../../shared/model/feature.ts';
+import { MAX_PATTERN_COUNT } from '../../shared/model/pattern.ts';
 import { isDimension, type SketchData } from '../../shared/model/sketch.ts';
 import { evaluate, variableNames } from './expression.ts';
 import { storedAngle } from './sketch/dimensions.ts';
@@ -82,7 +83,9 @@ export function withEvaluatedParameters<F extends Feature>(feature: F, values: R
   let next = feature;
   for (const [field, text] of Object.entries(expressions)) {
     if (!allowed.includes(field)) continue;
-    const value = evaluate(text, values);
+    // A pattern's count is a whole number of at least 2.
+    const raw = evaluate(text, values);
+    const value = raw !== null && field === 'count' ? (Math.round(raw) >= 2 ? Math.min(MAX_PATTERN_COUNT, Math.round(raw)) : null) : raw;
     const current = (feature as unknown as Record<string, unknown>)[field];
     if (value === null || !(value > 0) || current === value) continue;
     next = { ...next, [field]: value };

@@ -64,6 +64,7 @@ export function CopyFields({ draft }: { draft: CopyFeature }) {
             step={1}
             value={draft.count}
             testId="pattern-count"
+            {...equation(draft, 'count')}
             onChange={(count) => commands.updateDraft({ count: Math.min(MAX_PATTERN_COUNT, Math.max(2, Math.round(count))) })}
           />
           {draft.method === 'linear' ? (

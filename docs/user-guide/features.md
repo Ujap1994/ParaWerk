@@ -419,6 +419,20 @@ fixed value.
 Names start with a letter or `_` and may contain letters, digits and `_`; upper and lower case do not
 matter. Units and functions (`mm`, `in`, `sin`, `sqrt`, `pi`, …) cannot be used as names.
 
+Equations can use:
+
+| | |
+|---|---|
+| Arithmetic | `+ - * /` (also `× ÷ −`), powers `^`, brackets |
+| Units | `mm`, `cm`, `m`, `in` or `"` after a number or a bracket (`2 in`, `(a + 3) cm`) |
+| Functions | `sqrt`, `abs`, `sin`, `cos`, `tan` and `asin`, `acos`, `atan` (in degrees), `round`, `floor`, `ceil`, `pi` |
+| Several values | `min(a; b; …)`, `max(a; b; …)` |
+| Choices | `if(condition; then; else)` with `<`, `>`, `<=`, `>=`, `=`, `<>` – for example `if(length > 100; 8; 5)` |
+
+Arguments are separated by `;`. A comma is a decimal separator between digits (`2,5`) and separates
+arguments otherwise (`max(a, b)`). The count of a pattern takes an equation too, such as
+`floor(length / 30)`; it is rounded to a whole number of at least 2.
+
 ## Configurations
 
 **Configurations** (in the *Evaluate* tab, group *Part*) are variants of one part in one file – a mounting
