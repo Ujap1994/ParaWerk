@@ -351,13 +351,14 @@ export function RecoveryDialog() {
 }
 
 export function Toasts() {
+  const { t } = useTranslation();
   const toasts = useAppState((state) => state.toasts);
   return (
     <div className="toasts" role="status" aria-live="polite">
       {toasts.map((toast) => (
         <div key={toast.id} className={`toast is-${toast.kind}`} data-testid={`toast-${toast.kind}`}>
           <span>{toast.message}</span>
-          <button type="button" className="icon-button" aria-label="Close" onClick={() => dismissToast(toast.id)}>
+          <button type="button" className="icon-button" aria-label={t('toasts.close')} title={t('toasts.close')} onClick={() => dismissToast(toast.id)}>
             <CloseIcon />
           </button>
         </div>

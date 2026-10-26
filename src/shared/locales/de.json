@@ -484,7 +484,8 @@
     "noLoftSketches": "Eine Ausformung braucht mindestens zwei Skizzen mit je einer geschlossenen Kontur.",
     "noHelixSketch": "Zeichne zuerst einen Kreis in eine Skizze: Die Wendel windet sich um ihn.",
     "noCurveSketch": "Zeichne zuerst die zu projizierenden Kurven in eine Skizze.",
-    "noSurface": "Erzeuge zuerst eine Fläche, zum Beispiel mit „Fläche versetzen“."
+    "noSurface": "Erzeuge zuerst eine Fläche, zum Beispiel mit „Fläche versetzen“.",
+    "close": "Schließen"
   },
   "errors": {
     "no-body": "Es gibt noch keinen Körper, der verändert werden kann.",

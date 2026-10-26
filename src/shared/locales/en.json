@@ -484,7 +484,8 @@
     "noLoftSketches": "A loft needs at least two sketches with a closed outline each.",
     "noHelixSketch": "Draw a circle in a sketch first: the helix winds around it.",
     "noCurveSketch": "Draw the curves to project in a sketch first.",
-    "noSurface": "Make a surface first, for example with Offset surface."
+    "noSurface": "Make a surface first, for example with Offset surface.",
+    "close": "Close"
   },
   "errors": {
     "no-body": "There is no body to modify yet.",

@@ -310,7 +310,7 @@ input {
 }
 
 .command-bar[data-density='dense'] .command-tab {
-  padding: 4px 5px;
+  padding: 1px 5px;
   font-size: 11.5px;
 }
 

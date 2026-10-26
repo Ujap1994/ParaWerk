@@ -1085,6 +1085,18 @@ test('offsets a face into a surface and thickens it into a solid', async () => {
   await expect(page.locator('[data-testid="tree-body"]')).toHaveCount(2);
 });
 
+test('keeps the command bar the same height in every tab, also in a small window', async () => {
+  launched = await launchApp({ width: 1000, height: 600 });
+  const { page } = launched;
+  const heights: number[] = [];
+  for (const tab of ['features', 'surfaces', 'sketch', 'evaluate']) {
+    await page.click(`[data-tab="${tab}"]`);
+    heights.push(await page.evaluate(() => (document.querySelector('.command-bar') as HTMLElement).offsetHeight));
+  }
+  // The 3D view must not jump when the tab (and with it the density of the bar) changes.
+  expect(new Set(heights).size).toBe(1);
+});
+
 test('hollows a box out to a shell open at a picked face', async () => {
   launched = await launchApp({ width: 1440, height: 900 });
   const { page } = launched;

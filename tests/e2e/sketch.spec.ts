@@ -709,8 +709,11 @@ test('dimensions: placing with a value, reference dimensions, editing, moving an
   await expect.poll(async () => (await dimensions()).at(-1)?.driving).toBe(false);
   await expect(page.locator('.dimension-label.is-driven')).toHaveText(['(50)']);
 
-  // Double-click a value to change it; the geometry follows.
+  // Double-click a value to change it; the geometry follows. The message is closed first: in a small
+  // window it lies over the value.
   await page.keyboard.press('Escape');
+  for (const close of await page.locator('.toast button').all()) await close.click();
+  await expect(page.locator('.toast')).toHaveCount(0);
   await frames(page);
   const width = page.locator('.dimension-label', { hasText: /^50$/ });
   const box = await width.boundingBox();
