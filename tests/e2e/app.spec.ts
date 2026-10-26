@@ -1238,6 +1238,44 @@ test('sweeps an outline along a path and lofts two outlines', async () => {
   expect((await state(page)).history.features[3]).toMatchObject({ type: 'loft', sketches: ['low', 'high'], ruled: true });
 });
 
+test('twists a sweep and lets another one follow a guide curve', async () => {
+  launched = await launchApp({ width: 1000, height: 640 });
+  const { page } = launched;
+  // A 20 × 4 bar on the front plane, a path of 50 along y and a guide drifting out from 10 to 15.
+  await page.evaluate(() => {
+    const P = (id: string, x: number, y: number) => ({ id, type: 'point', x, y });
+    const L = (id: string, p1: string, p2: string) => ({ id, type: 'line', p1, p2 });
+    const features = [
+      { id: 'bar', type: 'sketch', plane: { kind: 'standard', plane: 'front' }, sketch: { entities: [P('p1', -10, -2), P('p2', 10, -2), P('p3', 10, 2), P('p4', -10, 2), L('l1', 'p1', 'p2'), L('l2', 'p2', 'p3'), L('l3', 'p3', 'p4'), L('l4', 'p4', 'p1')], constraints: [] } },
+      { id: 'path', type: 'sketch', plane: { kind: 'standard', plane: 'top' }, sketch: { entities: [P('a', 0, 0), P('b', 0, 50), L('ab', 'a', 'b')], constraints: [] } },
+      { id: 'guide', type: 'sketch', plane: { kind: 'standard', plane: 'top' }, sketch: { entities: [P('g1', 10, 0), P('g2', 15, 50), L('g', 'g1', 'g2')], constraints: [] } },
+    ];
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features, past: [], future: [] }, savedFeatures: features, dirty: false });
+  });
+  await idle(page);
+  await page.click('[data-variants="solid"]');
+  await page.click('[data-entry="sweep"]');
+  await page.selectOption('[data-testid="sweep-path"]', 'path');
+  await page.locator('[data-testid="sweep-twist"]').fill('180');
+  await page.locator('[data-testid="sweep-twist"]').press('Tab');
+  await idle(page);
+  await page.click('[data-testid="panel-ok"]');
+  expect(Math.abs((await volume(page)) / 4000 - 1)).toBeLessThan(1e-3);
+  expect((await state(page)).history.features[3]).toMatchObject({ type: 'sweep', twist: 180 });
+
+  // Edited again with the guide: no twist, the bar grows to 1.5 times its width.
+  await page.locator('.feature-tree .tree-item[data-feature-id]').nth(3).dblclick();
+  await page.selectOption('[data-testid="sweep-guide"]', 'guide');
+  await expect(page.locator('[data-testid="sweep-twist"]')).toHaveCount(0);
+  await page.click('[data-testid="panel-ok"]');
+  await idle(page);
+  const sweep = (await state(page)).history.features[3] as unknown as { guide?: string; twist?: number };
+  expect(sweep.guide).toBe('guide');
+  expect(sweep.twist).toBeUndefined();
+  // Scaled from 1 to 1.5 evenly: the area grows with the square, 80 · (1 + 1.5 + 2.25) / 3 on average.
+  expect(Math.abs((await volume(page)) / ((80 * 50 * (1 + 1.5 + 2.25)) / 3) - 1)).toBeLessThan(2e-3);
+});
+
 test('creates a helix around a sketch circle and sweeps a spring along it', async () => {
   launched = await launchApp({ width: 1000, height: 640 });
   const { page } = launched;

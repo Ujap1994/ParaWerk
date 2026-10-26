@@ -198,7 +198,8 @@ patterns, curves; 2026-10-26).
 | Draft (faces about a neutral plane) | ✅ done |
 | Sweep (along a path of lines, arcs, ellipses and splines) and loft (through outlines of several sketches) | ✅ done |
 | Rib (within the sketch plane from lines, or normal to the sketch) | ✅ done |
-| Sweep with twist and guide curves, loft with guide curves | open |
+| Sweep with twist and a guide curve | ✅ done |
+| Loft with guide curves | open |
 | Variable-radius fillets (from a start to an end radius along each edge) | ✅ done |
 | Modeled threads (ISO metric, external and internal, on cylindrical faces) | ✅ done |
 | Helix (pitch, turns, start angle, hand) as the path of sweeps: springs, coils, helical grooves | ✅ done |

@@ -117,6 +117,18 @@ the curves of another sketch – handles, tubes, wires, grooves along a curve wi
 The profile keeps its angle to the path as it follows it. Where the path bends tighter than the profile is
 wide, the sweep would cross itself and is reported.
 
+Along a sketch path or a curve, two options shape the sweep further:
+
+- *Twist* turns the outlines about the path, evenly from start to end – 180° for a twisted flat bar,
+  several turns (720°, 1080° …) for a drill-like spiral. Negative angles turn the other way.
+- *Guide curve* – a sketch or a curve that starts on the outlines – is followed all the way: the outlines
+  turn towards it and grow or shrink with its distance from the path, for handles, horns and bottle
+  necks. A guide at a constant distance keeps the outlines as they are; with a guide there is no twist.
+
+Twisted and guided sweeps take outlines without holes.
+
+![A flat bar twisted half a turn along a straight path](../images/screenshots/sweep-twist.png)
+
 ## Helix and springs
 
 **Helix** (in the arrow of the **Plane** button) is a curve that winds around the axis of a circle:

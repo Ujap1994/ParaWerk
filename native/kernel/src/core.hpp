@@ -143,10 +143,13 @@ int revolveProfile(const std::vector<double>& profile, const std::vector<double>
  * The solid swept by the regions of `profile` (encoded as for extrudeProfile, on the plane `frame`) along a
  * path: one chain of curves on the plane `pathFrame`, encoded like one outline (its edge count, then its
  * edges in order; it may be open). The profile is swept as it lies, usually at the start of the path. Faces
- * are named as for extrudeProfile. Fails with "sweep-failed" when the profile cannot follow the path.
+ * are named as for extrudeProfile. With a `twist` (radians) the profile turns about the path evenly along
+ * it; with a guide curve `guideId` of the store (one chain) it keeps touching the guide, scaled with its
+ * distance from the path. Twisted and guided sweeps take outlines without holes ("sweep-holes"). Fails
+ * with "sweep-failed" when the profile cannot follow the path, "guide-gaps" for a guide of several chains.
  */
 int sweepProfile(const std::vector<double>& profile, const std::vector<double>& frame, const std::vector<double>& path, const std::vector<double>& pathFrame,
-                 const std::vector<std::string>& edgeNames = {}, const std::string& name = "");
+                 const std::vector<std::string>& edgeNames = {}, const std::string& name = "", double twist = 0, int guideId = -1);
 
 /**
  * The solid swept by the regions of `profile` (as for sweepProfile) along the curve `curveId` of the
@@ -154,7 +157,7 @@ int sweepProfile(const std::vector<double>& profile, const std::vector<double>& 
  * outlines. Fails with "path-gaps" (several chains) or "sweep-failed".
  */
 int sweepAlongCurve(const std::vector<double>& profile, const std::vector<double>& frame, int curveId, const std::vector<std::string>& edgeNames = {},
-                    const std::string& name = "");
+                    const std::string& name = "", double twist = 0, int guideId = -1);
 
 // Curves: wires (or compounds of wires) in the store that are not bodies; they are drawn, joined and
 // swept along.

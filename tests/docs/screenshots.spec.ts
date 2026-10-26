@@ -1265,6 +1265,17 @@ test('sweep and loft screenshots', async () => {
     { id: 'spring', type: 'sweep', name: 'Spring', operation: 'add', sketch: 'wire', path: 'helix' },
   ];
   await show(spring, 'helix', 'helix.png', 'Spring');
+  // A flat bar twisted half a turn along a straight path.
+  await show(
+    [
+      { id: 'bar', type: 'sketch', name: 'Bar', plane: { kind: 'standard', plane: 'front' }, sketch: { entities: [P('p1', -15, -3), P('p2', 15, -3), P('p3', 15, 3), P('p4', -15, 3), L('l1', 'p1', 'p2'), L('l2', 'p2', 'p3'), L('l3', 'p3', 'p4'), L('l4', 'p4', 'p1')], constraints: [] } },
+      { id: 'axis', type: 'sketch', name: 'Path', plane: { kind: 'standard', plane: 'top' }, sketch: { entities: [P('a', 0, 0), P('b', 0, 120), L('ab', 'a', 'b')], constraints: [] } },
+      { id: 'twisted', type: 'sweep', name: 'Twisted bar', operation: 'add', sketch: 'bar', path: 'axis', twist: 180 },
+    ],
+    'twisted',
+    'sweep-twist.png',
+    'Twisted bar',
+  );
   // A circle seen from above, projected onto the top of a shaft: a saddle-shaped curve.
   await show(
     [

@@ -138,6 +138,8 @@ export type FeatureErrorCode =
   | 'sweep-holes'
   | 'curve-empty'
   | 'pattern-too-many'
+  | 'guide-missing'
+  | 'guide-gaps'
   | 'curve-missed'
   | 'curve-faces'
   | 'curve-edge-missing'

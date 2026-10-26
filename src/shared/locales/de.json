@@ -518,12 +518,14 @@
     "thread-face": "Wähle für das Gewinde die zylindrische Fläche eines Bolzens oder einer Bohrung.",
     "thread-size": "Steigung und Länge des Gewindes müssen größer als 0 sein.",
     "helix-circle": "Die Skizze der Wendel braucht einen Kreis: Die Wendel windet sich mit seinem Radius um seinen Mittelpunkt.",
-    "sweep-holes": "Entlang einer Wendel nimmt das Profil nur Umrisse ohne Löcher.",
+    "sweep-holes": "Entlang einer Wendel, mit Verdrehung oder mit Leitkurve nimmt das Profil nur Konturen ohne Löcher.",
     "curve-empty": "Die Kurve hat nichts zu projizieren oder zu verbinden: Wähle eine Skizze mit Kurven, oder wähle Kanten aus bzw. füge Skizzen und Kurven hinzu.",
     "curve-missed": "Die Kurven treffen die gewählten Flächen nicht, oder die Kurven der beiden Skizzen treffen sich nicht. Prüfe die Flächen und die Seite.",
     "curve-faces": "Wähle die Flächen, auf die die Kurven projiziert werden.",
     "curve-edge-missing": "{{detail}} Kante(n) der Kurve existieren nicht mehr, eine frühere Änderung hat sie entfernt. Bearbeite die Kurve und wähle die Kanten neu aus.",
-    "pattern-too-many": "Das Muster würde {{detail}} Kopien erzeugen; höchstens 10.000 sind möglich. Verringere die Anzahlen."
+    "pattern-too-many": "Das Muster würde {{detail}} Kopien erzeugen; höchstens 10.000 sind möglich. Verringere die Anzahlen.",
+    "guide-missing": "Die Leitkurve der Austragung existiert nicht mehr. Wähle eine andere oder keine.",
+    "guide-gaps": "Die Leitkurve muss ein Kurvenzug ohne Lücken und Verzweigungen sein."
   },
   "warnings": {
     "edge-missing_one": "{{count}} ausgewählte Kante existiert nicht mehr und wird ausgelassen. Bearbeite das Feature, um sie zu entfernen oder eine andere Kante zu wählen.",
@@ -1034,7 +1036,12 @@
   "sweep": {
     "profile": "Profil (geschlossene Konturen)",
     "path": "Pfad",
-    "hint": "Die Konturen werden so ausgetragen, wie sie liegen; zeichne sie also quer zum Anfang des Pfads. Der Pfad ist ein Kurvenzug aus Linien, Bögen, Ellipsen oder Splines in einer anderen Skizze, offen oder geschlossen, oder eine Wendel; er beginnt an seinem Ende, das näher an den Konturen liegt. Für eine Wendel zeichne die Konturen in einer Ebene durch ihre Achse, an ihrem Startpunkt."
+    "hint": "Die Konturen werden so ausgetragen, wie sie liegen; zeichne sie also quer zum Anfang des Pfads. Der Pfad ist ein Kurvenzug aus Linien, Bögen, Ellipsen oder Splines in einer anderen Skizze, offen oder geschlossen, eine Wendel oder eine Kurve; er beginnt an seinem Ende, das näher an den Konturen liegt. Für eine Wendel zeichne die Konturen in einer Ebene durch ihre Achse, an ihrem Startpunkt.",
+    "guide": "Leitkurve",
+    "noGuide": "Keine",
+    "twist": "Verdrehung",
+    "twistHint": "Die Verdrehung dreht die Konturen um den Pfad, gleichmäßig vom Anfang bis zum Ende (auch mehrere Umdrehungen). Verdrehte und geführte Austragungen nehmen nur Konturen ohne Löcher.",
+    "guideHint": "Die Konturen berühren ständig die Leitkurve – eine Skizze oder Kurve, die auf ihnen beginnt –, drehen sich zu ihr hin und wachsen oder schrumpfen mit ihrem Abstand zum Pfad. Verdrehte und geführte Austragungen nehmen nur Konturen ohne Löcher."
   },
   "loft": {
     "profiles": "Profile der Reihe nach",

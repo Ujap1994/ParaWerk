@@ -274,17 +274,17 @@ val cutThread(int bodyId, int faceIndex, double pitch, double length, bool rever
   return guarded([&] { return idResult(parawerk::cutThread(bodyId, faceIndex, pitch, length, reverse, leftHand, name)); });
 }
 
-val sweepProfile(val profile, val frame, val path, val pathFrame, val edgeNames, std::string name) {
+val sweepProfile(val profile, val frame, val path, val pathFrame, val edgeNames, std::string name, double twist, int guideId) {
   return guarded([&] {
     const auto numbers = [](const val& array) { return emscripten::convertJSArrayToNumberVector<double>(array); };
-    return idResult(parawerk::sweepProfile(numbers(profile), numbers(frame), numbers(path), numbers(pathFrame), toStringVector(edgeNames), name));
+    return idResult(parawerk::sweepProfile(numbers(profile), numbers(frame), numbers(path), numbers(pathFrame), toStringVector(edgeNames), name, twist, guideId));
   });
 }
 
-val sweepAlongCurve(val profile, val frame, int curveId, val edgeNames, std::string name) {
+val sweepAlongCurve(val profile, val frame, int curveId, val edgeNames, std::string name, double twist, int guideId) {
   return guarded([&] {
     const auto numbers = [](const val& array) { return emscripten::convertJSArrayToNumberVector<double>(array); };
-    return idResult(parawerk::sweepAlongCurve(numbers(profile), numbers(frame), curveId, toStringVector(edgeNames), name));
+    return idResult(parawerk::sweepAlongCurve(numbers(profile), numbers(frame), curveId, toStringVector(edgeNames), name, twist, guideId));
   });
 }
 
@@ -368,7 +368,7 @@ val importStepText(const std::string& text, const std::string& name) {
   return guarded([&] { return idResult(parawerk::importStep(text, name)); });
 }
 
-std::string version() { return "parawerk-kernel 0.19 / OCCT " PARAWERK_OCCT_VERSION; }
+std::string version() { return "parawerk-kernel 0.20 / OCCT " PARAWERK_OCCT_VERSION; }
 
 }  // namespace
 

@@ -362,8 +362,9 @@ function resolveSweep(feature: SweepFeature, before: readonly Feature[], context
   const profile = profileOf(sketch);
   const frame = context.frames.get(sketch.id) ?? frameOf(sketch.plane);
   // Along a projected or composite curve: the shape the rebuild made.
+  const guide = resolveGuide(feature, before, context);
   const curve = context.curves?.get(feature.path);
-  if (curve) return { ...feature, profile, frame, curve };
+  if (curve) return { ...feature, profile, frame, curve, ...guide };
   // Along a helix: where the rebuild found it.
   const helix = before.find((candidate) => candidate.id === feature.path && candidate.type === 'helix' && !candidate.suppressed);
   if (helix) {
@@ -384,7 +385,19 @@ function resolveSweep(feature: SweepFeature, before: readonly Feature[], context
     return Math.hypot(...minus(toModel(spineFrame, x, y), middle));
   };
   const spine = !found.closed && at(true) < at(false) ? reversedPath(found) : found;
-  return { ...feature, profile, frame, spine, spineFrame };
+  return { ...feature, profile, frame, spine, spineFrame, ...guide };
+}
+
+/** The guide curve of a sweep: a projected or composite curve, or the path of a sketch. */
+function resolveGuide(feature: SweepFeature, before: readonly Feature[], context: ResolveContext): Pick<ResolvedSweep, 'guidePath' | 'guideCurve'> {
+  if (!feature.guide) return {};
+  const curve = context.curves?.get(feature.guide);
+  if (curve) return { guideCurve: curve };
+  const sketch = before.find((candidate): candidate is SketchFeature => candidate.id === feature.guide && candidate.type === 'sketch' && !candidate.suppressed);
+  if (!sketch) throw new FeatureError('guide-missing');
+  const found = sketchPath(sketch.sketch);
+  if ('code' in found) throw new FeatureError('guide-gaps');
+  return { guidePath: { path: found, frame: context.frames.get(sketch.id) ?? frameOf(sketch.plane) } };
 }
 
 /** A rectangle of `length` × `width` along the x axis, centered on it, as a profile with named sides. */

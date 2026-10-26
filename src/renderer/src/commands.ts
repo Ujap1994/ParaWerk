@@ -852,6 +852,20 @@ export function pickExtrudeEnd(pick: Pick | 'origin'): void {
   updateDraft({ endRef: ref });
 }
 
+/** Gives the edited sweep a guide curve (a sketch or curve id), or none; a guided sweep does not twist. */
+export function setSweepGuide(guide: string | undefined): void {
+  const edit = getState().activeEdit;
+  if (edit?.draft.type !== 'sweep') return;
+  const { guide: _guide, ...rest } = edit.draft;
+  if (!guide) {
+    setState({ activeEdit: { ...edit, draft: rest } });
+    return;
+  }
+  const { twist: _twist, expressions, ...plain } = rest;
+  const { twist: _expression, ...others } = expressions ?? {};
+  setState({ activeEdit: { ...edit, draft: { ...plain, guide, ...(Object.keys(others).length > 0 ? { expressions: others } : {}) } } });
+}
+
 /** Adds an edge of the shown body to the edited composite curve, or takes it out again. */
 export function toggleCurveEdge(index: number): void {
   const { activeEdit: edit, display } = getState();

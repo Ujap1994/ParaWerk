@@ -76,7 +76,7 @@ export const EXPRESSION_FIELDS: Readonly<Record<FeatureType, readonly string[]>>
   chamfer: ['distance', 'distance2', 'angle'],
   shell: ['thickness'],
   draft: ['angle'],
-  sweep: [],
+  sweep: ['twist'],
   loft: [],
   rib: ['thickness'],
   thread: ['pitch', 'length'],
@@ -485,15 +485,22 @@ export function isSketchBased(feature: Feature): feature is SketchBasedFeature {
 
 /**
  * Sweeps the closed outlines of a sketch along a path, the curves of another sketch (lines, arcs, ellipses
- * and splines in one chain, open or closed). The outlines are swept as they lie, usually across the start
- * of the path; the path runs from its end nearer to them.
+ * and splines in one chain, open or closed), a helix or a curve. The outlines are swept as they lie,
+ * usually across the start of the path; the path runs from its end nearer to them. Along a sketch path or
+ * a curve, the outlines can turn about the path by `twist` degrees from start to end, or follow a `guide`
+ * curve (a sketch or curve id) they keep touching, growing and shrinking with its distance from the path.
  */
 export interface SweepFeature extends FeatureBase {
   type: 'sweep';
   operation: BooleanOperation;
   sketch: string;
   path: string;
+  twist?: number;
+  guide?: string;
 }
+
+/** The most a sweep can twist, in degrees (100 turns). */
+export const MAX_TWIST = 36_000;
 
 /** A solid through the closed outlines of several sketches, one outline each, in their order. */
 export interface LoftFeature extends FeatureBase {
@@ -599,7 +606,7 @@ export function isCurveFeature(feature: Feature): feature is CurveFeature {
 /** The sketches (and curves) a feature is built from (their curves belong to its geometry). */
 export function sketchesUsedBy(feature: Feature): string[] {
   if (isSketchBased(feature) || feature.type === 'rib' || feature.type === 'helix') return [feature.sketch];
-  if (feature.type === 'sweep') return [feature.sketch, feature.path];
+  if (feature.type === 'sweep') return feature.guide ? [feature.sketch, feature.path, feature.guide] : [feature.sketch, feature.path];
   if (feature.type === 'loft') return feature.sketches;
   if (feature.type === 'projectedCurve') return feature.method === 'sketch' ? [feature.sketch, feature.sketch2] : [feature.sketch];
   if (feature.type === 'compositeCurve') return feature.curves;

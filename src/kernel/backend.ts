@@ -32,6 +32,9 @@ export interface ResolvedSweep extends SweepFeature {
   spineFrame?: SketchFrame;
   helix?: Extract<ReferenceGeometry, { kind: 'helix' }>;
   curve?: ShapeHandle;
+  /** A guide curve: the path of a sketch on its plane, or a projected or composite curve. */
+  guidePath?: { path: SketchPath; frame: SketchFrame };
+  guideCurve?: ShapeHandle;
 }
 
 /** A loft with the outline and plane of each of its sketches, in order. */

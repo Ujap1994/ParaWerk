@@ -41,7 +41,7 @@ const SURFACE_KINDS: SurfaceKind[] = ['plane', 'cylinder', 'cone', 'sphere', 'to
 const CURVE_KINDS: CurveKind[] = ['line', 'circle', 'ellipse', 'bspline', 'other'];
 
 const FEATURE_ERROR_CODES = new Set<FeatureErrorCode>([
-  'no-body', 'no-edges', 'edge-missing', 'face-missing', 'plane-missing', 'reference-missing', 'reference-kind', 'reference-parallel', 'reference-not-parallel', 'reference-collinear', 'empty-result', 'first-must-add', 'sketch-missing', 'profile-empty', 'profile-crossing', 'axis-missing', 'axis-not-in-plane', 'hole-no-points', 'hole-invalid', 'pattern-empty', 'pattern-seed-missing', 'pattern-unsupported', 'shell-face-missing', 'end-behind', 'end-parallel', 'end-missed', 'thin-empty', 'thin-unsupported', 'thin-branching', 'thin-too-thick', 'round-faces', 'round-face-missing', 'round-sides', 'round-center', 'round-planes', 'round-radius', 'draft-faces', 'draft-face', 'draft-face-missing', 'path-empty', 'path-branching', 'path-gaps', 'sweep-failed', 'loft-sections', 'loft-profile', 'loft-failed', 'rib-curves', 'thread-face', 'thread-size', 'helix-circle', 'sweep-holes', 'curve-empty', 'pattern-too-many', 'curve-missed', 'curve-faces', 'curve-edge-missing', 'import-no-solid', 'profile-crosses-axis',
+  'no-body', 'no-edges', 'edge-missing', 'face-missing', 'plane-missing', 'reference-missing', 'reference-kind', 'reference-parallel', 'reference-not-parallel', 'reference-collinear', 'empty-result', 'first-must-add', 'sketch-missing', 'profile-empty', 'profile-crossing', 'axis-missing', 'axis-not-in-plane', 'hole-no-points', 'hole-invalid', 'pattern-empty', 'pattern-seed-missing', 'pattern-unsupported', 'shell-face-missing', 'end-behind', 'end-parallel', 'end-missed', 'thin-empty', 'thin-unsupported', 'thin-branching', 'thin-too-thick', 'round-faces', 'round-face-missing', 'round-sides', 'round-center', 'round-planes', 'round-radius', 'draft-faces', 'draft-face', 'draft-face-missing', 'path-empty', 'path-branching', 'path-gaps', 'sweep-failed', 'loft-sections', 'loft-profile', 'loft-failed', 'rib-curves', 'thread-face', 'thread-size', 'helix-circle', 'sweep-holes', 'curve-empty', 'pattern-too-many', 'guide-missing', 'guide-gaps', 'curve-missed', 'curve-faces', 'curve-edge-missing', 'import-no-solid', 'profile-crosses-axis',
   'operation-failed', 'unknown',
 ]);
 
@@ -220,9 +220,17 @@ export class ParaWerkBackend implements GeometryBackend {
           const { center, axis, xDir, radius, pitch, turns, leftHand } = feature.helix;
           return this.handle(k.sweepAlongHelix(profile, frame(feature.frame), [...center, ...axis, ...xDir, radius, pitch, turns, leftHand ? 1 : 0], names, feature.id));
         }
-        if (feature.curve) return this.handle(k.sweepAlongCurve(profile, frame(feature.frame), this.id(feature.curve), names, feature.id));
-        if (!feature.spine || !feature.spineFrame) throw new FeatureError('path-empty');
-        return this.handle(k.sweepProfile(profile, frame(feature.frame), encodeEdges(feature.spine.edges), frame(feature.spineFrame), names, feature.id));
+        const twist = ((feature.twist ?? 0) * Math.PI) / 180;
+        // A guide from a sketch becomes a curve of its own for the sweep.
+        const guide = feature.guidePath ? this.handle(k.sketchWire(encodeEdges(feature.guidePath.path.edges), frame(feature.guidePath.frame))) : feature.guideCurve;
+        try {
+          const guideId = guide ? this.id(guide) : -1;
+          if (feature.curve) return this.handle(k.sweepAlongCurve(profile, frame(feature.frame), this.id(feature.curve), names, feature.id, twist, guideId));
+          if (!feature.spine || !feature.spineFrame) throw new FeatureError('path-empty');
+          return this.handle(k.sweepProfile(profile, frame(feature.frame), encodeEdges(feature.spine.edges), frame(feature.spineFrame), names, feature.id, twist, guideId));
+        } finally {
+          if (feature.guidePath && guide) this.release(guide);
+        }
       }
       case 'loft': {
         const data: number[] = [feature.sections.length];

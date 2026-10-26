@@ -2,6 +2,7 @@
 
 #include "core.hpp"
 
+#include <BRepAdaptor_CompCurve.hxx>
 #include <BRepAdaptor_Curve.hxx>
 #include <BRepAdaptor_Surface.hxx>
 #include <BRepAlgoAPI_Cut.hxx>
@@ -55,6 +56,9 @@
 #include <BRep_Tool.hxx>
 #include <Bnd_Box.hxx>
 #include <GCPnts_TangentialDeflection.hxx>
+#include <GCPnts_UniformAbscissa.hxx>
+#include <GeomAPI_PointsToBSpline.hxx>
+#include <Geom_BSplineCurve.hxx>
 #include <GCE2d_MakeSegment.hxx>
 #include <GC_MakeArcOfCircle.hxx>
 #include <Geom_TrimmedCurve.hxx>
@@ -792,17 +796,198 @@ TopoDS_Wire pathWire(const std::vector<double>& path, const std::vector<double>&
 }
 
 /** The regions of `profile` swept along `spine`, joined into one body. */
-int sweepRegions(const TopoDS_Wire& spine, const std::vector<TopoDS_Face>& faces, NamedEdges& named, const std::string& name) {
+/**
+ * A curve beside `spine` that winds `twist` radians around it from its start to its end, evenly along
+ * its length. As auxiliary spine of a pipe shell, the direction from the spine to it turns the profile.
+ */
+TopoDS_Wire twistSpine(const TopoDS_Wire& spine, double twist) {
+  BRepAdaptor_CompCurve curve(spine);
+  const int count = 48 + static_cast<int>(std::abs(twist) / (2 * M_PI) * 48);
+  GCPnts_UniformAbscissa abscissa(curve, count + 1);
+  if (!abscissa.IsDone() || abscissa.NbPoints() < 2) throw KernelError("sweep-failed", "the path could not be divided");
+  Bnd_Box box;
+  BRepBndLib::Add(spine, box);
+  const double distance = 0.1 * std::sqrt(box.SquareExtent()) + 1;
+  NCollection_Array1<gp_Pnt> points(1, abscissa.NbPoints());
+  gp_Vec across;
+  for (int i = 1; i <= abscissa.NbPoints(); ++i) {
+    gp_Pnt point;
+    gp_Vec tangent;
+    curve.D1(abscissa.Parameter(i), point, tangent);
+    tangent.Normalize();
+    // A direction across the path, carried along it without turning about it.
+    if (i == 1) across = std::abs(tangent.Z()) < 0.9 ? tangent.Crossed(gp_Vec(0, 0, 1)) : tangent.Crossed(gp_Vec(1, 0, 0));
+    across -= tangent * across.Dot(tangent);
+    across.Normalize();
+    const double angle = twist * (i - 1) / (abscissa.NbPoints() - 1);
+    const gp_Vec turned = across * std::cos(angle) + tangent.Crossed(across) * std::sin(angle);
+    points(i) = point.Translated(turned * distance);
+  }
+  GeomAPI_PointsToBSpline fit(points, 3, 8, GeomAbs_C2, 1e-6 * distance);
+  if (!fit.IsDone()) throw KernelError("sweep-failed", "the twist could not be built");
+  return BRepBuilderAPI_MakeWire(BRepBuilderAPI_MakeEdge(fit.Curve()).Edge()).Wire();
+}
+
+/**
+ * Whether `guide` is `spine` moved as a whole (compared at the same fractions of their lengths): such a
+ * guide neither turns nor scales the profile, and the pipe shell cannot follow a straight guide parallel
+ * to a straight path.
+ */
+bool movedCopy(const TopoDS_Wire& spine, const TopoDS_Wire& guide) {
+  BRepAdaptor_CompCurve a(spine), b(guide);
+  GCPnts_UniformAbscissa pa(a, 9), pb(b, 9);
+  if (!pa.IsDone() || !pb.IsDone() || pa.NbPoints() != pb.NbPoints()) return false;
+  const gp_Vec offset(a.Value(pa.Parameter(1)), b.Value(pb.Parameter(1)));
+  for (int i = 2; i <= pa.NbPoints(); ++i)
+    if (gp_Vec(a.Value(pa.Parameter(i)), b.Value(pb.Parameter(i))).Subtracted(offset).Magnitude() > 1e-6 * (1 + offset.Magnitude())) return false;
+  return true;
+}
+
+/** `guide` running from its end nearer to the start of `spine`. */
+TopoDS_Wire alongSpine(const TopoDS_Wire& guide, const TopoDS_Wire& spine) {
+  TopoDS_Vertex start, end, first, last;
+  TopExp::Vertices(spine, start, end);
+  TopExp::Vertices(guide, first, last);
+  if (start.IsNull() || first.IsNull() || last.IsNull()) return guide;
+  const gp_Pnt from = BRep_Tool::Pnt(start);
+  return from.Distance(BRep_Tool::Pnt(last)) < from.Distance(BRep_Tool::Pnt(first)) ? TopoDS::Wire(guide.Reversed()) : guide;
+}
+
+/** Where the guide crosses the plane through `point` normal to `tangent`, searched from `from` on (its parameter). */
+std::optional<double> guideCrossing(const BRepAdaptor_CompCurve& rail, const gp_Pnt& point, const gp_Vec& tangent, double from) {
+  const auto side = [&](double u) { return gp_Vec(point, rail.Value(u)).Dot(tangent); };
+  const double last = rail.LastParameter();
+  const int steps = 400;
+  const double step = (last - rail.FirstParameter()) / steps;
+  double a = from;
+  double fa = side(a);
+  if (std::abs(fa) < 1e-9) return a;
+  for (double b = std::min(last, a + step); a < last; a = b, b = std::min(last, b + step)) {
+    const double fb = side(b);
+    if (fa * fb <= 0) {
+      // Bisection to the crossing.
+      double lo = a, hi = b, flo = fa;
+      for (int k = 0; k < 60; ++k) {
+        const double mid = (lo + hi) / 2;
+        const double fm = side(mid);
+        if (flo * fm <= 0) {
+          hi = mid;
+        } else {
+          lo = mid;
+          flo = fm;
+        }
+      }
+      return (lo + hi) / 2;
+    }
+    fa = fb;
+  }
+  return std::nullopt;
+}
+
+/**
+ * The outlines of `face` swept along `spine` touching `guide`: copies of its outer wire placed along the
+ * spine, each turned about the spine towards the guide and scaled with its distance from it, joined by a
+ * smooth loft. Side faces are named after the profile's edges as for the other sweeps.
+ */
+StoredShape guidedSweep(const TopoDS_Wire& spine, const TopoDS_Wire& guide, const TopoDS_Face& face, const NamedEdges& named, const std::string& name) {
+  BRepAdaptor_CompCurve path(spine), rail(guide);
+  const int count = 48;
+  GCPnts_UniformAbscissa along(path, count);
+  if (!along.IsDone() || along.NbPoints() < 2) throw KernelError("sweep-failed", "the path could not be divided");
+  // Where along the path the profile is, and the direction across it towards the guide.
+  struct Place {
+    gp_Ax3 frame;
+    double distance;
+  };
+  double search = rail.FirstParameter();
+  const auto placeAt = [&](int i) -> Place {
+    gp_Pnt point;
+    gp_Vec tangent;
+    path.D1(along.Parameter(i), point, tangent);
+    tangent.Normalize();
+    // The guide where it crosses the plane of the profile there, or at the same share of its length.
+    const std::optional<double> crossing = guideCrossing(rail, point, tangent, search);
+    const double u = crossing ? *crossing : rail.FirstParameter() + (rail.LastParameter() - rail.FirstParameter()) * (i - 1) / (along.NbPoints() - 1);
+    if (crossing) search = *crossing;
+    gp_Vec across(point, rail.Value(u));
+    across -= tangent * across.Dot(tangent);
+    if (across.Magnitude() < 1e-9) throw KernelError("sweep-failed", "the guide curve meets the path");
+    return {gp_Ax3(point, gp_Dir(tangent), gp_Dir(across)), across.Magnitude()};
+  };
+  const Place start = placeAt(1);
+  const TopoDS_Wire outline = BRepTools::OuterWire(face);
+  BRepOffsetAPI_ThruSections loft(true, false, 1e-6);
+  loft.CheckCompatibility(false);
+  loft.AddWire(outline);
+  for (int i = 2; i <= along.NbPoints(); ++i) {
+    const Place place = placeAt(i);
+    gp_Trsf move;
+    move.SetDisplacement(start.frame, place.frame);
+    gp_Trsf scale;
+    scale.SetScale(place.frame.Location(), place.distance / start.distance);
+    loft.AddWire(TopoDS::Wire(BRepBuilderAPI_Transform(outline, scale.Multiplied(move), true).Shape()));
+  }
+  loft.Build();
+  if (!loft.IsDone()) throw KernelError("sweep-failed", "the profile could not follow the guide curve");
+  const TopoDS_Shape result = loft.Shape();
+  requireValidSolid(result, "sweep");
+  ShapeMap own;
+  TopExp::MapShapes(outline, TopAbs_EDGE, own);
+  FaceNamer namer(result);
+  for (const auto& [edge, edgeName] : named.edges) {
+    if (edgeName.empty() || !own.Contains(edge)) continue;
+    const TopoDS_Shape side = loft.GeneratedFace(edge);
+    if (!side.IsNull()) namer.assign(side, faceName(name, "side:" + edgeName));
+  }
+  namer.assign(loft.FirstShape(), faceName(name, "start"));
+  namer.assign(loft.LastShape(), faceName(name, "end"));
+  namer.rest(faceName(name, "side"));
+  return {result, namer.take()};
+}
+
+/**
+ * The regions of `profile` swept along `spine`, joined into one body. With a `twist` (radians) the
+ * profile turns about the path; with a `guide` it keeps touching that curve, growing and shrinking with
+ * its distance from the path. Both take outlines without holes.
+ */
+int sweepRegions(const TopoDS_Wire& spine, const std::vector<TopoDS_Face>& faces, NamedEdges& named, const std::string& name, double twist = 0,
+                 const TopoDS_Wire* guide = nullptr) {
   std::vector<StoredShape> solids;
+  if (guide && movedCopy(spine, alongSpine(*guide, spine))) guide = nullptr;
   for (const TopoDS_Face& face : faces) {
-    BRepOffsetAPI_MakePipe pipe(spine, face);
+    if (twist == 0 && !guide) {
+      BRepOffsetAPI_MakePipe pipe(spine, face);
+      pipe.Build();
+      if (!pipe.IsDone()) throw KernelError("sweep-failed", "the profile could not be swept along the path");
+      requireValidSolid(pipe.Shape(), "sweep");
+      solids.push_back({pipe.Shape(), sweepNames(pipe, named, name)});
+      continue;
+    }
+    ShapeMap wires;
+    TopExp::MapShapes(face, TopAbs_WIRE, wires);
+    if (wires.Extent() != 1) throw KernelError("sweep-holes", "a twisted or guided sweep takes outlines without holes");
+    if (guide) {
+      solids.push_back(guidedSweep(spine, alongSpine(*guide, spine), face, named, name));
+      continue;
+    }
+    BRepOffsetAPI_MakePipeShell pipe(spine);
+    pipe.SetMode(twistSpine(spine, twist), false, BRepFill_NoContact);
+    pipe.Add(BRepTools::OuterWire(face));
     pipe.Build();
-    if (!pipe.IsDone()) throw KernelError("sweep-failed", "the profile could not be swept along the path");
+    if (!pipe.IsDone() || !pipe.MakeSolid()) throw KernelError("sweep-failed", "the profile could not be swept along the path");
     requireValidSolid(pipe.Shape(), "sweep");
     solids.push_back({pipe.Shape(), sweepNames(pipe, named, name)});
   }
   StoredShape result = joinRegions(solids, "swept");
   return store().add(result.shape, std::move(result.names));
+}
+
+/** The guide curve `guideId` of the store (-1 for none) as one wire. */
+std::optional<TopoDS_Wire> guideWire(int guideId) {
+  if (guideId < 0) return std::nullopt;
+  const TopoDS_Shape& guide = store().get(guideId);
+  if (guide.ShapeType() != TopAbs_WIRE) throw KernelError("guide-gaps", "the guide curve is not one chain");
+  return TopoDS::Wire(guide);
 }
 
 /** The edges of a shape joined into wires where their ends meet (as few wires as possible). */
@@ -837,14 +1022,16 @@ gp_Dir directionOf(const std::vector<double>& d) {
 }  // namespace
 
 int sweepProfile(const std::vector<double>& profile, const std::vector<double>& frame, const std::vector<double>& path, const std::vector<double>& pathFrame,
-                 const std::vector<std::string>& edgeNames, const std::string& name) {
+                 const std::vector<std::string>& edgeNames, const std::string& name, double twist, int guideId) {
   // The path: one chain of curves (open or closed) on its own sketch plane.
   const TopoDS_Wire spine = pathWire(path, pathFrame);
   NamedEdges named{edgeNames, {}};
-  return sweepRegions(spine, readFaces(profile, framePlane(frame), named), named, name);
+  const std::optional<TopoDS_Wire> guide = guideWire(guideId);
+  return sweepRegions(spine, readFaces(profile, framePlane(frame), named), named, name, twist, guide ? &*guide : nullptr);
 }
 
-int sweepAlongCurve(const std::vector<double>& profile, const std::vector<double>& frame, int curveId, const std::vector<std::string>& edgeNames, const std::string& name) {
+int sweepAlongCurve(const std::vector<double>& profile, const std::vector<double>& frame, int curveId, const std::vector<std::string>& edgeNames, const std::string& name,
+                    double twist, int guideId) {
   const TopoDS_Shape& curve = store().get(curveId);
   if (curve.ShapeType() != TopAbs_WIRE) throw KernelError("path-gaps", "the curve is not one chain");
   TopoDS_Wire spine = TopoDS::Wire(curve);
@@ -859,7 +1046,8 @@ int sweepAlongCurve(const std::vector<double>& profile, const std::vector<double
     const gp_Pnt middle = props.CentreOfMass();
     if (middle.Distance(BRep_Tool::Pnt(last)) < middle.Distance(BRep_Tool::Pnt(first))) spine = TopoDS::Wire(spine.Reversed());
   }
-  return sweepRegions(spine, faces, named, name);
+  const std::optional<TopoDS_Wire> guide = guideWire(guideId);
+  return sweepRegions(spine, faces, named, name, twist, guide ? &*guide : nullptr);
 }
 
 int sketchWire(const std::vector<double>& path, const std::vector<double>& pathFrame) { return store().add(pathWire(path, pathFrame)); }
