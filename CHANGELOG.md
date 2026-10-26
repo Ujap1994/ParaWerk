@@ -7,16 +7,93 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
-### Added
-- Extrude *Up to next*: adding material goes until each outline meets the body, cutting goes through the
-  first material each outline meets (a lid, not the whole box). The end follows steps, slopes and curved
-  faces; an outline the body does not stop is reported.
-- Extrude *Up to surface* also goes up to curved faces (cylinders, cones, spheres, tori, B-spline faces),
-  extended past their edges, with an offset before or past them.
-- Extrude in two directions with their own depths, and draft while extruding (inward or outward, each
-  side of a two-way extrusion towards its own end); drafted faces keep their names.
+## [0.3.0-alpha.0] - 2026-10-26
+
+The first **part modeling** preview (Phase 2): sketches become solids by extruding and revolving them,
+with holes, patterns, shells, fillets and chamfers, reference geometry, a feature tree with rollback and
+reordering, materials and mass properties, measuring and section views, crash recovery, STEP import and
+3MF export. Features keep their faces and edges when earlier features change. Still an alpha: not ready
+for productive use; see the disclaimer in the README.
+
+### Added – solid features
+- Extrude ([ADR 0009](docs/adr/0009-sketch-based-features.md)): the closed outlines of a sketch become a
+  solid, or are cut out of the body with *Remove material*. Outlines inside others become holes; curves
+  that cross each other are reported with their position. Lines, arcs, circles, ellipses and splines stay
+  exact B-Rep geometry, and a sketch used by an extrusion is hidden in the 3D view. Editing the sketch
+  rebuilds the extrusion. Part files with extrusions are saved as format version 4.
+- End conditions: a depth (also as an equation), *through all* of the body, *up to next* (adding goes
+  until each outline meets the body, cutting goes through the first material each outline meets – a lid,
+  not the whole box), *up to surface* (planar or curved faces, reference and standard planes, also at an
+  angle; with an offset before or past the surface) and *up to vertex*. The end follows the face or
+  vertex when it moves, and an outline the body or surface does not stop is reported.
+- Directions: along the sketch normal, reversed, mid-plane, or two directions with their own depths.
+  *Draft while extruding* tapers the side faces inward or outward (each side of a two-way extrusion
+  towards its own end); drafted faces keep their names.
+- Revolve: the closed outlines of a sketch turn around a line of the sketch (usually a centerline) or a
+  reference axis into a solid or a cut; angle up to 360° (also as an equation), one way, the other way or
+  symmetric. Outlines on both sides of the axis are reported. Shafts, bushes, grooves and tori come out
+  with exact volumes.
+- Hole: holes for ISO metric screws M1.6–M30 at the free points of a sketch – clearance holes (ISO 273
+  fine, medium, coarse), counterbores for ISO 4762, 90° countersinks for ISO 10642 and tapped holes with
+  their tap drill; through all or to a depth with a 118° drill point; dimensions from the standards and
+  changeable. Threads are shown as dashed circles of their nominal diameter. All holes of a feature are
+  cut in one operation (100 holes: 0.3 s instead of 1.2 s as single cuts).
+- Patterns and mirror: linear patterns along an edge, axis or plane normal, circular patterns around an
+  axis (evenly all round or over an angle) and mirror images through a plane, of extrusions, revolutions,
+  holes, boxes and cylinders. The features to copy are picked in the tree or by a face in the 3D view;
+  all copies of a feature are combined with the body in one operation.
+- Shell: hollows the part out to walls of a thickness, open at faces picked in the 3D view, or with a
+  closed cavity; the walls can also go outside the part. Walls that are too thick are reported.
 - Chamfers with two distances, or a distance and an angle, measured from one face of each edge (with a
   switch to the other face).
+
+### Added – stable references
+- Persistent naming ([ADR 0002](docs/adr/0002-persistent-naming.md)): every face is named after the
+  feature that made it (for an extrusion, after the sketch curve that swept it), and fillets and
+  chamfers remember their edges by the two faces they lie between. Editing earlier features – a wider
+  sketch, a new hole, a cut inserted or suppressed before the fillet – no longer moves fillets to other
+  edges. Edge numbers in files of earlier versions are converted when the part is opened; part files
+  with named edges are saved as format version 5.
+- A reference suite of 33 parts, each edited at early features (78 edits), must build without lost
+  references after every change (the Gate 2 exit criterion, run in CI).
+- Sketches on faces follow their face: when an earlier feature moves or turns the face (a thicker
+  plate), the sketch and the features built from it move along. A sketch whose face is gone is marked
+  and stays where the face was.
+- Lost edges: a fillet or chamfer whose edges are partly gone after an earlier change still rounds the
+  others and shows a yellow warning in the tree instead of failing. Editing it lists the lost edges,
+  marks where they were in the 3D view and removes them with one click.
+- Reference geometry ([ADR 0010](docs/adr/0010-reference-geometry.md)): reference planes (offset, at an
+  angle around an axis, through three points, between two planes, parallel through a point), axes (along
+  an edge or the axis of a cylinder, where two planes meet, through two points, normal to a plane) and
+  points (coordinates, centers of edges and faces, where an axis meets a plane). They are built on
+  standard planes, the origin, each other and faces, edges and vertices of the part, follow the part when
+  earlier features change, and carry sketches. Vertices can be picked in the 3D view. Part files with
+  reference geometry are saved as format version 6.
+
+### Added – feature tree
+- A rollback bar builds the part only up to a point; new features and sketches go in at the bar (insert
+  a feature in the middle of the history). Drag the bar or move it with the arrow keys; *Roll to end*
+  builds everything again.
+- Reorder features by dragging them in the tree. Moves that would put a feature before a feature it
+  builds on (sketch, reference geometry, faces and edges, copied features) or after one that builds on
+  it are refused with an explanation.
+
+### Added – evaluation
+- Material and appearance: a library of 27 metals, plastics and woods with typical densities, custom
+  materials with an own density, and a color for the part (the material's or any other). Shown at the
+  top of the feature tree, saved in the part file (format version 7), one undo step per change.
+- Mass properties: a panel over the 3D view with mass, volume, surface area, center of mass, bounding
+  box, principal moments of inertia and the inertia tensor at the center of mass, integrated exactly over
+  the B-Rep; the mass is also shown in the status bar. New command tab *Evaluate*.
+- Measure tool: pick faces, edges and vertices in the 3D view; one pick shows its kind and size (area,
+  length, diameter, center, position), two picks the shortest distance (with dX, dY, dZ), the angle
+  between planes and lines, the distance of parallel planes and the distance of centers and axes. The
+  distances are drawn in the 3D view; the kernel computes them on the exact B-Rep.
+- Section view: cuts the part open along the front, top or right plane or a selected planar face or
+  plane, with an offset and either side shown; cut faces are filled, and cut-away faces and edges cannot
+  be picked. A view only: part, mass and exports do not change.
+
+### Added – files and exchange
 - STEP import as a feature: the solids of a STEP file become a body of their own or are cut out of the
   part; the file is kept in the part file (its own entry), and its faces are named, so later features
   stay on them. *Replace with another STEP file* exchanges it.
@@ -26,78 +103,15 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
   15 seconds after a change; saving or a normal close removes it. After a crash, power cut or killed
   process the next start offers to restore or discard it, and a crashed 3D window is reloaded right away.
   Can be turned off in the settings.
-- Section view: cuts the part open along the front, top or right plane or a selected planar face or
-  plane, with an offset and either side shown; cut faces are filled (stencil caps), and cut-away faces and
-  edges cannot be picked. A view only: part, mass and exports do not change.
-- Measure tool: pick faces, edges and vertices in the 3D view; one pick shows its kind and size (area,
-  length, diameter, center, position), two picks the shortest distance (with dX, dY, dZ), the angle
-  between planes and lines, the distance of parallel planes and the distance of centers and axes. The
-  distances are drawn in the 3D view; the kernel computes them on the exact B-Rep.
-- Material and appearance: a library of 27 metals, plastics and woods with typical densities, custom
-  materials with an own density, and a color for the part (the material's or any other). Shown at the
-  top of the feature tree, saved in the part file (format version 7), one undo step per change.
-- Mass properties: a panel over the 3D view with mass, volume, surface area, center of mass, bounding
-  box, principal moments of inertia and the inertia tensor at the center of mass, integrated exactly over
-  the B-Rep; the mass is also shown in the status bar. New command tab *Evaluate*.
-- Feature tree: a rollback bar to build the part only up to a point; new features and sketches go in
-  at the bar (insert a feature in the middle of the history). Drag the bar or move it with the arrow
-  keys; *Roll to end* builds everything again.
-- Reorder features by dragging them in the tree. Moves that would put a feature before a feature it
-  builds on (sketch, reference geometry, faces and edges, copied features) or after one that builds on
-  it are refused with an explanation.
-- Extrude (Phase 2): the closed outlines of a sketch become a solid, or are cut out of the body with
-  *Remove material*; a depth (also as an equation) or *through all* of the body, direction along the
-  sketch normal, reversed or mid-plane. Outlines inside others become holes; curves that cross each other are reported with their
-  position. Lines, arcs, circles, ellipses and splines stay exact B-Rep geometry, and a sketch used by an
-  extrusion is hidden in the 3D view. Editing the sketch rebuilds the extrusion
-  ([ADR 0009](docs/adr/0009-sketch-based-features.md)). Part files with extrusions are saved as format
-  version 4.
-- Revolve: the closed outlines of a sketch turn around a line of the sketch (usually a centerline) into a
-  solid or a cut; angle up to 360° (also as an equation), one way, the other way or symmetric. The axis is
-  chosen in the side panel and shown in orange; outlines on both sides of the axis are reported. Shafts,
-  bushes, grooves and tori come out with exact volumes.
-- Persistent naming ([ADR 0002](docs/adr/0002-persistent-naming.md)): every face is named after the
-  feature that made it (for an extrusion, after the sketch curve that swept it), and fillets and
-  chamfers remember their edges by the two faces they lie between. Editing earlier features – a wider
-  sketch, a new hole, a cut inserted or suppressed before the fillet – no longer moves fillets to other
-  edges; an edge that is really gone is reported. Edge numbers in files of earlier versions are converted
-  when the part is opened; part files with named edges are saved as format version 5.
-- Sketches on faces follow their face: when an earlier feature moves or turns the face (a thicker
-  plate), the sketch and the features built from it move along. A sketch whose face is gone is marked
-  and stays where the face was.
-- Reference geometry ([ADR 0010](docs/adr/0010-reference-geometry.md)): reference planes (offset, at an
-  angle around an axis, through three points, between two planes, parallel through a point), axes (along
-  an edge or the axis of a cylinder, where two planes meet, through two points, normal to a plane) and
-  points (coordinates, centers of edges and faces, where an axis meets a plane). They are built on
-  standard planes, the origin, each other and faces, edges and vertices of the part, follow the part when
-  earlier features change, and carry sketches. Vertices can be picked in the 3D view. Part files with
-  reference geometry are saved as format version 6.
-- Revolve around a reference axis: *Axis* also lists the part's reference axes; the axis must lie in the
-  sketch plane.
-- Hole: holes for ISO metric screws M1.6–M30 at the free points of a sketch – clearance holes (ISO 273
-  fine, medium, coarse), counterbores for ISO 4762, 90° countersinks for ISO 10642 and tapped holes with
-  their tap drill; through all or to a depth with a 118° drill point; dimensions from the standards and
-  changeable. Threads are shown as dashed circles of their nominal diameter. All holes of a feature are cut
-  in one operation (100 holes: 0.3 s instead of 1.2 s as single cuts).
-- Patterns and mirror: linear patterns along an edge, axis or plane normal, circular patterns around an
-  axis (evenly all round or over an angle) and mirror images through a plane, of extrusions, revolutions,
-  holes, boxes and cylinders. The features to copy are picked in the tree (shown below the side panel
-  while picking) or by a face in the 3D view; all copies of a feature are combined with the body in one
-  operation.
-- Extrude up to a surface (a planar face, a reference or standard plane, also at an angle; with an offset
-  before or past it) and up to a vertex; the extrusion follows the face or vertex when it moves.
-- Shell: hollows the part out to walls of a thickness, open at faces picked in the 3D view, or with a
-  closed cavity; the walls can also go outside the part. Walls that are too thick are reported instead of
-  silently giving back the unchanged part.
-- Lost edges: a fillet or chamfer whose edges are partly gone after an earlier change still rounds the
-  others and shows a yellow warning in the tree instead of failing. Editing it lists the lost edges,
-  marks where they were in the 3D view and removes them with one click.
+- Format version 7 also covers two-way and drafted extrusions, *up to next* and uneven chamfers, so
+  earlier versions report a newer file instead of a damaged one.
+
+### Performance
+- A part of 301 features (a plate with 100 bosses, each a sketch, an extrusion and a rim fillet) rebuilds
+  fully in 2.8 s in the kernel worker; editing its last feature takes 87 ms (Apple M3). 25 holes cut
+  *up to next* rebuild in 136 ms.
 
 ### Fixed
-- The flat end faces of revolutions (swept by profile edges that touch the axis, such as the ends of a
-  shaft) get names of their own, so chamfers and fillets on their edges stay there when the part changes.
-- The command bar no longer grows by the height of a scroll bar when its commands only fit in a denser layout,
-  so the 3D view keeps its size when switching command tabs.
 - Dimensions can refer to edges of the part: pick a circle (its center), a point or a line, then an edge of
   the part, for example to place a hole relative to the edge of a face. The edge becomes fixed construction
   geometry of the sketch. After the first pick, moving over a second entity previews the dimension
@@ -105,6 +119,10 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 - Removing material with an extrusion from a sketch on a face now goes into the part: *Remove material*
   sets the direction to *Reversed*. Cuts that do not touch the part (extrusions, holes, patterns) are
   marked with a warning instead of silently removing nothing; warnings are also shown in the side panel.
+- The flat end faces of revolutions (swept by profile edges that touch the axis, such as the ends of a
+  shaft) get names of their own, so chamfers and fillets on their edges stay there when the part changes.
+- The command bar no longer grows by the height of a scroll bar when its commands only fit in a denser
+  layout, so the 3D view keeps its size when switching command tabs.
 - The labels of choice fields in the side panel had no space above them.
 - Volume and surface area of bodies with ellipses or splines are now exact; OCCT's default integration
   was off by up to 1e-4 on such faces.
@@ -274,7 +292,8 @@ First technical preview (Phase 0). Not ready for productive use; see the disclai
 ### Removed
 - DWG from the planned formats, because it is a closed, proprietary format. DXF covers 2D exchange.
 
-[Unreleased]: https://github.com/Ujap1994/ParaWerk/compare/v0.2.0-alpha.1...HEAD
+[Unreleased]: https://github.com/Ujap1994/ParaWerk/compare/v0.3.0-alpha.0...HEAD
+[0.3.0-alpha.0]: https://github.com/Ujap1994/ParaWerk/compare/v0.2.0-alpha.1...v0.3.0-alpha.0
 [0.2.0-alpha.1]: https://github.com/Ujap1994/ParaWerk/compare/v0.2.0-alpha.0...v0.2.0-alpha.1
 [0.2.0-alpha.0]: https://github.com/Ujap1994/ParaWerk/compare/v0.1.0-alpha.0...v0.2.0-alpha.0
 [0.1.0-alpha.0]: https://github.com/Ujap1994/ParaWerk/releases/tag/v0.1.0-alpha.0

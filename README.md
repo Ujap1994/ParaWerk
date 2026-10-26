@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img alt="Status: pre-alpha" src="https://img.shields.io/badge/status-pre--alpha%20(Phase%202%3A%20part%20modeling)-orange">
+  <img alt="Status: alpha" src="https://img.shields.io/badge/status-alpha%200.3%20(part%20modeling)-orange">
   <a href="https://github.com/Ujap1994/ParaWerk/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Ujap1994/ParaWerk/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="Platforms" src="https://img.shields.io/badge/platforms-Windows%20%7C%20macOS%20%7C%20Linux-blue">
   <img alt="UI languages" src="https://img.shields.io/badge/UI-English%20%7C%20Deutsch-informational">
@@ -18,10 +18,11 @@
 </p>
 
 > [!WARNING]
-> **ParaWerk is under active development.** The 2D sketcher (Phase 1) is complete; part modeling
-> (Phase 2) has started with *Extrude* and *Revolve*. It is a technical preview, not a usable CAD system
-> yet: holes, patterns, reference geometry and many other features are still missing. Please read the
-> [disclaimer](#disclaimer) first.
+> **ParaWerk is under active development.** Alpha 0.3 models real parts: sketches, extrusions and
+> revolutions, holes, patterns, shells, fillets and chamfers, reference geometry, materials and mass
+> properties. Assemblies, standard parts and drawings follow in later phases. It is an alpha to try out
+> and give feedback on, not yet a tool for productive work. Please read the [disclaimer](#disclaimer)
+> first.
 
 ---
 
@@ -85,53 +86,61 @@ makers, students and small workshops that covers the everyday mechanical design 
 
 ## Available now
 
-Preview 0.2 adds the complete 2D sketcher (Phase 1) to the foundation of Phase 0:
+Alpha 0.3 adds part modeling (Phase 2) to the 2D sketcher of Phase 1:
 
-![A fully defined bracket profile in sketch mode](docs/images/screenshots/sketch-bracket.png)
+![A bearing housing built from sketches: plate, boss, bore, counterbored M6 holes, rounds and a chamfer, in aluminium](docs/images/screenshots/part-modeling.png)
 
-- **Geometry kernel:** Open CASCADE Technology 8 (own WebAssembly build) in a background worker;
-  **extrude** and **revolve** sketches (add or remove material), box and cylinder, fillet and chamfer; incremental rebuild that only recomputes from the first changed feature;
-  exact volume and surface area.
-- **3D view:** shaded model with edges, view cube, standard views, orthographic and perspective
-  projection, rotation around the point under the cursor, zoom towards the cursor, mouse and trackpad
-  presets, hover and selection highlighting of faces and edges.
-- **Feature tree and property panels:** live preview while editing, rollback of later features,
-  suppress, delete, undo and redo; clear error messages when a feature cannot be built.
-- **Extrude and revolve:** the closed outlines of a sketch become a solid or a cut, straight or around a
-  centerline; outlines inside others become holes, and lines, arcs, circles, ellipses and splines stay
-  exact.
+- **Solid features:** **extrude** and **revolve** sketches (add or remove material) – a depth, through
+  all, up to the next face, up to a planar or curved surface or a vertex, in one or two directions, with
+  a draft angle; **holes** for ISO metric screws (clearance, counterbore, countersink, tapped with
+  cosmetic threads); **linear and circular patterns** and **mirror** images; **shell**; **fillet** and
+  **chamfer** (equal, two distances, distance and angle); box and cylinder; **STEP import** as a body.
+- **Stable edits:** faces are named after the feature that made them, so fillets, chamfers, sketches on
+  faces and other references stay in place when earlier features change; lost edges are marked instead
+  of breaking the part. A reference suite of 33 parts checks this in every CI run.
+- **Reference geometry:** planes, axes and points built on the part or on each other; they carry
+  sketches and follow the part.
+- **Feature tree and property panels:** live preview while editing, rollback bar to insert features in
+  the middle of the history, reorder by dragging (with dependency checks), suppress, delete, undo and
+  redo; clear errors and warnings that point to the cause.
+- **Evaluation:** materials (27 metals, plastics and woods, or your own density) and part colors; exact
+  mass, volume, center of mass and moments of inertia; measuring distances, angles and center distances;
+  section views with filled cut faces.
 - **Variables and equations:** named values for the whole part, used by name in parameters and sketch
   dimensions; calculations with units in every number field.
-- **2D sketcher:** sketches on the front, top and right plane and on planar faces, with their own undo
-  history.
+- **2D sketcher:** sketches on the standard planes, planar faces and reference planes, with their own
+  undo history.
   - *Drawing:* lines and centerlines, rectangles (corner, center, 3-point, parallelogram), circles
     (center, 3-point), ellipses, arcs (center, 3-point, tangent), splines, slots, polygons and points, with
     snapping, inference lines and automatic relations.
   - *Relations and dimensions:* thirteen relation types, offered for the selection and checked by the
     solver, shown as symbols next to the geometry; one smart dimension tool for lengths, distances,
-    angles, radii and diameters; over-defining dimensions become reference dimensions.
+    angles, radii and diameters, also to edges of the part; over-defining dimensions become reference
+    dimensions.
   - *Definition status:* under-defined geometry is blue, fully defined dark, conflicts red and listed.
   - *Editing:* trim, extend, sketch fillet and chamfer, offset, mirror, linear and circular patterns,
     move, copy and scale; dragging with live constraint solving (about 7 ms per step at 2,000 entities).
-  - *Splines:* smooth curves through fit points; points can be held on them, other curves trimmed and
-    extended at them, and splines themselves are cut exactly, without changing their shape.
-  - *Model edges:* convert edges of the part into the sketch.
-  - *DXF:* import into a sketch and export for laser cutting and CNC.
-- **Files:** native `.pwpart` files, STEP and binary STL export.
+  - *Splines, model edges, DXF:* splines through fit points that trim exactly, converting edges of the
+    part into the sketch, DXF import and export for laser cutting and CNC.
+- **Files:** native `.pwpart` files with crash recovery of unsaved work; STEP import; STEP, binary STL
+  and 3MF (with material and color) export.
+- **3D view:** shaded model with edges, view cube, standard views, orthographic and perspective
+  projection, rotation around the point under the cursor, zoom towards the cursor, mouse and trackpad
+  presets, hover and selection highlighting of faces, edges and vertices.
 - **Interface:** English and German (switchable at runtime, system language by default), light and dark
   theme, own icon set and visual design.
 
-| Drawing tools with relation symbols | Trim with preview |
+| Extrude a sketch (live preview) | Up to the curved face of a shaft |
 |---|---|
-| ![Drawing tools](docs/images/screenshots/sketch-tools.png) | ![Trim](docs/images/screenshots/sketch-trim.png) |
-| **Relation symbols: point at one to see its geometry** | **Conflicts are red and listed** |
-| ![Relation symbols](docs/images/screenshots/sketch-relation-symbols.png) | ![Over-defined sketch](docs/images/screenshots/sketch-conflict.png) |
-| **Extrude a sketch (live preview)** | **A pocket cut from a sketch on the top face** |
-| ![Extrude](docs/images/screenshots/extrude-plate.png) | ![Pocket](docs/images/screenshots/extrude-pocket.png) |
-| **Revolve a half section around its centerline** | **Variables and equations** |
-| ![Revolve](docs/images/screenshots/revolve-bush.png) | ![Variables](docs/images/screenshots/variables.png) |
-| **Splines: cut exactly at a line, the rest is only hinted** | **Splines with a point held on them** |
-| ![Cut spline](docs/images/screenshots/sketch-spline-cut.png) | ![Spline](docs/images/screenshots/sketch-spline.png) |
+| ![Extrude](docs/images/screenshots/extrude-plate.png) | ![Up to surface](docs/images/screenshots/extrude-up-to-surface.png) |
+| **Counterbored holes for M6 cap screws** | **Linear pattern of two holes along an edge** |
+| ![Hole](docs/images/screenshots/hole-counterbore.png) | ![Pattern](docs/images/screenshots/pattern-linear.png) |
+| **Rollback bar: insert features in the middle** | **Mass properties in aluminium** |
+| ![Rollback bar](docs/images/screenshots/feature-tree-rollback.png) | ![Mass properties](docs/images/screenshots/mass-properties.png) |
+| **Section view with filled cut faces** | **Measuring the distance of two bores** |
+| ![Section view](docs/images/screenshots/section-view.png) | ![Measure](docs/images/screenshots/measure.png) |
+| **A fully defined bracket profile** | **Splines: cut exactly at a line** |
+| ![Sketch](docs/images/screenshots/sketch-bracket.png) | ![Cut spline](docs/images/screenshots/sketch-spline-cut.png) |
 | **Fillet with live preview** | **Dark theme, German interface** |
 | ![Fillet preview](docs/images/screenshots/fillet-preview.png) | ![Dark theme](docs/images/screenshots/dark-theme-german.png) |
 
@@ -142,11 +151,9 @@ See the [user guide](docs/user-guide/README.md) for details.
 > Everything below is **planned**. Each item moves to "Available now", with screenshots, once it ships.
 
 ### Part modeling
-- Feature tree with rollback bar, suppress, reorder and edit-in-place
-- Extrude and cut (blind, through all, up to surface, mid-plane, thin), revolve, sweep, loft
-- Fillet, chamfer, shell, draft, rib, hole feature with ISO metric threads, linear, circular and mirror patterns
-- Reference planes, axes, points and coordinate systems; multi-body parts
-- Configurations and design tables, materials, mass properties, measuring and section views
+- Thin features, face fillets and full rounds, coordinate systems (rest of Phase 2)
+- Sweep, loft, rib, draft as a feature, variable fillets, multi-body parts
+- Configurations and design tables
 
 ### Assemblies
 - Components and sub-assemblies with standard, advanced and mechanical mates
@@ -223,7 +230,8 @@ The architecture is explained in [ROADMAP.md](ROADMAP.md#architecture-overview);
   Linux.
 - **Performance tests from the first commit:** kernel, solver and rendering benchmarks run in CI for
   every push. The **scale ladder** grows with every phase, up to tens of thousands of components before
-  v1.0. Current reference numbers (Apple M3): fillet of 12 edges in 32 ms; 1,000 instanced components
+  v1.0. Current reference numbers (Apple M3): a part of 301 features rebuilds in 2.8 s, and editing its
+  last feature takes 87 ms; fillet of 12 edges in 32 ms; 1,000 instanced components
   (2.3 million triangles) at 118 fps, 10,000 components at 32 fps. All results:
   [docs/benchmarks](docs/benchmarks/README.md).
 - **Stability:** memory-leak tests for the kernel, automatic recovery when the geometry kernel crashes,

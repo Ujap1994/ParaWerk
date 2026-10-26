@@ -117,6 +117,13 @@ point on the curve. Median solve per drag step (`npm run bench:solver`):
 | Spline profile with 100 fit points, extrusion with exact volume | 6 ms |
 | The same outline revolved a full turn, with exact volume | 68 ms |
 | Exact mass properties of the 100-hole plate (fast path for planes and circles) | 22 ms |
+| 100 M8 clearance holes as one hole feature | 304 ms |
+| 25 holes cut *up to next* through the lid of a closed box (sketch and cut rebuilt) | 136 ms |
+| Part of 100 features (a plate with 33 bosses: sketch, extrusion, rim fillet each): full rebuild / edit last feature | 501 ms / 32 ms |
+| Part of 301 features (100 bosses): full rebuild / edit last feature | 2.77 s / 87 ms |
+
+The Phase 2 budgets – a full rebuild of 300 features within 10 s and editing the last feature within
+1 s, both in the kernel worker, so the interface never waits – are met with a wide margin.
 
 ## CI runners – Phase 0 baselines
 

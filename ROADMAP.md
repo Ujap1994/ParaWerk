@@ -147,6 +147,9 @@ Marked complete for now: open points from hands-on testing are handled alongside
 
 ### Phase 2 – in progress
 
+First preview released as [v0.3.0-alpha.0](https://github.com/Ujap1994/ParaWerk/releases/tag/v0.3.0-alpha.0)
+(part modeling): everything marked done below.
+
 | Item | Status |
 |---|---|
 | Extrude and cut from sketch profiles (blind, reversed, mid-plane; exact splines and ellipses) | ✅ done ([ADR 0009](docs/adr/0009-sketch-based-features.md)) |

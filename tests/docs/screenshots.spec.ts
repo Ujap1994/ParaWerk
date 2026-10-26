@@ -1001,3 +1001,55 @@ test('extrude end screenshots', async () => {
   await page.click('[data-testid="panel-ok"]');
   await app.close();
 });
+
+test('part modeling overview screenshot', async () => {
+  const { app, page } = await launchApp({ width: 1440, height: 900 });
+  // A bearing housing built the way a user would: sketches, extrusions, a bore through all, counterbored
+  // M6 holes, rounds and a chamfer, in aluminium.
+  await page.evaluate(() => {
+    const P = (id: string, x: number, y: number) => ({ id, type: 'point', x, y });
+    const L = (id: string, p1: string, p2: string) => ({ id, type: 'line', p1, p2 });
+    const rect = (p: string, w: number, h: number) => [
+      P(`${p}1`, -w / 2, -h / 2), P(`${p}2`, w / 2, -h / 2), P(`${p}3`, w / 2, h / 2), P(`${p}4`, -w / 2, h / 2),
+      L(`${p}a`, `${p}1`, `${p}2`), L(`${p}b`, `${p}2`, `${p}3`), L(`${p}c`, `${p}3`, `${p}4`), L(`${p}d`, `${p}4`, `${p}1`),
+    ];
+    const circle = (id: string, r: number) => [P(`${id}c`, 0, 0), { id, type: 'circle', center: `${id}c`, radius: r }];
+    const onFace = (name: string, z: number) => ({ kind: 'face', face: 0, name, frame: { origin: [0, 0, z], xDir: [1, 0, 0], yDir: [0, 1, 0], normal: [0, 0, 1] } });
+    const sketch = (id: string, name: string, plane: unknown, entities: unknown[]) => ({ id, type: 'sketch', name, plane, sketch: { entities, constraints: [] } });
+    const extrude = (id: string, name: string, from: string, depth: number, more: object = {}) => ({ id, type: 'extrude', name, operation: 'add', sketch: from, depth, direction: 'normal', end: 'blind', ...more });
+    const edge = (a: string, b: string, at: number[]) => ({ kind: 'edge', faces: [a, b].sort(), at });
+    const features = [
+      sketch('base', 'Base sketch', { kind: 'standard', plane: 'top' }, rect('q', 120, 80)),
+      extrude('plate', 'Plate', 'base', 12),
+      {
+        id: 'corners', type: 'fillet', name: 'Corner rounds', radius: 10,
+        edges: [edge('plate:side:qa', 'plate:side:qb', [60, -40, 6]), edge('plate:side:qb', 'plate:side:qc', [60, 40, 6]), edge('plate:side:qc', 'plate:side:qd', [-60, 40, 6]), edge('plate:side:qd', 'plate:side:qa', [-60, -40, 6])],
+      },
+      sketch('boss-sketch', 'Boss sketch', onFace('plate:end', 12), circle('k', 26)),
+      extrude('boss', 'Boss', 'boss-sketch', 28),
+      sketch('bore-sketch', 'Bore sketch', onFace('boss:end', 40), circle('b', 15)),
+      extrude('bore', 'Bore', 'bore-sketch', 10, { operation: 'cut', direction: 'reverse', end: 'throughAll' }),
+      sketch('points', 'Mounting points', onFace('plate:end', 12), [P('m1', -45, -25), P('m2', 45, -25), P('m3', 45, 25), P('m4', -45, 25)]),
+      {
+        id: 'mount', type: 'hole', name: 'M6 counterbores', kind: 'counterbore', size: 'M6', fit: 'normal', sketch: 'points', end: 'throughAll', reverse: false,
+        diameter: 6.6, depth: 12, counterboreDiameter: 11, counterboreDepth: 6.4, countersinkDiameter: 13.7, countersinkAngle: 90, threadDepth: 12,
+      },
+      { id: 'foot', type: 'fillet', name: 'Boss fillet', radius: 4, edges: [edge('boss:side:k', 'plate:end', [26, 0, 12])] },
+      { id: 'rim', type: 'chamfer', name: 'Bore chamfer', distance: 1.5, edges: [edge('boss:end', 'bore:side:b', [15, 0, 40])] },
+    ];
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features, past: [], future: [] }, savedFeatures: features, fileName: 'Bearing housing' });
+  });
+  await idle(page);
+  await page.click('[data-tab="evaluate"]');
+  await page.click('[data-command="material"]');
+  await page.click('[data-material="aluminium-6061"]');
+  await page.click('[data-testid="material-ok"]');
+  await page.click('[data-tab="features"]');
+  await idle(page);
+  await page.evaluate(() => (window as unknown as { __parawerk: { viewport: { zoomToFit(): void } } }).__parawerk.viewport.zoomToFit());
+  const canvas = await page.locator('.viewport-canvas').boundingBox();
+  if (canvas) await page.mouse.move(canvas.x + canvas.width - 30, canvas.y + canvas.height - 30);
+  await page.waitForTimeout(600);
+  await page.screenshot({ path: out('part-modeling.png') });
+  await app.close();
+});

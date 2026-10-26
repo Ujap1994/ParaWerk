@@ -32,13 +32,13 @@ The geometry kernel runs in its own worker. If it crashes, ParaWerk restarts it 
 rebuilds your part; your document is not affected. Please report the steps that led to the crash in the
 [issue tracker](https://github.com/Ujap1994/ParaWerk/issues).
 
-## Known limitations of the preview
+## Known limitations of the alpha
 
-- Extrusions go a fixed depth and revolutions a fixed angle (no *up to surface* or *through all* yet);
-  the axis of a revolution must be a line of its sketch (no model edges or reference axes yet).
+- Not available yet: thin features, face fillets and full rounds, coordinate systems (rest of Phase 2);
+  sweep, loft, rib, draft as a feature and configurations (Phase 3); assemblies (Phase 4).
+- No multi-body tools yet (combining, splitting or listing separate bodies of a part).
 - Converted model edges are fixed copies; they do not follow later changes of the model yet.
 - Ellipses can only be trimmed as a whole, and *Offset* leaves ellipses and splines out.
-- Edge references are stored by topological index; editing an early feature can make a later fillet
-  lose its edges (shown as an error). Robust references follow in Phase 2
-  ([ADR 0002](../adr/0002-persistent-naming.md)).
+- Part files of this version (format versions 4–7) cannot be opened by ParaWerk 0.2; it reports a newer
+  file.
 - Builds are not code-signed yet.
