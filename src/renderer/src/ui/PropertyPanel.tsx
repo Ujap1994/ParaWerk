@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { formatQuantity } from '../format.ts';
-import { CHAMFER_METHODS, EXTRUDE_ENDS, extrudesOneWay, MAX_DRAFT_ANGLE, type RevolveDirection, hasReferenceSlots, isCopyFeature, type Axis, type BooleanOperation, type ChamferFeature, type ChamferMethod, type EdgeFeature, type ExtrudeDirection, type ExtrudeEnd, type ExtrudeFeature, type Feature, type RevolveFeature, type Vec3 } from '../../../shared/model/feature.ts';
+import { CHAMFER_METHODS, FILLET_METHODS, roundFaceCount, type FilletFeature, type FilletMethod, EXTRUDE_ENDS, extrudesOneWay, MAX_DRAFT_ANGLE, type RevolveDirection, hasReferenceSlots, isCopyFeature, type Axis, type BooleanOperation, type ChamferFeature, type ChamferMethod, type EdgeFeature, type ExtrudeDirection, type ExtrudeEnd, type ExtrudeFeature, type Feature, type RevolveFeature, type Vec3 } from '../../../shared/model/feature.ts';
 import { DEFAULT_THIN_THICKNESS, THIN_SIDES, type ThinSide } from '../../../shared/model/thin.ts';
 import type { GeometryRef } from '../../../shared/model/reference.ts';
 import { referenceRoles } from '../references.ts';
@@ -316,11 +316,15 @@ function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
       return <VariablesEditor draft={draft} />;
     case 'fillet':
     case 'chamfer':
+      if (draft.type === 'fillet' && roundFaceCount(draft.method) > 0) return <RoundFacesFields draft={draft} />;
       return (
         <>
           <Section title={t('panel.parameters')}>
             {draft.type === 'fillet' ? (
-              <NumberField label={t('panel.radius')} value={draft.radius} testId="fillet-radius" {...equation(draft, 'radius')} step={0.5} onChange={(radius) => commands.updateDraft({ radius })} />
+              <>
+                <FilletMethodField draft={draft} />
+                <NumberField label={t('panel.radius')} value={draft.radius} testId="fillet-radius" {...equation(draft, 'radius')} step={0.5} onChange={(radius) => commands.updateDraft({ radius })} />
+              </>
             ) : (
               <ChamferFields draft={draft} />
             )}
@@ -354,6 +358,58 @@ function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
 }
 
 /** The size of a chamfer: one distance, two distances, or a distance and an angle. */
+/** Constant radius or full round. */
+function FilletMethodField({ draft }: { draft: FilletFeature }) {
+  const { t } = useTranslation();
+  return (
+    <Segmented<FilletMethod>
+      label={t('fillet.method')}
+      value={draft.method ?? 'constant'}
+      options={FILLET_METHODS.map((value) => ({ value, label: t(`fillet.methods.${value}`) }))}
+      onChange={(method) => commands.setFilletMethod(method)}
+    />
+  );
+}
+
+/** What the face fields of a face fillet and a full round stand for, in order. */
+const ROUND_SLOTS = { faces: ['face1', 'face2'], fullRound: ['side1', 'center', 'side2'] } as const;
+
+/** A face fillet (its radius and two faces) or a full round (two side faces and the center face between them), picked in order. */
+function RoundFacesFields({ draft }: { draft: FilletFeature }) {
+  const { t } = useTranslation();
+  const nameOf = useReferenceName();
+  const refs = draft.round ?? [];
+  const method = draft.method === 'faces' ? 'faces' : 'fullRound';
+  return (
+    <Section title={t('panel.parameters')}>
+      <FilletMethodField draft={draft} />
+      {method === 'faces' ? (
+        <NumberField label={t('panel.radius')} value={draft.radius} testId="fillet-radius" {...equation(draft, 'radius')} step={0.5} onChange={(radius) => commands.updateDraft({ radius })} />
+      ) : null}
+      <ul className="reference-slots" aria-label={t('fillet.faces')} data-testid="round-faces">
+        {ROUND_SLOTS[method].map((slot, index) => {
+          const ref = refs[index];
+          const active = index === refs.length;
+          return (
+            <li key={slot} className={`reference-slot${active ? ' is-active' : ''}${ref ? ' is-filled' : ''}`} data-testid={`round-slot-${index}`}>
+              <div className="reference-slot-button">
+                <span className="reference-slot-role">{t(`fillet.slots.${slot}`)}</span>
+                <span className="reference-slot-value">{ref ? nameOf(ref) : active ? t('references.pick') : t('references.empty')}</span>
+              </div>
+              {ref ? (
+                <button type="button" className="icon-button" title={t('references.clear')} aria-label={t('references.clear')} onClick={() => commands.updateDraft({ round: refs.slice(0, index) })}>
+                  <CloseIcon />
+                </button>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+      <p className="panel-hint">{t(method === 'faces' ? 'fillet.facesHint' : 'fillet.roundHint')}</p>
+    </Section>
+  );
+}
+
 function ChamferFields({ draft }: { draft: ChamferFeature }) {
   const { t } = useTranslation();
   const method = draft.method ?? 'equal';

@@ -208,6 +208,22 @@ int chamferUneven(int bodyId, const std::vector<int>& edgeIndices, double distan
  */
 int transformShape(int id, const std::vector<double>& transform);
 
+/**
+ * A face fillet: a round of `radius` between two planar faces at an angle, also where they share no
+ * edge (faces between them, such as a chamfer, are rounded over). At an outer corner the material outside
+ * the round is cut away, at an inner corner the corner is filled. The round face is named "<name>:round".
+ * Fails with "round-planes" (not two planar faces forming a corner) or "round-radius".
+ */
+int faceFillet(int bodyId, int faceA, int faceB, double radius, const std::string& name = "");
+
+/**
+ * A full round: the center face between two side faces (parallel planes facing away from each other)
+ * replaced by half a cylinder tangent to all three, as wide as the sides are apart, over the length of
+ * the center face. The round face is named "<name>:round", faces the cut leaves where the part goes on
+ * "<name>:end". Fails with "round-sides" or "round-center" when the faces do not fit.
+ */
+int fullRound(int bodyId, int side1, int center, int side2, const std::string& name = "");
+
 void release(int id);
 int shapeCount();
 

@@ -145,10 +145,10 @@ Marked complete for now: open points from hands-on testing are handled alongside
 - Splines are natural cubic splines through fit points, and trimming keeps all fit points, so trimmed
   splines stay exact. Phase 2 converts them exactly into B-splines for the kernel.
 
-### Phase 2 – in progress
+### Phase 2 – features complete, waiting for Gate 2
 
 First preview released as [v0.3.0-alpha.0](https://github.com/Ujap1994/ParaWerk/releases/tag/v0.3.0-alpha.0)
-(part modeling): everything marked done below.
+(part modeling); thin features, coordinate systems and the remaining fillet types followed on 2026-10-26.
 
 | Item | Status |
 |---|---|
@@ -171,13 +171,20 @@ First preview released as [v0.3.0-alpha.0](https://github.com/Ujap1994/ParaWerk/
 | 3MF export (with material and color), STEP import as a body | ✅ done |
 | Chamfer with two distances and with distance and angle | ✅ done |
 | Extrude in two directions, draft while extruding | ✅ done |
-| Reference suite for Gate 2: 30 parts edited at early features | ✅ done |
+| Reference suite for Gate 2: parts edited at early features (30 at first, 36 now) | ✅ done |
 | Benchmarks of parts with 100 and 301 features (full rebuild, editing the last feature) | ✅ done |
 | Extrude up to next and up to curved surfaces (with offset) | ✅ done |
 | Thin feature (extrude and revolve; lines, arcs and circles) | ✅ done |
 | Coordinate systems (mass properties and exports in them) | ✅ done |
 | Fillets and chamfers on all edges of picked faces | ✅ done |
-| Fillet between faces that share no edge, full round | open |
+| Face fillet (between planar faces, also without a shared edge) and full round | ✅ done |
+
+**Result so far:** every item of the Phase 2 scope is in place, with tests, user guide and screenshots.
+The reference suite (36 parts, 87 edits at early features) builds without lost references after every
+edit, and a part of 301 features rebuilds in 2.8 s (87 ms to edit its last feature). Face fillets and
+full rounds are ParaWerk's own constructions, since OCCT has no such operations; face fillets cover planar
+faces. **Open for Gate 2:** the owner models a set of their own real-world parts without workarounds;
+what that turns up is fixed before Phase 3 starts.
 
 ## 2. Guiding principles
 
@@ -365,7 +372,7 @@ CAD system; over-defined sketches explain which relations conflict.
 **Exit criteria (Gate 2)**
 - The owner models a set of their own real-world parts without workarounds
 - Editing early features does not break later features in a reference suite of at least 30 models
-  (in place since 2026-10-25: `tests/integration/reference-models.test.ts`, 34 parts, 81 edits)
+  (in place since 2026-10-25: `tests/integration/reference-models.test.ts`, 36 parts, 87 edits)
 
 **Performance focus:** parts with 10 → 100 → 300 features; incremental rebuilds; tessellation in workers;
 no main-thread block longer than 100 ms.

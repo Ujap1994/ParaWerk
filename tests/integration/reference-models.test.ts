@@ -618,6 +618,31 @@ const MODELS: Model[] = [
       ['walls inside', set('ch', { thin: 'other' })],
     ],
   },
+  {
+    name: 'rib with a full round on a plate',
+    build() {
+      const base = [box('p', 100, 60, 10), box('rib', 80, 6, 20, [0, 0, 10])];
+      const sides = (features: Feature[]) => [faceRef(features, 'rib:front'), faceRef(features, 'rib:top'), faceRef(features, 'rib:back')];
+      return [...base, { id: 'r', type: 'fillet', radius: 1, edges: [], method: 'fullRound', round: sides(base) } as FilletFeature];
+    },
+    edits: [
+      ['taller rib', set('rib', { height: 30 })],
+      ['wider rib', set('rib', { depth: 8 })],
+      ['longer rib', set('rib', { width: 90 })],
+    ],
+  },
+  {
+    name: 'angle bracket with a face fillet in its inner corner',
+    build() {
+      const base = [box('f', 100, 60, 10), box('w', 10, 60, 50, [-45, 0, 10])];
+      return [...base, { id: 'r', type: 'fillet', radius: 6, edges: [], method: 'faces', round: [faceRef(base, 'f:top'), faceRef(base, 'w:right')] } as FilletFeature];
+    },
+    edits: [
+      ['thicker wall', set('w', { width: 14, position: [-43, 0, 10] })],
+      ['taller wall', set('w', { height: 70 })],
+      ['larger round', set('r', { radius: 10 })],
+    ],
+  },
 ];
 
 describe('reference models', () => {

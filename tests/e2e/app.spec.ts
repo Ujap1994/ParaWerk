@@ -1164,6 +1164,55 @@ test('rounds all edges of a face picked in the 3D view', async () => {
   await expect(page.locator('[data-testid="face-count"]')).toHaveCount(0);
 });
 
+test('rounds between two faces picked for a face fillet', async () => {
+  launched = await launchApp({ width: 1000, height: 640 });
+  const { page } = launched;
+  await createBox(page);
+  await page.click('[data-command="fillet"]');
+  await page.getByRole('radio', { name: 'Face fillet' }).click();
+  await idle(page);
+  // The top and the front face of the 100 × 60 × 40 box.
+  await clickWorldPoint(page, [10, 10, 40]);
+  await clickWorldPoint(page, [10, -30, 20]);
+  await expect(page.locator('[data-testid="round-slot-1"]')).toHaveClass(/is-filled/);
+  await page.locator('[data-testid="fillet-radius"]').fill('5');
+  await page.locator('[data-testid="fillet-radius"]').press('Tab');
+  await page.click('[data-testid="panel-ok"]');
+  expect(await volume(page)).toBeCloseTo(240_000 - 25 * (1 - Math.PI / 4) * 100, 2);
+  expect((await state(page)).history.features[1]).toMatchObject({ type: 'fillet', method: 'faces', radius: 5, round: [{ name: expect.stringMatching(/:top$/) }, { name: expect.stringMatching(/:front$/) }] });
+});
+
+test('rounds the top of a rib fully between its side faces', async () => {
+  launched = await launchApp({ width: 1000, height: 640 });
+  const { page } = launched;
+  // A plate with a rib 80 long, 6 wide and 20 high.
+  await page.evaluate(() => {
+    const features = [
+      { id: 'p', type: 'box', operation: 'add', width: 100, depth: 60, height: 10, position: [0, 0, 0] },
+      { id: 'rib', type: 'box', operation: 'add', width: 80, depth: 6, height: 20, position: [0, 0, 10] },
+    ];
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features, past: [], future: [] }, savedFeatures: features, dirty: false });
+  });
+  await idle(page);
+  await page.click('[data-command="fillet"]');
+  await page.getByRole('radio', { name: 'Full round' }).click();
+  await idle(page);
+  // The front side and the top are in view; the back side is given directly.
+  await clickWorldPoint(page, [0, -3, 20]);
+  await expect(page.locator('[data-testid="round-slot-0"]')).toHaveClass(/is-filled/);
+  await clickWorldPoint(page, [10, 0, 30]);
+  await expect(page.locator('[data-testid="round-slot-1"]')).toHaveClass(/is-filled/);
+  await page.evaluate(() => {
+    const hooks = (window as unknown as { __parawerk: { getState(): { display: { body: { naming: { faces: string[] } } } }; commands: { pickRoundFace(pick: unknown): void } } }).__parawerk;
+    const index = hooks.getState().display.body.naming.faces.indexOf('rib:back');
+    hooks.commands.pickRoundFace({ kind: 'face', index, at: [0, 3, 20] });
+  });
+  await expect(page.locator('[data-testid="round-slot-2"]')).toHaveClass(/is-filled/);
+  await page.click('[data-testid="panel-ok"]');
+  expect(await volume(page)).toBeCloseTo(60_000 + 80 * 6 * 17 + 80 * (Math.PI * 9) / 2, 2);
+  expect((await state(page)).history.features[2]).toMatchObject({ type: 'fillet', method: 'fullRound', round: [{ name: 'rib:front' }, { name: 'rib:top' }, { name: 'rib:back' }] });
+});
+
 test('cutting from a sketch on a face goes into the part, and a cut that misses warns', async () => {
   launched = await launchApp({ width: 1440, height: 900 });
   const { page } = launched;

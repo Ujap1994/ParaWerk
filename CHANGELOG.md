@@ -8,6 +8,11 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### Added
+- Fillet types *Face fillet* and *Full round*. A face fillet rounds with a radius between two planar faces
+  at a corner, also where they share no edge (a chamfer or step between them is rounded over, an inner
+  corner is filled). A full round replaces the face between two parallel side faces by half a cylinder
+  touching all three (rib tops, tab ends); holes through the rounded part stay. Both are built by ParaWerk
+  itself, since the geometry kernel has no such operation.
 - Fillets and chamfers on faces: clicking a face takes all of its edges (seams left out), also edges it
   gets later, such as the rim of a hole cut into it before the fillet. A face picked again is taken out.
 - Coordinate systems (reference geometry): at a position turned around Z, or at a point with their X axis

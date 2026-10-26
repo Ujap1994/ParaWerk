@@ -457,6 +457,12 @@
     "thin-unsupported": "Wände entlang von Ellipsen und Splines sind noch nicht möglich ({{detail}}). Verwende Linien und Bögen oder schalte das Dünnwand-Feature aus.",
     "thin-branching": "Bei ({{detail}}) mm treffen sich mehr als zwei Kurven: Wände brauchen Kurvenzüge ohne Verzweigungen.",
     "thin-too-thick": "Die Wände sind zu dick für die Kurven: Ein Bogen oder eine kurze Linie würde in ihnen verschwinden. Mach die Wände dünner oder lege sie auf die andere Seite.",
+    "round-faces": "Die Flächen der Rundung der Reihe nach anklicken ({{detail}} gewählt).",
+    "round-face-missing": "Fläche {{detail}} der Vollrundung gibt es nicht mehr: Eine frühere Änderung hat sie entfernt. Bearbeite die Verrundung und wähle sie neu.",
+    "round-sides": "Die Seitenflächen einer Vollrundung müssen parallele Ebenen auf gegenüberliegenden Seiten des Materials sein.",
+    "round-center": "Die Mittelfläche muss zwischen den beiden Seitenflächen liegen.",
+    "round-planes": "Eine Flächenverrundung braucht zwei ebene Flächen, die eine Ecke bilden (keine parallelen).",
+    "round-radius": "Der Radius ist zu groß: Die Rundung würde außerhalb der Flächen beginnen. Wähle ihn kleiner.",
     "profile-crosses-axis": "Konturen der Skizze liegen auf beiden Seiten der Achse. Halte sie auf einer Seite; berühren dürfen sie die Achse.",
     "plane-missing": "Die Referenzebene, auf der diese Skizze gezeichnet wurde, existiert nicht mehr. Die Skizze bleibt, wo die Ebene war.",
     "reference-missing": "Referenz {{detail}} dieses Features fehlt: Sie wurde noch nicht gewählt, oder eine frühere Änderung hat sie entfernt. Bearbeite das Feature und wähle sie.",
@@ -933,5 +939,23 @@
     "distance2": "Abstand 2",
     "angle": "Winkel",
     "flip": "Abstand 1 auf der anderen Fläche messen"
+  },
+  "fillet": {
+    "method": "Art",
+    "methods": {
+      "constant": "Konstanter Radius",
+      "faces": "Flächenverrundung",
+      "fullRound": "Vollrundung"
+    },
+    "faces": "Flächen der Rundung",
+    "slots": {
+      "face1": "Fläche 1",
+      "face2": "Fläche 2",
+      "side1": "Seitenfläche 1",
+      "center": "Mittelfläche",
+      "side2": "Seitenfläche 2"
+    },
+    "roundHint": "Eine Seitenfläche, die Fläche zwischen den Seiten und die andere Seitenfläche anklicken. Die mittlere Fläche wird zu einem halben Zylinder, der alle drei berührt; die Seitenflächen müssen parallele Ebenen sein (eine Rippe, das Ende einer Lasche).",
+    "facesHint": "Zwei ebene Flächen anklicken, die eine Ecke bilden. Die Rundung mit dem Radius verläuft zwischen ihnen, auch wenn sie keine gemeinsame Kante haben: Flächen dazwischen (eine Fase, eine Stufe) werden überrundet, eine Innenecke wird aufgefüllt."
   }
 }

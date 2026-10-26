@@ -177,6 +177,22 @@ cut into it before the fillet, are rounded too. Seams of round faces are left ou
 picks the edge; click the face again to take it out. Faces and edges selected before choosing **Fillet**
 are taken over.
 
+*Type* offers two more kinds of rounds, which are picked as faces in order (the fields show which one is
+next; ✕ clears a field and the ones after it):
+
+- **Face fillet** rounds with the *Radius* between two planar faces that meet at a corner – also where
+  they share no edge: faces between them, such as a chamfer or a small step, are rounded over. At an
+  inner corner (a wall on a floor) the corner is filled. A radius too large for the faces is reported.
+
+  ![A face fillet filling the inner corner of an angle bracket](../images/screenshots/fillet-faces.png)
+
+- **Full round** replaces a face by half a cylinder that touches it and the two faces beside it: pick
+  *Side face 1*, the *Center face* and *Side face 2*. The sides must be parallel planes, such as the
+  sides of a rib or the top and bottom of a tab whose end is rounded; the round is as wide as the sides
+  are apart and follows them when the rib changes. Holes through the rounded part stay holes.
+
+  ![A full round on the top of a rib, shown while it is edited](../images/screenshots/fillet-full-round.png)
+
 ![Fillet preview](../images/screenshots/fillet-preview.png)
 
 ## Chamfer

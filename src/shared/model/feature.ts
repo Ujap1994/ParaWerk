@@ -125,12 +125,33 @@ export interface ImportFeature extends FeatureBase {
   data: string;
 }
 
+/**
+ * How a fillet rounds: edges with a constant radius, a round of that radius between two planar faces
+ * (also where they share no edge), or a full round between two side faces.
+ */
+export type FilletMethod = 'constant' | 'faces' | 'fullRound';
+
+export const FILLET_METHODS: readonly FilletMethod[] = ['constant', 'faces', 'fullRound'];
+
+/** How many faces a fillet of a method picks in order (face fillet: two, full round: three). */
+export function roundFaceCount(method: FilletMethod | undefined): number {
+  return method === 'faces' ? 2 : method === 'fullRound' ? 3 : 0;
+}
+
 export interface FilletFeature extends FeatureBase {
   type: 'fillet';
   radius: number;
   edges: EdgeRef[];
   /** Faces whose edges are all rounded too, also edges they get later (a hole cut into the face). */
   faces?: FaceNameRef[];
+  /** Absent: constant. */
+  method?: FilletMethod;
+  /**
+   * Face fillet: the two faces; full round: side face 1, the center face and side face 2 (as far as
+   * picked). The center face of a full round is replaced by half a cylinder tangent to all three; the
+   * sides must be parallel planes.
+   */
+  round?: FaceNameRef[];
 }
 
 /** How a chamfer is sized: the same distance on both faces, two distances, or a distance and an angle. */

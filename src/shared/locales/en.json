@@ -457,6 +457,12 @@
     "thin-unsupported": "Walls along ellipses and splines are not possible yet ({{detail}}). Use lines and arcs, or turn the thin feature off.",
     "thin-branching": "More than two curves meet at ({{detail}}) mm: walls need chains of curves without branches.",
     "thin-too-thick": "The walls are too thick for the curves: an arc or a short line would vanish inside them. Make the walls thinner or put them on the other side.",
+    "round-faces": "Pick the faces of the round in order ({{detail}} picked).",
+    "round-face-missing": "Face {{detail}} of the full round no longer exists: an earlier change removed it. Edit the fillet and pick it again.",
+    "round-sides": "The side faces of a full round must be parallel planes on opposite sides of the material.",
+    "round-center": "The center face must lie between the two side faces.",
+    "round-planes": "A face fillet needs two planar faces that meet at a corner (not parallel ones).",
+    "round-radius": "The radius is too large: the round would start beyond the faces. Make it smaller.",
     "profile-crosses-axis": "Outlines of the sketch lie on both sides of the axis. Keep them on one side; they may touch it.",
     "plane-missing": "The reference plane this sketch was drawn on no longer exists. The sketch stays where the plane was.",
     "reference-missing": "Reference {{detail}} of this feature is missing: it was not chosen yet, or an earlier change removed it. Edit the feature and choose it.",
@@ -933,5 +939,23 @@
     "distance2": "Distance 2",
     "angle": "Angle",
     "flip": "Measure distance 1 on the other face"
+  },
+  "fillet": {
+    "method": "Type",
+    "methods": {
+      "constant": "Constant radius",
+      "faces": "Face fillet",
+      "fullRound": "Full round"
+    },
+    "faces": "Faces of the round",
+    "slots": {
+      "face1": "Face 1",
+      "face2": "Face 2",
+      "side1": "Side face 1",
+      "center": "Center face",
+      "side2": "Side face 2"
+    },
+    "roundHint": "Click a side face, the face between the sides and the other side face. The face in the middle becomes half a cylinder touching all three; the side faces must be parallel planes (a rib, the end of a tab).",
+    "facesHint": "Click two planar faces that meet at a corner. The round of the radius runs between them, also where they share no edge: faces between them (a chamfer, a step) are rounded over, and an inner corner is filled."
   }
 }

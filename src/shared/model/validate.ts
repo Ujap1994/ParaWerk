@@ -1,4 +1,4 @@
-import { CHAMFER_METHODS, type ChamferMethod, EXPRESSION_FIELDS, EXTRUDE_DIRECTIONS, MAX_DRAFT_ANGLE, REVOLVE_DIRECTIONS, type RevolveDirection, EXTRUDE_ENDS, HOLE_ENDS, type Axis, type BooleanOperation, type EdgeRef, type ExtrudeDirection, type ExtrudeEnd, type Feature, type FeatureType, type HoleEnd, type Variable, type Vec3 } from './feature.ts';
+import { CHAMFER_METHODS, type ChamferMethod, EXPRESSION_FIELDS, FILLET_METHODS, EXTRUDE_DIRECTIONS, MAX_DRAFT_ANGLE, REVOLVE_DIRECTIONS, type RevolveDirection, EXTRUDE_ENDS, HOLE_ENDS, type Axis, type BooleanOperation, type EdgeRef, type ExtrudeDirection, type ExtrudeEnd, type Feature, type FeatureType, type HoleEnd, type Variable, type Vec3 } from './feature.ts';
 import { HOLE_FITS, HOLE_KINDS } from './hole.ts';
 import { CUSTOM_MATERIAL, materialInfo, MAX_DENSITY, MIN_DENSITY, NO_PROPERTIES, type PartProperties } from './material.ts';
 import { MAX_PATTERN_COUNT } from './pattern.ts';
@@ -209,8 +209,8 @@ function extrudeEnd<T extends string>(value: unknown, path: string, ends: readon
 }
 
 /** A list of faces of the body by their persistent names. */
-function faceRefs(value: unknown, path: string): FaceNameRef[] {
-  if (!Array.isArray(value) || value.length > 1000) throw new ValidationError('expected a list of faces', path);
+function faceRefs(value: unknown, path: string, max = 1000): FaceNameRef[] {
+  if (!Array.isArray(value) || value.length > max) throw new ValidationError(`expected a list of up to ${max} faces`, path);
   return value.map((face, i) => {
     const ref = geometryRef(face, `${path}[${i}]`);
     if (ref.kind !== 'face') throw new ValidationError('expected a face', `${path}[${i}]`);
@@ -408,6 +408,8 @@ function parseFeatureFields(raw: Json, path: string): Feature {
         radius: positiveLength(raw.radius, `${path}.radius`),
         edges: edges(raw.edges, `${path}.edges`),
         ...(raw.faces === undefined ? {} : { faces: faceRefs(raw.faces, `${path}.faces`) }),
+        ...(raw.method === undefined ? {} : { method: method(raw.method, FILLET_METHODS, `${path}.method`) }),
+        ...(raw.round === undefined ? {} : { round: faceRefs(raw.round, `${path}.round`, 3) }),
       };
     case 'chamfer': {
       const chamfer: Feature = {

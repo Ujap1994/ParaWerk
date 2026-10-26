@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { hasReferenceSlots, isCopyFeature, isEdgeFeature, isSketchBased, type Vec3 } from '../../../shared/model/feature.ts';
+import { hasReferenceSlots, isCopyFeature, isEdgeFeature, isSketchBased, roundFaceCount, type Vec3 } from '../../../shared/model/feature.ts';
 import { resolveEdgeRefs } from '../../../shared/model/naming.ts';
 import { frameOf, STANDARD_PLANES } from '../../../shared/model/sketch.ts';
 import * as commands from '../commands.ts';
@@ -51,6 +51,11 @@ function visibleSelection(state: AppState): Pick[] {
     }
     return picks;
   }
+  // Once all three faces are picked, the preview shows the round; highlighting the faces would cover it.
+  if (edit?.draft.type === 'fillet' && roundFaceCount(edit.draft.method) > 0) {
+    const refs = edit.draft.round ?? [];
+    return refs.length >= roundFaceCount(edit.draft.method) && state.display.preview ? [] : referencePicks(refs, state);
+  }
   if (edit && isEdgeFeature(edit.draft)) {
     const naming = state.display.body?.naming;
     if (!naming) return [];
@@ -74,7 +79,7 @@ function pickFilter(state: AppState): PickFilter {
   if (state.sketch) return 'none';
   const edit = state.activeEdit;
   if (!edit) return 'all';
-  if (edit.draft.type === 'shell') return 'faces';
+  if (edit.draft.type === 'shell' || (edit.draft.type === 'fillet' && roundFaceCount(edit.draft.method) > 0)) return 'faces';
   return isEdgeFeature(edit.draft) ? 'edgesAndFaces' : picksReferences(edit.draft) ? 'references' : 'none';
 }
 

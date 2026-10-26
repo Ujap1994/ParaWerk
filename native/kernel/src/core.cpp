@@ -47,6 +47,8 @@
 #include <Bnd_Box.hxx>
 #include <GCPnts_TangentialDeflection.hxx>
 #include <GCE2d_MakeSegment.hxx>
+#include <GC_MakeArcOfCircle.hxx>
+#include <Geom_TrimmedCurve.hxx>
 #include <Geom2d_BSplineCurve.hxx>
 #include <Geom2d_Circle.hxx>
 #include <Geom2d_Ellipse.hxx>
@@ -1369,6 +1371,240 @@ int chamferUneven(int bodyId, const std::vector<int>& edgeIndices, double distan
     else maker.Add(distance, second, edge, face);
   }
   return finishEdgeFeature(maker, bodyId, edges, edgeNames, name, "chamfer", "chamfer could not be computed (distance too large?)");
+}
+
+namespace {
+
+/** The outward normal of a face where it is nearest to its center of area. */
+gp_Dir outwardNormal(const TopoDS_Face& face) {
+  GProp_GProps props;
+  BRepGProp::SurfaceProperties(face, props);
+  const occ::handle<Geom_Surface> surface = BRep_Tool::Surface(face);
+  GeomAPI_ProjectPointOnSurf projection(props.CentreOfMass(), surface);
+  if (projection.NbPoints() == 0) throw KernelError("operation-failed", "the face has no normal");
+  double u = 0, v = 0;
+  projection.LowerDistanceParameters(u, v);
+  GeomLProp_SLProps local(surface, u, v, 1, Precision::Confusion());
+  if (!local.IsNormalDefined()) throw KernelError("operation-failed", "the face has no normal");
+  gp_Dir normal = local.Normal();
+  if (face.Orientation() == TopAbs_REVERSED) normal.Reverse();
+  return normal;
+}
+
+double volumeOf(const TopoDS_Shape& shape) {
+  GProp_GProps props;
+  BRepGProp::VolumeProperties(shape, props);
+  return props.Mass();
+}
+
+}  // namespace
+
+int faceFillet(int bodyId, int faceA, int faceB, double radius, const std::string& name) {
+  const StoredShape& body = store().entry(bodyId);
+  ShapeMap faces;
+  TopExp::MapShapes(body.shape, TopAbs_FACE, faces);
+  const auto face = [&](int index) {
+    if (index < 0 || index >= faces.Extent()) throw KernelError("face-missing", "face " + std::to_string(index) + " does not exist");
+    return TopoDS::Face(faces(index + 1));
+  };
+  const TopoDS_Face a = face(faceA);
+  const TopoDS_Face b = face(faceB);
+  const std::optional<gp_Dir> na = planeNormal(a);
+  const std::optional<gp_Dir> nb = planeNormal(b);
+  if (!na || !nb) throw KernelError("round-planes", "a face fillet needs two planar faces");
+  const double k = na->Dot(*nb);
+  if (std::abs(k) > 1 - 1e-9) throw KernelError("round-planes", "the faces are parallel");
+  const double ha = gp_Vec(BRepAdaptor_Surface(a).Plane().Location().XYZ()).Dot(gp_Vec(*na));
+  const double hb = gp_Vec(BRepAdaptor_Surface(b).Plane().Location().XYZ()).Dot(gp_Vec(*nb));
+  // Where the planes meet: the point of that line nearest to the origin.
+  const gp_Vec va(*na), vb(*nb);
+  const double det = 1 - k * k;
+  const gp_Vec corner = va * ((ha - hb * k) / det) + vb * ((hb - ha * k) / det);
+  const gp_Dir along = na->Crossed(*nb);
+  // An outer corner has each face behind the other's plane (material between them); an inner one in front.
+  const auto centerOf = [](const TopoDS_Face& f) {
+    GProp_GProps props;
+    BRepGProp::SurfaceProperties(f, props);
+    return gp_Vec(props.CentreOfMass().XYZ());
+  };
+  const double aBehindB = centerOf(a).Dot(vb) - hb;
+  const double bBehindA = centerOf(b).Dot(va) - ha;
+  if ((aBehindB < 0) != (bBehindA < 0)) throw KernelError("round-planes", "the faces form no corner to round");
+  const bool outer = aBehindB < 0;
+  // The axis of the round lies `radius` from both planes: inside the material at an outer corner.
+  const double sign = outer ? -1 : 1;
+  const gp_Vec axis = corner + (va + vb) * (sign * radius / (1 + k));
+  const gp_Vec ta = axis - va * (sign * radius);
+  const gp_Vec tb = axis - vb * (sign * radius);
+
+  // The stretch along the corner where both faces are.
+  const auto span = [&](const TopoDS_Face& f) {
+    gp_Trsf toAlong;
+    toAlong.SetTransformation(gp_Ax3(gp_Pnt(0, 0, 0), along));
+    Bnd_Box box;
+    BRepBndLib::AddOptimal(f.Moved(TopLoc_Location(toAlong)), box, false, false);
+    double x0, y0, z0, x1, y1, z1;
+    box.Get(x0, y0, z0, x1, y1, z1);
+    return std::pair<double, double>(z0, z1);
+  };
+  const auto [a0, a1] = span(a);
+  const auto [b0, b1] = span(b);
+  const double from = std::max(a0, b0);
+  const double to = std::min(a1, b1);
+  if (!(to - from > Precision::Confusion())) throw KernelError("round-planes", "the faces do not run side by side");
+  // The round must start on the faces themselves, not past their ends.
+  const gp_Vec middle = gp_Vec(along) * ((from + to) / 2);
+  const auto onFace = [&](const TopoDS_Face& f, const gp_Vec& p) {
+    BRepExtrema_DistShapeShape gap(BRepBuilderAPI_MakeVertex(gp_Pnt((p + middle).XYZ())).Vertex(), f, Extrema_ExtFlag_MIN);
+    return gap.IsDone() && gap.Value() < 1e-6 * std::max(1.0, radius);
+  };
+  if (!onFace(a, ta) || !onFace(b, tb)) {
+    throw KernelError("round-radius", "the radius is too large for the faces");
+  }
+
+  // The corner region between the faces and the round, over that stretch.
+  // All of these lie in the plane through the origin across the corner; the region starts at `from`.
+  const auto at = [&](const gp_Vec& p) { return gp_Pnt((p + gp_Vec(along) * from).XYZ()); };
+  const gp_Vec cornerPoint = corner;
+  const gp_Vec mid = axis + (cornerPoint - axis).Normalized() * radius;
+  const occ::handle<Geom_TrimmedCurve> arc = GC_MakeArcOfCircle(at(ta), at(mid), at(tb)).Value();
+  const TopoDS_Edge arcEdge = BRepBuilderAPI_MakeEdge(arc).Edge();
+  BRepBuilderAPI_MakeWire wire(arcEdge, BRepBuilderAPI_MakeEdge(at(tb), at(cornerPoint)).Edge(), BRepBuilderAPI_MakeEdge(at(cornerPoint), at(ta)).Edge());
+  if (!wire.IsDone()) throw KernelError("operation-failed", "the round could not be outlined");
+  BRepPrimAPI_MakePrism prism(BRepBuilderAPI_MakeFace(wire.Wire(), true).Face(), gp_Vec(along) * (to - from));
+  if (!prism.IsDone()) throw KernelError("operation-failed", "the round could not be built");
+  StoredShape tool{prism.Shape(), {}};
+  {
+    FaceNamer namer(tool.shape);
+    namer.generated(prism, arcEdge, faceName(name, "round"));
+    namer.rest(faceName(name, "end"));
+    tool.names = namer.take();
+  }
+
+  const auto run = [&](BRepAlgoAPI_BooleanOperation& algorithm) {
+    configure(algorithm, body.shape, tool.shape);
+    if (algorithm.HasErrors()) throw KernelError("operation-failed", "the face fillet could not be computed");
+    algorithm.SimplifyResult(true, true, 1e-6);
+    const TopoDS_Shape result = algorithm.Shape();
+    requireValidSolid(result, "face fillet");
+    FaceNamer namer(result);
+    namer.inherit(algorithm, body.shape, body.names);
+    namer.inherit(algorithm, tool.shape, tool.names);
+    namer.rest(faceName(name, "round"));
+    return store().add(result, namer.take());
+  };
+  if (outer) {
+    BRepAlgoAPI_Cut algorithm;
+    return run(algorithm);
+  }
+  BRepAlgoAPI_Fuse algorithm;
+  return run(algorithm);
+}
+
+int fullRound(int bodyId, int side1, int center, int side2, const std::string& name) {
+  const StoredShape& body = store().entry(bodyId);
+  ShapeMap faces;
+  TopExp::MapShapes(body.shape, TopAbs_FACE, faces);
+  const auto face = [&](int index) {
+    if (index < 0 || index >= faces.Extent()) throw KernelError("face-missing", "face " + std::to_string(index) + " does not exist");
+    return TopoDS::Face(faces(index + 1));
+  };
+  const TopoDS_Face a = face(side1);
+  const TopoDS_Face b = face(side2);
+  const TopoDS_Face c = face(center);
+  // The sides: parallel planes facing away from each other, `width` apart.
+  const std::optional<gp_Dir> na = planeNormal(a);
+  const std::optional<gp_Dir> nb = planeNormal(b);
+  if (!na || !nb || na->Dot(*nb) > -1 + 1e-9) throw KernelError("round-sides", "the side faces must be parallel planes facing away from each other");
+  const gp_Pnt pa = BRepAdaptor_Surface(a).Plane().Location();
+  const gp_Pnt pb = BRepAdaptor_Surface(b).Plane().Location();
+  const double width = -gp_Vec(pa, pb).Dot(gp_Vec(*na));
+  if (!(width > Precision::Confusion())) throw KernelError("round-sides", "the side faces must face away from each other");
+  const gp_Dir n = *na;
+  const gp_Pnt middle = pa.Translated(gp_Vec(n) * (-width / 2));
+  // Across the sides and out of the center face: the round bulges that way.
+  const gp_Vec outward(outwardNormal(c));
+  const gp_Vec across = outward - gp_Vec(n) * outward.Dot(gp_Vec(n));
+  if (across.Magnitude() < 1e-6) throw KernelError("round-center", "the center face must lie between the side faces");
+  const gp_Dir out(across);
+  const gp_Dir along = n.Crossed(out);
+
+  // The center face in coordinates x out of it, y along it, z across the sides (from the middle plane).
+  const gp_Ax3 frame(middle, n, out);
+  gp_Trsf toFrame;
+  toFrame.SetTransformation(frame);
+  Bnd_Box box;
+  BRepBndLib::AddOptimal(c.Moved(TopLoc_Location(toFrame)), box, false, false);
+  double x0, y0, z0, x1, y1, z1;
+  box.Get(x0, y0, z0, x1, y1, z1);
+  const double tolerance = 1e-6 * std::max(1.0, width);
+  if (z0 < -width / 2 - tolerance || z1 > width / 2 + tolerance) throw KernelError("round-center", "the center face must lie between the side faces");
+  const double length = y1 - y0;
+  if (!(length > tolerance)) throw KernelError("round-center", "the center face has no length along the sides");
+  // The round touches the outermost point of the center face; its axis lies half the width inside.
+  const double axis = x1 - width / 2;
+  const double beyond = x1 + 0.05 * width;
+  const auto point = [&](double x, double y, double z) { return middle.Translated(gp_Vec(out) * x + gp_Vec(along) * y + gp_Vec(n) * z); };
+
+  // What is taken away: the slab between the sides beyond the axis, as far as the center face goes.
+  const TopoDS_Shape slab = BRepPrimAPI_MakeBox(gp_Ax2(point(axis, y0, -width / 2), n, out), beyond - axis, length, width).Shape();
+  // What comes back: half a cylinder over the same stretch.
+  const occ::handle<Geom_TrimmedCurve> arc = GC_MakeArcOfCircle(point(axis, y0, -width / 2), point(x1, y0, 0), point(axis, y0, width / 2)).Value();
+  const TopoDS_Edge arcEdge = BRepBuilderAPI_MakeEdge(arc).Edge();
+  BRepBuilderAPI_MakeWire wire(arcEdge, BRepBuilderAPI_MakeEdge(point(axis, y0, width / 2), point(axis, y0, -width / 2)).Edge());
+  if (!wire.IsDone()) throw KernelError("operation-failed", "the round could not be outlined");
+  BRepPrimAPI_MakePrism prism(BRepBuilderAPI_MakeFace(wire.Wire(), true).Face(), gp_Vec(along) * length);
+  if (!prism.IsDone()) throw KernelError("operation-failed", "the round could not be built");
+  StoredShape half{prism.Shape(), {}};
+  {
+    FaceNamer namer(half.shape);
+    namer.generated(prism, arcEdge, faceName(name, "round"));
+    namer.rest(faceName(name, "end"));
+    half.names = namer.take();
+  }
+
+  // Faces the slab leaves where the part goes on past the center face are named after the round too.
+  BRepAlgoAPI_Cut cut;
+  configure(cut, body.shape, slab);
+  if (cut.HasErrors()) throw KernelError("operation-failed", "the full round could not be cut");
+  StoredShape rest{cut.Shape(), {}};
+  {
+    FaceNamer namer(rest.shape);
+    namer.inherit(cut, body.shape, body.names);
+    namer.rest(faceName(name, "end"));
+    rest.names = namer.take();
+  }
+
+  // Where the slab held more than a plain block (holes, slots), only the material there is rounded.
+  StoredShape round = half;
+  BRepAlgoAPI_Common inside;
+  configure(inside, body.shape, slab);
+  if (inside.HasErrors()) throw KernelError("operation-failed", "the full round could not be cut");
+  const double block = width * length * (x1 - axis);
+  if (std::abs(volumeOf(inside.Shape()) - block) > 1e-6 * block) {
+    FaceNamer insideNamer(inside.Shape());
+    insideNamer.inherit(inside, body.shape, body.names);
+    const FaceNames insideNames = insideNamer.take();
+    BRepAlgoAPI_Common rounded;
+    configure(rounded, inside.Shape(), half.shape);
+    if (rounded.HasErrors()) throw KernelError("operation-failed", "the full round could not be shaped");
+    FaceNamer namer(rounded.Shape());
+    namer.inherit(rounded, half.shape, half.names);
+    namer.inherit(rounded, inside.Shape(), insideNames);
+    round = {rounded.Shape(), namer.take()};
+  }
+
+  BRepAlgoAPI_Fuse fuse;
+  configure(fuse, rest.shape, round.shape);
+  if (fuse.HasErrors()) throw KernelError("operation-failed", "the full round could not be joined to the part");
+  fuse.SimplifyResult(true, true, 1e-6);
+  const TopoDS_Shape result = fuse.Shape();
+  requireValidSolid(result, "full round");
+  FaceNamer namer(result);
+  namer.inherit(fuse, rest.shape, rest.names);
+  namer.inherit(fuse, round.shape, round.names);
+  namer.rest(faceName(name, "round"));
+  return store().add(result, namer.take());
 }
 
 int transformShape(int id, const std::vector<double>& transform) {

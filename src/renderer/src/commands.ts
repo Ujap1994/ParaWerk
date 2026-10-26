@@ -2,7 +2,7 @@ import { resolveLanguage } from '../../shared/i18n.ts';
 import type { MenuCommand } from '../../shared/ipc.ts';
 import { PART_FILE_EXTENSION } from '../../shared/app-info.ts';
 import { hashString } from '../../shared/hash.ts';
-import { COPYABLE_TYPES, type ImportFeature, defaultFeature, type BooleanOperation, hasReferenceSlots, isCopyFeature, isEdgeFeature, isReferenceFeature, isSketchBased, type EdgeRef, type ExtrudeEnd, extrudesOneWay, type Feature, type FeatureType, type HoleFeature, type ReferenceFeature, type SketchFeature, type SlotFeature } from '../../shared/model/feature.ts';
+import { COPYABLE_TYPES, type ImportFeature, defaultFeature, type BooleanOperation, hasReferenceSlots, isCopyFeature, isEdgeFeature, isReferenceFeature, isSketchBased, type EdgeRef, type ExtrudeEnd, extrudesOneWay, type Feature, type FilletMethod, roundFaceCount, type FeatureType, type HoleFeature, type ReferenceFeature, type SketchFeature, type SlotFeature } from '../../shared/model/feature.ts';
 import { holePositions, metricSize, sizesFor, standardHoleDimensions } from '../../shared/model/hole.ts';
 import { frameTransform } from '../../shared/model/frame.ts';
 import { sketchProfile } from '../../shared/model/profile.ts';
@@ -700,6 +700,32 @@ export function toggleShellFace(pick: Pick): void {
   }
   const ref = faceRefOf(naming, pick.index, pick.at);
   if (ref) updateDraft({ faces: [...edit.draft.faces, ref] });
+}
+
+/** Rounds edges with a constant radius, or makes a full round between two side faces. */
+export function setFilletMethod(method: FilletMethod): void {
+  const edit = getState().activeEdit;
+  if (edit?.draft.type !== 'fillet') return;
+  // The faces of one kind of round mean something else in the other: they are picked again.
+  updateDraft({ method, ...(roundFaceCount(method) > 0 && method !== edit.draft.method ? { round: [] } : {}) });
+}
+
+/**
+ * Picks the faces of the edited face fillet or full round in order (full round: side face 1, center face,
+ * side face 2); a face already picked is taken out with the ones after it.
+ */
+export function pickRoundFace(pick: Pick): void {
+  const { activeEdit: edit, display } = getState();
+  const naming = display.body?.naming;
+  if (edit?.draft.type !== 'fillet' || !naming || pick.kind !== 'face' || !pick.at) return;
+  const refs = edit.draft.round ?? [];
+  const at = refs.map((ref) => referencePicks([ref], getState())[0]?.index).indexOf(pick.index);
+  if (at >= 0) {
+    updateDraft({ round: refs.slice(0, at) });
+    return;
+  }
+  const ref = faceRefOf(naming, pick.index, pick.at);
+  if (ref && refs.length < roundFaceCount(edit.draft.method)) updateDraft({ round: [...refs, ref] });
 }
 
 /** Adds a face (all of its edges) to the edited fillet or chamfer, or removes it again. */
@@ -1441,6 +1467,10 @@ export function handlePick(pick: Pick | null, additive: boolean): void {
   // Sketch geometry is picked by the sketch layer, not here.
   if (state.sketch) return;
   const edit = state.activeEdit;
+  if (edit?.draft.type === 'fillet' && roundFaceCount(edit.draft.method) > 0) {
+    if (pick?.kind === 'face') pickRoundFace(pick);
+    return;
+  }
   if (edit && isEdgeFeature(edit.draft)) {
     if (pick?.kind === 'edge') toggleDraftEdge(pick.index);
     if (pick?.kind === 'face') toggleDraftFace(pick);

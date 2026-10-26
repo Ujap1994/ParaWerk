@@ -1,4 +1,4 @@
-import { COPYABLE_TYPES, isCopyFeature, isEdgeFeature, type CopyFeature, type EdgeFeature, type EdgeRef, type ExtrudeFeature, type Feature, type HoleFeature, type ShellFeature, type SketchFeature, type SolidModelingFeature, type Vec3 } from '../shared/model/feature.ts';
+import { COPYABLE_TYPES, isCopyFeature, isEdgeFeature, type CopyFeature, type EdgeFeature, type EdgeRef, type ExtrudeFeature, type Feature, type FilletFeature, roundFaceCount, type HoleFeature, type ShellFeature, type SketchFeature, type SolidModelingFeature, type Vec3 } from '../shared/model/feature.ts';
 import { circularTransforms, linearTransforms, mirrorTransform, type Transform } from '../shared/model/pattern.ts';
 import { holePositions, holeProblem } from '../shared/model/hole.ts';
 import { edgeFaceNames, edgeRefOf, faceRefOf, resolveEdgeRefs, resolveFaceRef, resolveFacePlane, type BodyNaming } from '../shared/model/naming.ts';
@@ -86,6 +86,20 @@ function checkedAxis([a, b]: [Point2, Point2], profile: Profile): [number, numbe
   return [a[0], a[1], b[0], b[1]];
 }
 
+/** The faces of a face fillet or full round in the body it rounds; each must be there. */
+function resolveRoundFaces(feature: FilletFeature, body: BodyQuery): ResolvedEdgeFeature {
+  const count = roundFaceCount(feature.method);
+  const refs = feature.round ?? [];
+  if (refs.length < count) throw new FeatureError('round-faces', `${refs.length}/${count}`);
+  const naming = body.naming();
+  const roundFaces = refs.slice(0, count).map((ref, slot) => {
+    const match = resolveFaceRef(ref, naming, (face, point) => Math.hypot(...minus(body.face(face).center, point)));
+    if (!match) throw new FeatureError('round-face-missing', String(slot + 1));
+    return match.index;
+  });
+  return { ...feature, edgeIndices: [], edgeNames: [], roundFaces };
+}
+
 /**
  * The edges a fillet or chamfer means in the body it modifies: its edges and all edges of its faces
  * (seams left out). Edges and faces that are gone are left out (and counted); when all are gone, the
@@ -93,6 +107,7 @@ function checkedAxis([a, b]: [Point2, Point2], profile: Profile): [number, numbe
  * their names when other edges join or leave the feature.
  */
 function resolveEdges(feature: EdgeFeature, body: BodyQuery): ResolvedEdgeFeature {
+  if (feature.type === 'fillet' && roundFaceCount(feature.method) > 0) return resolveRoundFaces(feature, body);
   const faces = feature.faces ?? [];
   if (feature.edges.length === 0 && faces.length === 0) throw new FeatureError('no-edges');
   const naming = body.naming();

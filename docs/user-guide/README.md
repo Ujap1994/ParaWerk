@@ -1,8 +1,8 @@
 # ParaWerk user guide
 
 > [!CAUTION]
-> ParaWerk is under active development. This guide describes alpha 0.3: the 2D sketcher of Phase 1
-> and part modeling of Phase 2.
+> ParaWerk is under active development. This guide describes alpha 0.3 and what has been added since
+> (marked in the [changelog](../../CHANGELOG.md)): the 2D sketcher of Phase 1 and part modeling of Phase 2.
 > Check every result before you manufacture anything.
 
 ![A bearing housing built from sketches in ParaWerk](../images/screenshots/part-modeling.png)
@@ -26,8 +26,8 @@
 
 | Area | Available now |
 |---|---|
-| Modeling | Extrude and revolve sketches (add or remove material; a depth, through all, up to the next face, a planar or curved surface or a vertex; two directions; draft), holes for metric screws (clearance, counterbore, countersink, tapped with cosmetic threads), linear and circular patterns and mirror images of features, box and cylinder, fillet and chamfer (equal, two distances, distance and angle) on edges picked in the 3D view, shells open at picked faces; features keep their edges and faces when earlier features change |
-| Reference geometry | Planes (offset, at an angle, through three points, between two planes, parallel through a point), axes and points that follow the part and carry sketches |
+| Modeling | Extrude and revolve sketches (add or remove material; a depth, through all, up to the next face, a planar or curved surface or a vertex; two directions; draft; thin features), holes for metric screws (clearance, counterbore, countersink, tapped with cosmetic threads), linear and circular patterns and mirror images of features, box and cylinder, fillet and chamfer (equal, two distances, distance and angle) on edges or whole faces picked in the 3D view, face fillets and full rounds, shells open at picked faces; features keep their edges and faces when earlier features change |
+| Reference geometry | Planes (offset, at an angle, through three points, between two planes, parallel through a point), axes, points and coordinate systems that follow the part and carry sketches |
 | Sketching | Sketches on the front, top and right plane and on planar faces, with their own undo history; lines, rectangles (corner, center, 3-point, parallelogram), circles, ellipses, arcs (center, 3-point, tangent), splines (with points on them, trimmed exactly), slots, polygons and points, with snapping and automatic relations; relations checked by the solver and shown as symbols next to the geometry; smart dimensions with reference dimensions; status colors and conflict diagnosis; trim, extend, sketch fillet and chamfer, offset, mirror, patterns, move, copy and scale; converting model edges; dragging with live solving; DXF import and export |
 | Feature tree | Edit, suppress and delete features; rollback bar to insert features in the middle of the history; reorder by dragging, with dependency checks; undo and redo |
 | Variables | Named values and equations for the whole part, used by name in parameters and sketch dimensions; calculations in every number field |
@@ -35,5 +35,5 @@
 | Files | Save and open `.pwpart` with recovery copies of unsaved work after a crash, import STEP as a body, export STEP (AP214), binary STL and 3MF with material and color |
 | Interface | English and German, light and dark theme, mouse and trackpad navigation |
 
-Thin features, face fillets and full rounds and coordinate systems follow in Phase 2; sweep, loft, rib and
-configurations in Phase 3, assemblies in Phase 4. See the [roadmap](../../ROADMAP.md).
+Sweep, loft, rib and configurations follow in Phase 3, assemblies in Phase 4. See the
+[roadmap](../../ROADMAP.md).

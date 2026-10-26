@@ -34,8 +34,9 @@ rebuilds your part; your document is not affected. Please report the steps that 
 
 ## Known limitations of the alpha
 
-- Not available yet: thin features, face fillets and full rounds, coordinate systems (rest of Phase 2);
-  sweep, loft, rib, draft as a feature and configurations (Phase 3); assemblies (Phase 4).
+- Not available yet: sweep, loft, rib, draft as a feature and configurations (Phase 3); assemblies
+  (Phase 4). Thin features offset lines, arcs and circles, not ellipses and splines; face fillets work
+  between planar faces.
 - No multi-body tools yet (combining, splitting or listing separate bodies of a part).
 - Converted model edges are fixed copies; they do not follow later changes of the model yet.
 - Ellipses can only be trimmed as a whole, and *Offset* leaves ellipses and splines out.

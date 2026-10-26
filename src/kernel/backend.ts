@@ -61,6 +61,8 @@ export type ResolvedEdgeFeature = EdgeFeature & {
   healedEdges?: EdgeRef[];
   /** How many referenced edges are gone and left out. */
   missingEdges?: number;
+  /** Face fillet: its two faces; full round: side face 1, the center face and side face 2 (topological indices). */
+  roundFaces?: number[];
 };
 
 /** A feature as a backend builds it, with its references to earlier features resolved. */

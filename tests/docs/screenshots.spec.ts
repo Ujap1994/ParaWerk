@@ -1108,3 +1108,56 @@ test('coordinate system screenshots', async () => {
   await page.screenshot({ path: out('mass-properties-csys.png') });
   await app.close();
 });
+
+test('full round screenshots', async () => {
+  const { app, page } = await launchApp({ width: 1440, height: 900 });
+  // A plate with two ribs; the front rib gets a full round, shown while it is edited.
+  await page.evaluate(() => {
+    const features = [
+      { id: 'p', type: 'box', operation: 'add', width: 100, depth: 60, height: 10, position: [0, 0, 0] },
+      { id: 'rib', type: 'box', operation: 'add', width: 80, depth: 8, height: 25, position: [0, -12, 10] },
+      { id: 'rib2', type: 'box', operation: 'add', width: 80, depth: 8, height: 25, position: [0, 12, 10] },
+      {
+        id: 'round', type: 'fillet', radius: 1, edges: [], method: 'fullRound', name: 'Full round',
+        round: [{ kind: 'face', name: 'rib:front', at: [0, -16, 22] }, { kind: 'face', name: 'rib:top', at: [0, -12, 35] }, { kind: 'face', name: 'rib:back', at: [0, -8, 22] }],
+      },
+    ];
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features, past: [], future: [] }, savedFeatures: features, fileName: 'Ribbed plate' });
+  });
+  await idle(page);
+  await page.evaluate(() => (window as unknown as { __parawerk: { viewport: { zoomToFit(): void } } }).__parawerk.viewport.zoomToFit());
+  await page.locator('.feature-tree .tree-item[data-feature-id="round"]').dblclick();
+  await idle(page);
+  const canvas = await page.locator('.viewport-canvas').boundingBox();
+  if (canvas) await page.mouse.move(canvas.x + canvas.width - 30, canvas.y + canvas.height - 30);
+  await page.waitForTimeout(600);
+  await page.screenshot({ path: out('fillet-full-round.png') });
+  await page.click('[data-testid="panel-ok"]');
+  await app.close();
+});
+
+test('face fillet screenshots', async () => {
+  const { app, page } = await launchApp({ width: 1440, height: 900 });
+  // An angle bracket: the inner corner between floor and wall filled with a round of 8 mm.
+  await page.evaluate(() => {
+    const features = [
+      { id: 'floor', type: 'box', operation: 'add', width: 100, depth: 60, height: 10, position: [0, 0, 0] },
+      { id: 'wall', type: 'box', operation: 'add', width: 10, depth: 60, height: 60, position: [-45, 0, 10] },
+      {
+        id: 'round', type: 'fillet', radius: 8, edges: [], method: 'faces', name: 'Inner round',
+        round: [{ kind: 'face', name: 'floor:top', at: [10, 0, 10] }, { kind: 'face', name: 'wall:right', at: [-40, 0, 40] }],
+      },
+    ];
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features, past: [], future: [] }, savedFeatures: features, fileName: 'Angle bracket' });
+  });
+  await idle(page);
+  await page.evaluate(() => (window as unknown as { __parawerk: { viewport: { zoomToFit(): void } } }).__parawerk.viewport.zoomToFit());
+  await page.locator('.feature-tree .tree-item[data-feature-id="round"]').dblclick();
+  await idle(page);
+  const canvas = await page.locator('.viewport-canvas').boundingBox();
+  if (canvas) await page.mouse.move(canvas.x + canvas.width - 30, canvas.y + canvas.height - 30);
+  await page.waitForTimeout(600);
+  await page.screenshot({ path: out('fillet-faces.png') });
+  await page.click('[data-testid="panel-ok"]');
+  await app.close();
+});

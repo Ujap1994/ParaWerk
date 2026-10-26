@@ -92,20 +92,22 @@ Alpha 0.3 adds part modeling (Phase 2) to the 2D sketcher of Phase 1:
 
 - **Solid features:** **extrude** and **revolve** sketches (add or remove material) – a depth, through
   all, up to the next face, up to a planar or curved surface or a vertex, in one or two directions, with
-  a draft angle; **holes** for ISO metric screws (clearance, counterbore, countersink, tapped with
-  cosmetic threads); **linear and circular patterns** and **mirror** images; **shell**; **fillet** and
-  **chamfer** (equal, two distances, distance and angle); box and cylinder; **STEP import** as a body.
+  a draft angle, also as **thin features** (walls along open or closed curves); **holes** for ISO metric
+  screws (clearance, counterbore, countersink, tapped with cosmetic threads); **linear and circular
+  patterns** and **mirror** images; **shell**; **fillet** (on edges or whole faces, face fillets also
+  without a shared edge, full rounds) and **chamfer** (equal, two distances, distance and angle); box and
+  cylinder; **STEP import** as a body.
 - **Stable edits:** faces are named after the feature that made them, so fillets, chamfers, sketches on
   faces and other references stay in place when earlier features change; lost edges are marked instead
   of breaking the part. A reference suite of 33 parts checks this in every CI run.
-- **Reference geometry:** planes, axes and points built on the part or on each other; they carry
-  sketches and follow the part.
+- **Reference geometry:** planes, axes, points and coordinate systems built on the part or on each other;
+  they carry sketches and follow the part.
 - **Feature tree and property panels:** live preview while editing, rollback bar to insert features in
   the middle of the history, reorder by dragging (with dependency checks), suppress, delete, undo and
   redo; clear errors and warnings that point to the cause.
 - **Evaluation:** materials (27 metals, plastics and woods, or your own density) and part colors; exact
-  mass, volume, center of mass and moments of inertia; measuring distances, angles and center distances;
-  section views with filled cut faces.
+  mass, volume, center of mass and moments of inertia, also in a coordinate system; measuring distances,
+  angles and center distances; section views with filled cut faces.
 - **Variables and equations:** named values for the whole part, used by name in parameters and sketch
   dimensions; calculations with units in every number field.
 - **2D sketcher:** sketches on the standard planes, planar faces and reference planes, with their own
@@ -123,7 +125,7 @@ Alpha 0.3 adds part modeling (Phase 2) to the 2D sketcher of Phase 1:
   - *Splines, model edges, DXF:* splines through fit points that trim exactly, converting edges of the
     part into the sketch, DXF import and export for laser cutting and CNC.
 - **Files:** native `.pwpart` files with crash recovery of unsaved work; STEP import; STEP, binary STL
-  and 3MF (with material and color) export.
+  and 3MF (with material and color) export, also in a coordinate system.
 - **3D view:** shaded model with edges, view cube, standard views, orthographic and perspective
   projection, rotation around the point under the cursor, zoom towards the cursor, mouse and trackpad
   presets, hover and selection highlighting of faces, edges and vertices.
@@ -151,7 +153,6 @@ See the [user guide](docs/user-guide/README.md) for details.
 > Everything below is **planned**. Each item moves to "Available now", with screenshots, once it ships.
 
 ### Part modeling
-- Thin features, face fillets and full rounds, coordinate systems (rest of Phase 2)
 - Sweep, loft, rib, draft as a feature, variable fillets, multi-body parts
 - Configurations and design tables
 
