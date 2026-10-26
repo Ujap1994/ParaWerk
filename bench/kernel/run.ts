@@ -191,6 +191,16 @@ if (backendName === 'parawerk') {
     { id: 'spring', type: 'sweep', operation: 'add', sketch: 'wire', path: 'helix' },
   ];
   cases['sweep.spring10turns.rebuildWithProperties'] = measure((i) => kernel.rebuild(request(spring(5 + (i + 1) * 0.01), true)), { iterations: 3, warmup: 1 });
+  // A cut through 20 overlapping bodies (body by body, docs/adr/0011-multi-body-parts.md), and through the
+  // same boxes merged into one body. Only the cut changes between runs.
+  const row = (merge: boolean, radius: number): Feature[] => [
+    ...Array.from({ length: 20 }, (_, k): Feature => ({ id: `b${k}`, type: 'box', operation: 'add', ...(merge || k === 0 ? {} : { merge: false }), width: 20, depth: 30, height: 30, position: [k * 15, 0, 0] })),
+    { id: 'bore', type: 'cylinder', operation: 'cut', radius, height: 400, axis: 'x', position: [-20, 0, 15] },
+  ];
+  for (const merge of [false, true]) {
+    kernel.rebuild(request(row(merge, 5)));
+    cases[`bodies.20${merge ? 'merged' : 'overlapping'}.cutThrough`] = measure((i) => kernel.rebuild(request(row(merge, 5 + (i + 1) * 0.01))), { iterations: 5, warmup: 1 });
+  }
   kernel.rebuild(request(lidHoles(5)));
   cases['extrude.upToNext.cut25outlines'] = measure((i) => kernel.rebuild(request(lidHoles(5 + (i + 1) * 0.01))), { iterations: 5, warmup: 1 });
 }
