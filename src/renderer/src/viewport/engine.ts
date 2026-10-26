@@ -62,7 +62,8 @@ import { VIEW_DIRECTIONS, viewQuaternion, type StandardView } from './views.ts';
 
 /** What a click can pick: everything, only edges (fillet, chamfer), planes and planar faces (choosing a sketch plane) or nothing. */
 /** What a click can pick: anything, only edges (fillets), only faces (shells), only planes (sketch planes), references (reference geometry) or nothing. */
-export type PickFilter = 'all' | 'edges' | 'faces' | 'planes' | 'references' | 'none';
+/** `edgesAndFaces`: fillets and chamfers (an edge where one is near, otherwise the face, no vertices). */
+export type PickFilter = 'all' | 'edges' | 'edgesAndFaces' | 'faces' | 'planes' | 'references' | 'none';
 
 /** Pointer position in sketch mode: CSS pixels on the canvas and sketch coordinates on the sketch plane. */
 export interface SketchPointer {
@@ -904,9 +905,10 @@ export class ViewportEngine {
     // Faces always occlude what lies behind them, even when they cannot be picked themselves.
     const faceHit = body ? this.firstShownHit(body.mesh) : undefined;
     const edgeHit = body && this.pickFilter !== 'planes' && this.pickFilter !== 'faces' ? this.firstShownHit(body.edges) : undefined;
-    const planeHit = this.pickFilter === 'edges' || this.pickFilter === 'faces' ? null : this.referencePlanes.intersect(this.raycaster);
+    const bodyOnly = this.pickFilter === 'edges' || this.pickFilter === 'edgesAndFaces' || this.pickFilter === 'faces';
+    const planeHit = bodyOnly ? null : this.referencePlanes.intersect(this.raycaster);
     // Choosing a sketch plane takes reference planes, not axes or points.
-    const referenceHit = this.pickFilter === 'edges' || this.pickFilter === 'faces' ? null : this.referenceGeometry.intersect(this.raycaster, this.pickFilter === 'planes' ? 'plane' : undefined);
+    const referenceHit = bodyOnly ? null : this.referenceGeometry.intersect(this.raycaster, this.pickFilter === 'planes' ? 'plane' : undefined);
     const worldPerPixel = this.controller.state.height / this.height;
     const tolerance = worldPerPixel * 8;
     const at = (point: Vector3): Vec3 => [point.x, point.y, point.z];
@@ -914,7 +916,7 @@ export class ViewportEngine {
     if (body && edgeHit && edgeHit.faceIndex !== undefined && edgeHit.faceIndex !== null && (!faceHit || edgeHit.distance <= faceHit.distance + tolerance)) {
       const edge = body.edgeOfSegment(edgeHit.faceIndex);
       // Near the end of an edge the vertex there is picked (not for fillets, which take edges only).
-      const vertex = this.pickFilter === 'edges' ? null : body.vertexNear(edge, edgeHit.point, worldPerPixel * VERTEX_PICK_PX);
+      const vertex = this.pickFilter === 'edges' || this.pickFilter === 'edgesAndFaces' ? null : body.vertexNear(edge, edgeHit.point, worldPerPixel * VERTEX_PICK_PX);
       if (vertex !== null) return { kind: 'vertex', index: vertex, at: at(body.vertexPosition(vertex)) };
       return { kind: 'edge', index: edge, at: at(edgeHit.point) };
     }
@@ -927,7 +929,7 @@ export class ViewportEngine {
     // and planes stay pickable where they extend beyond the part (and in the feature tree).
     if (body && faceHit && faceHit.faceIndex !== undefined && faceHit.faceIndex !== null) {
       const face = body.faceOfTriangle(faceHit.faceIndex);
-      if (this.pickFilter === 'all' || this.pickFilter === 'references' || this.pickFilter === 'faces' || (this.pickFilter === 'planes' && body.isPlanarFace(face))) {
+      if (this.pickFilter === 'all' || this.pickFilter === 'references' || this.pickFilter === 'faces' || this.pickFilter === 'edgesAndFaces' || (this.pickFilter === 'planes' && body.isPlanarFace(face))) {
         return { kind: 'face', index: face, at: at(faceHit.point) };
       }
     }

@@ -1138,6 +1138,32 @@ test('creates a coordinate system, gives mass properties in it and exports in it
   expect(top).toBeCloseTo(0, 4);
 });
 
+test('rounds all edges of a face picked in the 3D view', async () => {
+  launched = await launchApp({ width: 1000, height: 640 });
+  const { page } = launched;
+  await createBox(page);
+  await page.click('[data-command="fillet"]');
+  await idle(page);
+  // The middle of the top face, away from its edges.
+  await clickWorldPoint(page, [10, 10, 40]);
+  await expect(page.locator('[data-testid="face-count"]')).toContainText('1 face');
+  await page.locator('[data-testid="fillet-radius"]').fill('5');
+  await page.click('[data-testid="panel-ok"]');
+  // Four rounded top edges (100, 60, 100, 60 mm) remove r²(1 − π/4) per mm, less where they meet at the corners.
+  const volume = await (async () => {
+    await idle(page);
+    return (await state(page)).rebuild?.properties?.volume ?? NaN;
+  })();
+  expect(volume).toBeLessThan(240_000 - 25 * (1 - Math.PI / 4) * 300);
+  expect(volume).toBeGreaterThan(240_000 - 25 * (1 - Math.PI / 4) * 320);
+  expect((await state(page)).history.features[1]).toMatchObject({ type: 'fillet', edges: [], faces: [{ kind: 'face', name: expect.stringMatching(/:top$/) }] });
+  // Clicking the face again takes it out.
+  await page.locator('.feature-tree .tree-item[data-feature-id]').nth(1).dblclick();
+  await idle(page);
+  await clickWorldPoint(page, [10, 10, 40]);
+  await expect(page.locator('[data-testid="face-count"]')).toHaveCount(0);
+});
+
 test('cutting from a sketch on a face goes into the part, and a cut that misses warns', async () => {
   launched = await launchApp({ width: 1440, height: 900 });
   const { page } = launched;

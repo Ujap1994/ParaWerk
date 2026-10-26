@@ -176,7 +176,8 @@ First preview released as [v0.3.0-alpha.0](https://github.com/Ujap1994/ParaWerk/
 | Extrude up to next and up to curved surfaces (with offset) | ✅ done |
 | Thin feature (extrude and revolve; lines, arcs and circles) | ✅ done |
 | Coordinate systems (mass properties and exports in them) | ✅ done |
-| Face fillet, full round | open |
+| Fillets and chamfers on all edges of picked faces | ✅ done |
+| Fillet between faces that share no edge, full round | open |
 
 ## 2. Guiding principles
 

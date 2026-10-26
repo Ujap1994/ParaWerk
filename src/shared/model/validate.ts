@@ -3,7 +3,7 @@ import { HOLE_FITS, HOLE_KINDS } from './hole.ts';
 import { CUSTOM_MATERIAL, materialInfo, MAX_DENSITY, MIN_DENSITY, NO_PROPERTIES, type PartProperties } from './material.ts';
 import { MAX_PATTERN_COUNT } from './pattern.ts';
 import { THIN_SIDES, type ThinSide } from './thin.ts';
-import { AXIS_METHODS, CSYS_METHODS, PLANE_METHODS, POINT_METHODS, type GeometryRef } from './reference.ts';
+import { AXIS_METHODS, CSYS_METHODS, PLANE_METHODS, POINT_METHODS, type FaceNameRef, type GeometryRef } from './reference.ts';
 import { parseSketchData, parsePlaneRef } from './validate-sketch.ts';
 
 export class ValidationError extends Error {
@@ -208,6 +208,16 @@ function extrudeEnd<T extends string>(value: unknown, path: string, ends: readon
   return value as T;
 }
 
+/** A list of faces of the body by their persistent names. */
+function faceRefs(value: unknown, path: string): FaceNameRef[] {
+  if (!Array.isArray(value) || value.length > 1000) throw new ValidationError('expected a list of faces', path);
+  return value.map((face, i) => {
+    const ref = geometryRef(face, `${path}[${i}]`);
+    if (ref.kind !== 'face') throw new ValidationError('expected a face', `${path}[${i}]`);
+    return ref;
+  });
+}
+
 /** The thin-feature fields of an extrusion or revolution (absent: a solid profile). */
 function thinWalls(raw: Json, path: string): { thin?: ThinSide; thickness?: number } {
   if (raw.thin !== undefined && !(THIN_SIDES as readonly unknown[]).includes(raw.thin)) throw new ValidationError(`expected ${THIN_SIDES.join(', ')}`, `${path}.thin`);
@@ -397,6 +407,7 @@ function parseFeatureFields(raw: Json, path: string): Feature {
         type: 'fillet',
         radius: positiveLength(raw.radius, `${path}.radius`),
         edges: edges(raw.edges, `${path}.edges`),
+        ...(raw.faces === undefined ? {} : { faces: faceRefs(raw.faces, `${path}.faces`) }),
       };
     case 'chamfer': {
       const chamfer: Feature = {
@@ -404,6 +415,7 @@ function parseFeatureFields(raw: Json, path: string): Feature {
         type: 'chamfer',
         distance: positiveLength(raw.distance, `${path}.distance`),
         edges: edges(raw.edges, `${path}.edges`),
+        ...(raw.faces === undefined ? {} : { faces: faceRefs(raw.faces, `${path}.faces`) }),
       };
       if (raw.method !== undefined) {
         if (!CHAMFER_METHODS.includes(raw.method as ChamferMethod)) throw new ValidationError(`expected one of ${CHAMFER_METHODS.join(', ')}`, `${path}.method`);
@@ -421,14 +433,8 @@ function parseFeatureFields(raw: Json, path: string): Feature {
       return chamfer;
     }
     case 'shell': {
-      if (!Array.isArray(raw.faces) || raw.faces.length > 1000) throw new ValidationError('expected a list of faces', `${path}.faces`);
       if (typeof raw.outward !== 'boolean') throw new ValidationError('expected true or false', `${path}.outward`);
-      const faces = raw.faces.map((face, i) => {
-        const ref = geometryRef(face, `${path}.faces[${i}]`);
-        if (ref.kind !== 'face') throw new ValidationError('expected a face', `${path}.faces[${i}]`);
-        return ref;
-      });
-      return { ...common, type: 'shell', thickness: positiveLength(raw.thickness, `${path}.thickness`), faces, outward: raw.outward };
+      return { ...common, type: 'shell', thickness: positiveLength(raw.thickness, `${path}.thickness`), faces: faceRefs(raw.faces, `${path}.faces`), outward: raw.outward };
     }
     default:
       throw new ValidationError(`unknown feature type ${JSON.stringify(raw.type)}`, `${path}.type`);

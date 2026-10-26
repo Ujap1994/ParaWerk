@@ -31,7 +31,8 @@ export function formatVersionOf(features: readonly Feature[], properties: PartPr
     feature.type === 'csys' ||
     (feature.type === 'extrude' && (feature.end === 'upToNext' || feature.direction === 'two' || (feature.draft ?? 0) > 0)) ||
     ((feature.type === 'extrude' || feature.type === 'revolve') && feature.thin !== undefined) ||
-    (feature.type === 'chamfer' && feature.method !== undefined && feature.method !== 'equal');
+    (feature.type === 'chamfer' && feature.method !== undefined && feature.method !== 'equal') ||
+    (isEdgeFeature(feature) && feature.faces !== undefined && feature.faces.length > 0);
   if (properties.material !== undefined || properties.color !== undefined || features.some(seventh)) return 7;
   const reference = (feature: Feature) =>
     isReferenceFeature(feature) ||

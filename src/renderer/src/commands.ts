@@ -308,15 +308,22 @@ export function startFeature(type: FeatureType): void {
     }
     draft = { ...draft, sketch: sketch.id };
   } else if (isEdgeFeature(draft)) {
-    // Edges selected before starting the command are taken over (select first, then act).
+    // Edges and faces selected before starting the command are taken over (select first, then act).
     const naming = getState().display.body?.naming;
+    const selection = getState().selection;
     const edges: EdgeRef[] = naming
-      ? getState().selection.flatMap((pick) => {
+      ? selection.flatMap((pick) => {
           const ref = pick.kind === 'edge' ? edgeRefOf(naming, pick.index) : null;
           return ref ? [ref] : [];
         })
       : [];
-    draft = { ...draft, edges };
+    const faces = naming
+      ? selection.flatMap((pick) => {
+          const ref = pick.kind === 'face' && pick.at ? faceRefOf(naming, pick.index, pick.at) : null;
+          return ref ? [ref] : [];
+        })
+      : [];
+    draft = { ...draft, edges, ...(faces.length > 0 ? { faces } : {}) };
   } else if (isReferenceFeature(draft)) {
     // What was selected before starting becomes the references, and decides the method (select first, then act).
     draft = withSelectedReferences(draft, getState().selection);
@@ -693,6 +700,22 @@ export function toggleShellFace(pick: Pick): void {
   }
   const ref = faceRefOf(naming, pick.index, pick.at);
   if (ref) updateDraft({ faces: [...edit.draft.faces, ref] });
+}
+
+/** Adds a face (all of its edges) to the edited fillet or chamfer, or removes it again. */
+export function toggleDraftFace(pick: Pick): void {
+  const { activeEdit: edit, display } = getState();
+  const naming = display.body?.naming;
+  if (!edit || !isEdgeFeature(edit.draft) || !naming || pick.kind !== 'face' || !pick.at) return;
+  const faces = edit.draft.faces ?? [];
+  // One entry per reference (also for faces that are gone), so the positions match the list.
+  const at = faces.map((ref) => referencePicks([ref], getState())[0]?.index).indexOf(pick.index);
+  if (at >= 0) {
+    updateDraft({ faces: faces.filter((_, i) => i !== at) });
+    return;
+  }
+  const ref = faceRefOf(naming, pick.index, pick.at);
+  if (ref) updateDraft({ faces: [...faces, ref] });
 }
 
 /** Removes the edges of the edited fillet or chamfer that no longer exist in the body it modifies. */
@@ -1420,6 +1443,7 @@ export function handlePick(pick: Pick | null, additive: boolean): void {
   const edit = state.activeEdit;
   if (edit && isEdgeFeature(edit.draft)) {
     if (pick?.kind === 'edge') toggleDraftEdge(pick.index);
+    if (pick?.kind === 'face') toggleDraftFace(pick);
     return;
   }
   if (edit && isCopyFeature(edit.draft)) {

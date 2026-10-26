@@ -327,8 +327,21 @@ function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
           </Section>
           <Section title={t('panel.edges')}>
             <div className="edge-summary">
-              <span data-testid="edge-count">{t('panel.edgesCount', { count: draft.edges.length })}</span>
-              <button type="button" className="text-button" disabled={draft.edges.length === 0} onClick={() => commands.updateDraft({ edges: [] })}>
+              <span>
+                <span data-testid="edge-count">{t('panel.edgesCount', { count: draft.edges.length })}</span>
+                {(draft.faces?.length ?? 0) > 0 ? (
+                  <>
+                    <br />
+                    <span data-testid="face-count">{t('panel.facesCount', { count: draft.faces?.length ?? 0 })}</span>
+                  </>
+                ) : null}
+              </span>
+              <button
+                type="button"
+                className="text-button"
+                disabled={draft.edges.length === 0 && (draft.faces?.length ?? 0) === 0}
+                onClick={() => commands.updateDraft({ edges: [], faces: [] })}
+              >
                 {t('panel.clearEdges')}
               </button>
             </div>

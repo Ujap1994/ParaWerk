@@ -171,11 +171,17 @@ Rounds edges with a constant *Radius*. Click edges in the 3D view to add or remo
 are orange). While you edit, the 3D view shows the result and draws the original edges as thin blue lines,
 so you can keep picking.
 
+Click a **face** instead of an edge to round all of its edges at once – the rim of a top face, both
+circles of a boss. The face stays in the fillet as a face: edges it gets later, for example from a hole
+cut into it before the fillet, are rounded too. Seams of round faces are left out. A click near an edge
+picks the edge; click the face again to take it out. Faces and edges selected before choosing **Fillet**
+are taken over.
+
 ![Fillet preview](../images/screenshots/fillet-preview.png)
 
 ## Chamfer
 
-Bevels edges. Edge selection works like for fillets. *Size* decides the shape of the bevel:
+Bevels edges. Edge and face selection works like for fillets. *Size* decides the shape of the bevel:
 
 - **Distance:** the same distance on both faces of each edge (a 45° bevel).
 - **Two distances:** *Distance 1* along one face of the edge, *Distance 2* along the other.

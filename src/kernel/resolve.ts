@@ -10,7 +10,7 @@ import type { Point2 } from '../shared/model/spline.ts';
 import { hashString } from '../shared/hash.ts';
 import type { KernelFeature, ResolvedCopy, ResolvedEdgeFeature, ResolvedExtrude, ResolvedHole, ResolvedShell } from './backend.ts';
 import { FeatureError } from './feature-error.ts';
-import { axisOfReference, curvedFaceOfReference, referenceValue, type ReferenceContext } from './reference.ts';
+import { axisOfReference, curvedFaceOfReference, referenceValue, type BodyQuery, type ReferenceContext } from './reference.ts';
 
 const coordinate = (value: number) => String(Math.round(value * 100) / 100);
 
@@ -87,15 +87,19 @@ function checkedAxis([a, b]: [Point2, Point2], profile: Profile): [number, numbe
 }
 
 /**
- * The edges a fillet or chamfer means in the body it modifies. Edges that are gone are left out (and
- * counted); when all are gone, the feature fails. The faces made for an edge are named after the faces
- * it lies between, so they keep their names when other edges join or leave the feature.
+ * The edges a fillet or chamfer means in the body it modifies: its edges and all edges of its faces
+ * (seams left out). Edges and faces that are gone are left out (and counted); when all are gone, the
+ * feature fails. The faces made for an edge are named after the faces it lies between, so they keep
+ * their names when other edges join or leave the feature.
  */
-function resolveEdges(feature: EdgeFeature, naming: BodyNaming): ResolvedEdgeFeature {
-  if (feature.edges.length === 0) throw new FeatureError('no-edges');
+function resolveEdges(feature: EdgeFeature, body: BodyQuery): ResolvedEdgeFeature {
+  const faces = feature.faces ?? [];
+  if (feature.edges.length === 0 && faces.length === 0) throw new FeatureError('no-edges');
+  const naming = body.naming();
   const matches = resolveEdgeRefs(feature.edges, naming);
-  const missing = matches.filter((match) => match === null).length;
-  if (missing === matches.length) throw new FeatureError('edge-missing', String(missing));
+  const faceMatches = faces.map((ref) => resolveFaceRef(ref, naming, (face, point) => Math.hypot(...minus(body.face(face).center, point))));
+  const missing = [...matches, ...faceMatches].filter((match) => match === null).length;
+  if (missing === matches.length + faceMatches.length) throw new FeatureError('edge-missing', String(missing));
   const edgeIndices: number[] = [];
   const edgeNames: string[] = [];
   let healed = false;
@@ -113,6 +117,15 @@ function resolveEdges(feature: EdgeFeature, naming: BodyNaming): ResolvedEdgeFea
     healed = true;
     return current;
   });
+  // Every edge of the faces, as they are now: edges a face gets later are rounded too.
+  const faceIndices = new Set(faceMatches.flatMap((match) => (match ? [match.index] : [])));
+  for (let edge = 0; faceIndices.size > 0 && edge < naming.edgeFaces.length / 2; edge++) {
+    const [a, b] = [naming.edgeFaces[2 * edge] ?? -1, naming.edgeFaces[2 * edge + 1] ?? -1];
+    // Seams (the same face on both sides) and degenerate edges cannot be rounded.
+    if (a === b || !(faceIndices.has(a) || faceIndices.has(b)) || edgeIndices.includes(edge) || !edgeRefOf(naming, edge)) continue;
+    edgeIndices.push(edge);
+    edgeNames.push(`${feature.id}:${hashString(edgeFaceNames(naming, edge).join('|'))}`);
+  }
   return { ...feature, edgeIndices, edgeNames, ...(healed ? { healedEdges } : {}), ...(missing > 0 ? { missingEdges: missing } : {}) };
 }
 
@@ -281,7 +294,7 @@ export function resolveFeature(feature: SolidModelingFeature, before: readonly F
   if (feature.type === 'shell') return resolveShell(feature, context);
   if (isEdgeFeature(feature)) {
     if (!context.body) throw new FeatureError('no-body');
-    return resolveEdges(feature, context.body.naming());
+    return resolveEdges(feature, context.body);
   }
   if (feature.type !== 'extrude' && feature.type !== 'revolve' && feature.type !== 'hole') return feature;
   const sketch = before.find((candidate): candidate is SketchFeature => candidate.type === 'sketch' && candidate.id === feature.sketch);

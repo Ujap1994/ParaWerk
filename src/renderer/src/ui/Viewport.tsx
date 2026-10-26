@@ -54,7 +54,8 @@ function visibleSelection(state: AppState): Pick[] {
   if (edit && isEdgeFeature(edit.draft)) {
     const naming = state.display.body?.naming;
     if (!naming) return [];
-    return resolveEdgeRefs(edit.draft.edges, naming).flatMap((match) => (match ? [{ kind: 'edge' as const, index: match.index }] : []));
+    const edges = resolveEdgeRefs(edit.draft.edges, naming).flatMap((match) => (match ? [{ kind: 'edge' as const, index: match.index }] : []));
+    return [...edges, ...referencePicks(edit.draft.faces ?? [], state)];
   }
   return state.selection;
 }
@@ -74,7 +75,7 @@ function pickFilter(state: AppState): PickFilter {
   const edit = state.activeEdit;
   if (!edit) return 'all';
   if (edit.draft.type === 'shell') return 'faces';
-  return isEdgeFeature(edit.draft) ? 'edges' : picksReferences(edit.draft) ? 'references' : 'none';
+  return isEdgeFeature(edit.draft) ? 'edgesAndFaces' : picksReferences(edit.draft) ? 'references' : 'none';
 }
 
 /** Sketches shown in the 3D view besides the open one: those before the current edit position, unless suppressed. */

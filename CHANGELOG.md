@@ -8,6 +8,8 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### Added
+- Fillets and chamfers on faces: clicking a face takes all of its edges (seams left out), also edges it
+  gets later, such as the rim of a hole cut into it before the fillet. A face picked again is taken out.
 - Coordinate systems (reference geometry): at a position turned around Z, or at a point with their X axis
   along a direction and their Y axis towards a second one; drawn as three colored arrows. Mass properties
   can be given relative to one (center of mass and inertia tensor), and exports (STEP, STL, 3MF) written in

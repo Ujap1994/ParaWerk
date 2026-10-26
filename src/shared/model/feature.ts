@@ -129,6 +129,8 @@ export interface FilletFeature extends FeatureBase {
   type: 'fillet';
   radius: number;
   edges: EdgeRef[];
+  /** Faces whose edges are all rounded too, also edges they get later (a hole cut into the face). */
+  faces?: FaceNameRef[];
 }
 
 /** How a chamfer is sized: the same distance on both faces, two distances, or a distance and an angle. */
@@ -149,6 +151,8 @@ export interface ChamferFeature extends FeatureBase {
   angle?: number;
   /** Measures `distance` on the other face of each edge. */
   flip?: boolean;
+  /** Faces whose edges are all beveled too, also edges they get later. */
+  faces?: FaceNameRef[];
 }
 
 /**
