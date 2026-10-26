@@ -34,6 +34,8 @@
 #include <BRepBuilderAPI_MakeVertex.hxx>
 #include <BRepGProp.hxx>
 #include <BRepOffsetAPI_DraftAngle.hxx>
+#include <BRepOffsetAPI_MakePipe.hxx>
+#include <BRepOffsetAPI_ThruSections.hxx>
 #include <BRep_Builder.hxx>
 #include <TopoDS_Compound.hxx>
 #include <BRepLib.hxx>
@@ -576,7 +578,7 @@ struct NamedEdges {
   }
 };
 
-TopoDS_Wire readLoop(ProfileReader& in, const occ::handle<Geom_Plane>& plane, NamedEdges& named) {
+TopoDS_Wire readLoop(ProfileReader& in, const occ::handle<Geom_Plane>& plane, NamedEdges& named, bool mustClose = true) {
   const int edgeCount = in.count(1 << 20);
   BRepBuilderAPI_MakeWire wire;
   for (int e = 0; e < edgeCount; ++e) {
@@ -587,7 +589,7 @@ TopoDS_Wire readLoop(ProfileReader& in, const occ::handle<Geom_Plane>& plane, Na
     // The wire may replace the edge to share vertices with its neighbours: remember the edge it keeps.
     named.add(wire.Edge());
   }
-  if (!wire.IsDone() || !wire.Wire().Closed()) throw KernelError("operation-failed", "a profile outline is not closed");
+  if (!wire.IsDone() || (mustClose && !wire.Wire().Closed())) throw KernelError("operation-failed", "a profile outline is not closed");
   return wire.Wire();
 }
 
@@ -769,6 +771,58 @@ int revolveProfile(const std::vector<double>& profile, const std::vector<double>
                    const std::vector<std::string>& edgeNames, const std::string& name) {
   StoredShape result = revolveRegions(profile, frame, axis, from, to, edgeNames, name);
   return store().add(result.shape, std::move(result.names));
+}
+
+int sweepProfile(const std::vector<double>& profile, const std::vector<double>& frame, const std::vector<double>& path, const std::vector<double>& pathFrame,
+                 const std::vector<std::string>& edgeNames, const std::string& name) {
+  // The path: one chain of curves (open or closed) on its own sketch plane.
+  ProfileReader pathData(path);
+  const std::vector<std::string> noNames;
+  NamedEdges pathEdges{noNames, {}};
+  const TopoDS_Wire spine = readLoop(pathData, framePlane(pathFrame), pathEdges, false);
+  const occ::handle<Geom_Plane> plane = framePlane(frame);
+  NamedEdges named{edgeNames, {}};
+  std::vector<StoredShape> solids;
+  for (const TopoDS_Face& face : readFaces(profile, plane, named)) {
+    BRepOffsetAPI_MakePipe pipe(spine, face);
+    pipe.Build();
+    if (!pipe.IsDone()) throw KernelError("sweep-failed", "the profile could not be swept along the path");
+    requireValidSolid(pipe.Shape(), "sweep");
+    solids.push_back({pipe.Shape(), sweepNames(pipe, named, name)});
+  }
+  StoredShape result = joinRegions(solids, "swept");
+  return store().add(result.shape, std::move(result.names));
+}
+
+int loftProfiles(const std::vector<double>& sections, bool ruled, const std::vector<std::string>& edgeNames, const std::string& name) {
+  // The sections in order: their count, then per section its plane (9 values) and its outline.
+  ProfileReader in(sections);
+  const int count = in.count(1000);
+  if (count < 2) throw KernelError("loft-sections", "a loft needs at least two profiles");
+  BRepOffsetAPI_ThruSections loft(true, ruled, 1e-6);
+  loft.CheckCompatibility(true);
+  NamedEdges first{edgeNames, {}};
+  const std::vector<std::string> noNames;
+  for (int s = 0; s < count; ++s) {
+    std::vector<double> frame(9);
+    for (double& value : frame) value = in.number();
+    NamedEdges others{noNames, {}};
+    loft.AddWire(readLoop(in, framePlane(frame), s == 0 ? first : others));
+  }
+  loft.Build();
+  if (!loft.IsDone()) throw KernelError("loft-failed", "the profiles could not be joined");
+  const TopoDS_Shape result = loft.Shape();
+  requireValidSolid(result, "loft");
+  // Side faces after the edges of the first profile, then the end faces.
+  FaceNamer namer(result);
+  for (const auto& [edge, edgeName] : first.edges) {
+    const TopoDS_Shape side = loft.GeneratedFace(edge);
+    if (!side.IsNull()) namer.assign(side, faceName(name, "side:" + edgeName));
+  }
+  namer.assign(loft.FirstShape(), faceName(name, "start"));
+  namer.assign(loft.LastShape(), faceName(name, "end"));
+  namer.rest(faceName(name, "side"));
+  return store().add(result, namer.take());
 }
 
 int cutHoles(int bodyId, const std::vector<double>& profile, const std::vector<double>& placements, const std::vector<std::string>& edgeNames,

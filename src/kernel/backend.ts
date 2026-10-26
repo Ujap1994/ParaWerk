@@ -1,7 +1,8 @@
-import type { CopyFeature, DraftFeature, EdgeFeature, EdgeRef, ExtrudeFeature, HoleFeature, RevolveFeature, ShellFeature, SolidModelingFeature, Vec3 } from '../shared/model/feature.ts';
+import type { CopyFeature, DraftFeature, EdgeFeature, LoftFeature, SweepFeature, EdgeRef, ExtrudeFeature, HoleFeature, RevolveFeature, ShellFeature, SolidModelingFeature, Vec3 } from '../shared/model/feature.ts';
 import type { FaceNameRef } from '../shared/model/reference.ts';
 import type { BodyNaming } from '../shared/model/naming.ts';
-import type { Profile } from '../shared/model/profile.ts';
+import type { Profile, ProfileLoop } from '../shared/model/profile.ts';
+import type { SketchPath } from '../shared/model/path.ts';
 import type { SketchFrame } from '../shared/model/sketch.ts';
 import type { EdgeGeometry, FaceGeometry, MassProperties, MeshPayload } from './protocol.ts';
 import type { MeasuredDistance, MeasureTarget } from './measure.ts';
@@ -20,6 +21,19 @@ export interface ResolvedExtrude extends ExtrudeFeature {
    * the sketch, negative past the face): the extrusion goes past the body and is stopped there.
    */
   limit?: { kind: 'next' } | { kind: 'face'; face: number; offset: number };
+}
+
+/** A sweep with the outlines and plane of its sketch and its path (running from its end nearer to them) and the path's plane. */
+export interface ResolvedSweep extends SweepFeature {
+  profile: Profile;
+  frame: SketchFrame;
+  spine: SketchPath;
+  spineFrame: SketchFrame;
+}
+
+/** A loft with the outline and plane of each of its sketches, in order. */
+export interface ResolvedLoft extends LoftFeature {
+  sections: { loop: ProfileLoop; frame: SketchFrame }[];
 }
 
 /** A revolution with the outlines and plane of its sketch and its axis in sketch coordinates. */
@@ -75,13 +89,15 @@ export type ResolvedEdgeFeature = EdgeFeature & {
 
 /** A feature as a backend builds it, with its references to earlier features resolved. */
 export type KernelFeature =
-  | Exclude<SolidModelingFeature, ExtrudeFeature | RevolveFeature | EdgeFeature | HoleFeature | CopyFeature | ShellFeature | DraftFeature>
+  | Exclude<SolidModelingFeature, ExtrudeFeature | RevolveFeature | EdgeFeature | HoleFeature | CopyFeature | ShellFeature | DraftFeature | SweepFeature | LoftFeature>
   | ResolvedExtrude
   | ResolvedRevolve
   | ResolvedHole
   | ResolvedCopy
   | ResolvedShell
   | ResolvedDraft
+  | ResolvedSweep
+  | ResolvedLoft
   | ResolvedEdgeFeature;
 
 /** Opaque reference to a shape owned by a backend. */

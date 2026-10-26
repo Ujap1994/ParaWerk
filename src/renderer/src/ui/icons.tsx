@@ -570,6 +570,31 @@ export const ReferencePointIcon = (p: P) => (
   </Icon>
 );
 
+/** Move up in a list. */
+export const MoveUpIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="M12 19V5M6.5 10.5 12 5l5.5 5.5" />
+  </Icon>
+);
+
+/** Sweep: a circle swept along a bent path. */
+export const SweepIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="M4 20.5V12a7 7 0 0 1 7-7h9.5" strokeDasharray="2.2 2" opacity="0.6" />
+    <ellipse cx="4" cy="17" rx="2.5" ry="3.5" />
+    <path d="M17.5 2.5 20.5 5l-3 2.5" />
+  </Icon>
+);
+
+/** Loft: a large outline at the bottom joined to a smaller one above. */
+export const LoftIcon = (p: P) => (
+  <Icon {...p}>
+    <ellipse cx="12" cy="18.5" rx="8.5" ry="2.5" />
+    <ellipse cx="12" cy="5.5" rx="4" ry="1.5" />
+    <path d="M3.5 18.5 8 5.5M20.5 18.5 16 5.5" />
+  </Icon>
+);
+
 /** Draft: a block whose sides lean in, over a dashed neutral line, with the pull direction above it. */
 export const DraftIcon = (p: P) => (
   <Icon {...p}>
@@ -654,4 +679,6 @@ export const FEATURE_ICONS = {
   chamfer: ChamferIcon,
   shell: ShellIcon,
   draft: DraftIcon,
+  sweep: SweepIcon,
+  loft: LoftIcon,
 } as const;

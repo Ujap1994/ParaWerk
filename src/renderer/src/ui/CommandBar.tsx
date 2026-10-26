@@ -55,6 +55,8 @@ import {
   ReferencePlaneIcon,
   ReferencePointIcon,
   DraftIcon,
+  SweepIcon,
+  LoftIcon,
   CoordinateSystemIcon,
   SettingsIcon,
   ShellIcon,
@@ -129,15 +131,21 @@ function Group({ label, children }: { label: string; children: React.ReactNode }
 }
 
 const FEATURE_BUTTONS: { type: FeatureType; icon: IconType }[] = [
-  { type: 'sketch', icon: SketchIcon },
-  { type: 'extrude', icon: ExtrudeIcon },
-  { type: 'revolve', icon: RevolveIcon },
   { type: 'hole', icon: HoleIcon },
   { type: 'box', icon: BoxIcon },
   { type: 'cylinder', icon: CylinderIcon },
   { type: 'fillet', icon: FilletIcon },
   { type: 'chamfer', icon: ChamferIcon },
 ];
+
+/** Features from sketch outlines besides extrusions: revolve, sweep and loft. */
+const SOLID_ENTRIES: readonly SplitEntry[] = (['revolve', 'sweep', 'loft'] as const).map((type) => ({
+  id: type,
+  icon: { revolve: RevolveIcon, sweep: SweepIcon, loft: LoftIcon }[type],
+  label: type,
+  start: () => commands.startFeature(type),
+  active: (state: AppState) => state.activeEdit?.mode === 'create' && state.activeEdit.draft.type === type,
+}));
 
 /** Features that shape the walls of the body: shell and draft. */
 const FORM_ENTRIES: readonly SplitEntry[] = (['shell', 'draft'] as const).map((type) => ({
@@ -262,6 +270,19 @@ function FeaturesTab() {
   const hasFeatures = useAppState((state) => state.history.features.length > 0);
   return (
     <Group label={t('commands.groups.features')}>
+      {(['sketch', 'extrude'] as const).map((type) => (
+        <CommandButton
+          key={type}
+          id={type}
+          icon={type === 'sketch' ? SketchIcon : ExtrudeIcon}
+          label={t(`commands.${type}`)}
+          tooltip={t(`commands.tooltips.${type}`)}
+          active={activeType === type}
+          disabled={sketching && type !== 'sketch'}
+          onClick={() => commands.startFeature(type)}
+        />
+      ))}
+      <SplitFeatureButton entries={SOLID_ENTRIES} menuLabel={t('commands.solidFeatures')} variants="solid" disabled={sketching} />
       {FEATURE_BUTTONS.map(({ type, icon }) => (
         <CommandButton
           key={type}

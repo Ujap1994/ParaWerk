@@ -266,6 +266,17 @@ val transformShape(int id, val transform) {
   return guarded([&] { return idResult(parawerk::transformShape(id, emscripten::convertJSArrayToNumberVector<double>(transform))); });
 }
 
+val sweepProfile(val profile, val frame, val path, val pathFrame, val edgeNames, std::string name) {
+  return guarded([&] {
+    const auto numbers = [](const val& array) { return emscripten::convertJSArrayToNumberVector<double>(array); };
+    return idResult(parawerk::sweepProfile(numbers(profile), numbers(frame), numbers(path), numbers(pathFrame), toStringVector(edgeNames), name));
+  });
+}
+
+val loftProfiles(val sections, bool ruled, val edgeNames, std::string name) {
+  return guarded([&] { return idResult(parawerk::loftProfiles(emscripten::convertJSArrayToNumberVector<double>(sections), ruled, toStringVector(edgeNames), name)); });
+}
+
 val draftFaces(int bodyId, val faceIndices, val plane, double angle, std::string name) {
   return guarded([&] { return idResult(parawerk::draftFaces(bodyId, toIntVector(faceIndices), emscripten::convertJSArrayToNumberVector<double>(plane), angle, name)); });
 }
@@ -299,7 +310,7 @@ val importStepText(const std::string& text, const std::string& name) {
   return guarded([&] { return idResult(parawerk::importStep(text, name)); });
 }
 
-std::string version() { return "parawerk-kernel 0.14 / OCCT " PARAWERK_OCCT_VERSION; }
+std::string version() { return "parawerk-kernel 0.15 / OCCT " PARAWERK_OCCT_VERSION; }
 
 }  // namespace
 
@@ -337,5 +348,7 @@ EMSCRIPTEN_BINDINGS(parawerk_kernel) {
   emscripten::function("fullRound", &fullRound);
   emscripten::function("faceFillet", &faceFillet);
   emscripten::function("draftFaces", &draftFaces);
+  emscripten::function("sweepProfile", &sweepProfile);
+  emscripten::function("loftProfiles", &loftProfiles);
   emscripten::function("limitBySurface", &limitBySurface);
 }

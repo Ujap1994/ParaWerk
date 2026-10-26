@@ -2,7 +2,7 @@ import { resolveLanguage } from '../../shared/i18n.ts';
 import type { MenuCommand } from '../../shared/ipc.ts';
 import { PART_FILE_EXTENSION } from '../../shared/app-info.ts';
 import { hashString } from '../../shared/hash.ts';
-import { COPYABLE_TYPES, type ImportFeature, defaultFeature, type BooleanOperation, hasReferenceSlots, isCopyFeature, isEdgeFeature, isReferenceFeature, isSketchBased, type EdgeRef, type ExtrudeEnd, extrudesOneWay, type Feature, type FilletMethod, roundFaceCount, type FeatureType, type HoleFeature, type ReferenceFeature, type SketchFeature, type SlotFeature } from '../../shared/model/feature.ts';
+import { COPYABLE_TYPES, type ImportFeature, defaultFeature, type BooleanOperation, hasReferenceSlots, isCopyFeature, isEdgeFeature, isReferenceFeature, sketchesUsedBy, type EdgeRef, type ExtrudeEnd, extrudesOneWay, type Feature, type FilletMethod, roundFaceCount, type FeatureType, type HoleFeature, type ReferenceFeature, type SketchFeature, type SlotFeature } from '../../shared/model/feature.ts';
 import { holePositions, metricSize, sizesFor, standardHoleDimensions } from '../../shared/model/hole.ts';
 import { frameTransform } from '../../shared/model/frame.ts';
 import { sketchProfile } from '../../shared/model/profile.ts';
@@ -300,6 +300,30 @@ export function startFeature(type: FeatureType): void {
       const reference = features.findLast((feature) => feature.type === 'axis' && !feature.suppressed);
       draft = axis || !reference ? { ...draft, sketch: sketch.id, axis, operation, ...thin } : { ...draft, sketch: sketch.id, axis: '', axisRef: { kind: 'feature', feature: reference.id }, operation, ...thin };
     }
+  } else if (draft.type === 'sweep' || draft.type === 'loft') {
+    // Sketches no feature uses yet: those with closed outlines are profiles, one without is a path.
+    const operation = hasBodyBefore(features, index) ? draft.operation : 'add';
+    const used = new Set(features.flatMap(sketchesUsedBy));
+    const sketches = features.filter((feature): feature is SketchFeature => feature.type === 'sketch' && !feature.suppressed);
+    const unused = sketches.filter((sketch) => !used.has(sketch.id));
+    const outlined = (sketch: SketchFeature) => sketchProfile(sketch.sketch).regions.length > 0;
+    if (draft.type === 'sweep') {
+      const profile = unused.findLast(outlined) ?? sketches.findLast(outlined);
+      const path = unused.findLast((sketch) => sketch !== profile && !outlined(sketch)) ?? sketches.findLast((sketch) => sketch !== profile && !outlined(sketch));
+      if (!profile || !path) {
+        showToast('info', t('toasts.noSweepSketches'));
+        return;
+      }
+      draft = { ...draft, operation, sketch: profile.id, path: path.id };
+    } else {
+      const unusedOutlines = unused.filter(outlined);
+      const chosen = unusedOutlines.length >= 2 ? unusedOutlines : sketches.filter(outlined).slice(-2);
+      if (chosen.length < 2) {
+        showToast('info', t('toasts.noLoftSketches'));
+        return;
+      }
+      draft = { ...draft, operation, sketches: chosen.map((sketch) => sketch.id) };
+    }
   } else if (draft.type === 'hole') {
     const sketch = holeSketchToUse(features);
     if (!sketch) {
@@ -350,14 +374,14 @@ export function startFeature(type: FeatureType): void {
 
 /** The sketch a new extrusion or revolution uses: the last one no such feature uses yet, else the last one. */
 function sketchToUse(features: readonly Feature[]): SketchFeature | null {
-  const used = new Set(features.flatMap((feature) => (isSketchBased(feature) ? [feature.sketch] : [])));
+  const used = new Set(features.flatMap(sketchesUsedBy));
   const sketches = features.filter((feature): feature is SketchFeature => feature.type === 'sketch' && !feature.suppressed);
   return sketches.findLast((sketch) => !used.has(sketch.id)) ?? sketches.at(-1) ?? null;
 }
 
 /** The sketch a new hole uses: the newest one with points for holes that no feature uses yet, else the newest with such points. */
 function holeSketchToUse(features: readonly Feature[]): SketchFeature | null {
-  const used = new Set(features.flatMap((feature) => (isSketchBased(feature) ? [feature.sketch] : [])));
+  const used = new Set(features.flatMap(sketchesUsedBy));
   const sketches = features.filter((feature): feature is SketchFeature => feature.type === 'sketch' && !feature.suppressed && holePositions(feature.sketch).length > 0);
   return sketches.findLast((sketch) => !used.has(sketch.id)) ?? sketches.at(-1) ?? null;
 }
@@ -399,7 +423,7 @@ export function chooseRevolveAxis(value: string): void {
 /** Chooses the sketch of the extrusion or revolution being edited (a revolution also takes its centerline). */
 export function chooseFeatureSketch(id: string): void {
   const draft = getState().activeEdit?.draft;
-  if (draft?.type === 'extrude' || draft?.type === 'hole') updateDraft({ sketch: id });
+  if (draft?.type === 'extrude' || draft?.type === 'hole' || draft?.type === 'sweep') updateDraft({ sketch: id });
   if (draft?.type !== 'revolve') return;
   const sketch = getState().history.features.find((feature): feature is SketchFeature => feature.type === 'sketch' && feature.id === id);
   updateDraft({ sketch: id, axis: sketch ? defaultAxis(sketch) : '' });

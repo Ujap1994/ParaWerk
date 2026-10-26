@@ -140,6 +140,23 @@ int extrudeProfile(const std::vector<double>& profile, const std::vector<double>
 int revolveProfile(const std::vector<double>& profile, const std::vector<double>& frame, const std::vector<double>& axis, double from, double to,
                    const std::vector<std::string>& edgeNames = {}, const std::string& name = "");
 /**
+ * The solid swept by the regions of `profile` (encoded as for extrudeProfile, on the plane `frame`) along a
+ * path: one chain of curves on the plane `pathFrame`, encoded like one outline (its edge count, then its
+ * edges in order; it may be open). The profile is swept as it lies, usually at the start of the path. Faces
+ * are named as for extrudeProfile. Fails with "sweep-failed" when the profile cannot follow the path.
+ */
+int sweepProfile(const std::vector<double>& profile, const std::vector<double>& frame, const std::vector<double>& path, const std::vector<double>& pathFrame,
+                 const std::vector<std::string>& edgeNames = {}, const std::string& name = "");
+
+/**
+ * A solid through closed outlines on several planes, in order (`ruled`: flat between them). `sections`
+ * holds their count, then per outline its plane (9 values, as `frame` of extrudeProfile) and the outline
+ * (edge count, then edges, as one loop of extrudeProfile). Side faces are named after the edges of the first
+ * outline ("<name>:side:<edge name>"), the end faces "<name>:start" and "<name>:end".
+ */
+int loftProfiles(const std::vector<double>& sections, bool ruled, const std::vector<std::string>& edgeNames = {}, const std::string& name = "");
+
+/**
  * Cuts holes: the same `profile` revolved a full turn at every placement. The profile (encoded as for
  * extrudeProfile) lies in a plane through the hole axis: x is the distance from the axis, y the depth
  * into the material; the axis is x = 0. `placements` holds per hole its center and the direction into

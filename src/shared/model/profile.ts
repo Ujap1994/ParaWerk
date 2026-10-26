@@ -54,7 +54,7 @@ export interface Profile {
 /** Segments per span of a curve's polyline (for areas, containment and crossing checks). */
 const POLYLINE_STEPS = 24;
 
-interface Curve {
+export interface Curve {
   id: string;
   /** Vertex ids at the start and the end (equal for closed curves). */
   from: number;
@@ -145,7 +145,7 @@ export class Vertices {
   }
 }
 
-function sketchSize(positions: ReadonlyMap<string, Point2>, entities: readonly SketchEntity[]): number {
+export function sketchSize(positions: ReadonlyMap<string, Point2>, entities: readonly SketchEntity[]): number {
   let size = 1;
   for (const [x, y] of positions.values()) size = Math.max(size, Math.abs(x), Math.abs(y));
   for (const entity of entities) if (entity.type === 'circle') size = Math.max(size, entity.radius);
@@ -153,13 +153,13 @@ function sketchSize(positions: ReadonlyMap<string, Point2>, entities: readonly S
 }
 
 /** Closed curves (circles, ellipses, closed splines) as loops of their own. */
-interface ClosedCurve {
+export interface ClosedCurve {
   id: string;
   polyline: Point2[];
   edge(ccw: boolean): ProfileEdge;
 }
 
-function curvesOf(sketch: SketchData, vertices: Vertices): { open: Curve[]; closed: ClosedCurve[] } {
+export function curvesOf(sketch: SketchData, vertices: Vertices): { open: Curve[]; closed: ClosedCurve[] } {
   const positions = new Map<string, Point2>([[ORIGIN_ID, [0, 0]]]);
   for (const entity of sketch.entities) if (entity.type === 'point') positions.set(entity.id, [entity.x, entity.y]);
   const open: Curve[] = [];

@@ -1164,6 +1164,52 @@ test('rounds all edges of a face picked in the 3D view', async () => {
   await expect(page.locator('[data-testid="face-count"]')).toHaveCount(0);
 });
 
+test('sweeps an outline along a path and lofts two outlines', async () => {
+  launched = await launchApp({ width: 1000, height: 640 });
+  const { page } = launched;
+  // A circle of radius 2 on the front plane, a path of 50 mm on the top plane, and two squares for a loft.
+  await page.evaluate(() => {
+    const P = (id: string, x: number, y: number) => ({ id, type: 'point', x, y });
+    const L = (id: string, p1: string, p2: string) => ({ id, type: 'line', p1, p2 });
+    const square = (p: string, half: number) => [
+      P(`${p}1`, -half, -half), P(`${p}2`, half, -half), P(`${p}3`, half, half), P(`${p}4`, -half, half),
+      L(`${p}a`, `${p}1`, `${p}2`), L(`${p}b`, `${p}2`, `${p}3`), L(`${p}c`, `${p}3`, `${p}4`), L(`${p}d`, `${p}4`, `${p}1`),
+    ];
+    const sketch = (id: string, plane: unknown, entities: unknown[]) => ({ id, type: 'sketch', plane, sketch: { entities, constraints: [] } });
+    const features = [
+      sketch('profile', { kind: 'standard', plane: 'front' }, [P('m', 0, 0), { id: 'k', type: 'circle', center: 'm', radius: 2 }]),
+      sketch('path', { kind: 'standard', plane: 'top' }, [P('a', 0, 0), P('b', 0, 50), L('ab', 'a', 'b')]),
+    ];
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features, past: [], future: [] }, savedFeatures: features, dirty: false });
+    (window as unknown as { __loftSketches: unknown[] }).__loftSketches = [
+      { id: 'plane', type: 'plane', method: 'offset', references: [{ kind: 'standard-plane', plane: 'top' }], distance: 30, angle: 45, flip: false },
+      sketch('low', { kind: 'standard', plane: 'top' }, square('a', 10)),
+      sketch('high', { kind: 'feature', feature: 'plane', frame: { origin: [0, 0, 30], xDir: [1, 0, 0], yDir: [0, 1, 0], normal: [0, 0, 1] } }, square('b', 5)),
+    ];
+  });
+  await idle(page);
+  await page.click('[data-variants="solid"]');
+  await page.click('[data-entry="sweep"]');
+  await expect(page.locator('[data-testid="sweep-profile"]')).toHaveValue('profile');
+  await expect(page.locator('[data-testid="sweep-path"]')).toHaveValue('path');
+  await page.click('[data-testid="panel-ok"]');
+  expect(await volume(page)).toBeCloseTo(Math.PI * 4 * 50, 2);
+
+  // A new part with the loft sketches: a frustum from a 20 × 20 square to a 10 × 10 one 30 above.
+  await page.evaluate(() => {
+    const features = (window as unknown as { __loftSketches: unknown[] }).__loftSketches;
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features, past: [], future: [] }, savedFeatures: features, dirty: false });
+  });
+  await idle(page);
+  await page.click('[data-variants="solid"]');
+  await page.click('[data-entry="loft"]');
+  await expect(page.locator('[data-testid="loft-sketches"] li')).toHaveCount(2);
+  await page.locator('[data-testid="loft-ruled"]').check();
+  await page.click('[data-testid="panel-ok"]');
+  expect(await volume(page)).toBeCloseTo(10 * (400 + 100 + 200), 2);
+  expect((await state(page)).history.features[3]).toMatchObject({ type: 'loft', sketches: ['low', 'high'], ruled: true });
+});
+
 test('drafts faces picked in the 3D view about a neutral plane picked in the tree', async () => {
   launched = await launchApp({ width: 1000, height: 640 });
   const { page } = launched;

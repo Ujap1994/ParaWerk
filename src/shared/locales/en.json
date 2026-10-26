@@ -114,7 +114,9 @@
       "exportThreeMf": "Export as 3MF for 3D printing, with material and color",
       "importStep": "Import a STEP file as a body",
       "csys": "Create a coordinate system: at a position, or at a point with its axes along edges, axes or plane normals",
-      "draft": "Tilt faces by an angle about a neutral plane, for molding and casting"
+      "draft": "Tilt faces by an angle about a neutral plane, for molding and casting",
+      "sweep": "Sweep the closed outlines of a sketch along the curves of another sketch",
+      "loft": "Make a solid through the outlines of several sketches, in order"
     },
     "tabs": {
       "label": "Command tabs",
@@ -198,7 +200,10 @@
     "exportFormats": "Export formats",
     "csys": "Coordinate system",
     "draft": "Draft",
-    "formFeatures": "Shell and draft"
+    "formFeatures": "Shell and draft",
+    "sweep": "Sweep",
+    "loft": "Loft",
+    "solidFeatures": "Revolve, sweep and loft"
   },
   "features": {
     "plane": "Plane",
@@ -219,7 +224,9 @@
     "shell": "Shell",
     "import": "Import",
     "csys": "Coordinate system",
-    "draft": "Draft"
+    "draft": "Draft",
+    "sweep": "Sweep",
+    "loft": "Loft"
   },
   "tree": {
     "title": "Feature tree",
@@ -432,7 +439,9 @@
     "dxfImportedSkipped": "Imported {{count}} entities; not supported and left out: {{skipped}}.",
     "noSketchToExtrude": "Draw a sketch with a closed outline first.",
     "noHoleSketch": "Place points for the holes in a sketch on the face first.",
-    "importFailed": "Import failed: {{message}}"
+    "importFailed": "Import failed: {{message}}",
+    "noSweepSketches": "A sweep needs two sketches: one with a closed outline and one with the path.",
+    "noLoftSketches": "A loft needs at least two sketches with a closed outline each."
   },
   "errors": {
     "no-body": "There is no body to modify yet.",
@@ -452,7 +461,7 @@
     "hole-invalid": "The dimensions of the hole do not fit together: a counterbore or countersink must be wider than the hole and less deep, a thread no deeper than the hole.",
     "pattern-empty": "Choose the features to copy: click them in the feature tree or one of their faces in the 3D view.",
     "pattern-seed-missing": "A feature to copy is missing or suppressed. Edit the feature and choose the features again.",
-    "pattern-unsupported": "Only features that add or cut material can be copied: extrusions, revolutions, holes, boxes and cylinders.",
+    "pattern-unsupported": "Only features that add or cut material can be copied: extrusions, revolutions, sweeps, lofts, holes, boxes and cylinders.",
     "shell-face-missing": "The faces to open no longer exist: an earlier change removed them. Edit the shell and pick the faces again.",
     "end-behind": "The end lies behind the sketch in this direction. Choose the other direction or another end.",
     "end-parallel": "The extrusion runs along this plane and never reaches it. Choose a plane at an angle to the extrusion.",
@@ -477,7 +486,14 @@
     "import-no-solid": "The STEP file contains no solid body (only surfaces or wireframes).",
     "draft-faces": "Pick the faces to draft.",
     "draft-face": "Face {{detail}} cannot be drafted: it must run along the pull direction (not across it).",
-    "draft-face-missing": "{{detail}} of the faces to draft no longer exist: an earlier change removed them. Edit the draft and pick them again."
+    "draft-face-missing": "{{detail}} of the faces to draft no longer exist: an earlier change removed them. Edit the draft and pick them again.",
+    "path-empty": "The path sketch has no curves.",
+    "path-branching": "The path branches at ({{detail}}) mm: it must be one chain of curves.",
+    "path-gaps": "The curves of the path do not form one connected chain. Close the gaps, or put the other curves into another sketch.",
+    "sweep-failed": "The profile cannot follow the path: it may cross itself where the path bends tighter than the profile is wide.",
+    "loft-sections": "A loft needs at least two profiles.",
+    "loft-profile": "Profile {{detail}} must be one closed outline without holes.",
+    "loft-failed": "The profiles could not be joined. Check that they lie one after the other and are not twisted against each other."
   },
   "warnings": {
     "edge-missing_one": "{{count}} selected edge no longer exists and is left out. Edit the feature to remove it or pick another edge.",
@@ -979,5 +995,18 @@
     "angle": "Draft angle",
     "flip": "Pull the other way",
     "hint": "Pick the neutral plane, then the faces to tilt (click again to take one out). The faces turn about the line where they cross the neutral plane, so the part gets narrower along the pull direction, the normal of the plane."
+  },
+  "sweep": {
+    "profile": "Profile (closed outlines)",
+    "path": "Path",
+    "hint": "The outlines are swept as they lie, so draw them across the start of the path. The path is one chain of lines, arcs, ellipses or splines in another sketch, open or closed; it runs from its end nearer to the outlines."
+  },
+  "loft": {
+    "profiles": "Profiles, in order",
+    "up": "Move up",
+    "add": "Add a profile",
+    "choose": "Choose a sketch",
+    "ruled": "Flat faces between the profiles",
+    "hint": "Each sketch gives one closed outline (without holes). The solid goes through them in the order of the list, usually on parallel planes one above the other."
   }
 }

@@ -8,6 +8,11 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### Added
+- Sweep: the closed outlines of a sketch along a path, one chain of lines, arcs, ellipses or splines in
+  another sketch (open or closed); the path runs from its end nearer to the outlines. Adds or cuts.
+- Loft: a solid through one closed outline from each of several sketches, in order, smooth or with flat
+  faces between them; outlines with different edge counts (a square and a circle) are joined too.
+- Revolve, Sweep and Loft share a split button; patterns and mirror copy sweeps and lofts as well.
 - Draft as a feature (Phase 3): faces picked in the 3D view tilt by an angle about a neutral plane (a
   standard plane, planar face or reference plane), for molded and cast parts; the faces keep their names.
   Shell and Draft share a split button in the *Features* tab.

@@ -40,6 +40,13 @@ export function encodeProfile(profile: Profile): number[] {
   return out;
 }
 
+/** One chain of edges (an outline or a path) as the kernel reads one loop: the edge count, then the edges. */
+export function encodeEdges(edges: readonly ProfileEdge[]): number[] {
+  const out: number[] = [edges.length];
+  for (const edge of edges) pushEdge(out, edge);
+  return out;
+}
+
 /** The sketch curve of every profile edge, in the order of encodeProfile: the kernel names side faces after them. */
 export function profileEdgeNames(profile: Profile): string[] {
   return profile.regions.flatMap((region) => [region.outer, ...region.holes].flatMap((loop) => loop.curves));

@@ -7,7 +7,7 @@ import type { GeometryBackend, KernelFeature, ResolvedExtrude, ResolvedCopy, Res
 import { FeatureError } from '../feature-error.ts';
 import { axisDirection } from '../feature-geometry.ts';
 import type { MeshQuality } from '../mesh-quality.ts';
-import { encodeProfile, profileEdgeNames } from '../profile-data.ts';
+import { encodeEdges, encodeProfile, profileEdgeNames } from '../profile-data.ts';
 import type { BodyNaming } from '../../shared/model/naming.ts';
 import type { CurveKind, EdgeGeometry, EdgeInfo, FaceGeometry, FaceInfo, FeatureErrorCode, MassProperties, MeshPayload, SurfaceKind } from '../protocol.ts';
 
@@ -39,7 +39,7 @@ const SURFACE_KINDS: SurfaceKind[] = ['plane', 'cylinder', 'cone', 'sphere', 'to
 const CURVE_KINDS: CurveKind[] = ['line', 'circle', 'ellipse', 'bspline', 'other'];
 
 const FEATURE_ERROR_CODES = new Set<FeatureErrorCode>([
-  'no-body', 'no-edges', 'edge-missing', 'face-missing', 'plane-missing', 'reference-missing', 'reference-kind', 'reference-parallel', 'reference-not-parallel', 'reference-collinear', 'empty-result', 'first-must-add', 'sketch-missing', 'profile-empty', 'profile-crossing', 'axis-missing', 'axis-not-in-plane', 'hole-no-points', 'hole-invalid', 'pattern-empty', 'pattern-seed-missing', 'pattern-unsupported', 'shell-face-missing', 'end-behind', 'end-parallel', 'end-missed', 'thin-empty', 'thin-unsupported', 'thin-branching', 'thin-too-thick', 'round-faces', 'round-face-missing', 'round-sides', 'round-center', 'round-planes', 'round-radius', 'draft-faces', 'draft-face', 'draft-face-missing', 'import-no-solid', 'profile-crosses-axis',
+  'no-body', 'no-edges', 'edge-missing', 'face-missing', 'plane-missing', 'reference-missing', 'reference-kind', 'reference-parallel', 'reference-not-parallel', 'reference-collinear', 'empty-result', 'first-must-add', 'sketch-missing', 'profile-empty', 'profile-crossing', 'axis-missing', 'axis-not-in-plane', 'hole-no-points', 'hole-invalid', 'pattern-empty', 'pattern-seed-missing', 'pattern-unsupported', 'shell-face-missing', 'end-behind', 'end-parallel', 'end-missed', 'thin-empty', 'thin-unsupported', 'thin-branching', 'thin-too-thick', 'round-faces', 'round-face-missing', 'round-sides', 'round-center', 'round-planes', 'round-radius', 'draft-faces', 'draft-face', 'draft-face-missing', 'path-empty', 'path-branching', 'path-gaps', 'sweep-failed', 'loft-sections', 'loft-profile', 'loft-failed', 'import-no-solid', 'profile-crosses-axis',
   'operation-failed', 'unknown',
 ]);
 
@@ -138,7 +138,7 @@ export class ParaWerkBackend implements GeometryBackend {
   }
 
   /** The solid a box, cylinder, extrusion or revolution adds or cuts; the caller releases it. */
-  private tool(body: ShapeHandle | null, feature: Extract<KernelFeature, { type: 'box' | 'cylinder' | 'extrude' | 'revolve' }>): ShapeHandle {
+  private tool(body: ShapeHandle | null, feature: Extract<KernelFeature, { type: 'box' | 'cylinder' | 'extrude' | 'revolve' | 'sweep' | 'loft' }>): ShapeHandle {
     const k = this.kernel;
     switch (feature.type) {
       case 'box': {
@@ -210,6 +210,17 @@ export class ParaWerkBackend implements GeometryBackend {
           this.release(tool);
         }
       }
+      case 'sweep': {
+        const frame = (f: { origin: Vec3; xDir: Vec3; normal: Vec3 }) => [...f.origin, ...f.xDir, ...f.normal];
+        return this.handle(
+          k.sweepProfile(encodeProfile(feature.profile), frame(feature.frame), encodeEdges(feature.spine.edges), frame(feature.spineFrame), profileEdgeNames(feature.profile), feature.id),
+        );
+      }
+      case 'loft': {
+        const data: number[] = [feature.sections.length];
+        for (const { loop, frame } of feature.sections) data.push(...frame.origin, ...frame.xDir, ...frame.normal, ...encodeEdges(loop.edges));
+        return this.handle(k.loftProfiles(data, feature.ruled ?? false, feature.sections[0]?.loop.curves ?? [], feature.id));
+      }
       case 'revolve': {
         const [from, to] = revolveRange(feature);
         const { origin, xDir, normal } = feature.frame;
@@ -249,7 +260,7 @@ export class ParaWerkBackend implements GeometryBackend {
           }
         }
         next = this.holes(current, seed, placements, name);
-      } else if (seed.type === 'box' || seed.type === 'cylinder' || seed.type === 'extrude' || seed.type === 'revolve') {
+      } else if (seed.type === 'box' || seed.type === 'cylinder' || seed.type === 'extrude' || seed.type === 'revolve' || seed.type === 'sweep' || seed.type === 'loft') {
         const tool = this.tool(current, seed);
         try {
           next = this.handle(this.kernel.combineCopies(this.id(current), this.id(tool), feature.transforms, seed.operation === 'add' ? 0 : 1, name));
@@ -272,6 +283,8 @@ export class ParaWerkBackend implements GeometryBackend {
       case 'cylinder':
       case 'extrude':
       case 'revolve':
+      case 'sweep':
+      case 'loft':
         return this.combine(body, this.tool(body, feature), feature.operation);
       case 'import':
         return this.combine(body, this.handle(k.importStepText(feature.data, feature.id)), feature.operation);

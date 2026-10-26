@@ -208,6 +208,12 @@ function extrudeEnd<T extends string>(value: unknown, path: string, ends: readon
   return value as T;
 }
 
+/** The id of a sketch a feature is built from; empty or unknown ids are kept (the rebuild reports them). */
+function sketchId(value: unknown, path: string): string {
+  if (typeof value !== 'string' || value.length > 200) throw new ValidationError('expected a sketch id', path);
+  return value;
+}
+
 /** A list of faces of the body by their persistent names. */
 function faceRefs(value: unknown, path: string, max = 1000): FaceNameRef[] {
   if (!Array.isArray(value) || value.length > max) throw new ValidationError(`expected a list of up to ${max} faces`, path);
@@ -433,6 +439,13 @@ function parseFeatureFields(raw: Json, path: string): Feature {
         chamfer.flip = raw.flip;
       }
       return chamfer;
+    }
+    case 'sweep':
+      return { ...common, type: 'sweep', operation: operation(raw.operation, `${path}.operation`), sketch: sketchId(raw.sketch, `${path}.sketch`), path: sketchId(raw.path, `${path}.path`) };
+    case 'loft': {
+      if (!Array.isArray(raw.sketches) || raw.sketches.length > 100) throw new ValidationError('expected a list of sketch ids', `${path}.sketches`);
+      const sketches = raw.sketches.map((id, i) => sketchId(id, `${path}.sketches[${i}]`));
+      return { ...common, type: 'loft', operation: operation(raw.operation, `${path}.operation`), sketches, ...(raw.ruled === undefined ? {} : { ruled: flag(raw.ruled, `${path}.ruled`) }) };
     }
     case 'draft':
       if (typeof raw.flip !== 'boolean') throw new ValidationError('expected true or false', `${path}.flip`);

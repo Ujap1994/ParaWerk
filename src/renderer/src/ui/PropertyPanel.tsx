@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { formatQuantity } from '../format.ts';
-import { CHAMFER_METHODS, type DraftFeature, FILLET_METHODS, roundFaceCount, type FilletFeature, type FilletMethod, EXTRUDE_ENDS, extrudesOneWay, MAX_DRAFT_ANGLE, type RevolveDirection, hasReferenceSlots, isCopyFeature, type Axis, type BooleanOperation, type ChamferFeature, type ChamferMethod, type EdgeFeature, type ExtrudeDirection, type ExtrudeEnd, type ExtrudeFeature, type Feature, type RevolveFeature, type Vec3 } from '../../../shared/model/feature.ts';
+import { CHAMFER_METHODS, type DraftFeature, type LoftFeature, FILLET_METHODS, roundFaceCount, type FilletFeature, type FilletMethod, EXTRUDE_ENDS, extrudesOneWay, MAX_DRAFT_ANGLE, type RevolveDirection, hasReferenceSlots, isCopyFeature, type Axis, type BooleanOperation, type ChamferFeature, type ChamferMethod, type EdgeFeature, type ExtrudeDirection, type ExtrudeEnd, type ExtrudeFeature, type Feature, type RevolveFeature, type Vec3 } from '../../../shared/model/feature.ts';
 import { DEFAULT_THIN_THICKNESS, THIN_SIDES, type ThinSide } from '../../../shared/model/thin.ts';
 import type { GeometryRef } from '../../../shared/model/reference.ts';
 import { referenceRoles } from '../references.ts';
@@ -9,7 +9,7 @@ import * as commands from '../commands.ts';
 import { hasBodyBefore } from '../state/document.ts';
 import { useAppState } from '../state/store.ts';
 import { useFeatureName } from './FeatureTree.tsx';
-import { CheckIcon, CloseIcon, FEATURE_ICONS } from './icons.tsx';
+import { CheckIcon, CloseIcon, FEATURE_ICONS, MoveUpIcon } from './icons.tsx';
 import { NumberField } from './NumberField.tsx';
 import { ReferenceFields, ReferenceSlots, useReferenceName } from './ReferencePanel.tsx';
 import { HoleFields } from './HolePanel.tsx';
@@ -65,15 +65,15 @@ function OperationField({ value, firstFeature }: { value: BooleanOperation; firs
 }
 
 /** The sketches before the feature, to choose the one an extrusion uses. */
-function SketchField({ value, index }: { value: string; index: number }) {
+function SketchField({ value, index, label, testId = 'feature-sketch', onChange = commands.chooseFeatureSketch }: { value: string; index: number; label?: string; testId?: string; onChange?(id: string): void }) {
   const { t } = useTranslation();
   const features = useAppState((state) => state.history.features);
   const nameOf = useFeatureName();
   const sketches = features.slice(0, index).flatMap((feature, i) => (feature.type === 'sketch' ? [{ id: feature.id, name: nameOf(features, i) }] : []));
   return (
     <label className="field">
-      <span className="field-label">{t('panel.sketch')}</span>
-      <select className="field-select" value={value} data-testid="feature-sketch" onChange={(event) => commands.chooseFeatureSketch(event.target.value)}>
+      <span className="field-label">{label ?? t('panel.sketch')}</span>
+      <select className="field-select" value={value} data-testid={testId} onChange={(event) => onChange(event.target.value)}>
         {sketches.some((sketch) => sketch.id === value) ? null : <option value={value}>{t('panel.noSketch')}</option>}
         {sketches.map((sketch) => (
           <option key={sketch.id} value={sketch.id}>
@@ -294,6 +294,17 @@ function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
       return <HoleFields draft={draft} index={index} />;
     case 'draft':
       return <DraftFields draft={draft} />;
+    case 'sweep':
+      return (
+        <Section title={t('panel.parameters')}>
+          <SketchField value={draft.sketch} index={index} label={t('sweep.profile')} testId="sweep-profile" onChange={(sketch) => commands.updateDraft({ sketch })} />
+          <SketchField value={draft.path} index={index} label={t('sweep.path')} testId="sweep-path" onChange={(path) => commands.updateDraft({ path })} />
+          <OperationField value={draft.operation} firstFeature={firstFeature} />
+          <p className="panel-hint">{t('sweep.hint')}</p>
+        </Section>
+      );
+    case 'loft':
+      return <LoftFields draft={draft} index={index} firstFeature={firstFeature} />;
     case 'pattern':
     case 'mirror':
       return <CopyFields draft={draft} />;
@@ -360,6 +371,59 @@ function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
 }
 
 /** The size of a chamfer: one distance, two distances, or a distance and an angle. */
+/** A loft: its sketches in order (each with one closed outline), whether it is ruled, and what it does. */
+function LoftFields({ draft, index, firstFeature }: { draft: LoftFeature; index: number; firstFeature: boolean }) {
+  const { t } = useTranslation();
+  const features = useAppState((state) => state.history.features);
+  const nameOf = useFeatureName();
+  const sketches = features.slice(0, index).flatMap((feature, i) => (feature.type === 'sketch' ? [{ id: feature.id, name: nameOf(features, i) }] : []));
+  const name = (id: string) => sketches.find((sketch) => sketch.id === id)?.name ?? t('references.lost');
+  const move = (from: number, to: number) => {
+    const next = [...draft.sketches];
+    const [moved] = next.splice(from, 1);
+    if (moved !== undefined) next.splice(to, 0, moved);
+    commands.updateDraft({ sketches: next });
+  };
+  const available = sketches.filter((sketch) => !draft.sketches.includes(sketch.id));
+  return (
+    <Section title={t('panel.parameters')}>
+      <span className="field-label">{t('loft.profiles')}</span>
+      <ol className="loft-list" data-testid="loft-sketches">
+        {draft.sketches.map((id, i) => (
+          <li key={id} className="loft-item">
+            <span>{name(id)}</span>
+            <button type="button" className="icon-button" title={t('loft.up')} aria-label={t('loft.up')} disabled={i === 0} onClick={() => move(i, i - 1)}>
+              <MoveUpIcon />
+            </button>
+            <button type="button" className="icon-button" title={t('references.clear')} aria-label={t('references.clear')} onClick={() => commands.updateDraft({ sketches: draft.sketches.filter((other) => other !== id) })}>
+              <CloseIcon />
+            </button>
+          </li>
+        ))}
+      </ol>
+      {available.length > 0 ? (
+        <label className="field">
+          <span className="field-label">{t('loft.add')}</span>
+          <select className="field-select" value="" data-testid="loft-add" onChange={(event) => event.target.value && commands.updateDraft({ sketches: [...draft.sketches, event.target.value] })}>
+            <option value="">{t('loft.choose')}</option>
+            {available.map((sketch) => (
+              <option key={sketch.id} value={sketch.id}>
+                {sketch.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+      <label className="checkbox-field">
+        <input type="checkbox" checked={draft.ruled ?? false} data-testid="loft-ruled" onChange={(event) => commands.updateDraft({ ruled: event.target.checked })} />
+        {t('loft.ruled')}
+      </label>
+      <OperationField value={draft.operation} firstFeature={firstFeature} />
+      <p className="panel-hint">{t('loft.hint')}</p>
+    </Section>
+  );
+}
+
 /** A draft: its neutral plane, the faces to tilt (picked while their field is active), the angle and the pull direction. */
 function DraftFields({ draft }: { draft: DraftFeature }) {
   const { t } = useTranslation();

@@ -21,7 +21,7 @@ describe('feature validation', () => {
     [{ id: 'a', type: 'cylinder', operation: 'add', radius: 1, height: 1, axis: 'w', position: [0, 0, 0] }, 'axis'],
     [{ id: 'a', type: 'fillet', radius: 1, edges: [{ kind: 'edge-index', index: -1 }] }, 'index'],
     [{ id: 'a', type: 'fillet', radius: 1e9, edges: [] }, 'radius'],
-    [{ id: 'a', type: 'sweep' }, 'type'],
+    [{ id: 'a', type: 'spring' }, 'type'],
     [{ type: 'box' }, 'id'],
   ])('rejects invalid input %#', (raw, field) => {
     expect(() => parseFeature(raw)).toThrow(ValidationError);

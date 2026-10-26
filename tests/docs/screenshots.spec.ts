@@ -1187,3 +1187,64 @@ test('draft screenshots', async () => {
   await page.click('[data-testid="panel-ok"]');
   await app.close();
 });
+
+test('sweep and loft screenshots', async () => {
+  const { app, page } = await launchApp({ width: 1440, height: 900 });
+  const P = (id: string, x: number, y: number) => ({ id, type: 'point', x, y });
+  const L = (id: string, p1: string, p2: string) => ({ id, type: 'line', p1, p2 });
+  const show = async (features: unknown[], edit: string, file: string, name: string) => {
+    await page.evaluate(
+      ([list, title]) => (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features: list, past: [], future: [] }, savedFeatures: list, fileName: title }),
+      [features, name] as const,
+    );
+    await idle(page);
+    await page.evaluate(() => (window as unknown as { __parawerk: { viewport: { zoomToFit(): void } } }).__parawerk.viewport.zoomToFit());
+    await page.locator(`.feature-tree .tree-item[data-feature-id="${edit}"]`).dblclick();
+    await idle(page);
+    const canvas = await page.locator('.viewport-canvas').boundingBox();
+    if (canvas) await page.mouse.move(canvas.x + canvas.width - 30, canvas.y + canvas.height - 30);
+    await page.waitForTimeout(600);
+    await page.screenshot({ path: out(file) });
+    await page.click('[data-testid="panel-ok"]');
+  };
+  // A handle: a circle of radius 6 swept along a path with two bends.
+  await show(
+    [
+      { id: 'profile', type: 'sketch', name: 'Profile', plane: { kind: 'standard', plane: 'front' }, sketch: { entities: [P('m', 0, 0), { id: 'k', type: 'circle', center: 'm', radius: 6 }], constraints: [] } },
+      {
+        id: 'path', type: 'sketch', name: 'Path', plane: { kind: 'standard', plane: 'top' },
+        sketch: {
+          entities: [
+            P('a', 0, 0), P('b', 0, 40), P('c', 20, 40), P('d', 20, 60), P('e', 80, 60), P('f', 80, 40), P('g', 100, 40), P('h', 100, 0),
+            L('ab', 'a', 'b'), { id: 'r1', type: 'arc', center: 'c', start: 'd', end: 'b' }, L('de', 'd', 'e'), { id: 'r2', type: 'arc', center: 'f', start: 'g', end: 'e' }, L('gh', 'g', 'h'),
+          ],
+          constraints: [],
+        },
+      },
+      { id: 'handle', type: 'sweep', name: 'Handle', operation: 'add', sketch: 'profile', path: 'path' },
+    ],
+    'handle',
+    'sweep.png',
+    'Handle',
+  );
+  // A transition from a square duct to a round one.
+  const square = (p: string, half: number) => [
+    P(`${p}1`, -half, -half), P(`${p}2`, half, -half), P(`${p}3`, half, half), P(`${p}4`, -half, half),
+    L(`${p}a`, `${p}1`, `${p}2`), L(`${p}b`, `${p}2`, `${p}3`), L(`${p}c`, `${p}3`, `${p}4`), L(`${p}d`, `${p}4`, `${p}1`),
+  ];
+  await show(
+    [
+      { id: 'plane', type: 'plane', method: 'offset', references: [{ kind: 'standard-plane', plane: 'top' }], distance: 60, angle: 45, flip: false },
+      { id: 'square', type: 'sketch', name: 'Square', plane: { kind: 'standard', plane: 'top' }, sketch: { entities: square('a', 30), constraints: [] } },
+      {
+        id: 'round', type: 'sketch', name: 'Round', plane: { kind: 'feature', feature: 'plane', frame: { origin: [0, 0, 60], xDir: [1, 0, 0], yDir: [0, 1, 0], normal: [0, 0, 1] } },
+        sketch: { entities: [P('m', 0, 0), { id: 'k', type: 'circle', center: 'm', radius: 18 }], constraints: [] },
+      },
+      { id: 'transition', type: 'loft', name: 'Transition', operation: 'add', sketches: ['square', 'round'] },
+    ],
+    'transition',
+    'loft.png',
+    'Duct transition',
+  );
+  await app.close();
+});

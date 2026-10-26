@@ -1,14 +1,15 @@
-import { COPYABLE_TYPES, isCopyFeature, isEdgeFeature, type CopyFeature, type DraftFeature, type EdgeFeature, type EdgeRef, type ExtrudeFeature, type Feature, type FilletFeature, roundFaceCount, type HoleFeature, type ShellFeature, type SketchFeature, type SolidModelingFeature, type Vec3 } from '../shared/model/feature.ts';
+import { COPYABLE_TYPES, isCopyFeature, isEdgeFeature, type CopyFeature, type DraftFeature, type LoftFeature, type SweepFeature, type EdgeFeature, type EdgeRef, type ExtrudeFeature, type Feature, type FilletFeature, roundFaceCount, type HoleFeature, type ShellFeature, type SketchFeature, type SolidModelingFeature, type Vec3 } from '../shared/model/feature.ts';
 import { circularTransforms, linearTransforms, mirrorTransform, type Transform } from '../shared/model/pattern.ts';
 import { holePositions, holeProblem } from '../shared/model/hole.ts';
 import { edgeFaceNames, edgeRefOf, faceRefOf, resolveEdgeRefs, resolveFaceRef, resolveFacePlane, type BodyNaming } from '../shared/model/naming.ts';
 import { sketchProfile, type Profile } from '../shared/model/profile.ts';
 import { DEFAULT_THIN_THICKNESS, thinProfile } from '../shared/model/thin.ts';
+import { edgePoint, reversedPath, sketchPath } from '../shared/model/path.ts';
 import type { GeometryRef, ReferenceGeometry } from '../shared/model/reference.ts';
 import { frameOf, frameOnPlane, ORIGIN_ID, toModel, toSketch, type SketchFrame, type SketchPlaneRef } from '../shared/model/sketch.ts';
 import type { Point2 } from '../shared/model/spline.ts';
 import { hashString } from '../shared/hash.ts';
-import type { KernelFeature, ResolvedCopy, ResolvedDraft, ResolvedEdgeFeature, ResolvedExtrude, ResolvedHole, ResolvedShell } from './backend.ts';
+import type { KernelFeature, ResolvedCopy, ResolvedDraft, ResolvedLoft, ResolvedSweep, ResolvedEdgeFeature, ResolvedExtrude, ResolvedHole, ResolvedShell } from './backend.ts';
 import { FeatureError } from './feature-error.ts';
 import { axisOfReference, curvedFaceOfReference, referenceValue, type BodyQuery, type ReferenceContext } from './reference.ts';
 
@@ -311,6 +312,50 @@ function resolveDraft(feature: DraftFeature, context: ResolveContext): ResolvedD
   };
 }
 
+/** A sketch before the feature by id; throws FeatureError when it is missing or suppressed. */
+function sketchBefore(before: readonly Feature[], id: string): SketchFeature {
+  const sketch = before.find((candidate): candidate is SketchFeature => candidate.type === 'sketch' && candidate.id === id);
+  if (!sketch || sketch.suppressed) throw new FeatureError('sketch-missing');
+  return sketch;
+}
+
+/**
+ * A sweep: the outlines of its sketch and the path of the other one, running from its end nearer to the
+ * outlines (they are swept from where they lie).
+ */
+function resolveSweep(feature: SweepFeature, before: readonly Feature[], context: ResolveContext): ResolvedSweep {
+  const sketch = sketchBefore(before, feature.sketch);
+  const profile = profileOf(sketch);
+  const frame = context.frames.get(sketch.id) ?? frameOf(sketch.plane);
+  const pathSketch = sketchBefore(before, feature.path);
+  const spineFrame = context.frames.get(pathSketch.id) ?? frameOf(pathSketch.plane);
+  const found = sketchPath(pathSketch.sketch);
+  if ('code' in found) throw new FeatureError(found.code, found.code === 'path-branching' ? `${coordinate(found.at[0])}, ${coordinate(found.at[1])}` : undefined);
+  // The middle of the outlines, and both ends of the path, in the model.
+  const points = profile.regions.flatMap((region) => region.outer.polygon).map(([x, y]) => toModel(frame, x, y));
+  const middle = points.reduce<Vec3>((sum, p) => [sum[0] + p[0] / points.length, sum[1] + p[1] / points.length, sum[2] + p[2] / points.length], [0, 0, 0]);
+  const at = (end: boolean) => {
+    const edge = end ? found.edges.at(-1) : found.edges[0];
+    const [x, y] = edge ? edgePoint(edge, end) : [0, 0];
+    return Math.hypot(...minus(toModel(spineFrame, x, y), middle));
+  };
+  const spine = !found.closed && at(true) < at(false) ? reversedPath(found) : found;
+  return { ...feature, profile, frame, spine, spineFrame };
+}
+
+/** A loft: one outline (without holes) of each of its sketches, in order. */
+function resolveLoft(feature: LoftFeature, before: readonly Feature[], context: ResolveContext): ResolvedLoft {
+  if (feature.sketches.length < 2) throw new FeatureError('loft-sections');
+  const sections = feature.sketches.map((id, i) => {
+    const sketch = sketchBefore(before, id);
+    const profile = profileOf(sketch);
+    const region = profile.regions[0];
+    if (!region || profile.regions.length > 1 || region.holes.length > 0) throw new FeatureError('loft-profile', String(i + 1));
+    return { loop: region.outer, frame: context.frames.get(sketch.id) ?? frameOf(sketch.plane) };
+  });
+  return { ...feature, sections };
+}
+
 /** What features are resolved against: the body before them, where sketches lie and where reference features lie. */
 export interface ResolveContext extends ReferenceContext {
   frames: ReadonlyMap<string, SketchFrame>;
@@ -326,6 +371,8 @@ export function resolveFeature(feature: SolidModelingFeature, before: readonly F
   if (isCopyFeature(feature)) return resolveCopy(feature, before, context);
   if (feature.type === 'shell') return resolveShell(feature, context);
   if (feature.type === 'draft') return resolveDraft(feature, context);
+  if (feature.type === 'sweep') return resolveSweep(feature, before, context);
+  if (feature.type === 'loft') return resolveLoft(feature, before, context);
   if (isEdgeFeature(feature)) {
     if (!context.body) throw new FeatureError('no-body');
     return resolveEdges(feature, context.body);

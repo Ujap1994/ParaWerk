@@ -99,6 +99,39 @@ example a cup from the open outline of its inside.
 
 ![A flanged bush revolved three quarters of a turn around the orange centerline](../images/screenshots/revolve-bush.png)
 
+## Sweep
+
+**Sweep** (in the arrow of the **Revolve** button) moves the closed outlines of one sketch along a path,
+the curves of another sketch – handles, tubes, wires, grooves along a curve with **Remove material**.
+
+- *Profile*: the sketch with the closed outlines. They are swept as they lie, so draw them across the
+  start of the path – usually on a plane at a right angle to it, through its first point.
+- *Path*: a sketch with one chain of lines, arcs, ellipses or splines, open or closed. Curves that
+  branch or do not connect are reported. The path runs from its end nearer to the outlines, so it does not
+  matter in which direction it was drawn.
+- Sweep starts with the newest sketch with closed outlines as profile and the newest one without as
+  path, if no feature uses them yet.
+
+![A handle: a circle swept along a path of lines and two arcs](../images/screenshots/sweep.png)
+
+The profile keeps its angle to the path as it follows it. Where the path bends tighter than the profile is
+wide, the sweep would cross itself and is reported.
+
+## Loft
+
+**Loft** (also in the arrow of **Revolve**) makes a solid through the outlines of several sketches, in
+order – transitions from a square duct to a round one, bottles, blades. Each sketch gives one closed
+outline without holes, usually on parallel planes one above the other (reference planes at offsets).
+
+- *Profiles, in order*: the list of sketches; **↑** moves a sketch up, **✕** takes it out, *Add a profile*
+  adds another one at the end. Loft starts with the sketches with closed outlines that no feature uses yet.
+- **Flat faces between the profiles** joins neighboring outlines with straight faces instead of a smooth
+  surface through all of them.
+- Outlines with different numbers of edges (a square and a circle) are joined too; the side faces are
+  named after the edges of the first outline.
+
+![A transition from a square to a circle 60 mm above it](../images/screenshots/loft.png)
+
 ## Hole
 
 **Hole** drills holes for ISO metric screws – M1.6 to M30 – at the points of a sketch. Sketch on the face
@@ -134,8 +167,8 @@ circles of its nominal diameter where it starts and where it ends (dimmed where 
 
 **Pattern** copies features in a row, **Circular pattern** around an axis, **Mirror** through a plane
 (all three under the *Pattern* button and its arrow). They copy features that add or cut material –
-extrusions, revolutions, holes, boxes and cylinders – with everything that defines them; fillets and
-chamfers are not copied.
+extrusions, revolutions, sweeps, lofts, holes, boxes and cylinders – with everything that defines them;
+fillets and chamfers are not copied.
 
 1. *Features to copy*: click the features in the feature tree (shown below the side panel while you
    edit) or click one of their faces in the 3D view; click again to take one out. Their faces are

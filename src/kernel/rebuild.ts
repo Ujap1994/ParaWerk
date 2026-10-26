@@ -1,5 +1,5 @@
 import { hashString } from '../shared/hash.ts';
-import { isEdgeFeature, isReferenceFeature, isSketchBased, type Feature, type SketchFeature, type Vec3 } from '../shared/model/feature.ts';
+import { isEdgeFeature, isReferenceFeature, sketchesUsedBy, type Feature, type SketchFeature, type Vec3 } from '../shared/model/feature.ts';
 import type { BodyNaming } from '../shared/model/naming.ts';
 import type { ReferenceGeometry } from '../shared/model/reference.ts';
 import type { SketchFrame, SketchPlaneRef } from '../shared/model/sketch.ts';
@@ -57,10 +57,14 @@ function featureSignature(feature: Feature, sketches: ReadonlyMap<string, Sketch
   // An imported file is known by its content hash: hashing the whole file at every rebuild would be slow.
   if (feature.type === 'import') return stableStringify({ type: feature.type, id: feature.id, operation: feature.operation, hash: feature.hash, suppressed: feature.suppressed });
   const { name: _name, expressions: _expressions, ...geometry } = feature;
-  if (isSketchBased(feature)) {
-    // Extrusions and revolutions follow their sketch: its plane and geometry belong to their signature.
-    const sketch = sketches.get(feature.sketch);
-    return stableStringify({ ...geometry, from: sketch && !sketch.suppressed ? { plane: planeSignature(sketch.plane), entities: sketch.sketch.entities } : null });
+  const used = sketchesUsedBy(feature);
+  if (used.length > 0) {
+    // Extrusions, revolutions, sweeps and lofts follow their sketches: their planes and geometry belong to their signature.
+    const from = used.map((id) => {
+      const sketch = sketches.get(id);
+      return sketch && !sketch.suppressed ? { plane: planeSignature(sketch.plane), entities: sketch.sketch.entities } : null;
+    });
+    return stableStringify({ ...geometry, from: from.length === 1 ? from[0] : from });
   }
   return stableStringify(geometry);
 }

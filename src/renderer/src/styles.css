@@ -2007,3 +2007,22 @@ kbd {
   justify-self: start;
   margin-bottom: 10px;
 }
+
+/* The profiles of a loft, in order. */
+.loft-list {
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 4px;
+}
+
+.loft-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 4px 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}

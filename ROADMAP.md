@@ -192,7 +192,8 @@ what that turns up is fixed before Phase 3 starts.
 | Item | Status |
 |---|---|
 | Draft (faces about a neutral plane) | ✅ done |
-| Sweep, loft, rib | open |
+| Sweep (along a path of lines, arcs, ellipses and splines) and loft (through outlines of several sketches) | ✅ done |
+| Sweep with twist and guide curves, loft with guide curves, rib | open |
 | Multi-body parts, variable-radius fillets, curves (helix, projected, composite), modeled threads | open |
 | Surface tools (offset, knit, thicken), configurations and design tables, full equation support | open |
 

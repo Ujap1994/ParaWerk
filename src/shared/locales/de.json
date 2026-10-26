@@ -114,7 +114,9 @@
       "exportThreeMf": "Als 3MF für den 3D-Druck exportieren, mit Material und Farbe",
       "importStep": "Eine STEP-Datei als Körper importieren",
       "csys": "Koordinatensystem erzeugen: an einer Position oder an einem Punkt mit Achsen entlang von Kanten, Achsen oder Ebenennormalen",
-      "draft": "Flächen um einen Winkel zu einer neutralen Ebene neigen, für Guss- und Spritzgussteile"
+      "draft": "Flächen um einen Winkel zu einer neutralen Ebene neigen, für Guss- und Spritzgussteile",
+      "sweep": "Die geschlossenen Konturen einer Skizze entlang der Kurven einer anderen Skizze austragen",
+      "loft": "Einen Körper durch die Konturen mehrerer Skizzen der Reihe nach erzeugen"
     },
     "tabs": {
       "label": "Befehlsregister",
@@ -198,7 +200,10 @@
     "exportFormats": "Exportformate",
     "csys": "Koordinatensystem",
     "draft": "Formschräge",
-    "formFeatures": "Schale und Formschräge"
+    "formFeatures": "Schale und Formschräge",
+    "sweep": "Austragung",
+    "loft": "Ausformung",
+    "solidFeatures": "Rotation, Austragung und Ausformung"
   },
   "features": {
     "plane": "Ebene",
@@ -219,7 +224,9 @@
     "shell": "Schale",
     "import": "Import",
     "csys": "Koordinatensystem",
-    "draft": "Formschräge"
+    "draft": "Formschräge",
+    "sweep": "Austragung",
+    "loft": "Ausformung"
   },
   "tree": {
     "title": "Featurebaum",
@@ -432,7 +439,9 @@
     "dxfImportedSkipped": "{{count}} Elemente importiert; nicht unterstützt und ausgelassen: {{skipped}}.",
     "noSketchToExtrude": "Zeichne zuerst eine Skizze mit einer geschlossenen Kontur.",
     "noHoleSketch": "Setze zuerst Punkte für die Bohrungen in einer Skizze auf der Fläche.",
-    "importFailed": "Import fehlgeschlagen: {{message}}"
+    "importFailed": "Import fehlgeschlagen: {{message}}",
+    "noSweepSketches": "Eine Austragung braucht zwei Skizzen: eine mit geschlossener Kontur und eine mit dem Pfad.",
+    "noLoftSketches": "Eine Ausformung braucht mindestens zwei Skizzen mit je einer geschlossenen Kontur."
   },
   "errors": {
     "no-body": "Es gibt noch keinen Körper, der verändert werden kann.",
@@ -452,7 +461,7 @@
     "hole-invalid": "Die Maße der Bohrung passen nicht zusammen: Eine Senkung muss breiter als die Bohrung und weniger tief sein, ein Gewinde nicht tiefer als die Bohrung.",
     "pattern-empty": "Wähle die zu kopierenden Features: im Featurebaum anklicken oder eine ihrer Flächen in der 3D-Ansicht.",
     "pattern-seed-missing": "Ein zu kopierendes Feature fehlt oder ist unterdrückt. Bearbeite das Feature und wähle die Features neu.",
-    "pattern-unsupported": "Nur Features, die Material hinzufügen oder wegnehmen, lassen sich kopieren: Extrusionen, Rotationen, Bohrungen, Quader und Zylinder.",
+    "pattern-unsupported": "Nur Features, die Material hinzufügen oder wegnehmen, lassen sich kopieren: Extrusionen, Rotationen, Austragungen, Ausformungen, Bohrungen, Quader und Zylinder.",
     "shell-face-missing": "Die zu öffnenden Flächen existieren nicht mehr, eine frühere Änderung hat sie entfernt. Bearbeite die Schale und wähle die Flächen neu.",
     "end-behind": "Das Ende liegt in dieser Richtung hinter der Skizze. Wähle die andere Richtung oder ein anderes Ende.",
     "end-parallel": "Die Extrusion läuft entlang dieser Ebene und erreicht sie nie. Wähle eine Ebene, die schräg zur Extrusion liegt.",
@@ -477,7 +486,14 @@
     "import-no-solid": "Die STEP-Datei enthält keinen Volumenkörper (nur Flächen oder Drahtmodelle).",
     "draft-faces": "Wähle die Flächen, die geneigt werden sollen.",
     "draft-face": "Fläche {{detail}} lässt sich nicht neigen: Sie muss entlang der Zugrichtung verlaufen (nicht quer dazu).",
-    "draft-face-missing": "{{detail}} der zu neigenden Flächen gibt es nicht mehr: Eine frühere Änderung hat sie entfernt. Bearbeite die Formschräge und wähle sie neu."
+    "draft-face-missing": "{{detail}} der zu neigenden Flächen gibt es nicht mehr: Eine frühere Änderung hat sie entfernt. Bearbeite die Formschräge und wähle sie neu.",
+    "path-empty": "Die Pfadskizze hat keine Kurven.",
+    "path-branching": "Der Pfad verzweigt sich bei ({{detail}}) mm: Er muss ein einziger Kurvenzug sein.",
+    "path-gaps": "Die Kurven des Pfads bilden keinen zusammenhängenden Zug. Schließe die Lücken oder lege die anderen Kurven in eine andere Skizze.",
+    "sweep-failed": "Das Profil kann dem Pfad nicht folgen: Es durchdringt sich vielleicht selbst, wo der Pfad enger gebogen ist, als das Profil breit ist.",
+    "loft-sections": "Eine Ausformung braucht mindestens zwei Profile.",
+    "loft-profile": "Profil {{detail}} muss eine geschlossene Kontur ohne Löcher sein.",
+    "loft-failed": "Die Profile ließen sich nicht verbinden. Prüfe, ob sie hintereinander liegen und nicht gegeneinander verdreht sind."
   },
   "warnings": {
     "edge-missing_one": "{{count}} ausgewählte Kante existiert nicht mehr und wird ausgelassen. Bearbeite das Feature, um sie zu entfernen oder eine andere Kante zu wählen.",
@@ -979,5 +995,18 @@
     "angle": "Formschrägenwinkel",
     "flip": "In die andere Richtung ziehen",
     "hint": "Erst die neutrale Ebene wählen, dann die zu neigenden Flächen (erneutes Klicken nimmt eine heraus). Die Flächen drehen sich um die Linie, an der sie die neutrale Ebene schneiden, sodass das Teil in Zugrichtung, der Normalen der Ebene, schmaler wird."
+  },
+  "sweep": {
+    "profile": "Profil (geschlossene Konturen)",
+    "path": "Pfad",
+    "hint": "Die Konturen werden so ausgetragen, wie sie liegen; zeichne sie also quer zum Anfang des Pfads. Der Pfad ist ein Kurvenzug aus Linien, Bögen, Ellipsen oder Splines in einer anderen Skizze, offen oder geschlossen; er beginnt an seinem Ende, das näher an den Konturen liegt."
+  },
+  "loft": {
+    "profiles": "Profile der Reihe nach",
+    "up": "Nach oben",
+    "add": "Profil hinzufügen",
+    "choose": "Skizze wählen",
+    "ruled": "Ebene Flächen zwischen den Profilen",
+    "hint": "Jede Skizze liefert eine geschlossene Kontur (ohne Löcher). Der Körper verläuft durch sie in der Reihenfolge der Liste, meist auf parallelen Ebenen übereinander."
   }
 }

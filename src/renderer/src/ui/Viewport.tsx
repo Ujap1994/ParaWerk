@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { hasReferenceSlots, isCopyFeature, isEdgeFeature, isSketchBased, roundFaceCount, type Vec3 } from '../../../shared/model/feature.ts';
+import { hasReferenceSlots, isCopyFeature, isEdgeFeature, roundFaceCount, sketchesUsedBy, type Vec3 } from '../../../shared/model/feature.ts';
 import { resolveEdgeRefs } from '../../../shared/model/naming.ts';
 import { frameOf, STANDARD_PLANES } from '../../../shared/model/sketch.ts';
 import * as commands from '../commands.ts';
@@ -90,7 +90,7 @@ function inactiveSketches(state: AppState): InactiveSketch[] {
   const features = state.history.features;
   const end = modelEnd(state);
   // Sketches that an extrusion or revolution has turned into a solid are hidden (editing that feature shows its sketch).
-  const used = new Set(features.slice(0, end).flatMap((feature) => (isSketchBased(feature) && !feature.suppressed ? [feature.sketch] : [])));
+  const used = new Set(features.slice(0, end).flatMap((feature) => (feature.suppressed ? [] : sketchesUsedBy(feature))));
   // The axis of the revolution being edited is highlighted in its sketch.
   const draft = state.activeEdit?.draft;
   const axis = draft?.type === 'revolve' ? { sketch: draft.sketch, line: draft.axis } : null;

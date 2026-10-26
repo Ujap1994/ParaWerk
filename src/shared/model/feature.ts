@@ -11,7 +11,7 @@ import type { ThinSide } from './thin.ts';
 
 export type Vec3 = [number, number, number];
 
-export type FeatureType = 'variables' | 'sketch' | 'plane' | 'axis' | 'point' | 'csys' | 'extrude' | 'revolve' | 'hole' | 'pattern' | 'mirror' | 'box' | 'cylinder' | 'import' | 'fillet' | 'chamfer' | 'shell' | 'draft';
+export type FeatureType = 'variables' | 'sketch' | 'plane' | 'axis' | 'point' | 'csys' | 'extrude' | 'revolve' | 'hole' | 'pattern' | 'mirror' | 'box' | 'cylinder' | 'import' | 'fillet' | 'chamfer' | 'shell' | 'draft' | 'sweep' | 'loft';
 
 /** How a solid-creating feature combines with the existing body. */
 export type BooleanOperation = 'add' | 'cut';
@@ -76,6 +76,8 @@ export const EXPRESSION_FIELDS: Readonly<Record<FeatureType, readonly string[]>>
   chamfer: ['distance', 'distance2', 'angle'],
   shell: ['thickness'],
   draft: ['angle'],
+  sweep: [],
+  loft: [],
 };
 
 /** A named value of the part; its expression may use other variables. */
@@ -457,13 +459,42 @@ export function hasReferenceSlots(feature: Feature): feature is SlotFeature {
 }
 
 /** The feature types a pattern or mirror can copy: those that add or cut material with a tool of their own. */
-export const COPYABLE_TYPES: ReadonlySet<FeatureType> = new Set(['extrude', 'revolve', 'hole', 'box', 'cylinder']);
+export const COPYABLE_TYPES: ReadonlySet<FeatureType> = new Set(['extrude', 'revolve', 'hole', 'box', 'cylinder', 'sweep', 'loft']);
 
 /** Features built from a sketch: its outlines (extrude, revolve) or its points (hole). */
 export type SketchBasedFeature = ExtrudeFeature | RevolveFeature | HoleFeature;
 
 export function isSketchBased(feature: Feature): feature is SketchBasedFeature {
   return feature.type === 'extrude' || feature.type === 'revolve' || feature.type === 'hole';
+}
+
+/**
+ * Sweeps the closed outlines of a sketch along a path, the curves of another sketch (lines, arcs, ellipses
+ * and splines in one chain, open or closed). The outlines are swept as they lie, usually across the start
+ * of the path; the path runs from its end nearer to them.
+ */
+export interface SweepFeature extends FeatureBase {
+  type: 'sweep';
+  operation: BooleanOperation;
+  sketch: string;
+  path: string;
+}
+
+/** A solid through the closed outlines of several sketches, one outline each, in their order. */
+export interface LoftFeature extends FeatureBase {
+  type: 'loft';
+  operation: BooleanOperation;
+  sketches: string[];
+  /** Flat faces between the outlines instead of smooth ones. */
+  ruled?: boolean;
+}
+
+/** The sketches a feature is built from (their curves belong to its geometry). */
+export function sketchesUsedBy(feature: Feature): string[] {
+  if (isSketchBased(feature)) return [feature.sketch];
+  if (feature.type === 'sweep') return [feature.sketch, feature.path];
+  if (feature.type === 'loft') return feature.sketches;
+  return [];
 }
 
 export type Feature =
@@ -484,7 +515,9 @@ export type Feature =
   | FilletFeature
   | ChamferFeature
   | ShellFeature
-  | DraftFeature;
+  | DraftFeature
+  | SweepFeature
+  | LoftFeature;
 
 /** Features that build or modify the solid body (everything except variables, sketches and reference geometry). */
 export type SolidModelingFeature = Exclude<Feature, SketchFeature | VariablesFeature | ReferenceFeature>;
@@ -499,10 +532,10 @@ export function isSolidFeature(feature: Feature): feature is BoxFeature | Cylind
   return feature.type === 'box' || feature.type === 'cylinder';
 }
 
-export const FEATURE_TYPES: readonly FeatureType[] = ['variables', 'sketch', 'plane', 'axis', 'point', 'csys', 'extrude', 'revolve', 'hole', 'pattern', 'mirror', 'box', 'cylinder', 'import', 'fillet', 'chamfer', 'shell', 'draft'];
+export const FEATURE_TYPES: readonly FeatureType[] = ['variables', 'sketch', 'plane', 'axis', 'point', 'csys', 'extrude', 'revolve', 'hole', 'pattern', 'mirror', 'box', 'cylinder', 'import', 'fillet', 'chamfer', 'shell', 'draft', 'sweep', 'loft'];
 
 /** Features that make a body from nothing (the first feature with material must be one of them, adding). */
-export const BODY_TYPES: ReadonlySet<FeatureType> = new Set(['box', 'cylinder', 'extrude', 'revolve', 'import']);
+export const BODY_TYPES: ReadonlySet<FeatureType> = new Set(['box', 'cylinder', 'extrude', 'revolve', 'import', 'sweep', 'loft']);
 
 let idCounter = 0;
 
@@ -567,5 +600,9 @@ export function defaultFeature(type: FeatureType, id: string = createFeatureId()
       return { id, type, thickness: 2, faces: [], outward: false };
     case 'draft':
       return { id, type, method: 'neutralPlane', references: [], faces: [], angle: 3, flip: false };
+    case 'sweep':
+      return { id, type, operation: 'add', sketch: '', path: '' };
+    case 'loft':
+      return { id, type, operation: 'add', sketches: [] };
   }
 }
