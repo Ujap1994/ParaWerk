@@ -37,9 +37,13 @@ jobs:
           - name: windows
             os: windows-latest
             command: npx electron-builder --win --x64 --publish never && npx electron-builder --win --arm64 --publish never
+          # The AppImage on its own first: built together with the other targets, it sometimes misses
+          # chrome-sandbox in the shared linux-unpacked folder (ENOENT).
           - name: linux-x64
             os: ubuntu-24.04
-            command: npx electron-builder --linux --x64 --publish never
+            command: >-
+              npx electron-builder --linux AppImage --x64 --publish never &&
+              npx electron-builder --linux deb rpm pacman snap flatpak tar.gz --x64 --publish never
           # The arm64 snap is built with snapcraft (no prebuilt template); a 22.04 host matches the core22 base.
           # snapcraft in host mode needs root (it runs apt), so only the snap is built with sudo.
           - name: linux-arm64
