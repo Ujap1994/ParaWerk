@@ -558,7 +558,8 @@
     "surface-missing": "The surface no longer exists. Choose another one.",
     "surface-open": "Only a surface that encloses a volume can be filled. Knit its faces together first, or give it a thickness instead.",
     "offset-failed": "The faces cannot be offset by this distance: a curved face may be smaller than the distance inwards.",
-    "thicken-failed": "The surface cannot be thickened like this; try a smaller thickness or the other side."
+    "thicken-failed": "The surface cannot be thickened like this; try a smaller thickness or the other side.",
+    "faces-bodies": "The picked faces belong to different bodies. Pick faces of one body, or combine the bodies first."
   },
   "warnings": {
     "edge-missing_one": "{{count}} selected edge no longer exists and is left out. Edit the feature to remove it or pick another edge.",

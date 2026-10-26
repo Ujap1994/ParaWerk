@@ -64,6 +64,33 @@ describe('separate bodies', () => {
   });
 });
 
+describe('features on one of overlapping bodies', () => {
+  it('shells, drafts and threads only the body their faces belong to', () => {
+    // a shelled 3 thick, open at its top: the cube b stays solid.
+    const shelled = build([a, b, { id: 's', type: 'shell', thickness: 3, faces: [topOfA], outward: false }]);
+    expect(shelled.features.at(-1)?.status).toBe('ok');
+    expect(bodiesOf(shelled)).toBe(2);
+    expect(shelled.captures[0]?.properties?.volume).toBeCloseTo(A - 94 * 54 * 37 + B, 1);
+    // Two sides of b drafted 5° about its bottom: each adds half of 40 · 40 · tan 5° · 40.
+    const drafted = build([a, b, {
+      id: 'd', type: 'draft', method: 'neutralPlane', references: [{ kind: 'face', name: 'b:bottom', at: [50, 0, 20] }],
+      faces: [{ kind: 'face', name: 'b:front', at: [50, -20, 40] }, { kind: 'face', name: 'b:back', at: [50, 20, 40] }], angle: 5, flip: false,
+    }]);
+    expect(drafted.captures[0]?.properties?.volume).toBeCloseTo(A + B + 2 * 0.5 * 40 * 40 * Math.tan((5 * Math.PI) / 180) * 40, 0);
+    // A thread on a pin of its own that stands in a.
+    const pin: CylinderFeature = { id: 'p', type: 'cylinder', operation: 'add', merge: false, radius: 5, height: 30, axis: 'z', position: [-30, 0, 30] };
+    const before = build([a, pin]).captures[0]?.properties?.volume ?? 0;
+    const threaded = build([a, pin, { id: 't', type: 'thread', faces: [{ kind: 'face', name: 'p:side', at: [-25, 0, 50] }], size: 'M10', pitch: 1.5, length: 10, reverse: false, leftHand: false }]);
+    expect(threaded.features.at(-1)?.status).toBe('ok');
+    expect(threaded.captures[0]?.properties?.volume).toBeLessThan(before - 50);
+  });
+
+  it('reports faces of different bodies in one feature', () => {
+    const result = build([a, b, { id: 'f', type: 'fillet', radius: 3, edges: [], method: 'faces', round: [topOfA, { kind: 'face', name: 'b:front', at: [50, -20, 40] }] }]);
+    expect(result.features.at(-1)?.error?.code).toBe('faces-bodies');
+  });
+});
+
 describe('combine and delete bodies', () => {
   it('fuses, subtracts and intersects bodies', () => {
     const add = build([a, b, combine('add', [topOfA, topOfB])]);

@@ -38,8 +38,6 @@ rebuilds your part; your document is not affected. Please report the steps that 
   bodies) and moving or copying bodies; assemblies (Phase 4).
 - Thin features offset lines, arcs and circles, not ellipses and splines; face fillets work between
   planar faces.
-- Shell, draft, threads and face fillets on bodies that overlap other bodies act on the part as a whole;
-  combine overlapping bodies first.
 - Along a helix, with a twist or with a guide curve, a sweep takes outlines without holes. A spring of
   many turns takes a second or more to build and show.
 - Converted model edges are fixed copies; they do not follow later changes of the model yet.

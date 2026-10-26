@@ -144,6 +144,7 @@ export type FeatureErrorCode =
   | 'centerline-gaps'
   | 'combine-bodies'
   | 'body-missing'
+  | 'faces-bodies'
   | 'surface-faces'
   | 'surface-missing'
   | 'surface-open'

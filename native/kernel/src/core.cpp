@@ -606,6 +606,14 @@ StoredShape bodyByBody(const StoredShape& body, const TopoDS_Shape& tools, bool 
   return bodyOf(parts);
 }
 
+/**
+ * Runs `operation` on the body (solid) that holds the faces `faceIndices` of `bodyId`, with the faces'
+ * indices in that body, and puts the result back among the other bodies; operations that change faces
+ * of one body (shell, draft, threads, face fillets) so never see bodies that overlap it. With one solid,
+ * or no faces, it runs on the whole shape. Fails with "faces-bodies" when the faces are in several bodies.
+ */
+int onBodyOfFaces(int bodyId, const std::vector<int>& faceIndices, const std::function<int(int, const std::vector<int>&)>& operation);
+
 /** The index (in TopExp::MapShapes order) of the solid that holds each face of a body. */
 std::vector<int32_t> faceSolids(const TopoDS_Shape& shape) {
   ShapeMap faces, solids;
@@ -621,6 +629,40 @@ std::vector<int32_t> faceSolids(const TopoDS_Shape& shape) {
     }
   }
   return out;
+}
+
+int onBodyOfFaces(int bodyId, const std::vector<int>& faceIndices, const std::function<int(int, const std::vector<int>&)>& operation) {
+  const StoredShape& body = store().entry(bodyId);
+  if (countSolids(body.shape) <= 1 || faceIndices.empty()) return operation(bodyId, faceIndices);
+  std::vector<StoredShape> solids = solidsOf(body);
+  const std::vector<int32_t> owners = faceSolids(body.shape);
+  int solid = -1;
+  for (int face : faceIndices) {
+    if (face < 0 || face >= static_cast<int>(owners.size())) throw KernelError("operation-failed", "no such face");
+    const int owner = owners[static_cast<size_t>(face)];
+    if (solid >= 0 && owner != solid) throw KernelError("faces-bodies", "the faces belong to different bodies");
+    solid = owner;
+  }
+  if (solid < 0) return operation(bodyId, faceIndices);
+  // The faces' indices in that body.
+  ShapeMap all, own;
+  TopExp::MapShapes(body.shape, TopAbs_FACE, all);
+  TopExp::MapShapes(solids[static_cast<size_t>(solid)].shape, TopAbs_FACE, own);
+  std::vector<int> local;
+  for (int face : faceIndices) local.push_back(own.FindIndex(all(face + 1)) - 1);
+  const int partId = store().add(solids[static_cast<size_t>(solid)].shape, solids[static_cast<size_t>(solid)].names);
+  int resultId = 0;
+  try {
+    resultId = operation(partId, local);
+  } catch (...) {
+    store().release(partId);
+    throw;
+  }
+  store().release(partId);
+  solids[static_cast<size_t>(solid)] = store().entry(resultId);
+  store().release(resultId);
+  StoredShape combined = bodyOf(solids);
+  return store().add(combined.shape, std::move(combined.names));
 }
 
 }  // namespace
@@ -1563,7 +1605,9 @@ int cutHoles(int bodyId, const std::vector<double>& profile, const std::vector<d
   return store().add(result.shape, std::move(result.names));
 }
 
-int shell(int bodyId, const std::vector<int>& openFaces, double thickness, bool outward, const std::string& name) {
+namespace {
+
+int shellOnBody(int bodyId, const std::vector<int>& openFaces, double thickness, bool outward, const std::string& name) {
   if (!(thickness > 0)) throw KernelError("operation-failed", "the wall thickness must be above 0");
   const StoredShape& body = store().entry(bodyId);
   ShapeMap faces;
@@ -1633,6 +1677,12 @@ int shell(int bodyId, const std::vector<int>& openFaces, double thickness, bool 
   namer.inherit(cut, body.shape, body.names);
   namer.inherit(cut, offsetSolid, offsetNames);
   return store().add(result, namer.take());
+}
+
+}  // namespace
+
+int shell(int bodyId, const std::vector<int>& openFaces, double thickness, bool outward, const std::string& name) {
+  return onBodyOfFaces(bodyId, openFaces, [&](int id, const std::vector<int>& faces) { return shellOnBody(id, faces, thickness, outward, name); });
 }
 
 int trimByPlane(int shapeId, const std::vector<double>& plane, const std::string& name) {
@@ -2222,7 +2272,9 @@ int chamferUneven(int bodyId, const std::vector<int>& edgeIndices, double distan
   return finishEdgeFeature(maker, bodyId, edges, edgeNames, name, "chamfer", "chamfer could not be computed (distance too large?)");
 }
 
-int draftFaces(int bodyId, const std::vector<int>& faceIndices, const std::vector<double>& plane, double angle, const std::string& name) {
+namespace {
+
+int draftOnBody(int bodyId, const std::vector<int>& faceIndices, const std::vector<double>& plane, double angle, const std::string& name) {
   if (plane.size() != 6) throw KernelError("operation-failed", "a plane needs a point and a normal");
   if (faceIndices.empty()) throw KernelError("draft-faces", "no faces to draft");
   const StoredShape& body = store().entry(bodyId);
@@ -2257,6 +2309,12 @@ int draftFaces(int bodyId, const std::vector<int>& faceIndices, const std::vecto
   return store().add(result, namer.take());
 }
 
+}  // namespace
+
+int draftFaces(int bodyId, const std::vector<int>& faceIndices, const std::vector<double>& plane, double angle, const std::string& name) {
+  return onBodyOfFaces(bodyId, faceIndices, [&](int id, const std::vector<int>& faces) { return draftOnBody(id, faces, plane, angle, name); });
+}
+
 namespace {
 
 /** The outward normal of a face where it is nearest to its center of area. */
@@ -2283,7 +2341,9 @@ double volumeOf(const TopoDS_Shape& shape) {
 
 }  // namespace
 
-int faceFillet(int bodyId, int faceA, int faceB, double radius, const std::string& name) {
+namespace {
+
+int faceFilletOnBody(int bodyId, int faceA, int faceB, double radius, const std::string& name) {
   const StoredShape& body = store().entry(bodyId);
   ShapeMap faces;
   TopExp::MapShapes(body.shape, TopAbs_FACE, faces);
@@ -2385,7 +2445,15 @@ int faceFillet(int bodyId, int faceA, int faceB, double radius, const std::strin
   return run(algorithm);
 }
 
-int fullRound(int bodyId, int side1, int center, int side2, const std::string& name) {
+}  // namespace
+
+int faceFillet(int bodyId, int faceA, int faceB, double radius, const std::string& name) {
+  return onBodyOfFaces(bodyId, {faceA, faceB}, [&](int id, const std::vector<int>& faces) { return faceFilletOnBody(id, faces[0], faces[1], radius, name); });
+}
+
+namespace {
+
+int fullRoundOnBody(int bodyId, int side1, int center, int side2, const std::string& name) {
   const StoredShape& body = store().entry(bodyId);
   ShapeMap faces;
   TopExp::MapShapes(body.shape, TopAbs_FACE, faces);
@@ -2491,7 +2559,15 @@ int fullRound(int bodyId, int side1, int center, int side2, const std::string& n
   return store().add(result, namer.take());
 }
 
-int cutThread(int bodyId, int faceIndex, double pitch, double length, bool reverse, bool leftHand, const std::string& name) {
+}  // namespace
+
+int fullRound(int bodyId, int side1, int center, int side2, const std::string& name) {
+  return onBodyOfFaces(bodyId, {side1, center, side2}, [&](int id, const std::vector<int>& faces) { return fullRoundOnBody(id, faces[0], faces[1], faces[2], name); });
+}
+
+namespace {
+
+int cutThreadOnBody(int bodyId, int faceIndex, double pitch, double length, bool reverse, bool leftHand, const std::string& name) {
   const StoredShape& body = store().entry(bodyId);
   ShapeMap faces;
   TopExp::MapShapes(body.shape, TopAbs_FACE, faces);
@@ -2570,6 +2646,12 @@ int cutThread(int bodyId, int faceIndex, double pitch, double length, bool rever
   namer.inherit(cut, groove.shape, groove.names);
   namer.rest(faceName(name, "thread"));
   return store().add(result, namer.take());
+}
+
+}  // namespace
+
+int cutThread(int bodyId, int faceIndex, double pitch, double length, bool reverse, bool leftHand, const std::string& name) {
+  return onBodyOfFaces(bodyId, {faceIndex}, [&](int id, const std::vector<int>& faces) { return cutThreadOnBody(id, faces[0], pitch, length, reverse, leftHand, name); });
 }
 
 int transformShape(int id, const std::vector<double>& transform) {

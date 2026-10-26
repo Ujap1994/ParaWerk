@@ -7,6 +7,10 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### Fixed
+- Shells, drafts, threads, face fillets and full rounds on a part of several bodies work on the body their
+  faces belong to: a shell no longer fails and a thread no longer cuts nothing when another body overlaps.
+
 ## [0.4.0-alpha.2] - 2026-10-26
 
 Completes the features of **Phase 3** except lofts with guide curves: twisted and guided sweeps, lofts

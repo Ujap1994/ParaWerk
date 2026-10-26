@@ -558,7 +558,8 @@
     "surface-missing": "Die Fläche existiert nicht mehr. Wähle eine andere.",
     "surface-open": "Nur eine Fläche, die ein Volumen umschließt, kann gefüllt werden. Füge ihre Flächen zuerst zusammen oder gib ihr stattdessen eine Dicke.",
     "offset-failed": "Die Flächen lassen sich nicht um diesen Abstand versetzen: Eine gekrümmte Fläche ist vielleicht kleiner als der Abstand nach innen.",
-    "thicken-failed": "Die Fläche lässt sich so nicht verdicken; versuche eine kleinere Dicke oder die andere Seite."
+    "thicken-failed": "Die Fläche lässt sich so nicht verdicken; versuche eine kleinere Dicke oder die andere Seite.",
+    "faces-bodies": "Die gewählten Flächen gehören zu verschiedenen Körpern. Wähle Flächen eines Körpers oder kombiniere die Körper zuerst."
   },
   "warnings": {
     "edge-missing_one": "{{count}} ausgewählte Kante existiert nicht mehr und wird ausgelassen. Bearbeite das Feature, um sie zu entfernen oder eine andere Kante zu wählen.",
