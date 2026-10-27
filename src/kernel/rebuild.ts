@@ -3,7 +3,7 @@ import { hasReferenceGeometry, isCurveFeature, isSurfaceFeature, isEdgeFeature, 
 import type { BodyNaming } from '../shared/model/naming.ts';
 import type { ReferenceGeometry } from '../shared/model/reference.ts';
 import type { SketchFrame, SketchPlaneRef } from '../shared/model/sketch.ts';
-import type { GeometryBackend, ResolvedHole, ShapeHandle } from './backend.ts';
+import type { GeometryBackend, ResolvedCopy, ResolvedHole, ShapeHandle } from './backend.ts';
 import { holeThreads, throughDepth, type CosmeticThread } from '../shared/model/hole.ts';
 import { FeatureError } from './feature-error.ts';
 import type { FeatureResult } from './protocol.ts';
@@ -23,6 +23,8 @@ interface CacheEntry {
   reference?: ReferenceGeometry;
   /** Curves and surfaces: the shape (owned by the entry). */
   own?: ShapeHandle;
+  /** Patterns and mirrors: what they copied and where (patterns of patterns build on it). */
+  copy?: ResolvedCopy;
   result: FeatureResult;
 }
 
@@ -139,11 +141,15 @@ export class Rebuilder implements Disposable {
     const references = new Map<string, ReferenceGeometry>();
     const curves = new Map<string, ShapeHandle>();
     const surfaces = new Map<string, ShapeHandle>();
+    const copies = new Map<string, ResolvedCopy>();
+    const failed = new Set<string>();
     this.entries.forEach((entry, i) => {
       const feature = features[i];
       if (entry.frame) frames.set(feature?.id ?? '', entry.frame);
       if (entry.reference) references.set(feature?.id ?? '', entry.reference);
       if (entry.own && feature) (isSurfaceFeature(feature) ? surfaces : curves).set(feature.id, entry.own);
+      if (entry.copy && feature) copies.set(feature.id, entry.copy);
+      if (entry.result.status === 'error' && feature) failed.add(feature.id);
     });
     // Several features in a row may ask for the names of the same body.
     const namings = new Map<ShapeHandle, BodyNaming>();
@@ -168,6 +174,7 @@ export class Rebuilder implements Disposable {
       const input = previous?.shape ?? null;
       const inputKey = previous?.shapeKey ?? ROOT_KEY;
       const start = performance.now();
+      if (previous?.result.status === 'error') failed.add((features[i - 1] as Feature).id);
 
       // Sketches do not change the body (extrusions consume them); a sketch on a face follows its face.
       if (feature.type === 'sketch' && !feature.suppressed) {
@@ -258,7 +265,7 @@ export class Rebuilder implements Disposable {
       }
 
       try {
-        const resolved = resolveFeature(feature, features.slice(0, i), { body: input ? query(input) : null, frames, references, curves, surfaces });
+        const resolved = resolveFeature(feature, features.slice(0, i), { body: input ? query(input) : null, frames, references, curves, surfaces, copies, failed });
         this.backend.takeCutMissed?.();
         const shape = this.backend.applyFeature(input, resolved);
         const missed = this.backend.takeCutMissed?.() ?? false;
@@ -267,11 +274,13 @@ export class Rebuilder implements Disposable {
         const missing = 'missingEdges' in resolved ? resolved.missingEdges : undefined;
         const missingFaces = 'missingFaces' in resolved ? resolved.missingFaces : undefined;
         const threads = resolved.type === 'hole' && input ? threadsOf(resolved, this.backend.boundingBox(input)) : [];
+        if (resolved.type === 'pattern' || resolved.type === 'mirror') copies.set(feature.id, resolved);
         this.entries.push({
           key,
           shapeKey: key,
           shape,
           ownsShape: true,
+          ...(resolved.type === 'pattern' || resolved.type === 'mirror' ? { copy: resolved } : {}),
           result: {
             id: feature.id,
             status: 'ok',

@@ -263,7 +263,8 @@ export function FeatureTree() {
 
   const featureRow = (feature: Feature, index: number, position: number, last: boolean) => {
     const Icon = FEATURE_ICONS[feature.type];
-    const result = !activeEdit ? results?.find((r) => r.id === feature.id) : undefined;
+    // While a feature is edited, the features before it keep showing their errors (a broken pattern to copy).
+    const result = !activeEdit || index < activeEdit.index ? results?.find((r) => r.id === feature.id) : undefined;
     const error = result?.status === 'error' ? result.error : undefined;
     const warning = result?.status === 'ok' ? result.warning : undefined;
     const rolledBack = activeEdit !== null ? index > activeEdit.index || (activeEdit.mode === 'create' && index >= activeEdit.index) : index >= rollback;

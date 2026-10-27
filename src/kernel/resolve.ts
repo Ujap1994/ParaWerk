@@ -251,11 +251,8 @@ function resolveCopy(feature: CopyFeature, before: readonly Feature[], context: 
   for (const index of indices.sort((a, b) => a - b)) {
     const seed = before[index] as Feature;
     if (!COPYABLE_TYPES.has(seed.type)) throw new FeatureError('pattern-unsupported');
-    const resolved = resolveFeature(seed as SolidModelingFeature, before.slice(0, index), context);
-    const parts =
-      resolved.type === 'pattern' || resolved.type === 'mirror'
-        ? resolved.seeds.map((inner, i) => ({ seed: inner, placed: [IDENTITY, ...chunks(resolved.transforms[i] ?? [])] }))
-        : [{ seed: resolved, placed: [IDENTITY] }];
+    if (context.failed?.has(seed.id)) throw new FeatureError('pattern-seed-failed');
+    const parts = isCopyFeature(seed) ? placesOfCopy(seed, before, index, context) : [{ seed: resolveFeature(seed as SolidModelingFeature, before.slice(0, index), context) as Exclude<KernelFeature, ResolvedCopy>, placed: [IDENTITY] }];
     for (const part of parts) {
       const group = groups.get(part.seed.id) ?? { seed: part.seed, placed: [] };
       for (const placement of part.placed) if (!group.placed.some((other) => sameTransform(other, placement))) group.placed.push(placement);
@@ -289,6 +286,20 @@ function resolveCopy(feature: CopyFeature, before: readonly Feature[], context: 
   const total = copies.reduce((sum, list) => sum + list.length, 0);
   if (total > MAX_COPIES) throw new FeatureError('pattern-too-many', String(total));
   return { ...feature, seeds: seeds.map(({ seed }) => seed), transforms: copies.map((list) => list.flat()) };
+}
+
+/**
+ * The features a pattern or mirror copies, with where they and their copies are. It is taken as it was
+ * built: its own references lie in the body before it and may be gone by now (an edge rounded later).
+ * The features it copies are resolved here, like features copied directly.
+ */
+function placesOfCopy(copy: CopyFeature, before: readonly Feature[], index: number, context: ResolveContext): { seed: Exclude<KernelFeature, ResolvedCopy>; placed: Transform[] }[] {
+  const built = context.copies?.get(copy.id) ?? resolveCopy(copy, before.slice(0, index), context);
+  return built.seeds.map((inner, i) => {
+    const at = before.findIndex((candidate) => candidate.id === inner.id);
+    const seed = at >= 0 ? (resolveFeature(before[at] as SolidModelingFeature, before.slice(0, at), context) as Exclude<KernelFeature, ResolvedCopy>) : inner;
+    return { seed, placed: [IDENTITY, ...chunks(built.transforms[i] ?? [])] };
+  });
 }
 
 /** Most copies a pattern of patterns may make in all. */
@@ -499,6 +510,10 @@ export interface ResolveContext extends ReferenceContext {
   curves?: ReadonlyMap<string, ShapeHandle>;
   /** The offset and knit surfaces before the feature, by id. */
   surfaces?: ReadonlyMap<string, ShapeHandle>;
+  /** The patterns and mirrors before the feature as they were built, by id. */
+  copies?: ReadonlyMap<string, ResolvedCopy>;
+  /** The features before the feature that failed. */
+  failed?: ReadonlySet<string>;
 }
 
 /** What an offset or knit surface is built from: faces of the body, or earlier surfaces. Throws FeatureError. */

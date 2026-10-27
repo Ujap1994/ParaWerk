@@ -548,6 +548,7 @@
     "curve-faces": "Wähle die Flächen, auf die die Kurven projiziert werden.",
     "curve-edge-missing": "{{detail}} Kante(n) der Kurve existieren nicht mehr, eine frühere Änderung hat sie entfernt. Bearbeite die Kurve und wähle die Kanten neu aus.",
     "pattern-too-many": "Das Muster würde {{detail}} Kopien erzeugen; höchstens 10.000 sind möglich. Verringere die Anzahlen.",
+    "pattern-seed-failed": "Ein Feature, das dieses Muster oder diese Spiegelung kopiert, ist selbst fehlgeschlagen. Behebe zuerst dieses Feature: Der Featurebaum markiert es.",
     "guide-missing": "Die Leitkurve der Austragung existiert nicht mehr. Wähle eine andere oder keine.",
     "guide-gaps": "Die Leitkurve muss ein Kurvenzug ohne Lücken und Verzweigungen sein.",
     "centerline-missing": "Die Mittellinie der Ausformung existiert nicht mehr. Wähle eine andere oder keine.",
@@ -880,6 +881,7 @@
   "copy": {
     "features": "Zu kopierende Features",
     "pickFeatures": "Features im Baum oder ihre Flächen in der 3D-Ansicht anklicken",
+    "ownGeometry": "Das gehört zu einer Kopie, die dieses Feature selbst erzeugt. Wähle Geometrie, die es auch ohne das Feature gibt: eine Kante, Fläche oder Ebene des Teils oder eine Referenzachse oder -ebene.",
     "count": "Anzahl",
     "spacing": "Abstand",
     "angle": "Gesamtwinkel",

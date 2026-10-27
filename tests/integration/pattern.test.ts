@@ -4,6 +4,7 @@ import { createKernel } from '../../src/kernel/create.ts';
 import type { Kernel } from '../../src/kernel/kernel.ts';
 import { defaultFeature, type AxisFeature, type BoxFeature, type CylinderFeature, type ExtrudeFeature, type Feature, type HoleFeature, type MirrorFeature, type PatternFeature, type SketchFeature } from '../../src/shared/model/feature.ts';
 import { circularTransforms, linearTransforms, mirrorTransform, transformPoint } from '../../src/shared/model/pattern.ts';
+import { edgeCount, edgeRefOf } from '../../src/shared/model/naming.ts';
 import type { GeometryRef } from '../../src/shared/model/reference.ts';
 import { frameOnPlane } from '../../src/shared/model/sketch.ts';
 
@@ -129,6 +130,31 @@ describe('patterns of patterns', () => {
     // A row of three bosses (x −60, −40, −20) mirrored through the right plane: six bosses.
     const bosses = pattern({ id: 'row', references: [right], features: ['boss'], count: 3, spacing: 20 });
     expect(volumeOf([plate, boss, bosses, mirror({ references: [right], features: ['row'] })])).toBeCloseTo(PLATE + 6 * BOSS, 4);
+  });
+});
+
+describe('patterns of patterns as they were built', () => {
+  it('copies a pattern whose direction edge was rounded off later', () => {
+    // The row goes along the plate's front top edge, which a fillet then rounds off.
+    const naming = build([plate, boss]).captures[0]?.mesh?.naming;
+    if (!naming) throw new Error('no naming');
+    const along = Array.from({ length: edgeCount(naming) }, (_, i) => edgeRefOf(naming, i)).find((ref) => ref && Math.abs(ref.at[1] + 50) < 1e-6 && Math.abs(ref.at[2] - 10) < 1e-6);
+    if (!along) throw new Error('no front top edge');
+    const row = pattern({ id: 'row', references: [along], features: ['boss'], count: 3, spacing: 30 });
+    const round: Feature = { id: 'round', type: 'fillet', radius: 2, edges: [along] };
+    const grid = pattern({ id: 'grid', references: [front], features: ['row'], count: 2, spacing: 30 });
+    const result = build([plate, boss, row, round, grid]);
+    expect(result.features.map((feature) => feature.status)).toEqual(['ok', 'ok', 'ok', 'ok', 'ok']);
+    expect(result.captures[0]?.mesh?.naming.faces).toEqual(expect.arrayContaining(['grid:boss:0:boss:side', 'grid:boss:2:boss:side']));
+  });
+
+  it('tells when a pattern it copies has failed', () => {
+    const row = pattern({ id: 'row', references: [{ kind: 'feature', feature: 'gone' }], features: ['boss'], count: 3, spacing: 30 });
+    const grid = pattern({ id: 'grid', references: [front], features: ['row'], count: 2, spacing: 30 });
+    const result = build([plate, boss, row, grid]);
+    expect(result.features[2]?.error?.code).toBe('reference-missing');
+    expect(result.features[3]?.error?.code).toBe('pattern-seed-failed');
+    expect(build([plate, boss, row, mirror({ references: [right], features: ['row'] })]).features[3]?.error?.code).toBe('pattern-seed-failed');
   });
 });
 

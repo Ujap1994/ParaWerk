@@ -271,10 +271,13 @@ a part mirrored with its patterns. A feature that ends up at the same place twic
 1. *Features to copy*: click the features in the feature tree (shown below the side panel while you
    edit) or click one of their faces in the 3D view; click again to take one out. Their faces are
    highlighted.
-2. Click the next field and pick what the copies follow: for a **linear** pattern a *Direction* – a
-   straight edge, an axis, or a plane or planar face (its normal); for a **circular** pattern an *Axis* –
-   a reference axis, a cylindrical face or a circular edge; for a **mirror** a *Plane* – a standard plane,
-   a planar face or a reference plane.
+2. Pick what the copies follow: for a **linear** pattern a *Direction* – a straight edge, an axis, or a
+   plane or planar face (its normal); for a **circular** pattern an *Axis* – a reference axis, a
+   cylindrical face or a circular edge; for a **mirror** a *Plane* – a standard plane, a planar face or a
+   reference plane. An edge, vertex, plane or axis you click goes into this field right away; for a face,
+   click the field first (a face clicked while *Features to copy* is active names the feature it belongs
+   to). The copies the pattern shows while you edit it cannot be its own direction: pick the original
+   geometry.
 3. *Count* (the original included) and *Spacing*, or the *Total angle* of a circular pattern: 360° spreads
    the copies evenly all round, a smaller angle puts the last copy at its end. **Other direction** and
    **Other way round** turn the pattern the other way.
@@ -282,7 +285,9 @@ a part mirrored with its patterns. A feature that ends up at the same place twic
 ![Two holes copied twice along the front edge of the plate, 22 mm apart: the holes being copied are orange, the edge they follow too](../images/screenshots/pattern-linear.png)
 
 All copies of a feature are added or cut in one operation, so even long patterns rebuild quickly; a
-pattern of patterns makes at most 10,000 copies.
+pattern of patterns makes at most 10,000 copies. A pattern copies another pattern as it was built – with
+the direction that pattern had when it was made, even if its edge was rounded later. If the pattern to
+copy has failed, the new one says so: fix the first one (it is marked in the tree) and the copy follows.
 
 ![A row of three holes turned four times around the center of a disk: a circular pattern of a linear pattern](../images/screenshots/pattern-of-pattern.png)
  Faces of

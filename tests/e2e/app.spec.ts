@@ -1016,6 +1016,61 @@ test('copies a pattern with a second pattern into a grid', async () => {
   expect((await state(page)).history.features[3]).toMatchObject({ type: 'pattern', features: ['row'], count: 2 });
 });
 
+test('copies a pattern of holes with a second pattern along edges picked right after the features', async () => {
+  launched = await launchApp({ width: 1000, height: 640 });
+  const { page } = launched;
+  // A 100 × 20 × 100 block (x −50 … 50, y −10 … 10) with a point on its front face at x 0, z 70.
+  await page.evaluate(() => {
+    const features = [
+      { id: 'block', type: 'box', operation: 'add', width: 100, depth: 20, height: 100, position: [0, 0, 0] },
+      {
+        id: 'points',
+        type: 'sketch',
+        plane: { kind: 'face', face: 0, name: 'block:front', frame: { origin: [0, -10, 50], normal: [0, -1, 0], xDir: [1, 0, 0], yDir: [0, 0, 1] } },
+        sketch: { entities: [{ id: 'p', type: 'point', x: 0, y: 20 }], constraints: [] },
+      },
+    ];
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features, past: [], future: [] }, savedFeatures: features, dirty: false });
+  });
+  await idle(page);
+  await page.click('[data-command="hole"]');
+  await page.click('[data-testid="panel-ok"]');
+  const hole = 100 * 20 * 100 - (await volume(page));
+  const toasts = page.locator('.toast');
+
+  // The hole is picked in the tree; the edge clicked next is the direction, while the list is still the active field.
+  await page.click('[data-command="pattern"]');
+  const ids = (await state(page)).history.features.map((feature) => feature.id);
+  await page.click(`.feature-tree .tree-item[data-feature-id="${ids[2]}"]`);
+  await clickWorldPoint(page, [-50, -10, 50]);
+  await expect(page.locator('[data-testid="reference-slot-0"]')).toContainText('Edge');
+  await expect(toasts).toHaveCount(0);
+  for (const [field, value] of [['pattern-count', '3'], ['pattern-spacing', '10']] as const) {
+    await page.locator(`[data-testid="${field}"]`).fill(value);
+    await page.locator(`[data-testid="${field}"]`).press('Tab');
+  }
+  await page.click('[data-testid="panel-ok"]');
+  expect(await volume(page)).toBeCloseTo(100 * 20 * 100 - 3 * hole, 2);
+
+  // The column of holes copied along the top edge: nine holes.
+  await page.click('[data-command="pattern"]');
+  const column = (await state(page)).history.features[3]?.id;
+  await page.click(`.feature-tree .tree-item[data-feature-id="${column}"]`);
+  await expect(page.locator('[data-testid="copy-features"]')).toContainText('Pattern1');
+  await clickWorldPoint(page, [20, -10, 100]);
+  await expect(page.locator('[data-testid="reference-slot-0"]')).toContainText('Edge');
+  for (const [field, value] of [['pattern-count', '3'], ['pattern-spacing', '10']] as const) {
+    await page.locator(`[data-testid="${field}"]`).fill(value);
+    await page.locator(`[data-testid="${field}"]`).press('Tab');
+  }
+  await idle(page);
+  await expect(page.locator('.property-panel .panel-error')).toHaveCount(0);
+  await page.click('[data-testid="panel-ok"]');
+  expect(await volume(page)).toBeCloseTo(100 * 20 * 100 - 9 * hole, 2);
+  expect((await state(page)).rebuild?.results.every((result) => result.status === 'ok')).toBe(true);
+  await expect(toasts).toHaveCount(0);
+});
+
 test('adds a box as a body of its own and combines the bodies', async () => {
   launched = await launchApp({ width: 1000, height: 640 });
   const { page } = launched;

@@ -583,13 +583,25 @@ export function toggleCopySeed(id: string): void {
   updateDraft({ features } as Partial<SlotFeature>);
 }
 
-/** A pick while a pattern or mirror is edited: a face names a feature to copy when the list is active, else it fills a reference field. */
+/**
+ * A pick while a pattern or mirror is edited: a face names a feature to copy when the list is active, else
+ * it fills a reference field. Edges, vertices, planes and axes name no feature: they fill the direction
+ * (axis, mirror plane) field right away.
+ */
 function pickForCopy(pick: Pick): void {
-  if (getState().referenceSlot !== FEATURES_SLOT) {
+  const edit = getState().activeEdit;
+  if (getState().referenceSlot !== FEATURES_SLOT || !edit || !isCopyFeature(edit.draft)) {
     assignReference(pick);
     return;
   }
-  const seed = pick.kind === 'face' ? seedOfFace(pick.index) : null;
+  if (pick.kind !== 'face') {
+    setState({ referenceSlot: 0 });
+    assignReference(pick);
+    // An unsuitable pick leaves the list of features the active field.
+    if (getState().activeEdit?.draft === edit.draft) setState({ referenceSlot: FEATURES_SLOT });
+    return;
+  }
+  const seed = seedOfFace(pick.index);
   if (seed) toggleCopySeed(seed);
   else showToast('info', t('errors.pattern-unsupported'));
 }
@@ -611,6 +623,11 @@ export function assignReference(pick: Pick | 'origin'): void {
   const role = roles[slot] as ReferenceRole;
   const ref: GeometryRef | null = pick === 'origin' ? { kind: 'origin' } : referenceOfPick(pick, state);
   if (!ref) return;
+  // A pattern or mirror is shown with its copies, which exist only through it: they cannot be its references.
+  if (isCopyFeature(edit.draft) && namesOwnCopies(ref, edit.draft.id)) {
+    showToast('info', t('copy.ownGeometry'));
+    return;
+  }
   if (!referenceFits(ref, role, state, pick === 'origin' ? undefined : pick)) {
     showToast('info', t(`references.unsuitable.${role}`));
     return;
@@ -620,6 +637,12 @@ export function assignReference(pick: Pick | 'origin'): void {
   const draft = { ...edit.draft, references } as SlotFeature;
   updateDraft(draft);
   setState({ referenceSlot: firstEmptySlot(draft) });
+}
+
+/** Whether a face, edge or vertex reference lies on a copy the feature `id` makes (its faces are named after it). */
+function namesOwnCopies(ref: GeometryRef, id: string): boolean {
+  const names = ref.kind === 'face' ? [ref.name] : ref.kind === 'edge' || ref.kind === 'vertex' ? ref.faces : [];
+  return names.some((name) => name.startsWith(`${id}:`));
 }
 
 /** Empties a reference field; the next pick fills it. */

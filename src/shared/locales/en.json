@@ -548,6 +548,7 @@
     "curve-faces": "Pick the faces the curves are projected onto.",
     "curve-edge-missing": "{{detail}} edge(s) of the curve no longer exist: an earlier change removed them. Edit the curve and pick the edges again.",
     "pattern-too-many": "The pattern would make {{detail}} copies; at most 10,000 are possible. Reduce the counts.",
+    "pattern-seed-failed": "A feature this pattern or mirror copies has failed itself. Fix that feature first: the feature tree marks it.",
     "guide-missing": "The guide curve of the sweep no longer exists. Choose another one, or none.",
     "guide-gaps": "The guide curve must be one chain of curves without gaps or branches.",
     "centerline-missing": "The centerline of the loft no longer exists. Choose another one, or none.",
@@ -880,6 +881,7 @@
   "copy": {
     "features": "Features to copy",
     "pickFeatures": "Click features in the tree or their faces in the 3D view",
+    "ownGeometry": "That belongs to a copy this feature makes itself. Choose geometry that is there without it: an edge, face or plane of the part, or a reference axis or plane.",
     "count": "Count",
     "spacing": "Spacing",
     "angle": "Total angle",

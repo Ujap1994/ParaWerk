@@ -7,6 +7,16 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### Fixed
+- Patterns of patterns: a pattern copies another pattern as it was built, so it no longer fails with
+  *Reference 1 is missing* when the edge the other pattern follows was changed later (rounded, cut). When
+  the pattern it copies has failed itself, it says so instead of reporting that pattern's reference.
+- While a pattern or mirror is edited, a click on an edge, vertex, plane or axis fills the direction (axis,
+  mirror plane) field right away, also while the list of features to copy is the active field, instead of
+  telling that only features that add or cut material can be copied.
+- Edges and faces of the copies a pattern makes itself are rejected as its own direction, with a hint.
+- While a feature is edited, the features before it keep their error marks in the feature tree.
+
 ## [0.4.0-alpha.3] - 2026-10-26
 
 Fixes for parts of several bodies and faster display of free-form faces, on top of 0.4.0-alpha.2. Still an
