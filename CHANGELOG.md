@@ -7,6 +7,12 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+## [0.4.0-alpha.4] - 2026-10-27
+
+Patterns of patterns fixed after the owner's tests, and a function reference with one page for every
+function, on top of 0.4.0-alpha.3. Still an alpha: not ready for productive use; see the disclaimer in the
+README.
+
 ### Added
 - A function reference in the documentation: one page for every function of ParaWerk – where to find
   it, what it needs, step-by-step instructions, every option with its default, tips, and the messages it
@@ -447,7 +453,8 @@ First technical preview (Phase 0). Not ready for productive use; see the disclai
 ### Removed
 - DWG from the planned formats, because it is a closed, proprietary format. DXF covers 2D exchange.
 
-[Unreleased]: https://github.com/Ujap1994/ParaWerk/compare/v0.4.0-alpha.3...HEAD
+[Unreleased]: https://github.com/Ujap1994/ParaWerk/compare/v0.4.0-alpha.4...HEAD
+[0.4.0-alpha.4]: https://github.com/Ujap1994/ParaWerk/compare/v0.4.0-alpha.3...v0.4.0-alpha.4
 [0.4.0-alpha.3]: https://github.com/Ujap1994/ParaWerk/compare/v0.4.0-alpha.2...v0.4.0-alpha.3
 [0.4.0-alpha.2]: https://github.com/Ujap1994/ParaWerk/compare/v0.4.0-alpha.1...v0.4.0-alpha.2
 [0.4.0-alpha.1]: https://github.com/Ujap1994/ParaWerk/compare/v0.4.0-alpha.0...v0.4.0-alpha.1

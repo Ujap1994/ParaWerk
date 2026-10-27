@@ -8,7 +8,8 @@ The plan lives in ROADMAP.md, decisions in docs/adr/.
 - Adopt functionality of established CAD tools, never their code, assets, icons or visual design.
 - Priorities: usability, performance with large parts/assemblies, stability.
 - Every feature ships with tests (unit/integration/E2E), benchmark coverage where performance matters,
-  user-guide text and screenshots (`npm run docs:screenshots`). Push to GitHub after each step.
+  user-guide text, a page in the function reference (`docs/user-guide/reference/`) and screenshots
+  (`npm run docs:screenshots`). Push to GitHub after each step.
 - No DWG support (closed format).
 
 ## Conventions
