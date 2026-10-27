@@ -3,6 +3,10 @@
 A part is a list of features applied from top to bottom. Every feature can be edited later; the part is
 rebuilt automatically and only from the first changed feature onwards.
 
+> [!TIP]
+> The [function reference](reference/README.md) has a page for every feature with step-by-step
+> instructions, all options and their defaults, and the messages it can show.
+
 ## Extrude
 
 **Extrude** (in the *Features* tab) turns the closed outlines of a sketch into a solid, or cuts them out

@@ -65,8 +65,8 @@ The dialog remembers the last choice.
 
 ## Sketches as DXF
 
-In sketch mode, the **DXF** group of the *Sketch* tab exchanges sketch geometry with 2D CAD, laser
-cutting and CNC software:
+In sketch mode, **Import** and **Export** in the *Exchange* group of the *Sketch* tab exchange sketch
+geometry with 2D CAD, laser cutting and CNC software:
 
 - **Export** saves the open sketch as a DXF file (R12, millimeters) with its lines, circles and arcs.
   R12 has no ellipses and splines, so they are written as polylines that stay within 0.005 mm of the true

@@ -7,6 +7,13 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### Added
+- A function reference in the documentation: one page for every function of ParaWerk – where to find
+  it, what it needs, step-by-step instructions, every option with its default, tips, and the messages it
+  can show with what to do about them – with new screenshots of boxes, cylinders, chamfers, mirrors,
+  circular patterns, knit and thickened surfaces, deleted bodies, coordinate systems and the export dialog.
+- A test checks that every link and image of the README and the documentation exists.
+
 ### Fixed
 - Patterns of patterns: a pattern copies another pattern as it was built, so it no longer fails with
   *Reference 1 is missing* when the edge the other pattern follows was changed later (rounded, cut). When

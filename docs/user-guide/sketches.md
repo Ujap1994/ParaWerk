@@ -154,8 +154,9 @@ Select geometry, and the **Copy and move** section of the side panel offers:
 
 ### DXF
 
-The **DXF** group of the *Sketch* tab imports the geometry of a DXF file into the open sketch and exports
-the sketch as DXF – for example for laser cutting. See [Files, import and export](files.md#sketches-as-dxf).
+**Import** in the *Exchange* group of the *Sketch* tab adds the geometry of a DXF file to the open
+sketch; **Export** saves the sketch as DXF – for example for laser cutting. See
+[Files, import and export](files.md#sketches-as-dxf).
 
 ### Ellipses
 

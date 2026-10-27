@@ -23,6 +23,8 @@
 7. [Files, import and export](files.md): `.pwpart` files, recovery after a crash, STEP import, STEP, STL and 3MF export, sketches as DXF
 8. [Settings](settings.md): language, theme, navigation and projection
 9. [Troubleshooting](troubleshooting.md): self-test, logs and known limitations
+10. [Function reference](reference/README.md): one page per function, from **Sketch** to **Export** –
+    where to find it, step by step, every option, tips and messages
 
 ## What the alpha can do
 

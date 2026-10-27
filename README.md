@@ -25,6 +25,12 @@
 > and give feedback on, not yet a tool for productive work. Please read the [disclaimer](#disclaimer)
 > first.
 
+<p align="center">
+  📖 <a href="docs/user-guide/README.md"><strong>User guide</strong></a> ·
+  🔎 <a href="docs/user-guide/reference/README.md"><strong>Function reference</strong></a> (every function, step by step) ·
+  ⬇️ <a href="https://github.com/Ujap1994/ParaWerk/releases"><strong>Downloads</strong></a>
+</p>
+
 ---
 
 ## Contents
@@ -162,7 +168,8 @@ surfaces, multi-body parts, configurations – to part modeling (Phase 2) and th
 | **Modeled M10 thread** | **Configurations in a design table** |
 | ![Thread](docs/images/screenshots/thread.png) | ![Configurations](docs/images/screenshots/configurations.png) |
 
-See the [user guide](docs/user-guide/README.md) for details.
+See the [user guide](docs/user-guide/README.md) for details, and the
+[function reference](docs/user-guide/reference/README.md) for every function step by step.
 
 ## Planned features
 
@@ -307,6 +314,8 @@ npm run package        # build installers for the current platform into release/
 
 - [User guide](docs/user-guide/README.md) with screenshots of every feature (generated automatically by
   `npm run docs:screenshots`, so they always match the current version)
+- [Function reference](docs/user-guide/reference/README.md): one page per function – where to find it,
+  step-by-step instructions, every option with its default, tips, messages and what to do about them
 - [Roadmap](ROADMAP.md) with effort estimates, phases, risks and decision gates
 - [Architecture decision records](docs/adr/README.md)
 - [Benchmarks](docs/benchmarks/README.md)

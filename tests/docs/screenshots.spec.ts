@@ -1477,3 +1477,87 @@ test('configurations screenshots', async () => {
   await page.click('[data-testid="configurations-dialog"] .modal-actions .is-primary');
   await app.close();
 });
+
+/** Opens a part and edits one of its features, as the function reference shows it. */
+async function editFeatureShot(page: Page, name: string, features: unknown[], edit: string): Promise<void> {
+  await page.evaluate(
+    ([list, title]) => (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features: list, past: [], future: [] }, savedFeatures: list, fileName: title }),
+    [features, name] as const,
+  );
+  await idle(page);
+  await page.evaluate(() => (window as unknown as { __parawerk: { viewport: { zoomToFit(): void } } }).__parawerk.viewport.zoomToFit());
+  await page.locator(`.feature-tree .tree-item[data-feature-id="${edit}"]`).dblclick();
+  await idle(page);
+  const canvas = await page.locator('.viewport-canvas').boundingBox();
+  if (canvas) await page.mouse.move(canvas.x + canvas.width - 30, canvas.y + canvas.height - 30);
+  await page.waitForTimeout(700);
+}
+
+test('function reference screenshots', async () => {
+  const { app, page } = await launchApp({ width: 1440, height: 900 });
+  const plate = { id: 'plate', type: 'box', name: 'Plate', operation: 'add', width: 120, depth: 80, height: 10, position: [0, 0, 0] };
+  const block = { id: 'block', type: 'box', name: 'Block', operation: 'add', width: 100, depth: 60, height: 40, position: [0, 0, 0] };
+  const shot = async (file: string, name: string, features: unknown[], edit: string) => {
+    await editFeatureShot(page, name, features, edit);
+    await page.screenshot({ path: out(file) });
+    await page.click('[data-testid="panel-cancel"]');
+    await idle(page);
+  };
+
+  // A block on a plate, edited: size, operation and position of the box.
+  await shot('box.png', 'Box', [plate, { id: 'riser', type: 'box', name: 'Riser', operation: 'add', width: 40, depth: 40, height: 30, position: [-30, 0, 10] }], 'riser');
+  // A cylinder that removes material: a bore through the plate.
+  await shot('cylinder.png', 'Cylinder', [plate, { id: 'bore', type: 'cylinder', name: 'Bore', operation: 'cut', radius: 15, height: 30, axis: 'z', position: [25, 0, -10] }], 'bore');
+  // All edges of the top face beveled by two distances.
+  await shot('chamfer.png', 'Chamfer', [block, { id: 'bevel', type: 'chamfer', name: 'Bevel', method: 'distances', distance: 6, distance2: 3, edges: [], faces: [{ kind: 'face', name: 'block:top', at: [0, 0, 40] }] }], 'bevel');
+  // A boss mirrored through the right plane.
+  await shot('mirror.png', 'Mirror', [
+    plate,
+    { id: 'boss', type: 'cylinder', name: 'Boss', operation: 'add', radius: 10, height: 20, axis: 'z', position: [-35, 10, 10] },
+    { id: 'mirror', type: 'mirror', name: 'Mirror', method: 'plane', references: [{ kind: 'standard-plane', plane: 'right' }], features: ['boss'] },
+  ], 'mirror');
+  // Six holes around the center axis of a disk.
+  await shot('pattern-circular.png', 'Circular pattern', [
+    { id: 'disk', type: 'cylinder', name: 'Disk', operation: 'add', radius: 50, height: 10, axis: 'z', position: [0, 0, 0] },
+    { id: 'points', type: 'sketch', name: 'Hole position', plane: { kind: 'face', face: 2, name: 'disk:top', frame: { origin: [0, 0, 10], xDir: [1, 0, 0], yDir: [0, 1, 0], normal: [0, 0, 1] } }, sketch: { entities: [{ id: 'p', type: 'point', x: 35, y: 0 }], constraints: [] } },
+    {
+      id: 'hole', type: 'hole', name: 'M8 clearance hole', kind: 'simple', size: 'M8', fit: 'normal', sketch: 'points', end: 'throughAll', reverse: false,
+      diameter: 9, depth: 12, counterboreDiameter: 15, counterboreDepth: 8.6, countersinkDiameter: 17.6, countersinkAngle: 90, threadDepth: 12,
+    },
+    { id: 'z', type: 'axis', name: 'Center axis', method: 'twoPlanes', references: [{ kind: 'standard-plane', plane: 'front' }, { kind: 'standard-plane', plane: 'right' }] },
+    { id: 'around', type: 'pattern', name: 'Around', method: 'circular', references: [{ kind: 'feature', feature: 'z' }], features: ['hole'], count: 6, spacing: 20, angle: 360, flip: false },
+  ], 'around');
+  // The top face offset 12 mm upwards and thickened to a 4 mm lid of its own.
+  const lid = { id: 'skin', type: 'offsetSurface', name: 'Lid surface', distance: 12, faces: [{ kind: 'face', name: 'block:top', at: [0, 0, 40] }] };
+  await shot('thicken.png', 'Thicken', [block, lid, { id: 'lid', type: 'thicken', name: 'Lid', surface: 'skin', thickness: 4, side: 'normal', fill: false, merge: false }], 'lid');
+  // Copies of the top and front faces knit into one surface.
+  await shot('knit.png', 'Knit', [
+    block,
+    { id: 'top', type: 'offsetSurface', name: 'Top copy', distance: 0, faces: [{ kind: 'face', name: 'block:top', at: [0, 0, 40] }] },
+    { id: 'front', type: 'offsetSurface', name: 'Front copy', distance: 0, faces: [{ kind: 'face', name: 'block:front', at: [0, -30, 20] }] },
+    { id: 'knit', type: 'knit', name: 'Knit', surfaces: ['top', 'front'] },
+  ], 'knit');
+  // A cube kept as a body of its own, then deleted.
+  await shot('delete-body.png', 'Delete body', [
+    block,
+    { id: 'cube', type: 'box', name: 'Cube', operation: 'add', merge: false, width: 40, depth: 40, height: 40, position: [50, 0, 20] },
+    { id: 'remove', type: 'deleteBody', name: 'Delete cube', bodies: [{ kind: 'face', name: 'cube:top', at: [50, 0, 60] }] },
+  ], 'remove');
+  // A coordinate system on the top of the block, turned 30° around Z.
+  const csys = { id: 'frame', type: 'csys', name: 'Print frame', method: 'position', references: [], x: 20, y: 0, z: 40, angle: 30, flipX: false, flipY: false };
+  await shot('csys.png', 'Coordinate system', [block, csys], 'frame');
+
+  // Exporting a part with a coordinate system asks which one the file uses.
+  await page.evaluate(
+    (list) => (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features: list, past: [], future: [] }, savedFeatures: list, fileName: 'Bracket' }),
+    [block, csys],
+  );
+  await idle(page);
+  await page.click('[data-variants="export"]');
+  await page.click('[data-entry="export-stl"]');
+  await page.locator('[data-testid="export-frame-dialog"]').waitFor();
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: out('export-frame.png') });
+  await page.keyboard.press('Escape');
+  await app.close();
+});
