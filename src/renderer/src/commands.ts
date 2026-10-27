@@ -448,7 +448,7 @@ export function startFeature(type: FeatureType): void {
     draft = { ...draft, operation: 'add' };
   }
   const slot = hasReferenceSlots(draft) ? firstEmptySlot(draft) : 0;
-  setState({ activeEdit: { mode: 'create', index, draft }, selection: [], referenceSlot: slot });
+  setState({ activeEdit: { mode: 'create', index, draft }, selection: [], referenceSlot: slot, orientCopy: null });
 }
 
 /** The sketch a new extrusion or revolution uses: the last one no such feature uses yet, else the last one. */
@@ -636,7 +636,14 @@ export function assignReference(pick: Pick | 'origin'): void {
   references[slot] = ref;
   const draft = { ...edit.draft, references } as SlotFeature;
   updateDraft(draft);
-  setState({ referenceSlot: firstEmptySlot(draft) });
+  // A new direction of a linear pattern is turned towards the part once the kernel knows which way it goes.
+  setState({ referenceSlot: firstEmptySlot(draft), ...(role === 'direction' && draft.type === 'pattern' ? { orientCopy: draft.id } : {}) });
+}
+
+/** Turns a pattern or mirror the other way; the user's choice wins over turning it towards the part. */
+export function setCopyFlip(flip: boolean): void {
+  updateDraft({ flip } as Partial<SlotFeature>);
+  setState({ orientCopy: null });
 }
 
 /** Whether a face, edge or vertex reference lies on a copy the feature `id` makes (its faces are named after it). */
@@ -684,7 +691,7 @@ export function editFeature(id: string): void {
     enterSketch(openSketchSession('edit', index, feature));
     return;
   }
-  setState({ activeEdit: { mode: 'edit', index, draft: feature }, selection: [], choosingSketchPlane: false, referenceSlot: hasReferenceSlots(feature) ? firstEmptySlot(feature) : 0 });
+  setState({ activeEdit: { mode: 'edit', index, draft: feature }, selection: [], choosingSketchPlane: false, referenceSlot: hasReferenceSlots(feature) ? firstEmptySlot(feature) : 0, orientCopy: null });
 }
 
 /** Opens the part's variables in the property panel (a new, empty list at the top of the tree if there is none). */

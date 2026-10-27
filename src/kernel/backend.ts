@@ -80,6 +80,8 @@ export type ResolvedCopy = CopyFeature & {
   seeds: Exclude<KernelFeature, ResolvedCopy>[];
   /** For each seed: 12 numbers per copy (see src/shared/model/pattern.ts). */
   transforms: number[][];
+  /** Linear patterns: the unit direction the copies go in (Other direction applied). */
+  direction?: Vec3;
 };
 
 /** Combining or deleting bodies, with the faces that pick them (topological indices; the main body first). */

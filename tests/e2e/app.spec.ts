@@ -1071,6 +1071,77 @@ test('copies a pattern of holes with a second pattern along edges picked right a
   await expect(toasts).toHaveCount(0);
 });
 
+test('turns a pattern along an edge towards the part, whichever parallel edge is picked', async () => {
+  launched = await launchApp({ width: 1000, height: 640 });
+  const { page } = launched;
+  // A 100 × 100 × 10 plate extruded from a rectangle drawn round from the origin, as the owner did: its
+  // front and back edges run opposite ways. A column of five holes along its left side.
+  await page.evaluate(() => {
+    const P = (id: string, x: number, y: number) => ({ id, type: 'point', x, y });
+    const L = (id: string, p1: string, p2: string) => ({ id, type: 'line', p1, p2 });
+    const features = [
+      {
+        id: 'outline',
+        type: 'sketch',
+        plane: { kind: 'standard', plane: 'top' },
+        sketch: { entities: [P('a', 0, 0), P('b', 100, 0), P('c', 100, 100), P('d', 0, 100), L('ab', 'a', 'b'), L('bc', 'b', 'c'), L('cd', 'c', 'd'), L('da', 'd', 'a')], constraints: [] },
+      },
+      { id: 'plate', type: 'extrude', operation: 'add', sketch: 'outline', depth: 10, direction: 'normal', end: 'blind' },
+      {
+        id: 'points',
+        type: 'sketch',
+        plane: { kind: 'face', face: 5, name: 'plate:end', frame: { origin: [0, 0, 10], normal: [0, 0, 1], xDir: [1, 0, 0], yDir: [0, 1, 0] } },
+        sketch: { entities: [{ id: 'p', type: 'point', x: 10, y: 90 }], constraints: [] },
+      },
+      {
+        id: 'hole', type: 'hole', kind: 'simple', size: 'M6', fit: 'normal', sketch: 'points', end: 'throughAll', reverse: false,
+        diameter: 6.6, depth: 12, counterboreDiameter: 11, counterboreDepth: 6.4, countersinkDiameter: 13.7, countersinkAngle: 90, threadDepth: 12,
+      },
+      // The front plane's normal points to −y: down the plate.
+      { id: 'column', type: 'pattern', method: 'linear', references: [{ kind: 'standard-plane', plane: 'front' }], features: ['hole'], count: 5, spacing: 20, angle: 360, flip: false },
+    ];
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features, past: [], future: [] }, savedFeatures: features, dirty: false });
+  });
+  const HOLE = Math.PI * 3.3 * 3.3 * 10;
+  expect(await volume(page)).toBeCloseTo(100_000 - 5 * HOLE, 2);
+  const arrow = () => page.evaluate(() => (window as unknown as { __parawerk: { viewport: { directionArrow(): { direction: number[] } | null } } }).__parawerk.viewport.directionArrow());
+  const draft = async () => (await page.evaluate(() => (window as unknown as { __parawerk: { getState(): { activeEdit: { draft: { flip: boolean } } } } }).__parawerk.getState().activeEdit.draft));
+
+  // The top edge: its own direction may point either way; the copies go to the right, into the plate.
+  await page.click('[data-command="pattern"]');
+  await page.click('.feature-tree .tree-item[data-feature-id="column"]');
+  await clickWorldPoint(page, [50, 100, 10]);
+  await expect(page.locator('[data-testid="reference-slot-0"]')).toContainText('Edge');
+  for (const [field, value] of [['pattern-count', '5'], ['pattern-spacing', '20']] as const) {
+    await page.locator(`[data-testid="${field}"]`).fill(value);
+    await page.locator(`[data-testid="${field}"]`).press('Tab');
+  }
+  await idle(page);
+  await expect.poll(async () => (await arrow())?.direction[0] ?? 0).toBeGreaterThan(0.99);
+  const topFlip = (await draft()).flip;
+  await expect(page.locator('[data-testid="panel-warning"]')).toHaveCount(0);
+
+  // The bottom edge (along the x axis) goes to the right as well.
+  await page.click('[data-testid="reference-slot-0"] .icon-button');
+  await clickWorldPoint(page, [50, 0, 10]);
+  await idle(page);
+  await expect.poll(async () => (await arrow())?.direction[0] ?? 0).toBeGreaterThan(0.99);
+  const bottomFlip = (await draft()).flip;
+
+  // Other direction is the user's choice: the copies leave the plate, the panel says so, and it stays like that.
+  await page.click('[data-testid="pattern-flip"]');
+  await idle(page);
+  await expect.poll(async () => (await arrow())?.direction[0] ?? 0).toBeLessThan(-0.99);
+  await expect(page.locator('[data-testid="panel-warning"]')).toContainText('Other direction');
+  await page.click('[data-testid="pattern-flip"]');
+  await idle(page);
+  await page.click('[data-testid="panel-ok"]');
+  expect(await volume(page)).toBeCloseTo(100_000 - 25 * HOLE, 2);
+  expect(await arrow()).toBeNull();
+  // The two edges point opposite ways, so exactly one of them needed turning round.
+  expect(topFlip).not.toBe(bottomFlip);
+});
+
 test('adds a box as a body of its own and combines the bodies', async () => {
   launched = await launchApp({ width: 1000, height: 640 });
   const { page } = launched;

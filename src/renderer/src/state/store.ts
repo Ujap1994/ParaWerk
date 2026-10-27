@@ -105,6 +105,11 @@ export interface AppState {
   chamferDistance: number;
   selection: Pick[];
   hover: Pick | null;
+  /**
+   * The linear pattern (feature id) whose direction was just picked: once the kernel tells which way its
+   * copies go, they are turned towards the part (see state/rebuild.ts).
+   */
+  orientCopy: string | null;
 
   kernelStatus: KernelStatus;
   rebuild: RebuildState | null;
@@ -159,6 +164,7 @@ export const initialState: AppState = {
   chamferDistance: 3,
   selection: [],
   hover: null,
+  orientCopy: null,
   kernelStatus: 'loading',
   rebuild: null,
   display: { body: null, preview: null, pickable: true },

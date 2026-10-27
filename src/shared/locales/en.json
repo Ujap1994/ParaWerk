@@ -568,6 +568,7 @@
     "shell-face-missing_one": "{{count}} face to open no longer exists and is left out. Edit the shell to pick another face.",
     "shell-face-missing_other": "{{count}} faces to open no longer exist and are left out. Edit the shell to pick other faces.",
     "cut-nothing": "This cut does not touch the part, so it removes nothing. Try the other direction (for a sketch on a face: Reversed, into the part).",
+    "copies-nothing": "The copies do not touch the part, so they remove nothing. Turn on Other direction (Other way round), or check the spacing, the angle or the mirror plane.",
     "draft-face-missing_one": "{{count}} face to draft no longer exists and is left out. Edit the draft to pick another face.",
     "draft-face-missing_other": "{{count}} faces to draft no longer exist and are left out. Edit the draft to pick other faces."
   },

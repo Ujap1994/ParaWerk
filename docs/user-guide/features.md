@@ -282,11 +282,14 @@ a part mirrored with its patterns. A feature that ends up at the same place twic
    click the field first (a face clicked while *Features to copy* is active names the feature it belongs
    to). The copies the pattern shows while you edit it cannot be its own direction: pick the original
    geometry.
-3. *Count* (the original included) and *Spacing*, or the *Total angle* of a circular pattern: 360° spreads
+3. For a linear pattern, an **arrow** in the 3D view shows which way the copies go. When you pick the
+   direction, ParaWerk turns it towards the rest of the part (from the features you copy), so the copies
+   go into the part whichever of two parallel edges you pick.
+4. *Count* (the original included) and *Spacing*, or the *Total angle* of a circular pattern: 360° spreads
    the copies evenly all round, a smaller angle puts the last copy at its end. **Other direction** and
    **Other way round** turn the pattern the other way.
 
-![Two holes copied twice along the front edge of the plate, 22 mm apart: the holes being copied are orange, the edge they follow too](../images/screenshots/pattern-linear.png)
+![Two holes copied twice along the front edge of the plate, 22 mm apart: the holes being copied and the edge they follow are orange, the arrow shows which way the copies go](../images/screenshots/pattern-linear.png)
 
 All copies of a feature are added or cut in one operation, so even long patterns rebuild quickly; a
 pattern of patterns makes at most 10,000 copies. A pattern copies another pattern as it was built – with

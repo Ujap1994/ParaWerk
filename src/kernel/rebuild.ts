@@ -30,6 +30,9 @@ interface CacheEntry {
 
 export const ROOT_KEY = 'root';
 
+/** At most this many faces are measured to find the middle of the features a pattern copies. */
+const PATTERN_FACE_SAMPLE = 200;
+
 
 function stableStringify(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
@@ -274,6 +277,7 @@ export class Rebuilder implements Disposable {
         const missing = 'missingEdges' in resolved ? resolved.missingEdges : undefined;
         const missingFaces = 'missingFaces' in resolved ? resolved.missingFaces : undefined;
         const threads = resolved.type === 'hole' && input ? threadsOf(resolved, this.backend.boundingBox(input)) : [];
+        const pattern = resolved.type === 'pattern' && resolved.direction && input ? this.patternDirection(input, naming(input), resolved, resolved.direction) : undefined;
         if (resolved.type === 'pattern' || resolved.type === 'mirror') copies.set(feature.id, resolved);
         this.entries.push({
           key,
@@ -290,8 +294,9 @@ export class Rebuilder implements Disposable {
             ...(missing ? { warning: { code: 'edge-missing' as const, detail: String(missing) } } : {}),
             ...(healedFaces ? { healedFaces } : {}),
             ...(missingFaces ? { warning: { code: resolved.type === 'draft' ? ('draft-face-missing' as const) : ('shell-face-missing' as const), detail: String(missingFaces) } } : {}),
-            ...(missed ? { warning: { code: 'cut-nothing' as const } } : {}),
+            ...(missed ? { warning: { code: resolved.type === 'pattern' || resolved.type === 'mirror' ? ('copies-nothing' as const) : ('cut-nothing' as const) } } : {}),
             ...(threads.length > 0 ? { threads } : {}),
+            ...(pattern ? { pattern } : {}),
           },
         });
       } catch (error) {
@@ -314,6 +319,32 @@ export class Rebuilder implements Disposable {
       return withoutTakenOver(result, features[i]);
     });
     return { results, rebuilt: features.length - firstChanged };
+  }
+
+  /**
+   * Where the features a linear pattern copies are (the middle of their faces in the body before it),
+   * the direction its copies go in, and whether that is towards the middle of the part.
+   */
+  private patternDirection(input: ShapeHandle, names: BodyNaming, copy: ResolvedCopy, direction: Vec3): FeatureResult['pattern'] {
+    const prefixes = [...copy.features, ...copy.seeds.map((seed) => seed.id)].map((id) => `${id}:`);
+    const faces = names.faces.flatMap((name, index) => (prefixes.some((prefix) => name.startsWith(prefix)) ? [index] : []));
+    if (faces.length === 0) return undefined;
+    // A pattern of many copies has many faces: a sample of them is enough for their middle.
+    const step = Math.ceil(faces.length / PATTERN_FACE_SAMPLE);
+    const sum: Vec3 = [0, 0, 0];
+    let count = 0;
+    for (let i = 0; i < faces.length; i += step) {
+      const center = this.backend.faceGeometry(input, faces[i] as number).center;
+      if (!center.every(Number.isFinite)) continue;
+      for (let k = 0; k < 3; k++) sum[k] = (sum[k] as number) + (center[k] as number);
+      count++;
+    }
+    if (count === 0) return undefined;
+    const origin: Vec3 = [sum[0] / count, sum[1] / count, sum[2] / count];
+    const { min, max } = this.backend.boundingBox(input);
+    const towards = [0, 1, 2].reduce((total, k) => total + (direction[k] as number) * (((min[k] as number) + (max[k] as number)) / 2 - (origin[k] as number)), 0);
+    const size = Math.hypot(max[0] - min[0], max[1] - min[1], max[2] - min[2]);
+    return { origin, direction, ...(Math.abs(towards) > 1e-6 * Math.max(size, 1) ? { inward: towards > 0 } : {}) };
   }
 
   /** Body after the feature at `index`; index -1 is the empty start state. */

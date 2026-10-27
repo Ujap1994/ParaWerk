@@ -164,6 +164,24 @@ function applyResult(
     };
   });
   takeOverHealedEdges(plan, results);
+  orientNewDirection(plan, results);
+}
+
+/**
+ * A linear pattern whose direction was just picked goes towards the part: when the kernel reports that its
+ * copies go away from it, the pattern is turned round once. Picking a direction never sends the copies
+ * off the part by chance (an edge's own direction depends on how the part was built).
+ */
+function orientNewDirection(plan: RebuildPlan, results: FeatureResult[]): void {
+  const { activeEdit, orientCopy } = getState();
+  if (!activeEdit || orientCopy !== activeEdit.draft.id || activeEdit.draft.type !== 'pattern') return;
+  // Only the result of the pattern as it is now (a newer rebuild follows otherwise).
+  if (plan.features[activeEdit.index] !== activeEdit.draft) return;
+  const pattern = results[activeEdit.index]?.pattern;
+  // Without features to copy yet, the direction cannot be judged: wait for them.
+  if (!pattern) return;
+  setState({ orientCopy: null });
+  if (pattern.inward === false) setState({ activeEdit: { ...activeEdit, draft: { ...activeEdit.draft, flip: !activeEdit.draft.flip } } });
 }
 
 /**

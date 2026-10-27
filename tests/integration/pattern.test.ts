@@ -133,6 +133,32 @@ describe('patterns of patterns', () => {
   });
 });
 
+describe('which way a linear pattern goes', () => {
+  it('tells where its copies go and whether that is towards the part', () => {
+    // The boss sits left of the middle (x −60); the right plane's normal points along +x, into the part.
+    const result = build([plate, boss, pattern({ references: [right], features: ['boss'], count: 3, spacing: 30 })]);
+    const info = result.features[2]?.pattern;
+    expect(info?.inward).toBe(true);
+    expect(info?.direction[0]).toBeCloseTo(1, 9);
+    expect(info?.origin[0]).toBeCloseTo(-60, 6);
+    expect(build([plate, boss, pattern({ references: [right], features: ['boss'], count: 3, spacing: 30, flip: true })]).features[2]?.pattern?.inward).toBe(false);
+    // Circular patterns and mirrors have no single direction.
+    expect(build([plate, boss, mirror({ references: [right], features: ['boss'] })]).features[2]?.pattern).toBeUndefined();
+  });
+
+  it('warns when the copies of a cut miss the part', () => {
+    const sketch: SketchFeature = {
+      id: 'circle', type: 'sketch', plane: { kind: 'face', face: 5, name: 'plate:top', frame: frameOnPlane([0, 0, 10], [0, 0, 1]) },
+      sketch: { entities: [{ id: 'm', type: 'point', x: -90, y: 0 }, { id: 'c', type: 'circle', center: 'm', radius: 4 }], constraints: [] },
+    };
+    const cut: ExtrudeFeature = { id: 'cut', type: 'extrude', operation: 'cut', sketch: 'circle', depth: 10, direction: 'reverse', end: 'throughAll' };
+    // Along −x, the copies of a cut at the left end land beside the plate.
+    const result = build([plate, sketch, cut, pattern({ references: [right], features: ['cut'], count: 3, spacing: 40, flip: true })]);
+    expect(result.features[3]?.warning?.code).toBe('copies-nothing');
+    expect(result.features[3]?.pattern?.inward).toBe(false);
+  });
+});
+
 describe('patterns of patterns as they were built', () => {
   it('copies a pattern whose direction edge was rounded off later', () => {
     // The row goes along the plate's front top edge, which a fillet then rounds off.

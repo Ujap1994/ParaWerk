@@ -156,6 +156,7 @@ export type FeatureErrorCode =
   | 'curve-edge-missing'
   | 'import-no-solid'
   | 'cut-nothing'
+  | 'copies-nothing'
   | 'profile-crosses-axis'
   | 'operation-failed'
   | 'unknown';
@@ -184,6 +185,12 @@ export interface FeatureResult {
   reference?: ReferenceGeometry;
   /** Reference geometry whose references were found only by position: the up-to-date references, for the document to take over. */
   healedReferences?: GeometryRef[];
+  /**
+   * Linear patterns: the middle of the features they copy, the unit direction the copies go in, and
+   * whether that is towards the rest of the part (the middle of its bounding box); left out when the
+   * features to copy lie in the middle.
+   */
+  pattern?: { origin: Vec3; direction: Vec3; inward?: boolean };
 }
 
 export interface MassProperties {

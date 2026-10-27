@@ -10,6 +10,7 @@ import { SketchController, sketchHighlight, statusColors } from '../sketch/contr
 import { sketchSolver } from '../sketch/solver.ts';
 import { modelEnd, partProperties, setState, store, type AppState, type Pick } from '../state/store.ts';
 import { partColor } from '../../../shared/model/material.ts';
+import type { DirectionArrowSpec } from '../viewport/direction-arrow.ts';
 import { ViewportEngine, type InactiveSketch, type PickFilter } from '../viewport/engine.ts';
 import type { PlaneDisplay } from '../viewport/reference-planes.ts';
 import { registerSketchControl, registerViewport } from '../viewport/registry.ts';
@@ -96,6 +97,14 @@ function lostEdgePoints(state: AppState): Vec3[] {
   if (!edit || !isEdgeFeature(edit.draft) || !naming) return [];
   const matches = resolveEdgeRefs(edit.draft.edges, naming);
   return edit.draft.edges.flatMap((ref, i) => (matches[i] === null && ref.kind === 'edge' ? [ref.at] : []));
+}
+
+/** Which way the copies of the edited linear pattern go, as the last rebuild found: an arrow from the features it copies. */
+function patternArrow(state: AppState): DirectionArrowSpec | null {
+  const edit = state.activeEdit;
+  if (edit?.draft.type !== 'pattern' || edit.draft.method !== 'linear') return null;
+  const result = state.rebuild?.results[edit.index];
+  return result?.id === edit.draft.id && result.status === 'ok' && result.pattern ? { origin: result.pattern.origin, direction: result.pattern.direction } : null;
 }
 
 function pickFilter(state: AppState): PickFilter {
@@ -214,6 +223,7 @@ export function Viewport() {
       ) {
         engine.setReferences(referenceItems(state));
         engine.setThreads(visibleThreads(state));
+        engine.setDirectionArrow(patternArrow(state));
       }
       const plane = state.sketch?.draft.plane;
       if (!previous || plane !== previous.sketch?.draft.plane) {

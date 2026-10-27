@@ -260,12 +260,14 @@ function resolveCopy(feature: CopyFeature, before: readonly Feature[], context: 
     }
   }
   let transforms: Transform[];
+  let along: Vec3 | undefined;
   if (feature.type === 'mirror') {
     const plane = referenceValue(feature.references[0], 'plane', 0, context);
     transforms = [mirrorTransform(plane.point, plane.normal)];
   } else if (feature.method === 'linear') {
     const direction = referenceValue(feature.references[0], 'direction', 0, context);
-    transforms = linearTransforms(feature.flip ? ([-direction[0], -direction[1], -direction[2]] as Vec3) : direction, feature.spacing, feature.count);
+    along = feature.flip ? ([-direction[0], -direction[1], -direction[2]] as Vec3) : direction;
+    transforms = linearTransforms(along, feature.spacing, feature.count);
   } else {
     const axis = referenceValue(feature.references[0], 'axis', 0, context);
     const direction = feature.flip ? ([-axis.direction[0], -axis.direction[1], -axis.direction[2]] as Vec3) : axis.direction;
@@ -285,7 +287,7 @@ function resolveCopy(feature: CopyFeature, before: readonly Feature[], context: 
   });
   const total = copies.reduce((sum, list) => sum + list.length, 0);
   if (total > MAX_COPIES) throw new FeatureError('pattern-too-many', String(total));
-  return { ...feature, seeds: seeds.map(({ seed }) => seed), transforms: copies.map((list) => list.flat()) };
+  return { ...feature, seeds: seeds.map(({ seed }) => seed), transforms: copies.map((list) => list.flat()), ...(along ? { direction: along } : {}) };
 }
 
 /**

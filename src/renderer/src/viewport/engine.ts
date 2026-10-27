@@ -39,6 +39,7 @@ import type { FrameStats, Pick } from '../state/store.ts';
 import { CameraController } from './camera-controller.ts';
 import { AxisTriad } from './axis-triad.ts';
 import { palettes, type ViewportPalette } from './palette.ts';
+import { DirectionArrow, type DirectionArrowSpec } from './direction-arrow.ts';
 import { LostMarkers } from './lost-markers.ts';
 import { MeasureGraphics, type MeasureLine } from './measure-graphics.ts';
 import { SectionView, type SectionCut } from './section-view.ts';
@@ -168,6 +169,7 @@ export class ViewportEngine {
   private lastSketchPointer: SketchPointer | null = null;
   private readonly pivotMarker: Mesh<SphereGeometry, MeshBasicMaterial>;
   private readonly lostMarkers = new LostMarkers();
+  private readonly directionArrow = new DirectionArrow();
   private readonly measureGraphics = new MeasureGraphics();
   private readonly sectionView = new SectionView();
   private sectionCut: SectionCut | null = null;
@@ -270,7 +272,7 @@ export class ViewportEngine {
     this.pivotMarker = new Mesh(new SphereGeometry(1, 16, 12), new MeshBasicMaterial({ depthTest: false }));
     this.pivotMarker.renderOrder = 10;
     this.pivotMarker.visible = false;
-    this.scene.add(this.pivotMarker, this.lostMarkers.group, this.measureGraphics.group, this.sectionView.group, this.referenceGeometry.group, this.threads.group);
+    this.scene.add(this.pivotMarker, this.lostMarkers.group, this.directionArrow.group, this.measureGraphics.group, this.sectionView.group, this.referenceGeometry.group, this.threads.group);
     const texture = pointTexture();
     this.vertexMaterials.hover.map = texture;
     this.vertexMaterials.selected.map = texture;
@@ -376,6 +378,16 @@ export class ViewportEngine {
 
   get lostMarkerCount(): number {
     return this.lostMarkers.count;
+  }
+
+  /** Shows which way the copies of the pattern being edited go (null: no arrow); see DirectionArrow. */
+  setDirectionArrow(arrow: DirectionArrowSpec | null): void {
+    this.directionArrow.set(arrow);
+    this.requestRender();
+  }
+
+  get directionArrowShown(): DirectionArrowSpec | null {
+    return this.directionArrow.shown;
   }
 
   /** Cuts the part open in the view (null: whole part); see SectionView. */
@@ -580,6 +592,7 @@ export class ViewportEngine {
     this.materials.referenceEdge.color.setHex(p.referenceEdge);
     this.pivotMarker.material.color.setHex(p.pivot);
     this.lostMarkers.setColor(p.lost);
+    this.directionArrow.setColor(p.selected);
     this.measureGraphics.setColor(p.measure);
     this.sectionView.setCapColor(p.sectionCap);
     this.referenceGeometry.setPalette(p);
@@ -773,6 +786,7 @@ export class ViewportEngine {
     const mmPerPixel = this.mmPerPixel();
     this.sketchMaterials.setZoom(mmPerPixel);
     this.lostMarkers.setZoom(mmPerPixel);
+    this.directionArrow.setZoom(mmPerPixel);
     this.measureGraphics.setZoom(mmPerPixel);
     this.referenceGeometry.setZoom(mmPerPixel);
     // Vertex highlights keep their size on screen.
@@ -837,6 +851,7 @@ export class ViewportEngine {
     this.referencePlanes.setResolution(resolution);
     this.referenceGeometry.setResolution(resolution);
     this.threads.setResolution(resolution);
+    this.directionArrow.setResolution(this.width, this.height);
     this.sketchLayer.setResolution(resolution);
     this.sketchMaterials.setResolution(resolution, this.renderer.getPixelRatio());
     this.requestRender();
@@ -1242,6 +1257,7 @@ export class ViewportEngine {
     this.vertexMaterials.hover.map?.dispose();
     for (const material of Object.values(this.vertexMaterials)) material.dispose();
     this.lostMarkers.dispose();
+    this.directionArrow.dispose();
     this.measureGraphics.dispose();
     this.sectionView.dispose();
     this.sketchLayer.dispose();

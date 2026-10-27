@@ -7,6 +7,15 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### Changed
+- A linear pattern goes into the part: when you pick its direction, the copies are turned towards the
+  rest of the part (from the features they copy), so the top and the bottom edge of a plate both pattern
+  holes across it. Before, the copies followed the edge's own direction, which depends on how the edge
+  was drawn, and often left the part. An arrow in the 3D view shows which way the copies go; **Other
+  direction** turns them round as before. Existing parts do not change.
+- Copies of a pattern or mirror that miss the part get their own warning, which points to **Other
+  direction**.
+
 ## [0.4.0-alpha.4] - 2026-10-27
 
 Patterns of patterns fixed after the owner's tests, and a function reference with one page for every

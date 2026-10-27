@@ -73,7 +73,7 @@ export function CopyFields({ draft }: { draft: CopyFeature }) {
             <NumberField label={t('copy.angle')} unit="°" step={15} value={draft.angle} testId="pattern-angle" {...equation(draft, 'angle')} onChange={(angle) => commands.updateDraft({ angle: Math.min(360, angle) })} />
           )}
           <label className="checkbox-field">
-            <input type="checkbox" checked={draft.flip} data-testid="pattern-flip" onChange={(event) => commands.updateDraft({ flip: event.target.checked })} />
+            <input type="checkbox" checked={draft.flip} data-testid="pattern-flip" onChange={(event) => commands.setCopyFlip(event.target.checked)} />
             {draft.method === 'linear' ? t('copy.flipLinear') : t('copy.flipCircular')}
           </label>
           <p className="panel-hint">{draft.method === 'linear' ? t('copy.linearHint') : t('copy.circularHint')}</p>

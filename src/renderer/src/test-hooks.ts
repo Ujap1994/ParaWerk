@@ -28,6 +28,7 @@ export function installTestHooks(): void {
       relationGlyphs: () => viewport()?.relationGlyphsOnScreen() ?? [],
       zoomToFit: () => viewport()?.zoomToFit(false),
       lostMarkers: () => viewport()?.lostMarkerCount ?? 0,
+      directionArrow: () => viewport()?.directionArrowShown ?? null,
       measureLines: () => viewport()?.measureLineCount ?? 0,
       section: () => viewport()?.sectionActive ?? false,
       references: () => viewport()?.referenceCount ?? 0,

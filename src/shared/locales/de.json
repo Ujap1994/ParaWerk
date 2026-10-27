@@ -568,6 +568,7 @@
     "shell-face-missing_one": "{{count}} zu öffnende Fläche existiert nicht mehr und wird ausgelassen. Bearbeite die Schale, um eine andere Fläche zu wählen.",
     "shell-face-missing_other": "{{count}} zu öffnende Flächen existieren nicht mehr und werden ausgelassen. Bearbeite die Schale, um andere Flächen zu wählen.",
     "cut-nothing": "Dieser Schnitt berührt das Teil nicht und entfernt nichts. Versuche die andere Richtung (bei einer Skizze auf einer Fläche: Umkehren, ins Teil hinein).",
+    "copies-nothing": "Die Kopien berühren das Teil nicht und entfernen daher nichts. Schalte „Andere Richtung“ („Andere Drehrichtung“) ein, oder prüfe Abstand, Winkel oder Spiegelebene.",
     "draft-face-missing_one": "{{count}} zu neigende Fläche gibt es nicht mehr; sie wird ausgelassen. Bearbeite die Formschräge, um eine andere Fläche zu wählen.",
     "draft-face-missing_other": "{{count}} zu neigende Flächen gibt es nicht mehr; sie werden ausgelassen. Bearbeite die Formschräge, um andere Flächen zu wählen."
   },

@@ -7,7 +7,7 @@ Pattern copies features in a row along a direction: a row of holes, ribs at equa
 extrusions, revolutions, sweeps, lofts, holes, boxes and cylinders – and other patterns and mirror images
 with all their copies (a row copied into a grid).
 
-![Two holes copied twice along the front edge of the plate, 22 mm apart](../../images/screenshots/pattern-linear.png)
+![Two holes copied twice along the front edge of the plate, 22 mm apart; the arrow shows which way the copies go](../../images/screenshots/pattern-linear.png)
 
 ## Step by step
 
@@ -18,8 +18,11 @@ with all their copies (a row copied into a grid).
 3. Pick the *Direction*: click a straight edge, an axis, or a plane in the tree. An edge, vertex, plane or
    axis goes into the *Direction* field right away. For a **planar face** as direction (its normal), click
    the *Direction* field first – while *Features to copy* is active, a face names a feature to copy.
-4. Set *Count* (the original included) and *Spacing*; **Other direction** turns the row round.
-5. Click **✓**.
+4. Check the **arrow** in the 3D view: it starts at the features you copy and points the way the copies
+   go. When you pick a direction, ParaWerk turns it towards the rest of the part, so the copies go into
+   the part – the top and the bottom edge of a plate both give a row across it.
+5. Set *Count* (the original included) and *Spacing*; **Other direction** turns the row round.
+6. Click **✓**.
 
 ## Options
 
@@ -30,7 +33,7 @@ with all their copies (a row copied into a grid).
 | *Direction (edge, axis or plane)* | A straight edge, a reference axis, a helix (its axis), or a plane or planar face (its normal) | |
 | *Count* | How many in all, the original included (2 to 1000) | 3 |
 | *Spacing* | The distance from one copy to the next | 20 mm |
-| *Other direction* | The copies go the other way | off |
+| *Other direction* | The copies go the other way; set when you pick a direction so that they go into the part | towards the part |
 
 ## Patterns of patterns
 
@@ -60,6 +63,7 @@ as it was built, with the direction it had, even if its edge was rounded later.
 | *Reference 1 of this feature is missing …* | The direction is gone: pick a new one. |
 | *That belongs to a copy this feature makes itself …* | Pick an edge, face or plane of the original part as direction. |
 | *The pattern would make n copies; at most 10,000 are possible.* | Reduce the counts. |
+| *The copies do not touch the part, so they remove nothing …* (yellow) | The copies of a cut lie beside the part: turn on **Other direction**, or check the spacing. |
 
 ## See also
 
