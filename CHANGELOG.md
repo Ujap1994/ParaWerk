@@ -7,6 +7,11 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+## [0.4.0-alpha.5] - 2026-10-27
+
+Linear patterns go into the part, with an arrow for their direction, on top of 0.4.0-alpha.4. Still an
+alpha: not ready for productive use; see the disclaimer in the README.
+
 ### Changed
 - A linear pattern goes into the part: when you pick its direction, the copies are turned towards the
   rest of the part (from the features they copy), so the top and the bottom edge of a plate both pattern
@@ -462,7 +467,8 @@ First technical preview (Phase 0). Not ready for productive use; see the disclai
 ### Removed
 - DWG from the planned formats, because it is a closed, proprietary format. DXF covers 2D exchange.
 
-[Unreleased]: https://github.com/Ujap1994/ParaWerk/compare/v0.4.0-alpha.4...HEAD
+[Unreleased]: https://github.com/Ujap1994/ParaWerk/compare/v0.4.0-alpha.5...HEAD
+[0.4.0-alpha.5]: https://github.com/Ujap1994/ParaWerk/compare/v0.4.0-alpha.4...v0.4.0-alpha.5
 [0.4.0-alpha.4]: https://github.com/Ujap1994/ParaWerk/compare/v0.4.0-alpha.3...v0.4.0-alpha.4
 [0.4.0-alpha.3]: https://github.com/Ujap1994/ParaWerk/compare/v0.4.0-alpha.2...v0.4.0-alpha.3
 [0.4.0-alpha.2]: https://github.com/Ujap1994/ParaWerk/compare/v0.4.0-alpha.1...v0.4.0-alpha.2

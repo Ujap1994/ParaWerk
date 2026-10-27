@@ -194,8 +194,10 @@ First previews released as [v0.4.0-alpha.0](https://github.com/Ujap1994/ParaWerk
 patterns, curves), [v0.4.0-alpha.2](https://github.com/Ujap1994/ParaWerk/releases/tag/v0.4.0-alpha.2)
 (twisted and guided sweeps, centerline lofts, multi-body parts, surfaces),
 [v0.4.0-alpha.3](https://github.com/Ujap1994/ParaWerk/releases/tag/v0.4.0-alpha.3) (fixes; all 2026-10-26)
-and [v0.4.0-alpha.4](https://github.com/Ujap1994/ParaWerk/releases/tag/v0.4.0-alpha.4) (patterns of
-patterns fixed, function reference; 2026-10-27).
+[v0.4.0-alpha.4](https://github.com/Ujap1994/ParaWerk/releases/tag/v0.4.0-alpha.4) (patterns of
+patterns fixed, function reference) and
+[v0.4.0-alpha.5](https://github.com/Ujap1994/ParaWerk/releases/tag/v0.4.0-alpha.5) (linear patterns go
+into the part; both 2026-10-27).
 
 | Item | Status |
 |---|---|
