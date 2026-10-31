@@ -237,6 +237,16 @@ export class ParaWerkBackend implements GeometryBackend {
         const data: number[] = [feature.sections.length];
         for (const { loop, frame } of feature.sections) data.push(...frame.origin, ...frame.xDir, ...frame.normal, ...encodeEdges(loop.edges));
         const names = feature.sections[0]?.loop.curves ?? [];
+        if (feature.guidePath || feature.guideCurve) {
+          // A guide from a sketch becomes a curve of its own for the loft.
+          const { guidePath } = feature;
+          const guide = guidePath ? this.handle(k.sketchWire(encodeEdges(guidePath.path.edges), [...guidePath.frame.origin, ...guidePath.frame.xDir, ...guidePath.frame.normal])) : feature.guideCurve;
+          try {
+            return this.handle(k.loftGuided(data, this.id(guide as ShapeHandle), names, feature.id));
+          } finally {
+            if (guidePath && guide) this.release(guide);
+          }
+        }
         if (!feature.centerlinePath && !feature.centerlineCurve) return this.handle(k.loftProfiles(data, feature.ruled ?? false, names, feature.id));
         // A centerline from a sketch becomes a curve of its own for the loft.
         const { centerlinePath } = feature;

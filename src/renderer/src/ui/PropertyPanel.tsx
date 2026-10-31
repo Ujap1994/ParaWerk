@@ -954,19 +954,35 @@ function LoftFields({ draft, index, firstFeature }: { draft: LoftFeature; index:
           </select>
         </label>
       ) : null}
-      <label className="field">
-        <span className="field-label">{t('loft.centerline')}</span>
-        <select className="field-select" value={draft.centerline ?? ''} data-testid="loft-centerline" onChange={(event) => commands.setLoftCenterline(event.target.value || undefined)}>
-          <option value="">{t('loft.noCenterline')}</option>
-          {draft.centerline && !centerlines.some((line) => line.id === draft.centerline) ? <option value={draft.centerline}>{t('references.lost')}</option> : null}
-          {centerlines.map((line) => (
-            <option key={line.id} value={line.id}>
-              {line.name}
-            </option>
-          ))}
-        </select>
-      </label>
+      {draft.guide ? null : (
+        <label className="field">
+          <span className="field-label">{t('loft.centerline')}</span>
+          <select className="field-select" value={draft.centerline ?? ''} data-testid="loft-centerline" onChange={(event) => commands.setLoftCenterline(event.target.value || undefined)}>
+            <option value="">{t('loft.noCenterline')}</option>
+            {draft.centerline && !centerlines.some((line) => line.id === draft.centerline) ? <option value={draft.centerline}>{t('references.lost')}</option> : null}
+            {centerlines.map((line) => (
+              <option key={line.id} value={line.id}>
+                {line.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       {draft.centerline ? null : (
+        <label className="field">
+          <span className="field-label">{t('loft.guide')}</span>
+          <select className="field-select" value={draft.guide ?? ''} data-testid="loft-guide" onChange={(event) => commands.setLoftGuide(event.target.value || undefined)}>
+            <option value="">{t('loft.noGuide')}</option>
+            {draft.guide && !centerlines.some((line) => line.id === draft.guide) ? <option value={draft.guide}>{t('references.lost')}</option> : null}
+            {centerlines.map((line) => (
+              <option key={line.id} value={line.id}>
+                {line.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      {draft.centerline || draft.guide ? null : (
         <label className="checkbox-field">
           <input type="checkbox" checked={draft.ruled ?? false} data-testid="loft-ruled" onChange={(event) => commands.updateDraft({ ruled: event.target.checked })} />
           {t('loft.ruled')}
@@ -975,6 +991,7 @@ function LoftFields({ draft, index, firstFeature }: { draft: LoftFeature; index:
       <OperationField value={draft.operation} firstFeature={firstFeature} />
       <p className="panel-hint">{t('loft.hint')}</p>
       {draft.centerline ? <p className="panel-hint">{t('loft.centerlineHint')}</p> : null}
+      {draft.guide ? <p className="panel-hint">{t('loft.guideHint')}</p> : null}
     </Section>
   );
 }

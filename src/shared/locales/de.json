@@ -559,7 +559,7 @@
     "curve-edge-missing": "{{detail}} Kante(n) der Kurve existieren nicht mehr, eine frühere Änderung hat sie entfernt. Bearbeite die Kurve und wähle die Kanten neu aus.",
     "pattern-too-many": "Das Muster würde {{detail}} Kopien erzeugen; höchstens 10.000 sind möglich. Verringere die Anzahlen.",
     "pattern-seed-failed": "Ein Feature, das dieses Muster oder diese Spiegelung kopiert, ist selbst fehlgeschlagen. Behebe zuerst dieses Feature: Der Featurebaum markiert es.",
-    "guide-missing": "Die Leitkurve der Austragung existiert nicht mehr. Wähle eine andere oder keine.",
+    "guide-missing": "Die Leitkurve existiert nicht mehr oder verläuft nicht entlang des Features. Wähle eine andere oder keine.",
     "guide-gaps": "Die Leitkurve muss ein Kurvenzug ohne Lücken und Verzweigungen sein.",
     "centerline-missing": "Die Mittellinie der Ausformung existiert nicht mehr. Wähle eine andere oder keine.",
     "centerline-gaps": "Die Mittellinie muss ein Kurvenzug ohne Lücken und Verzweigungen sein.",
@@ -1111,7 +1111,10 @@
     "hint": "Jede Skizze liefert eine geschlossene Kontur (ohne Löcher). Der Körper verläuft durch sie in der Reihenfolge der Liste, meist auf parallelen Ebenen übereinander.",
     "centerline": "Mittellinie",
     "noCenterline": "Keine (gerade zwischen den Profilen)",
-    "centerlineHint": "Die Profile bleiben, wo sie gezeichnet sind; dazwischen folgt die Ausformung der Mittellinie – einer Skizze oder Kurve durch die Profile –, für gebogene Übergänge und Kanäle."
+    "centerlineHint": "Die Profile bleiben, wo sie gezeichnet sind; dazwischen folgt die Ausformung der Mittellinie – einer Skizze oder Kurve durch die Profile –, für gebogene Übergänge und Kanäle.",
+    "guide": "Leitkurve",
+    "noGuide": "Keine",
+    "guideHint": "Zwischen den Profilen wächst oder schrumpft die Ausformung so, dass ihr Umriss die Leitkurve berührt – eine Skizze oder Kurve, die die Profile berührt. Zeichne sie seitlich der Profile, für Bäuche und Taillen."
   },
   "rib": {
     "thickness": "Dicke",

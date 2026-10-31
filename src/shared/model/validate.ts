@@ -573,6 +573,7 @@ function parseFeatureFields(raw: Json, path: string): Feature {
         sketches,
         ...(raw.ruled === undefined ? {} : { ruled: flag(raw.ruled, `${path}.ruled`) }),
         ...(raw.centerline === undefined ? {} : { centerline: sketchId(raw.centerline, `${path}.centerline`) }),
+        ...(raw.guide === undefined ? {} : { guide: sketchId(raw.guide, `${path}.guide`) }),
       };
     }
     case 'draft':

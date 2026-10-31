@@ -559,7 +559,7 @@
     "curve-edge-missing": "{{detail}} edge(s) of the curve no longer exist: an earlier change removed them. Edit the curve and pick the edges again.",
     "pattern-too-many": "The pattern would make {{detail}} copies; at most 10,000 are possible. Reduce the counts.",
     "pattern-seed-failed": "A feature this pattern or mirror copies has failed itself. Fix that feature first: the feature tree marks it.",
-    "guide-missing": "The guide curve of the sweep no longer exists. Choose another one, or none.",
+    "guide-missing": "The guide curve no longer exists, or it does not run along the feature. Choose another one, or none.",
     "guide-gaps": "The guide curve must be one chain of curves without gaps or branches.",
     "centerline-missing": "The centerline of the loft no longer exists. Choose another one, or none.",
     "centerline-gaps": "The centerline must be one chain of curves without gaps or branches.",
@@ -1111,7 +1111,10 @@
     "hint": "Each sketch gives one closed outline (without holes). The solid goes through them in the order of the list, usually on parallel planes one above the other.",
     "centerline": "Centerline",
     "noCenterline": "None (straight between the profiles)",
-    "centerlineHint": "The profiles stay where they are drawn; between them the loft follows the centerline – a sketch or a curve through the profiles – for bent transitions and ducts."
+    "centerlineHint": "The profiles stay where they are drawn; between them the loft follows the centerline – a sketch or a curve through the profiles – for bent transitions and ducts.",
+    "guide": "Guide curve",
+    "noGuide": "None",
+    "guideHint": "Between the profiles the loft grows or shrinks so that its outline keeps touching the guide curve – a sketch or a curve that touches the profiles. Draw it beside the profiles, for bulges and waists."
   },
   "rib": {
     "thickness": "Thickness",

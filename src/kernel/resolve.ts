@@ -486,9 +486,14 @@ function resolveLoft(feature: LoftFeature, before: readonly Feature[], context: 
     if (!region || profile.regions.length > 1 || region.holes.length > 0) throw new FeatureError('loft-profile', String(i + 1));
     return { loop: region.outer, frame: context.frames.get(sketch.id) ?? frameOf(sketch.plane) };
   });
-  if (!feature.centerline) return { ...feature, sections };
-  const centerline = curveOrPath(feature.centerline, before, context, 'centerline-missing', 'centerline-gaps');
-  return { ...feature, sections, ...(centerline.curve ? { centerlineCurve: centerline.curve } : { centerlinePath: centerline.path }) };
+  // A centerline wins over a guide curve (the panel offers one or the other).
+  if (feature.centerline) {
+    const centerline = curveOrPath(feature.centerline, before, context, 'centerline-missing', 'centerline-gaps');
+    return { ...feature, sections, ...(centerline.curve ? { centerlineCurve: centerline.curve } : { centerlinePath: centerline.path }) };
+  }
+  if (!feature.guide) return { ...feature, sections };
+  const guide = curveOrPath(feature.guide, before, context, 'guide-missing', 'guide-gaps');
+  return { ...feature, sections, ...(guide.curve ? { guideCurve: guide.curve } : { guidePath: guide.path }) };
 }
 
 /** The bodies a combine or delete-body feature picks, by one face each (the main body first). */

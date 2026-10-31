@@ -250,6 +250,14 @@ int sweepAlongHelix(const std::vector<double>& profile, const std::vector<double
  * `centerlineId` of the store (one chain; it runs from its end nearer to the first profile), each where
  * it lies. Faces are named as for sweepProfile. Fails with "loft-sections", "path-gaps" or "loft-failed".
  */
+/**
+ * A loft through the profiles (as for loftProfiles) whose outline follows a guide curve (`guideId`, a
+ * wire that touches the profiles): between the profiles, cross-sections of the plain loft are scaled about
+ * their middles until they reach the guide. Fails with "guide-missing" when the guide does not run along
+ * the loft, "loft-failed" otherwise.
+ */
+int loftGuided(const std::vector<double>& sections, int guideId, const std::vector<std::string>& edgeNames, const std::string& name = "");
+
 int loftAlongCurve(const std::vector<double>& sections, int centerlineId, const std::vector<std::string>& edgeNames = {}, const std::string& name = "");
 
 // Surfaces: faces that are not part of a solid, kept in the store like curves.

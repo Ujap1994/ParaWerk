@@ -16,7 +16,7 @@ a round one, bottles, blades. With a centerline it bends between the profiles.
    last two).
 4. Check the order under *Profiles, in order*: **↑** moves a sketch up, **✕** takes it out, *Add a
    profile* adds one at the end.
-5. Optionally choose a *Centerline* or turn on *Flat faces between the profiles*.
+5. Optionally choose a *Centerline*, a *Guide curve*, or turn on *Flat faces between the profiles*.
 6. Click **✓**.
 
 ## Options
@@ -26,7 +26,8 @@ a round one, bottles, blades. With a centerline it bends between the profiles.
 | *Profiles, in order* | The sketches the solid goes through, in this order | unused sketches with outlines |
 | *Add a profile* | Adds another sketch at the end | |
 | *Centerline* | A sketch or curve through the profiles: between them the loft follows it (bent transitions, elbows) | None (straight between the profiles) |
-| *Flat faces between the profiles* | Straight faces between neighboring outlines instead of a smooth surface (not with a centerline) | off |
+| *Guide curve* | A sketch or curve beside the profiles that touches each of them: between them the loft grows or shrinks to keep touching it (not with a centerline) | None |
+| *Flat faces between the profiles* | Straight faces between neighboring outlines instead of a smooth surface (not with a centerline or a guide) | off |
 | *Operation* | **Add material** or **Remove material**; *Merge result* as for [Extrude](extrude.md) | Add material |
 
 ## Tips
@@ -39,6 +40,8 @@ a round one, bottles, blades. With a centerline it bends between the profiles.
 
 ![A square duct bent around a corner: a loft along a quarter-circle centerline](../../images/screenshots/loft-centerline.png)
 
+![A vase: a loft between two squares that bulges out to a guide arc](../../images/screenshots/loft-guide.png)
+
 ## Messages
 
 | Message | What to do |
@@ -48,6 +51,7 @@ a round one, bottles, blades. With a centerline it bends between the profiles.
 | *Profile n must be one closed outline without holes.* | Remove extra or inner outlines from that sketch. |
 | *The profiles could not be joined.* | Check that they lie one after the other and are not twisted against each other. |
 | *The centerline of the loft no longer exists.* / *The centerline must be one chain …* | Choose another centerline or none. |
+| *The guide curve no longer exists, or it does not run along the feature.* | The guide must reach from the first profile to the last, beside them: choose another one, or none. |
 
 ## See also
 

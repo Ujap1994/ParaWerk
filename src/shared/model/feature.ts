@@ -532,6 +532,8 @@ export interface LoftFeature extends FeatureBase {
   ruled?: boolean;
   /** A centerline the loft follows (a sketch or curve id); the outlines stay where they are drawn. */
   centerline?: string;
+  /** A guide curve (a sketch or curve id) that touches the outlines: between them the loft grows or shrinks to keep touching it. */
+  guide?: string;
 }
 
 /** Which way a rib grows from its curves: within the sketch plane, or along its normal. */
@@ -724,7 +726,7 @@ export function isCurveFeature(feature: Feature): feature is CurveFeature {
 export function sketchesUsedBy(feature: Feature): string[] {
   if (isSketchBased(feature) || feature.type === 'rib' || feature.type === 'helix') return [feature.sketch];
   if (feature.type === 'sweep') return feature.guide ? [feature.sketch, feature.path, feature.guide] : [feature.sketch, feature.path];
-  if (feature.type === 'loft') return feature.centerline ? [...feature.sketches, feature.centerline] : feature.sketches;
+  if (feature.type === 'loft') return [...feature.sketches, ...(feature.centerline ? [feature.centerline] : []), ...(feature.guide ? [feature.guide] : [])];
   if (feature.type === 'projectedCurve') return feature.method === 'sketch' ? [feature.sketch, feature.sketch2] : [feature.sketch];
   if (feature.type === 'compositeCurve') return feature.curves;
   if (feature.type === 'knit') return feature.surfaces;

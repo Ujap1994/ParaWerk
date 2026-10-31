@@ -1290,6 +1290,38 @@ test('hides reference planes, axes and points, but shows them where they are pic
   await expect.poll(drawn).toBe(2);
 });
 
+test('gives a loft a guide curve in its panel', async () => {
+  launched = await launchApp({ width: 1000, height: 640 });
+  const { page } = launched;
+  await page.evaluate(() => {
+    const square = (p: string) => [
+      { id: `${p}1`, type: 'point', x: -10, y: -10 }, { id: `${p}2`, type: 'point', x: 10, y: -10 }, { id: `${p}3`, type: 'point', x: 10, y: 10 }, { id: `${p}4`, type: 'point', x: -10, y: 10 },
+      { id: `${p}a`, type: 'line', p1: `${p}1`, p2: `${p}2` }, { id: `${p}b`, type: 'line', p1: `${p}2`, p2: `${p}3` }, { id: `${p}c`, type: 'line', p1: `${p}3`, p2: `${p}4` }, { id: `${p}d`, type: 'line', p1: `${p}4`, p2: `${p}1` },
+    ];
+    const features = [
+      { id: 'bottom', type: 'sketch', plane: { kind: 'standard', plane: 'top' }, sketch: { entities: square('b'), constraints: [] } },
+      { id: 'up', type: 'plane', method: 'offset', references: [{ kind: 'standard-plane', plane: 'top' }], distance: 60, angle: 45, flip: false },
+      { id: 'top', type: 'sketch', plane: { kind: 'feature', feature: 'up', frame: { origin: [0, 0, 60], xDir: [1, 0, 0], yDir: [0, 1, 0], normal: [0, 0, 1] } }, sketch: { entities: square('t'), constraints: [] } },
+      {
+        id: 'guide', type: 'sketch', plane: { kind: 'standard', plane: 'front' },
+        sketch: { entities: [{ id: 'g1', type: 'point', x: 10, y: 0 }, { id: 'g2', type: 'point', x: 10, y: 60 }, { id: 'gc', type: 'point', x: -30, y: 30 }, { id: 'arc', type: 'arc', center: 'gc', start: 'g1', end: 'g2' }], constraints: [] },
+      },
+      { id: 'loft', type: 'loft', operation: 'add', sketches: ['bottom', 'top'] },
+    ];
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features, past: [], future: [] }, savedFeatures: features, dirty: false });
+  });
+  expect(await volume(page)).toBeCloseTo(24_000, 1);
+  await page.locator('.feature-tree .tree-item[data-feature-id="loft"]').dblclick();
+  await page.locator('[data-testid="loft-guide"]').selectOption('guide');
+  await expect(page.locator('[data-testid="loft-centerline"]')).toHaveCount(0);
+  await expect(page.locator('[data-testid="loft-ruled"]')).toHaveCount(0);
+  await idle(page);
+  await expect(page.locator('.property-panel .panel-error')).toHaveCount(0);
+  await page.click('[data-testid="panel-ok"]');
+  expect(await volume(page)).toBeGreaterThan(48_000);
+  expect((await state(page)).history.features[4]).toMatchObject({ type: 'loft', guide: 'guide' });
+});
+
 test('adds a box as a body of its own and combines the bodies', async () => {
   launched = await launchApp({ width: 1000, height: 640 });
   const { page } = launched;

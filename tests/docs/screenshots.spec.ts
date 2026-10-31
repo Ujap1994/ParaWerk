@@ -1556,6 +1556,21 @@ test('function reference screenshots', async () => {
     { id: 'puck', type: 'cylinder', name: 'Puck', operation: 'add', merge: false, radius: 10, height: 15, axis: 'z', position: [-35, 15, 10] },
     { id: 'copy', type: 'moveBody', name: 'Puck copy', method: 'translate', references: [], bodies: [{ kind: 'face', name: 'puck:top', at: [-35, 15, 25] }], dx: 70, dy: -30, dz: 0, angle: 90, copy: true },
   ], 'copy');
+  // A loft between two squares 60 apart, bulging out to a guide arc on its right side.
+  const square = (p: string, half: number) => [
+    { id: `${p}1`, type: 'point', x: -half, y: -half }, { id: `${p}2`, type: 'point', x: half, y: -half }, { id: `${p}3`, type: 'point', x: half, y: half }, { id: `${p}4`, type: 'point', x: -half, y: half },
+    { id: `${p}a`, type: 'line', p1: `${p}1`, p2: `${p}2` }, { id: `${p}b`, type: 'line', p1: `${p}2`, p2: `${p}3` }, { id: `${p}c`, type: 'line', p1: `${p}3`, p2: `${p}4` }, { id: `${p}d`, type: 'line', p1: `${p}4`, p2: `${p}1` },
+  ];
+  await shot('loft-guide.png', 'Loft with a guide curve', [
+    { id: 'bottom', type: 'sketch', name: 'Bottom square', plane: { kind: 'standard', plane: 'top' }, sketch: { entities: square('b', 10), constraints: [] } },
+    { id: 'topPlane', type: 'plane', name: 'Top of the vase', method: 'offset', references: [{ kind: 'standard-plane', plane: 'top' }], distance: 60, angle: 45, flip: false },
+    { id: 'top', type: 'sketch', name: 'Top square', plane: { kind: 'feature', feature: 'topPlane', frame: { origin: [0, 0, 60], xDir: [1, 0, 0], yDir: [0, 1, 0], normal: [0, 0, 1] } }, sketch: { entities: square('t', 10), constraints: [] } },
+    {
+      id: 'guide', type: 'sketch', name: 'Guide arc', plane: { kind: 'standard', plane: 'front' },
+      sketch: { entities: [{ id: 'g1', type: 'point', x: 10, y: 0 }, { id: 'g2', type: 'point', x: 10, y: 60 }, { id: 'gc', type: 'point', x: -30, y: 30 }, { id: 'arc', type: 'arc', center: 'gc', start: 'g1', end: 'g2' }], constraints: [] },
+    },
+    { id: 'vase', type: 'loft', name: 'Vase', operation: 'add', sketches: ['bottom', 'top'], guide: 'guide' },
+  ], 'vase');
   // A coordinate system on the top of the block, turned 30° around Z.
   const csys = { id: 'frame', type: 'csys', name: 'Print frame', method: 'position', references: [], x: 20, y: 0, z: 40, angle: 30, flipX: false, flipY: false };
   await shot('csys.png', 'Coordinate system', [block, csys], 'frame');

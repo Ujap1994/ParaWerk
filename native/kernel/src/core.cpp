@@ -1527,6 +1527,123 @@ SurfaceInfo surfaceInfo(int id) {
   return info;
 }
 
+namespace {
+
+/** The middle of a closed wire (the average of points along it). */
+gp_Pnt wireMiddle(const TopoDS_Wire& wire) {
+  BRepAdaptor_CompCurve curve(wire);
+  const int samples = 64;
+  gp_XYZ sum(0, 0, 0);
+  for (int i = 0; i < samples; ++i) sum += curve.Value(curve.FirstParameter() + (curve.LastParameter() - curve.FirstParameter()) * i / samples).XYZ();
+  return gp_Pnt(sum / samples);
+}
+
+/** The cross-section of `solid` in the plane through `point` normal to `normal`, as one closed wire; null when there is none. */
+TopoDS_Wire crossSection(const TopoDS_Shape& solid, const gp_Pnt& point, const gp_Dir& normal) {
+  BRepAlgoAPI_Section section(solid, gp_Pln(point, normal), false);
+  section.ComputePCurveOn1(false);
+  section.Approximation(true);
+  section.Build();
+  if (!section.IsDone()) return TopoDS_Wire();
+  occ::handle<NCollection_HSequence<TopoDS_Shape>> edges = new NCollection_HSequence<TopoDS_Shape>();
+  for (TopExp_Explorer it(section.Shape(), TopAbs_EDGE); it.More(); it.Next()) edges->Append(it.Current());
+  occ::handle<NCollection_HSequence<TopoDS_Shape>> wires;
+  ShapeAnalysis_FreeBounds::ConnectEdgesToWires(edges, 1e-6, false, wires);
+  if (wires.IsNull() || wires->Length() != 1) return TopoDS_Wire();
+  return TopoDS::Wire(wires->Value(1));
+}
+
+/** How far from `from` the wire is in the direction `across` (where a ray from there crosses it); 0 when it does not. */
+double reachAlong(const TopoDS_Wire& wire, const gp_Pnt& from, const gp_Dir& across, double length) {
+  const TopoDS_Edge ray = BRepBuilderAPI_MakeEdge(from, from.Translated(gp_Vec(across) * length)).Edge();
+  BRepExtrema_DistShapeShape distance(ray, wire);
+  if (!distance.IsDone() || distance.NbSolution() == 0 || distance.Value() > 1e-4) return 0;
+  double reach = 0;
+  for (int i = 1; i <= distance.NbSolution(); ++i) reach = std::max(reach, from.Distance(distance.PointOnShape1(i)));
+  return reach;
+}
+
+}  // namespace
+
+int loftGuided(const std::vector<double>& sections, int guideId, const std::vector<std::string>& edgeNames, const std::string& name) {
+  const TopoDS_Shape& guideShape = store().get(guideId);
+  if (guideShape.ShapeType() != TopAbs_WIRE) throw KernelError("guide-gaps", "the guide curve is not one chain");
+  ProfileReader in(sections);
+  const int count = in.count(1000);
+  if (count < 2) throw KernelError("loft-sections", "a loft needs at least two profiles");
+  NamedEdges first{edgeNames, {}};
+  const std::vector<std::string> noNames;
+  std::vector<TopoDS_Wire> wires;
+  for (int s = 0; s < count; ++s) {
+    std::vector<double> frame(9);
+    for (double& value : frame) value = in.number();
+    NamedEdges others{noNames, {}};
+    wires.push_back(readLoop(in, framePlane(frame), s == 0 ? first : others));
+  }
+  // The loft without the guide, whose cross-sections are then made to touch the guide.
+  BRepOffsetAPI_ThruSections plain(true, false, 1e-6);
+  plain.CheckCompatibility(true);
+  for (const TopoDS_Wire& wire : wires) plain.AddWire(wire);
+  plain.Build();
+  if (!plain.IsDone()) throw KernelError("loft-failed", "the profiles could not be joined");
+  // The guide runs from its end nearer to the first profile.
+  TopoDS_Wire guide = TopoDS::Wire(guideShape);
+  TopoDS_Vertex guideStart, guideEnd;
+  TopExp::Vertices(guide, guideStart, guideEnd);
+  std::vector<gp_Pnt> middles;
+  for (const TopoDS_Wire& wire : wires) middles.push_back(wireMiddle(wire));
+  if (!guideStart.IsNull() && !guideEnd.IsNull() && middles.front().Distance(BRep_Tool::Pnt(guideEnd)) < middles.front().Distance(BRep_Tool::Pnt(guideStart)))
+    guide = TopoDS::Wire(guide.Reversed());
+  BRepAdaptor_CompCurve rail(guide);
+  Bnd_Box box;
+  BRepBndLib::Add(plain.Shape(), box);
+  BRepBndLib::Add(guide, box);
+  const double size = std::sqrt(box.SquareExtent());
+  // Between each two profiles, stations along the line through their middles; at each, the plain loft's
+  // cross-section scaled about its middle until it reaches the guide.
+  const int stations = 12;
+  BRepOffsetAPI_ThruSections loft(true, false, 1e-6);
+  loft.CheckCompatibility(true);
+  double search = rail.FirstParameter();
+  loft.AddWire(wires.front());
+  for (size_t s = 0; s + 1 < wires.size(); ++s) {
+    const gp_Vec span(middles[s], middles[s + 1]);
+    if (span.Magnitude() < 1e-6) throw KernelError("loft-failed", "two profiles lie at the same place");
+    const gp_Dir normal(span);
+    for (int i = 1; i < stations; ++i) {
+      const gp_Pnt point = middles[s].Translated(span * (static_cast<double>(i) / stations));
+      const TopoDS_Wire cut = crossSection(plain.Shape(), point, normal);
+      if (cut.IsNull()) throw KernelError("loft-failed", "the loft could not be cut to follow the guide");
+      const gp_Pnt middle = wireMiddle(cut);
+      const std::optional<double> crossing = guideCrossing(rail, middle, gp_Vec(normal), search);
+      if (!crossing) throw KernelError("guide-missing", "the guide curve does not run along the loft");
+      search = *crossing;
+      gp_Vec across(middle, rail.Value(*crossing));
+      across -= gp_Vec(normal) * across.Dot(gp_Vec(normal));
+      if (across.Magnitude() < 1e-9) throw KernelError("loft-failed", "the guide curve meets the middle of the loft");
+      const double reach = reachAlong(cut, middle, gp_Dir(across), size * 2);
+      if (!(reach > 1e-9)) throw KernelError("loft-failed", "the guide curve lies inside the profiles");
+      gp_Trsf scale;
+      scale.SetScale(middle, across.Magnitude() / reach);
+      loft.AddWire(TopoDS::Wire(BRepBuilderAPI_Transform(cut, scale, true).Shape()));
+    }
+    loft.AddWire(wires[s + 1]);
+  }
+  loft.Build();
+  if (!loft.IsDone()) throw KernelError("loft-failed", "the profiles could not follow the guide curve");
+  const TopoDS_Shape result = loft.Shape();
+  requireValidSolid(result, "loft");
+  FaceNamer namer(result);
+  for (const auto& [edge, edgeName] : first.edges) {
+    const TopoDS_Shape side = loft.GeneratedFace(edge);
+    if (!side.IsNull()) namer.assign(side, faceName(name, "side:" + edgeName));
+  }
+  namer.assign(loft.FirstShape(), faceName(name, "start"));
+  namer.assign(loft.LastShape(), faceName(name, "end"));
+  namer.rest(faceName(name, "side"));
+  return store().add(result, namer.take());
+}
+
 int loftAlongCurve(const std::vector<double>& sections, int centerlineId, const std::vector<std::string>& edgeNames, const std::string& name) {
   const TopoDS_Shape& line = store().get(centerlineId);
   if (line.ShapeType() != TopAbs_WIRE) throw KernelError("path-gaps", "the centerline is not one chain");

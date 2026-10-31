@@ -43,6 +43,9 @@ export interface ResolvedLoft extends LoftFeature {
   /** The centerline: the path of a sketch on its plane, or a projected or composite curve. */
   centerlinePath?: { path: SketchPath; frame: SketchFrame };
   centerlineCurve?: ShapeHandle;
+  /** The guide curve: the path of a sketch on its plane, or a projected or composite curve. */
+  guidePath?: { path: SketchPath; frame: SketchFrame };
+  guideCurve?: ShapeHandle;
 }
 
 /**

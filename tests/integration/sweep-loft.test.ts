@@ -138,6 +138,42 @@ describe('loft', () => {
   });
 });
 
+describe('loft with a guide curve', () => {
+  // Two 20 × 20 squares 60 apart; a guide on the right side bulging out to x 20 halfway up.
+  const bottom = sketch('bottom', { kind: 'standard', plane: 'top' }, ...square('b', 10));
+  const top = above('top', 60, ...square('t', 10));
+  // In the front plane (x right, z up): an arc from (10, 0) through (20, 30) to (10, 60) around (−30, 30).
+  const bulge = sketch('guide', { kind: 'standard', plane: 'front' }, P('g1', 10, 0), P('g2', 10, 60), P('gc', -30, 30), { id: 'arc', type: 'arc', center: 'gc', start: 'g1', end: 'g2' });
+  const loft = (more: Partial<LoftFeature> = {}): LoftFeature => ({ id: 'loft', type: 'loft', operation: 'add', sketches: ['bottom', 'top'], ...more });
+
+  it('grows and shrinks with the guide between the profiles', () => {
+    const result = build([bottom, ...top, bulge, loft({ guide: 'guide' })]);
+    expect(result.features.at(-1)?.status).toBe('ok');
+    const properties = result.captures[0]?.properties;
+    // Halfway up the section is twice as wide (scaled about its middle): 40 × 40.
+    expect(properties?.bboxMax[0]).toBeCloseTo(20, 1);
+    expect(properties?.bboxMin[0]).toBeCloseTo(-20, 1);
+    expect(properties?.bboxMax[2]).toBeCloseTo(60, 6);
+    expect(properties?.volume ?? 0).toBeGreaterThan(20 * 20 * 60 * 2);
+    expect(properties?.volume ?? 0).toBeLessThan(40 * 40 * 60);
+    // The faces are named as for a loft without a guide.
+    expect(result.captures[0]?.mesh?.naming.faces).toEqual(expect.arrayContaining(['loft:start', 'loft:end', 'loft:side:ba']));
+  });
+
+  it('follows the guide from a square to a circle', () => {
+    const round = above('round', 60, P('rc', 0, 0), { id: 'circle', type: 'circle', center: 'rc', radius: 10 });
+    const result = build([bottom, ...round, bulge, loft({ sketches: ['bottom', 'round'], guide: 'guide' })]);
+    expect(result.features.at(-1)?.status).toBe('ok');
+    expect(result.captures[0]?.properties?.bboxMax[0]).toBeCloseTo(20, 1);
+  });
+
+  it('reports a guide that does not run along the loft', () => {
+    const away = sketch('guide', { kind: 'standard', plane: 'front' }, P('g1', 100, 0), P('g2', 150, 0), L('gl', 'g1', 'g2'));
+    expect(build([bottom, ...top, away, loft({ guide: 'guide' })]).features.at(-1)?.error?.code).toBe('guide-missing');
+    expect(build([bottom, ...top, loft({ guide: 'gone' })]).features.at(-1)?.error?.code).toBe('guide-missing');
+  });
+});
+
 describe('copies of sweeps and lofts', () => {
   it('patterns a sweep', () => {
     const pattern: Feature = { id: 'row', type: 'pattern', method: 'linear', references: [{ kind: 'standard-plane', plane: 'right' }], features: ['s'], count: 3, spacing: 10, angle: 360, flip: false };

@@ -971,6 +971,14 @@ export function setLoftCenterline(centerline: string | undefined): void {
   setState({ activeEdit: { ...edit, draft: centerline ? { ...rest, centerline } : rest } });
 }
 
+/** Gives the edited loft a guide curve (a sketch or curve id), or none; a guided loft has no centerline and no flat faces. */
+export function setLoftGuide(guide: string | undefined): void {
+  const edit = getState().activeEdit;
+  if (edit?.draft.type !== 'loft') return;
+  const { guide: _old, ...rest } = edit.draft;
+  setState({ activeEdit: { ...edit, draft: guide ? { ...rest, guide } : rest } });
+}
+
 /** Gives the edited sweep a guide curve (a sketch or curve id), or none; a guided sweep does not twist. */
 export function setSweepGuide(guide: string | undefined): void {
   const edit = getState().activeEdit;
