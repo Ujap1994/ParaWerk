@@ -1,4 +1,4 @@
-import { COPYABLE_TYPES, type MoveBodyFeature, type SplitFeature, type SurfaceFeature, type CombineFeature, type DeleteBodyFeature, type CurveFeature, isCopyFeature, isEdgeFeature, type CopyFeature, type DraftFeature, type LoftFeature, type RibFeature, type SweepFeature, type ThreadFeature, type EdgeFeature, type EdgeRef, type ExtrudeFeature, type Feature, type FilletFeature, roundFaceCount, type HoleFeature, type ShellFeature, type SketchFeature, type SolidModelingFeature, type Vec3 } from '../shared/model/feature.ts';
+import { COPYABLE_TYPES, scopeOf, type MoveBodyFeature, type SplitFeature, type SurfaceFeature, type CombineFeature, type DeleteBodyFeature, type CurveFeature, isCopyFeature, isEdgeFeature, type CopyFeature, type DraftFeature, type LoftFeature, type RibFeature, type SweepFeature, type ThreadFeature, type EdgeFeature, type EdgeRef, type ExtrudeFeature, type Feature, type FilletFeature, roundFaceCount, type HoleFeature, type ShellFeature, type SketchFeature, type SolidModelingFeature, type Vec3 } from '../shared/model/feature.ts';
 import { circularTransforms, composeTransforms, IDENTITY, linearTransforms, mirrorTransform, rotation, sameTransform, type Transform } from '../shared/model/pattern.ts';
 import { holePositions, holeProblem } from '../shared/model/hole.ts';
 import { edgeFaceNames, edgeRefOf, faceRefOf, resolveEdgeRefs, resolveFaceRef, resolveFacePlane, type BodyNaming } from '../shared/model/naming.ts';
@@ -621,6 +621,20 @@ export function resolveCurve(feature: CurveFeature, before: readonly Feature[], 
  * has no usable outline, or when an edge or the axis is gone.
  */
 export function resolveFeature(feature: SolidModelingFeature, before: readonly Feature[], context: ResolveContext): KernelFeature {
+  const resolved = resolveOwn(feature, before, context);
+  const scope = scopeOf(feature);
+  if (!scope) return resolved;
+  // The feature scope: the bodies (by one face each) the feature may change.
+  const body = context.body;
+  if (!body) throw new FeatureError('no-body');
+  const naming = body.naming();
+  const scopeFaces = scope.map((ref) => resolveFaceRef(ref, naming, (face, point) => Math.hypot(...minus(body.face(face).center, point)))?.index ?? -1);
+  const missing = scopeFaces.filter((index) => index < 0).length;
+  if (missing > 0) throw new FeatureError('body-missing', String(missing));
+  return { ...resolved, scopeFaces };
+}
+
+function resolveOwn(feature: SolidModelingFeature, before: readonly Feature[], context: ResolveContext): KernelFeature {
   if (isCopyFeature(feature)) return resolveCopy(feature, before, context);
   if (feature.type === 'shell') return resolveShell(feature, context);
   if (feature.type === 'draft') return resolveDraft(feature, context);

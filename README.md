@@ -175,9 +175,6 @@ See the [user guide](docs/user-guide/README.md) for details, and the
 
 > Everything below is **planned**. Each item moves to "Available now", with screenshots, once it ships.
 
-### Part modeling
-- Feature scope for multi-body parts (cuts limited to chosen bodies)
-
 ### Assemblies
 - Components and sub-assemblies with standard, advanced and mechanical mates
 - Dragging that respects mates, degree-of-freedom analysis, interference and clearance checks

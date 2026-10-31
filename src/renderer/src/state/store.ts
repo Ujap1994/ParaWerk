@@ -1,5 +1,6 @@
 import { useStore } from 'zustand';
 import { createStore } from 'zustand/vanilla';
+import type { BodyNaming } from '../../../shared/model/naming.ts';
 import type { Language } from '../../../shared/i18n.ts';
 import type { AppInfo, RecoveryEntry } from '../../../shared/ipc.ts';
 import type { Feature, Vec3 } from '../../../shared/model/feature.ts';
@@ -53,6 +54,8 @@ export interface DisplayMeshes {
   preview: MeshPayload | null;
   /** Whether faces and edges of the body can be picked. */
   pickable: boolean;
+  /** While a feature is edited: the faces' names of the body before it (for its feature scope). */
+  before?: BodyNaming | null;
 }
 
 export interface AppState {

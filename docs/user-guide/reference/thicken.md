@@ -25,6 +25,9 @@ for a closed surface, the solid it encloses. The solid is added like other featu
 | *Grows* | **Along the normal**, **Against the normal** or **Half each way** | Along the normal |
 | *Merge result (with the bodies it touches)* | Cleared, the solid stays a body of its own | on |
 
+On a part of several bodies, *Feature scope* limits the feature to the bodies you tick (see
+[Combine](combine.md#feature-scope)).
+
 ## Messages
 
 | Message | What to do |

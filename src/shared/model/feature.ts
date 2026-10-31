@@ -109,6 +109,8 @@ export interface BoxFeature extends FeatureBase {
   operation: BooleanOperation;
   /** Added material stays a body of its own instead of being fused with the bodies it touches (docs/adr/0011-multi-body-parts.md). */
   merge?: boolean;
+  /** Feature scope: the bodies (one face each) it cuts or merges with; all without (docs/adr/0011-multi-body-parts.md). */
+  scope?: FaceNameRef[];
   width: number;
   depth: number;
   height: number;
@@ -121,6 +123,8 @@ export interface CylinderFeature extends FeatureBase {
   operation: BooleanOperation;
   /** Added material stays a body of its own instead of being fused with the bodies it touches (docs/adr/0011-multi-body-parts.md). */
   merge?: boolean;
+  /** Feature scope: the bodies (one face each) it cuts or merges with; all without (docs/adr/0011-multi-body-parts.md). */
+  scope?: FaceNameRef[];
   radius: number;
   height: number;
   axis: Axis;
@@ -138,6 +142,8 @@ export interface ImportFeature extends FeatureBase {
   operation: BooleanOperation;
   /** Added material stays a body of its own instead of being fused with the bodies it touches (docs/adr/0011-multi-body-parts.md). */
   merge?: boolean;
+  /** Feature scope: the bodies (one face each) it cuts or merges with; all without (docs/adr/0011-multi-body-parts.md). */
+  scope?: FaceNameRef[];
   /** The name of the imported file. */
   file: string;
   /** Content hash of `data`: rebuilds compare it instead of the whole file. */
@@ -336,6 +342,8 @@ export interface ExtrudeFeature extends FeatureBase {
   operation: BooleanOperation;
   /** Added material stays a body of its own instead of being fused with the bodies it touches (docs/adr/0011-multi-body-parts.md). */
   merge?: boolean;
+  /** Feature scope: the bodies (one face each) it cuts or merges with; all without (docs/adr/0011-multi-body-parts.md). */
+  scope?: FaceNameRef[];
   /** Id of the sketch feature (before this one) whose outlines are extruded. */
   sketch: string;
   /** Used when `end` is blind. */
@@ -386,6 +394,8 @@ export interface RevolveFeature extends FeatureBase {
   operation: BooleanOperation;
   /** Added material stays a body of its own instead of being fused with the bodies it touches (docs/adr/0011-multi-body-parts.md). */
   merge?: boolean;
+  /** Feature scope: the bodies (one face each) it cuts or merges with; all without (docs/adr/0011-multi-body-parts.md). */
+  scope?: FaceNameRef[];
   /** Id of the sketch feature (before this one) whose outlines are revolved. */
   sketch: string;
   /** Id of the line (often a centerline) of that sketch that is the axis (unused when `axisRef` is set). */
@@ -426,6 +436,8 @@ export type HoleFit = 'close' | 'normal' | 'loose';
  */
 export interface HoleFeature extends FeatureBase {
   type: 'hole';
+  /** Feature scope: the bodies (one face each) the holes cut; all without. */
+  scope?: FaceNameRef[];
   kind: HoleKind;
   /** ISO metric size, e.g. "M6". */
   size: string;
@@ -512,6 +524,8 @@ export interface SweepFeature extends FeatureBase {
   operation: BooleanOperation;
   /** Added material stays a body of its own instead of being fused with the bodies it touches (docs/adr/0011-multi-body-parts.md). */
   merge?: boolean;
+  /** Feature scope: the bodies (one face each) it cuts or merges with; all without (docs/adr/0011-multi-body-parts.md). */
+  scope?: FaceNameRef[];
   sketch: string;
   path: string;
   twist?: number;
@@ -527,6 +541,8 @@ export interface LoftFeature extends FeatureBase {
   operation: BooleanOperation;
   /** Added material stays a body of its own instead of being fused with the bodies it touches (docs/adr/0011-multi-body-parts.md). */
   merge?: boolean;
+  /** Feature scope: the bodies (one face each) it cuts or merges with; all without (docs/adr/0011-multi-body-parts.md). */
+  scope?: FaceNameRef[];
   sketches: string[];
   /** Flat faces between the outlines instead of smooth ones. */
   ruled?: boolean;
@@ -651,6 +667,8 @@ export interface ThickenFeature extends FeatureBase {
   fill: boolean;
   /** Added material stays a body of its own instead of being fused with the bodies it touches (docs/adr/0011-multi-body-parts.md). */
   merge?: boolean;
+  /** Feature scope: the bodies (one face each) it cuts or merges with; all without (docs/adr/0011-multi-body-parts.md). */
+  scope?: FaceNameRef[];
 }
 
 export type SurfaceFeature = OffsetSurfaceFeature | KnitFeature;
@@ -716,6 +734,11 @@ export interface MoveBodyFeature extends FeatureBase {
   dz: number;
   angle: number;
   copy: boolean;
+}
+
+/** The bodies a feature that adds or cuts material is limited to (feature scope), if any. */
+export function scopeOf(feature: Feature): FaceNameRef[] | undefined {
+  return 'scope' in feature && feature.scope && feature.scope.length > 0 ? feature.scope : undefined;
 }
 
 export function isCurveFeature(feature: Feature): feature is CurveFeature {

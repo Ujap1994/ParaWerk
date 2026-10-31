@@ -34,7 +34,7 @@ rebuilds your part; your document is not affected. Please report the steps that 
 
 ## Known limitations of the alpha
 
-- Not available yet: feature scope (cuts limited to chosen bodies); assemblies (Phase 4).
+- Not available yet: assemblies (Phase 4).
 - A loft follows one guide curve, not several; with a guide it has no centerline.
 - Thin features offset lines, arcs and circles, not ellipses and splines; face fillets work between
   planar faces.

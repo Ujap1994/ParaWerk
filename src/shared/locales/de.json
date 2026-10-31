@@ -1246,5 +1246,10 @@
     "angle": "Winkel",
     "copy": "Original behalten (kopieren)",
     "hint": "Klicke eine Fläche jedes Körpers an, der sich bewegen soll. Ein verschobener Körper behält die Namen seiner Flächen, die Features danach folgen ihm; eine Kopie ist ein eigener Körper."
+  },
+  "scope": {
+    "title": "Feature-Bereich",
+    "all": "Alle Körper",
+    "hint": "Schneidet oder verschmilzt nur die angehakten Körper; die anderen bleiben, wie sie sind."
   }
 }

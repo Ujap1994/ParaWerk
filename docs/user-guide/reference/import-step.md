@@ -25,6 +25,9 @@ from another CAD system to continue in ParaWerk.
 | *Operation* | **Add material** or **Remove material** | Add material |
 | *Merge result (with the bodies it touches)* | Cleared, the import stays a body of its own | on |
 
+On a part of several bodies, *Feature scope* limits the feature to the bodies you tick (see
+[Combine](combine.md#feature-scope)).
+
 ## Tips
 
 - The file is kept **in the part**: the part opens without it, and later changes of the file do not reach the

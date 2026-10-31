@@ -25,6 +25,9 @@ Cylinder adds a cylinder to the part or removes one from it, without a sketch: a
 | *Axis* | **X**, **Y** or **Z** | Z |
 | *Position* X, Y, Z | The center of the base circle | 0, 0, 0 |
 
+On a part of several bodies, *Feature scope* limits the feature to the bodies you tick (see
+[Combine](combine.md#feature-scope)).
+
 ## Tips
 
 - To drill through a part, make the cylinder longer than the part and start it below the part (a negative

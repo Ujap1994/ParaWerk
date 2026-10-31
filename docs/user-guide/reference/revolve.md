@@ -28,6 +28,9 @@ Revolve turns the closed outlines of a sketch around an axis: shafts, bushes, pu
 | *Direction* | **Normal** or **Reversed** (one way or the other from the sketch plane), **Symmetric** (half the angle each way) | Normal |
 | *Thin feature* | Walls of a *Wall thickness* along the curves (not along the axis line), e.g. a cup from the open outline of its inside | off |
 
+On a part of several bodies, *Feature scope* limits the feature to the bodies you tick (see
+[Combine](combine.md#feature-scope)).
+
 ## Tips
 
 - A line of the outline itself can be the axis (a shaft whose section touches the axis).

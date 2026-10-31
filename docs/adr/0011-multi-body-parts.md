@@ -39,7 +39,9 @@ overlap each other, so bodies that overlap cannot be kept in one compound and ha
   are named after the side they are on. **Move body** (`moveBody`) moves or copies bodies by a rigid
   motion; moved bodies keep their face names, copies are named after the feature. Mass properties and
   exports can be limited to one body (`keepBodies` in the kernel).
-- Not covered yet: feature scope (cuts limited to chosen bodies) and per-body materials.
+- **Feature scope** (`scope`, faces of the bodies) limits a feature that adds or cuts material to some
+  bodies: the kernel's `setScope` makes the body-by-body step leave the others as they are.
+- Not covered yet: per-body materials.
 
 ## Revisit when
 

@@ -3,7 +3,7 @@
  * faces and the feature its first face comes from.
  */
 
-import type { BodyNaming } from '../../shared/model/naming.ts';
+import { faceRefOf, vertexPosition, type BodyNaming } from '../../shared/model/naming.ts';
 import type { FaceNameRef } from '../../shared/model/reference.ts';
 import { referencePicks, type ReferenceState } from './references.ts';
 
@@ -39,4 +39,27 @@ export function bodiesOfRefs(refs: readonly FaceNameRef[], state: ReferenceState
     const face = referencePicks([ref], state)[0];
     return naming && face?.kind === 'face' ? bodyOfFace(naming, face.index) : null;
   });
+}
+
+/** A reference to a body: one of its named faces, at one of its corners; null when it has no such face. */
+export function bodyRef(naming: BodyNaming, body: BodyInfo): FaceNameRef | null {
+  for (const face of body.faces) {
+    if (!naming.faces[face]) continue;
+    for (let vertex = 0; vertex + 1 < naming.vertexFaceOffsets.length; vertex++) {
+      const from = naming.vertexFaceOffsets[vertex] ?? 0;
+      const to = naming.vertexFaceOffsets[vertex + 1] ?? 0;
+      for (let k = from; k < to; k++) {
+        if (naming.vertexFaces[k] !== face) continue;
+        const ref = faceRefOf(naming, face, vertexPosition(naming, vertex));
+        if (ref) return ref;
+      }
+    }
+  }
+  return null;
+}
+
+/** The body of the face a reference names (by name), or null. */
+export function bodyOfRef(naming: BodyNaming, ref: FaceNameRef): number | null {
+  const face = naming.faces.indexOf(ref.name);
+  return face >= 0 ? (naming.faceBodies?.[face] ?? 0) : null;
 }

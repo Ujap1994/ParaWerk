@@ -379,6 +379,15 @@ val loftGuided(val sections, int guideId, val edgeNames, std::string name) {
   return guarded([&] { return idResult(parawerk::loftGuided(emscripten::convertJSArrayToNumberVector<double>(sections), guideId, toStringVector(edgeNames), name)); });
 }
 
+val setScope(int bodyId, val faces) {
+  return guarded([&] {
+    parawerk::setScope(bodyId, toIntVector(faces));
+    return okObject();
+  });
+}
+
+void clearScope() { parawerk::clearScope(); }
+
 val splitBody(int bodyId, val plane, int surfaceId, int keep, std::string name) {
   return guarded([&] { return idResult(parawerk::splitBody(bodyId, emscripten::convertJSArrayToNumberVector<double>(plane), surfaceId, keep, name)); });
 }
@@ -475,6 +484,8 @@ EMSCRIPTEN_BINDINGS(parawerk_kernel) {
   emscripten::function("moveBodies", &moveBodies);
   emscripten::function("keepBodies", &keepBodies);
   emscripten::function("loftGuided", &loftGuided);
+  emscripten::function("setScope", &setScope);
+  emscripten::function("clearScope", &clearScope);
   emscripten::function("sketchWire", &sketchWire);
   emscripten::function("projectCurve", &projectCurve);
   emscripten::function("intersectCurves", &intersectCurves);

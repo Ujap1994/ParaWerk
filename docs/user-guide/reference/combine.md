@@ -31,6 +31,14 @@ to select all its faces.
 
 Bodies you do not pick stay as they are.
 
+## Feature scope
+
+On a part of several bodies, every feature that adds or cuts material shows **Feature scope** in its
+panel. *All bodies* is the default. Clear it and tick the bodies the feature may change: a cut through two
+overlapping bodies then cuts only the ticked one, and added material merges only with the ticked bodies.
+
+![A bore limited to one of two overlapping bodies by its feature scope](../../images/screenshots/feature-scope.png)
+
 ## Tips
 
 - Cuts remove material from every body they reach, each on its own.

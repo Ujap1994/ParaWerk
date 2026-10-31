@@ -41,6 +41,9 @@ brackets – or, with **Remove material**, cuts them out of the body: pockets, s
 
 Up to next, surface and vertex go one way only (**Normal** or **Reversed**).
 
+On a part of several bodies, *Feature scope* limits the feature to the bodies you tick (see
+[Combine](combine.md#feature-scope)).
+
 ## Tips
 
 - **Outlines inside outlines** become holes; an outline inside a hole is material again. Construction

@@ -24,6 +24,9 @@ from, a rectangular cut-out.
 | *Width (X)*, *Depth (Y)*, *Height (Z)* | The size along the model axes, in mm | 100, 60, 40 |
 | *Position* X, Y, Z | The center of the bottom face | 0, 0, 0 |
 
+On a part of several bodies, *Feature scope* limits the feature to the bodies you tick (see
+[Combine](combine.md#feature-scope)).
+
 ## Tips
 
 - Every field takes equations and [variables](variables.md): `width`, `depth - 2*wall`.

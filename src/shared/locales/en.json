@@ -1246,5 +1246,10 @@
     "angle": "Angle",
     "copy": "Keep the original (copy)",
     "hint": "Click a face of each body to move. A moved body keeps the names of its faces, so the features after it follow it; a copy is a body of its own."
+  },
+  "scope": {
+    "title": "Feature scope",
+    "all": "All bodies",
+    "hint": "Cuts or merges with the ticked bodies only; the others stay as they are."
   }
 }

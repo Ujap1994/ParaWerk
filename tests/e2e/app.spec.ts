@@ -1322,6 +1322,35 @@ test('gives a loft a guide curve in its panel', async () => {
   expect((await state(page)).history.features[4]).toMatchObject({ type: 'loft', guide: 'guide' });
 });
 
+test('limits a cut to one body with its feature scope', async () => {
+  launched = await launchApp({ width: 1000, height: 640 });
+  const { page } = launched;
+  // A block and an overlapping slab of its own; a bore through both where they overlap.
+  await page.evaluate(() => {
+    const features = [
+      { id: 'block', type: 'box', operation: 'add', width: 100, depth: 60, height: 20, position: [0, 0, 0] },
+      { id: 'slab', type: 'box', operation: 'add', merge: false, width: 100, depth: 20, height: 20, position: [30, 0, 0] },
+      { id: 'bore', type: 'cylinder', operation: 'cut', radius: 5, height: 40, axis: 'z', position: [10, 0, -10] },
+    ];
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features, past: [], future: [] }, savedFeatures: features, dirty: false });
+  });
+  const BORE = Math.PI * 25 * 20;
+  const both = await volume(page);
+  expect(both).toBeCloseTo(120_000 + 40_000 - 2 * BORE, 1);
+  await page.locator('.feature-tree .tree-item[data-feature-id="bore"]').dblclick();
+  await expect(page.locator('[data-testid="feature-scope"]')).toBeVisible();
+  await page.click('[data-testid="scope-all"]');
+  // The block's body: untick it, so only the slab is cut.
+  const blockBody = await page.evaluate(() => {
+    const state = (window as unknown as { __parawerk: { getState(): { display: { before: { faces: string[]; faceBodies: Int32Array } } } } }).__parawerk.getState();
+    return state.display.before.faceBodies[state.display.before.faces.indexOf('block:left')];
+  });
+  await page.click(`[data-testid="scope-body-${blockBody}"]`);
+  await page.click('[data-testid="panel-ok"]');
+  expect(await volume(page)).toBeCloseTo(both + BORE, 1);
+  expect((await state(page)).history.features[2]).toMatchObject({ scope: [{ kind: 'face', name: expect.stringMatching(/^slab:/) }] });
+});
+
 test('adds a box as a body of its own and combines the bodies', async () => {
   launched = await launchApp({ width: 1000, height: 640 });
   const { page } = launched;

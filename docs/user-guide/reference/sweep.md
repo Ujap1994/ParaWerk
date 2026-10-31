@@ -30,6 +30,9 @@ Sweep moves the closed outlines of a profile sketch along a path: handles, tubes
 | *Twist* | Turns the outlines about the path, evenly from start to end; several turns are possible (720°, 1080° …), negative angles turn the other way (not with a guide, not along a helix) | 0° |
 | *Operation* | **Add material** or **Remove material**; *Merge result* as for [Extrude](extrude.md) | Add material |
 
+On a part of several bodies, *Feature scope* limits the feature to the bodies you tick (see
+[Combine](combine.md#feature-scope)).
+
 ## Tips
 
 - The outlines are swept **as they lie**; the path runs from its end nearer to the outlines, so the

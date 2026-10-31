@@ -34,7 +34,8 @@ counterbores for cap screws, countersinks for countersunk screws and tapped hole
 | *Thread depth* | For tapped holes; the hole is drilled four turns deeper | 12 mm |
 
 Changing the type, size or fit sets the dimensions from the standards again; afterwards each one can be
-changed, also as an equation.
+changed, also as an equation. On a part of several bodies, *Feature scope* limits the holes to the bodies
+you tick (see [Combine](combine.md#feature-scope)).
 
 ## Tips
 

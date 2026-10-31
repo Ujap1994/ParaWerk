@@ -240,6 +240,17 @@ class FaceNamer {
 /** Set by cuts that leave every face of the body as it was (the tool missed the body). */
 bool cutMissed = false;
 
+/** The bodies (solids) the next feature may change (feature scope); empty: all of them. */
+std::vector<TopoDS_Shape> scopeSolids;
+
+/** Whether the feature scope lets the next feature change this body (solid). */
+bool inScope(const TopoDS_Shape& solid) {
+  if (scopeSolids.empty()) return true;
+  for (const TopoDS_Shape& allowed : scopeSolids)
+    if (allowed.IsSame(solid)) return true;
+  return false;
+}
+
 /** The faces of `result` that come from faces of `input` (unchanged, modified or merged). */
 ShapeMap facesFrom(BRepBuilderAPI_MakeShape& maker, const TopoDS_Shape& input, const ShapeMap& result) {
   ShapeMap faces, from;
@@ -570,7 +581,7 @@ StoredShape fuseBodies(const StoredShape& a, const StoredShape& b) {
  * fuse goes to the first of them, and the result is fused with the others one after the other.
  */
 StoredShape bodyByBody(const StoredShape& body, const TopoDS_Shape& tools, bool fuse, const std::function<StoredShape(const StoredShape&)>& step) {
-  if (countSolids(body.shape) <= 1) return step(body);
+  if (countSolids(body.shape) <= 1 && scopeSolids.empty()) return step(body);
   Bnd_Box reach;
   BRepBndLib::Add(tools, reach);
   reach.Enlarge(1e-6);
@@ -578,7 +589,22 @@ StoredShape bodyByBody(const StoredShape& body, const TopoDS_Shape& tools, bool 
   for (StoredShape& solid : solidsOf(body)) {
     Bnd_Box box;
     BRepBndLib::Add(solid.shape, box);
-    (box.IsOut(reach) ? kept : near).push_back(std::move(solid));
+    // Bodies outside the feature scope stay as they are.
+    (box.IsOut(reach) || !inScope(solid.shape) ? kept : near).push_back(std::move(solid));
+  }
+  if (near.empty() && !scopeSolids.empty()) {
+    // The tool reaches no body of the scope: a cut removes nothing, added material joins the scope's first body.
+    if (!fuse) {
+      cutMissed = true;
+      return body;
+    }
+    for (size_t i = 0; i < kept.size(); ++i) {
+      if (!inScope(kept[i].shape)) continue;
+      near.push_back(std::move(kept[i]));
+      kept.erase(kept.begin() + static_cast<std::ptrdiff_t>(i));
+      break;
+    }
+    if (near.empty()) throw KernelError("body-missing", "the feature scope holds no body");
   }
   std::vector<StoredShape> parts;
   if (fuse) {
@@ -2166,6 +2192,23 @@ int combineCopies(int bodyId, int toolId, const std::vector<double>& transforms,
   StoredShape result = bodyByBody(body, compoundOf(tools), op == 0, step);
   return store().add(result.shape, std::move(result.names));
 }
+
+void setScope(int bodyId, const std::vector<int>& faceIndices) {
+  scopeSolids.clear();
+  if (faceIndices.empty()) return;
+  const StoredShape& body = store().entry(bodyId);
+  ShapeMap solids;
+  TopExp::MapShapes(body.shape, TopAbs_SOLID, solids);
+  const std::vector<int32_t> owners = faceSolids(body.shape);
+  for (int face : faceIndices) {
+    if (face < 0 || face >= static_cast<int>(owners.size())) throw KernelError("body-missing", "no such face");
+    const int solid = owners[static_cast<size_t>(face)];
+    if (solid >= 0) scopeSolids.push_back(solids(solid + 1));
+  }
+  if (scopeSolids.empty()) throw KernelError("body-missing", "the feature scope holds no body");
+}
+
+void clearScope() { scopeSolids.clear(); }
 
 bool takeCutMissed() {
   const bool missed = cutMissed;

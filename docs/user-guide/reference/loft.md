@@ -30,6 +30,9 @@ a round one, bottles, blades. With a centerline it bends between the profiles.
 | *Flat faces between the profiles* | Straight faces between neighboring outlines instead of a smooth surface (not with a centerline or a guide) | off |
 | *Operation* | **Add material** or **Remove material**; *Merge result* as for [Extrude](extrude.md) | Add material |
 
+On a part of several bodies, *Feature scope* limits the feature to the bodies you tick (see
+[Combine](combine.md#feature-scope)).
+
 ## Tips
 
 - Outlines with different numbers of edges (a square and a circle) are joined too; the side faces are

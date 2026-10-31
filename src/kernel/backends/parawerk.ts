@@ -314,6 +314,18 @@ export class ParaWerkBackend implements GeometryBackend {
   }
 
   applyFeature(body: ShapeHandle | null, feature: KernelFeature): ShapeHandle {
+    // A feature scope limits the cuts and merges of this feature to some bodies.
+    if (!feature.scopeFaces || body === null) return this.applyUnscoped(body, feature);
+    const scoped = this.kernel.setScope(this.id(body), feature.scopeFaces) as { ok: true } | Failure;
+    if (!scoped.ok) throw new FeatureError('body-missing', scoped.message);
+    try {
+      return this.applyUnscoped(body, feature);
+    } finally {
+      this.kernel.clearScope();
+    }
+  }
+
+  private applyUnscoped(body: ShapeHandle | null, feature: KernelFeature): ShapeHandle {
     const k = this.kernel;
     switch (feature.type) {
       case 'box':

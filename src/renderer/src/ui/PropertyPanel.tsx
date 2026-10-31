@@ -15,6 +15,7 @@ import { CheckIcon, CloseIcon, FEATURE_ICONS, MoveUpIcon } from './icons.tsx';
 import { NumberField } from './NumberField.tsx';
 import { ReferenceFields, ReferenceSlots, useReferenceName } from './ReferencePanel.tsx';
 import { HoleFields } from './HolePanel.tsx';
+import { ScopeField } from './ScopeField.tsx';
 import { CopyFields } from './CopyPanel.tsx';
 import { Segmented } from './Segmented.tsx';
 import { VariablesEditor, variablesValid } from './VariablesPanel.tsx';
@@ -71,6 +72,7 @@ function OperationField({ value, firstFeature }: { value: BooleanOperation; firs
           {t('panel.merge')}
         </label>
       ) : null}
+      {value === 'cut' || merge ? <ScopeField /> : null}
     </>
   );
 }
@@ -761,6 +763,7 @@ function ThickenFields({ draft, index, firstFeature }: { draft: ThickenFeature; 
           {t('panel.merge')}
         </label>
       )}
+      {draft.merge ?? true ? <ScopeField /> : null}
       <p className="panel-hint">{t('surface.thickenHint')}</p>
     </Section>
   );

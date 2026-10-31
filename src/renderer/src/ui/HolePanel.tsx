@@ -6,6 +6,7 @@ import { formatNumber } from '../format.ts';
 import { useAppState } from '../state/store.ts';
 import { useFeatureName } from './FeatureTree.tsx';
 import { NumberField } from './NumberField.tsx';
+import { ScopeField } from './ScopeField.tsx';
 import { Segmented } from './Segmented.tsx';
 
 /** Props that let a parameter field take an equation over the part's variables. */
@@ -97,6 +98,7 @@ export function HoleFields({ draft, index }: { draft: HoleFeature; index: number
           <input type="checkbox" checked={draft.reverse} data-testid="hole-reverse" onChange={(event) => commands.updateDraft({ reverse: event.target.checked })} />
           {t('hole.reverse')}
         </label>
+        <ScopeField />
       </fieldset>
       <fieldset className="panel-section">
         <legend className="panel-section-title">{t('hole.dimensions')}</legend>

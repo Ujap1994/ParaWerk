@@ -445,6 +445,13 @@ int importStep(const std::string& data, const std::string& name = "");
  */
 int draftSides(int toolId, const std::vector<double>& frame, double angle, const std::string& name);
 
+/**
+ * Limits the next features to the bodies holding the faces `faceIndices` of `bodyId` (feature scope): cuts
+ * change only them, added material merges only with them. Until clearScope, every feature is limited.
+ */
+void setScope(int bodyId, const std::vector<int>& faceIndices);
+void clearScope();
+
 /** Whether the last cut left the body as it was (its tool missed the body); reading it clears it. */
 bool takeCutMissed();
 

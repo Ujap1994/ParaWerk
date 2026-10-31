@@ -318,6 +318,12 @@ them under *Solid bodies*; click one to select all its faces.
   material stays a body of its own, even where it overlaps another body.
 - **Cuts** remove material from every body they reach, each body on its own; a body a cut removes
   completely is gone.
+- **Feature scope:** on a part of several bodies, features that add or cut material (extrude, revolve,
+  sweep, loft, hole, box, cylinder, import, thicken) show *Feature scope* in their panel. Clear *All
+  bodies* and tick the bodies the feature may change: a cut through two overlapping bodies then cuts only
+  one, added material merges only with the ticked bodies.
+
+  ![A bore limited to one of two overlapping bodies by its feature scope](../images/screenshots/feature-scope.png)
 - **Combine** (in the *Surfaces* tab, group *Bodies*) joins bodies: click a face of each, the main body first.
   **Add** fuses them, **Subtract** removes the others from the main body, **Common** keeps only what they
   all share. Bodies you do not pick stay as they are.

@@ -215,6 +215,10 @@ function mergeOf(raw: Json, path: string): { merge?: boolean } {
   return raw.merge === undefined ? {} : { merge: flag(raw.merge, `${path}.merge`) };
 }
 
+function scopeFieldOf(raw: Json, path: string): { scope?: FaceNameRef[] } {
+  return raw.scope === undefined ? {} : { scope: faceRefs(raw.scope, `${path}.scope`) };
+}
+
 function sketchId(value: unknown, path: string): string {
   if (typeof value !== 'string' || value.length > 200) throw new ValidationError('expected a sketch id', path);
   return value;
@@ -306,6 +310,7 @@ function parseFeatureFields(raw: Json, path: string): Feature {
         type: 'extrude',
         operation: operation(raw.operation, `${path}.operation`),
         ...mergeOf(raw, path),
+        ...scopeFieldOf(raw, path),
         sketch: raw.sketch,
         depth: positiveLength(raw.depth, `${path}.depth`),
         direction: raw.direction as ExtrudeDirection,
@@ -330,6 +335,7 @@ function parseFeatureFields(raw: Json, path: string): Feature {
         type: 'revolve',
         operation: operation(raw.operation, `${path}.operation`),
         ...mergeOf(raw, path),
+        ...scopeFieldOf(raw, path),
         sketch: raw.sketch,
         axis: raw.axis,
         ...(raw.axisRef === undefined ? {} : { axisRef: geometryRef(raw.axisRef, `${path}.axisRef`) }),
@@ -348,6 +354,7 @@ function parseFeatureFields(raw: Json, path: string): Feature {
       return {
         ...common,
         type: 'hole',
+        ...scopeFieldOf(raw, path),
         kind: method(raw.kind, HOLE_KINDS, `${path}.kind`),
         size: raw.size,
         fit: method(raw.fit, HOLE_FITS, `${path}.fit`),
@@ -395,6 +402,7 @@ function parseFeatureFields(raw: Json, path: string): Feature {
         type: 'box',
         operation: operation(raw.operation, `${path}.operation`),
         ...mergeOf(raw, path),
+        ...scopeFieldOf(raw, path),
         width: positiveLength(raw.width, `${path}.width`),
         depth: positiveLength(raw.depth, `${path}.depth`),
         height: positiveLength(raw.height, `${path}.height`),
@@ -405,7 +413,8 @@ function parseFeatureFields(raw: Json, path: string): Feature {
       if (typeof raw.hash !== 'string' || raw.hash.length > 64) throw new ValidationError('expected a content hash', `${path}.hash`);
       if (typeof raw.data !== 'string' || raw.data.length === 0 || raw.data.length > MAX_IMPORT_CHARS) throw new ValidationError('expected the imported STEP file', `${path}.data`);
       return { ...common, type: 'import', operation: operation(raw.operation, `${path}.operation`),
-        ...mergeOf(raw, path), file: raw.file, hash: raw.hash, data: raw.data };
+        ...mergeOf(raw, path),
+        ...scopeFieldOf(raw, path), file: raw.file, hash: raw.hash, data: raw.data };
     }
     case 'cylinder':
       return {
@@ -413,6 +422,7 @@ function parseFeatureFields(raw: Json, path: string): Feature {
         type: 'cylinder',
         operation: operation(raw.operation, `${path}.operation`),
         ...mergeOf(raw, path),
+        ...scopeFieldOf(raw, path),
         radius: positiveLength(raw.radius, `${path}.radius`),
         height: positiveLength(raw.height, `${path}.height`),
         axis: axis(raw.axis, `${path}.axis`),
@@ -524,6 +534,7 @@ function parseFeatureFields(raw: Json, path: string): Feature {
         side: raw.side as ThickenSide,
         fill: flag(raw.fill, `${path}.fill`),
         ...mergeOf(raw, path),
+        ...scopeFieldOf(raw, path),
       };
     case 'compositeCurve': {
       if (!Array.isArray(raw.curves) || raw.curves.length > 1000) throw new ValidationError('expected a list of curve ids', `${path}.curves`);
@@ -557,6 +568,7 @@ function parseFeatureFields(raw: Json, path: string): Feature {
         type: 'sweep',
         operation: operation(raw.operation, `${path}.operation`),
         ...mergeOf(raw, path),
+        ...scopeFieldOf(raw, path),
         sketch: sketchId(raw.sketch, `${path}.sketch`),
         path: sketchId(raw.path, `${path}.path`),
         ...(raw.twist === undefined ? {} : { twist: finiteNumber(raw.twist, `${path}.twist`, MAX_TWIST) }),
@@ -570,6 +582,7 @@ function parseFeatureFields(raw: Json, path: string): Feature {
         type: 'loft',
         operation: operation(raw.operation, `${path}.operation`),
         ...mergeOf(raw, path),
+        ...scopeFieldOf(raw, path),
         sketches,
         ...(raw.ruled === undefined ? {} : { ruled: flag(raw.ruled, `${path}.ruled`) }),
         ...(raw.centerline === undefined ? {} : { centerline: sketchId(raw.centerline, `${path}.centerline`) }),

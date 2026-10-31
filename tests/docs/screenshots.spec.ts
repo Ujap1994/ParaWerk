@@ -1571,6 +1571,12 @@ test('function reference screenshots', async () => {
     },
     { id: 'vase', type: 'loft', name: 'Vase', operation: 'add', sketches: ['bottom', 'top'], guide: 'guide' },
   ], 'vase');
+  // A bore through two overlapping bodies, limited to the slab by its feature scope.
+  await shot('feature-scope.png', 'Feature scope', [
+    { id: 'base', type: 'box', name: 'Base', operation: 'add', width: 100, depth: 60, height: 20, position: [0, 0, 0] },
+    { id: 'slab', type: 'box', name: 'Slab', operation: 'add', merge: false, width: 100, depth: 24, height: 20, position: [30, 0, 0] },
+    { id: 'bore', type: 'cylinder', name: 'Bore', operation: 'cut', radius: 8, height: 40, axis: 'z', position: [10, 0, -10], scope: [{ kind: 'face', name: 'slab:right', at: [80, 12, 20] }] },
+  ], 'bore');
   // A coordinate system on the top of the block, turned 30° around Z.
   const csys = { id: 'frame', type: 'csys', name: 'Print frame', method: 'position', references: [], x: 20, y: 0, z: 40, angle: 30, flipX: false, flipY: false };
   await shot('csys.png', 'Coordinate system', [block, csys], 'frame');

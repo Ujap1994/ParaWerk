@@ -126,8 +126,10 @@ export type ResolvedEdgeFeature = EdgeFeature & {
   roundFaces?: number[];
 };
 
-/** A feature as a backend builds it, with its references to earlier features resolved. */
-export type KernelFeature =
+/** A feature as a backend builds it, with its references to earlier features resolved (and its feature scope: faces of the bodies it may change). */
+export type KernelFeature = KernelFeatureOwn & { scopeFaces?: number[] };
+
+type KernelFeatureOwn =
   | Exclude<SolidModelingFeature, ExtrudeFeature | RevolveFeature | EdgeFeature | HoleFeature | CopyFeature | ShellFeature | DraftFeature | SweepFeature | LoftFeature | RibFeature | ThreadFeature | CombineFeature | DeleteBodyFeature | ThickenFeature | SplitFeature | MoveBodyFeature>
   | ResolvedBodies
   | ResolvedSplit

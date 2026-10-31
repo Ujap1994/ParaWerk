@@ -151,6 +151,8 @@ function applyResult(
     display = { body: meshes.get(activeEdit.index) ?? null, preview: null, pickable: false };
   }
 
+  // The body before the edited feature: its bodies are what a feature scope picks from.
+  if (activeEdit && !sketch) display = { ...display, before: meshes.get(activeEdit.index - 1)?.naming ?? null };
   setState((state) => {
     const bodyChanged = state.display.body?.key !== display.body?.key;
     return {

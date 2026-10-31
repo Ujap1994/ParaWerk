@@ -18,6 +18,8 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 - Lofts follow a **guide curve**: a sketch or curve beside the profiles that touches each of them; between
   the profiles the loft grows or shrinks to keep touching it – bellies, waists, vases. This completes the
   features of Phase 3.
+- **Feature scope**: on a part of several bodies, features that add or cut material can be limited to
+  the bodies you tick – a cut through two overlapping bodies cuts only one of them.
 - Mass properties and exports of one body: the mass properties panel and the export dialog let you
   choose one body of a part of several – to weigh it or to print it on its own.
 - A button in the view toolbar hides reference planes, axes, points and coordinate systems; they still
