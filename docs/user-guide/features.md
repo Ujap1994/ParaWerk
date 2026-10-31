@@ -327,7 +327,8 @@ them under *Solid bodies*; click one to select all its faces.
 - **Delete body** (next to it) removes the bodies you click a face of.
 
 Bodies are picked by one of their faces, which are remembered by name like the edges of a fillet, so the
-features follow the part when earlier features change. Shells, drafts, threads, face fillets and full rounds
+features follow the part when earlier features change. [Mass properties](evaluate.md#mass-properties) and
+[exports](files.md#export) can be limited to one body. Shells, drafts, threads, face fillets and full rounds
 change only the body their faces belong to – the faces of one such feature must be on one body. Mass
 properties and exports cover all bodies.
 

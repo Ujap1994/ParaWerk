@@ -469,7 +469,10 @@
       "frame": "Coordinate system",
       "hint": "The file uses the coordinates of this coordinate system: its origin becomes 0, 0, 0, and its axes become X, Y and Z (for 3D printing, Z points up from the build plate).",
       "export": "Export",
-      "modelOrigin": "Model origin"
+      "modelOrigin": "Model origin",
+      "bodies": "Bodies",
+      "allBodies": "All bodies",
+      "bodiesHint": "One body alone, for example to print it on its own."
     }
   },
   "toasts": {
@@ -986,7 +989,9 @@
     "rolledBack": "Rolled back: the values are for the part above the rollback bar.",
     "editing": "The values are updated when the edit is finished.",
     "relativeTo": "Relative to",
-    "modelOrigin": "Model origin"
+    "modelOrigin": "Model origin",
+    "body": "Body",
+    "allBodies": "All bodies"
   },
   "measure": {
     "title": "Measure",

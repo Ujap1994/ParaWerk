@@ -8,6 +8,7 @@ import type {
   MassProperties,
   MeasureRequest,
   MemoryStats,
+  PropertiesRequest,
   RebuildRequest,
   RebuildResult,
 } from './protocol.ts';
@@ -103,13 +104,32 @@ export class Kernel implements Disposable {
     this.rebuilder.rebuild(request.features);
     const built = this.rebuilder.shapeAfter(request.features.length - 1);
     if (!built) throw new NothingToExportError();
-    if (!request.transform || !this.backend.transformed) return this.exportShape(built, request);
-    // In a coordinate system: a moved copy of the body, released again.
-    const moved = this.backend.transformed(built, request.transform);
+    // Some bodies only: a shape of just them, released again.
+    const chosen = request.bodies && this.backend.bodies ? this.backend.bodies(built, request.bodies) : built;
     try {
-      return this.exportShape(moved, request);
+      if (!request.transform || !this.backend.transformed) return this.exportShape(chosen, request);
+      // In a coordinate system: a moved copy of the body, released again.
+      const moved = this.backend.transformed(chosen, request.transform);
+      try {
+        return this.exportShape(moved, request);
+      } finally {
+        this.backend.release(moved);
+      }
     } finally {
-      this.backend.release(moved);
+      if (chosen !== built) this.backend.release(chosen);
+    }
+  }
+
+  /** Mass properties of some bodies of the part. */
+  bodyProperties(request: PropertiesRequest): MassProperties {
+    this.rebuilder.rebuild(request.features);
+    const built = this.rebuilder.shapeAfter(request.features.length - 1);
+    if (!built || !this.backend.bodies) throw new NothingToExportError();
+    const chosen = this.backend.bodies(built, request.bodies);
+    try {
+      return this.backend.massProperties(chosen);
+    } finally {
+      this.backend.release(chosen);
     }
   }
 

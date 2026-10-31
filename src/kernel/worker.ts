@@ -46,6 +46,9 @@ scope.addEventListener('message', (event) => {
         case 'measure':
           scope.postMessage({ kind: 'reply', id: message.id, ok: true, result: kernel.measure(message.payload) });
           break;
+        case 'properties':
+          scope.postMessage({ kind: 'reply', id: message.id, ok: true, result: kernel.bodyProperties(message.payload) });
+          break;
         case 'memory':
           scope.postMessage({ kind: 'reply', id: message.id, ok: true, result: kernel.memoryStats() });
           break;

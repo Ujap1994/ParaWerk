@@ -121,6 +121,8 @@ export interface AppState {
   showMassProperties: boolean;
   /** The coordinate system (feature id) mass properties are given in; null: the model's own axes. */
   massFrame: string | null;
+  /** The body (solid index) the mass properties are for; null: the whole part. */
+  massBody: number | null;
   /** The export waiting for the choice of a coordinate system (asked only when the part has any). */
   exporting: ExportFormat | null;
   /** The coordinate system (feature id) the last export used; null: the model's own axes. */
@@ -172,6 +174,7 @@ export const initialState: AppState = {
   dialogs: { settings: false, about: false, material: false, configurations: false },
   showMassProperties: false,
   massFrame: null,
+  massBody: null,
   exporting: null,
   exportFrame: null,
   recovery: [],

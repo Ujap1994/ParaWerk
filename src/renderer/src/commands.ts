@@ -8,7 +8,8 @@ import { frameTransform } from '../../shared/model/frame.ts';
 import { sketchProfile } from '../../shared/model/profile.ts';
 import { DEFAULT_THIN_THICKNESS, type ThinSide } from '../../shared/model/thin.ts';
 import { AXIS_METHODS, CSYS_METHODS, PLANE_METHODS, POINT_METHODS, REFERENCE_ROLES, type GeometryRef, type ReferenceRole } from '../../shared/model/reference.ts';
-import { bodiesOf, bodiesOfRefs, bodyOfFace } from './bodies.ts';
+import { bodiesOf, bodiesOfRefs, bodyOfFace, type BodyInfo } from './bodies.ts';
+import type { MassProperties } from '../../kernel/protocol.ts';
 import { coordinateSystems, extrudesUpTo, referenceFits, referenceGeometry, referenceOfPick, referencePicks, referenceRoles } from './references.ts';
 import { edgeRefOf, faceRefOf, resolveEdgeRefs } from '../../shared/model/naming.ts';
 import { decodePartFile, encodePartFile, PartFileError } from '../../shared/model/part-file.ts';
@@ -177,25 +178,34 @@ const EXPORT_FILES = {
   '3mf': { extensions: ['3mf'], filter: 'dialogs.threeMfFiles' },
 } as const;
 
+/** The bodies an export can be limited to: those of the whole part, when it has several (not while it is rolled back). */
+function exportableBodies(state: AppState): BodyInfo[] {
+  return rollbackIndex(state.history.features, state.rollback) < state.history.features.length ? [] : partBodies(state);
+}
+
 export async function exportModel(format: 'step' | 'stl' | '3mf'): Promise<void> {
-  // With coordinate systems in the part, the export asks which one the file is in.
-  if (coordinateSystems(getState()).length > 0) {
+  // With coordinate systems or several bodies in the part, the export asks which one the file is in and what it holds.
+  const state = getState();
+  if (coordinateSystems(state).length > 0 || exportableBodies(state).length > 0) {
     setState({ exporting: format });
     return;
   }
-  await writeExport(format, null);
+  await writeExport(format, null, null);
 }
 
-/** Exports in the chosen coordinate system (feature id; null: the model's own axes), or (cancel) not at all. */
-export async function confirmExport(frameId: string | null | 'cancel'): Promise<void> {
+/**
+ * Exports in the chosen coordinate system (feature id; null: the model's own axes), with only one body
+ * (solid index; null: all), or (cancel) not at all.
+ */
+export async function confirmExport(frameId: string | null | 'cancel', body: number | null = null): Promise<void> {
   const format = getState().exporting;
   setState({ exporting: null });
   if (!format || frameId === 'cancel') return;
   setState({ exportFrame: frameId });
-  await writeExport(format, frameId);
+  await writeExport(format, frameId, body !== null && exportableBodies(getState()).some((candidate) => candidate.index === body) ? body : null);
 }
 
-async function writeExport(format: 'step' | 'stl' | '3mf', frameId: string | null): Promise<void> {
+async function writeExport(format: 'step' | 'stl' | '3mf', frameId: string | null, body: number | null): Promise<void> {
   const state = getState();
   const features = state.history.features;
   const frame = frameId ? coordinateSystems(state).find((system) => system.id === frameId)?.frame : undefined;
@@ -208,6 +218,7 @@ async function writeExport(format: 'step' | 'stl' | '3mf', frameId: string | nul
       format,
       ...(format === '3mf' ? { title: documentName(), application: `ParaWerk ${state.appInfo?.version ?? ''}`.trim(), ...(material ? { material } : {}) } : {}),
       ...(frame ? { transform: frameTransform(frame) } : {}),
+      ...(body !== null ? { bodies: [body] } : {}),
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -1290,6 +1301,31 @@ export function toggleMassProperties(show = !getState().showMassProperties): voi
 /** Gives mass properties in a coordinate system (feature id), or (null) in the model's own axes. */
 export function setMassFrame(id: string | null): void {
   setState({ massFrame: id });
+}
+
+/** Gives the mass properties of one body of the part (solid index), or (null) of the whole part. */
+export function setMassBody(index: number | null): void {
+  setState({ massBody: index });
+}
+
+/** The bodies of the part as it is built, when it has several (none while it is edited). */
+export function partBodies(state: AppState = getState()): BodyInfo[] {
+  if (state.activeEdit || state.sketch) return [];
+  const naming = state.display.body?.naming;
+  const bodies = naming ? bodiesOf(naming) : [];
+  return bodies.length > 1 ? bodies : [];
+}
+
+/** The mass properties of one body of the part as it is built (up to the rollback bar); null when it cannot tell. */
+export async function bodyProperties(index: number): Promise<MassProperties | null> {
+  const state = getState();
+  const features = state.history.features.slice(0, rollbackIndex(state.history.features, state.rollback));
+  try {
+    await whenIdle();
+    return await kernel().bodyProperties({ features, bodies: [index] });
+  } catch {
+    return null;
+  }
 }
 
 /** Gives the part its own color in the 3D view (null: the material's color); one undo step. */

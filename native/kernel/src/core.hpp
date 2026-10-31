@@ -146,6 +146,13 @@ int splitBody(int bodyId, const std::vector<double>& plane, int surfaceId, int k
 int moveBodies(int bodyId, const std::vector<int>& faceIndices, const std::vector<double>& transform, bool copy, const std::string& name = "");
 
 /**
+ * Only the bodies (solids, in TopExp order, as Naming.faceBodies counts them) `solidIndices` of `bodyId`,
+ * with their face names: for the mass properties and exports of single bodies. Fails with "body-missing"
+ * when none of them exists.
+ */
+int keepBodies(int bodyId, const std::vector<int>& solidIndices);
+
+/**
  * The solid swept by planar regions along the normal of their plane, from `from` to `to`.
  *
  * `profile` holds the regions in plane coordinates: the region count, then per region its loop count

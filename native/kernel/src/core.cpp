@@ -2330,6 +2330,17 @@ int moveBodies(int bodyId, const std::vector<int>& faceIndices, const std::vecto
   return store().add(result.shape, std::move(result.names));
 }
 
+int keepBodies(int bodyId, const std::vector<int>& solidIndices) {
+  const StoredShape& body = store().entry(bodyId);
+  std::vector<StoredShape> solids = solidsOf(body);
+  std::vector<StoredShape> parts;
+  for (int s : solidIndices)
+    if (s >= 0 && s < static_cast<int>(solids.size())) parts.push_back(solids[static_cast<size_t>(s)]);
+  if (parts.empty()) throw KernelError("body-missing", "no such body");
+  StoredShape result = bodyOf(parts);
+  return store().add(result.shape, std::move(result.names));
+}
+
 int fillet(int bodyId, const std::vector<int>& edgeIndices, double radius, const std::vector<std::string>& edgeNames, const std::string& name) {
   const TopoDS_Shape& body = store().get(bodyId);
   BRepFilletAPI_MakeFillet maker(body, ChFi3d_Rational);

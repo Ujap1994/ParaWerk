@@ -38,6 +38,9 @@ part as it was. Material and color are saved in the part file (format version 7)
 | Principal moments of inertia | I₁ ≤ I₂ ≤ I₃ about the principal axes through the center of mass, in kg·mm². |
 | Inertia tensor | In axes through the center of mass, parallel to the model axes, in kg·mm². The diagonal holds the moments about X, Y and Z; the other terms are the negative products of inertia (−∫xy dm). |
 
+When the part has [several bodies](features.md#bodies), **Body** at the top of the panel gives the values
+of one body alone (*All bodies* goes back to the whole part).
+
 When the part has [coordinate systems](features.md#reference-geometry), **Relative to** at the top of
 the panel gives the center of mass in the coordinates of one of them and the inertia tensor about its
 axes; the principal moments do not depend on it. The bounding box stays along the model axes.

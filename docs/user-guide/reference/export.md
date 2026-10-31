@@ -18,7 +18,8 @@ last; its arrow offers all formats.
 
 1. Open the arrow next to the export button and choose the format.
 2. If the part has [coordinate systems](coordinate-system.md), choose the one the file uses (or *Model
-   origin*) and click **Export**.
+   origin*). If it has several [bodies](combine.md), choose *All bodies* or one body alone. Click
+   **Export**.
 3. Choose the file name.
 
 ![Exporting a part with a coordinate system: the dialog asks which one the file uses](../../images/screenshots/export-frame.png)

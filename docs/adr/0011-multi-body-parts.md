@@ -35,8 +35,11 @@ overlap each other, so bodies that overlap cannot be kept in one compound and ha
 
 - Mass properties, exports and the mesh cover all bodies; the tree lists them (*Solid bodies*).
 - A file with a separate body or a combine feature needs a newer format version.
-- Not covered yet: feature scope (cuts limited to chosen bodies), splitting a body by a plane or surface,
-  moving and copying bodies, per-body materials and exports of single bodies.
+- **Split** (`split`) cuts the bodies a plane or a surface crosses into bodies of their own; its cut faces
+  are named after the side they are on. **Move body** (`moveBody`) moves or copies bodies by a rigid
+  motion; moved bodies keep their face names, copies are named after the feature. Mass properties and
+  exports can be limited to one body (`keepBodies` in the kernel).
+- Not covered yet: feature scope (cuts limited to chosen bodies) and per-body materials.
 
 ## Revisit when
 

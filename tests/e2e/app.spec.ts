@@ -1228,6 +1228,39 @@ test('moves a body by a face picked in the view, then keeps a copy in place', as
   expect(await volume(page)).toBeCloseTo(volumeBefore + Math.PI * 25 * 8, 2);
 });
 
+test('gives the mass properties of one body and exports it alone', async () => {
+  launched = await launchApp({ width: 1000, height: 640 });
+  const { page } = launched;
+  await page.evaluate(() => {
+    const features = [
+      { id: 'plate', type: 'box', operation: 'add', width: 100, depth: 60, height: 10, position: [0, 0, 0] },
+      { id: 'puck', type: 'cylinder', operation: 'add', merge: false, radius: 5, height: 8, axis: 'z', position: [30, 0, 10] },
+    ];
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features, past: [], future: [] }, savedFeatures: features, dirty: false });
+  });
+  await idle(page);
+  await page.click('[data-tab="evaluate"]');
+  await page.click('[data-command="mass-properties"]');
+  await expect(page.locator('[data-testid="mass-volume"]')).toContainText('60,628.3');
+  // The puck alone: π · 5² · 8 = 628.3 mm³.
+  await page.locator('[data-testid="mass-body"]').selectOption({ label: 'Cylinder1' });
+  await expect(page.locator('[data-testid="mass-volume"]')).toContainText('628.3');
+  await expect(page.locator('[data-testid="mass-volume"]')).not.toContainText('60,628.3');
+  await page.locator('[data-testid="mass-body"]').selectOption('');
+  await expect(page.locator('[data-testid="mass-volume"]')).toContainText('60,628.3');
+
+  // Export asks for the bodies; the request carries the one chosen.
+  await page.evaluate(() => {
+    const hooks = (window as unknown as { __parawerk: { commands: { exportModel(format: string): Promise<void> } } }).__parawerk;
+    void hooks.commands.exportModel('stl');
+  });
+  await expect(page.locator('[data-testid="export-frame-dialog"]')).toBeVisible();
+  await expect(page.locator('[data-testid="export-frame"]')).toHaveCount(0);
+  await expect(page.locator('[data-testid="export-body"] option')).toHaveCount(3);
+  await page.click('[data-testid="export-frame-dialog"] .modal-actions .button:not(.is-primary)');
+  await expect(page.locator('[data-testid="export-frame-dialog"]')).toBeHidden();
+});
+
 test('adds a box as a body of its own and combines the bodies', async () => {
   launched = await launchApp({ width: 1000, height: 640 });
   const { page } = launched;

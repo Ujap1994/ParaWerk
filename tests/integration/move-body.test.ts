@@ -91,6 +91,34 @@ describe('move body', () => {
     ]);
   });
 
+  it('gives the mass properties of single bodies and exports them alone', () => {
+    const features = [plate, puck];
+    const names = naming(build(features));
+    const puckBody = names.faceBodies?.[names.faces.indexOf('puck:top')] ?? -1;
+    const plateBody = names.faceBodies?.[names.faces.indexOf('plate:top')] ?? -1;
+    expect(puckBody).toBeGreaterThanOrEqual(0);
+    expect(plateBody).not.toBe(puckBody);
+    expect(kernel.bodyProperties({ features, bodies: [puckBody] }).volume).toBeCloseTo(PUCK, 3);
+    expect(kernel.bodyProperties({ features, bodies: [plateBody] }).volume).toBeCloseTo(PLATE, 3);
+    expect(kernel.bodyProperties({ features, bodies: [plateBody, puckBody] }).volume).toBeCloseTo(PLATE + PUCK, 3);
+    // STL: 50 bytes per triangle after an 84-byte header; every corner of the puck alone lies on the puck.
+    const alone = kernel.exportModel({ features, format: 'stl', bodies: [puckBody] });
+    const view = new DataView(alone.buffer, alone.byteOffset, alone.byteLength);
+    const triangles = view.getUint32(80, true);
+    expect(triangles).toBeGreaterThan(10);
+    for (let t = 0; t < triangles; t++) {
+      for (let corner = 0; corner < 3; corner++) {
+        const at = 84 + 50 * t + 12 + 12 * corner;
+        expect(Math.hypot(view.getFloat32(at, true) - 30, view.getFloat32(at + 4, true))).toBeLessThan(5.01);
+        expect(view.getFloat32(at + 8, true)).toBeGreaterThan(9.99);
+      }
+    }
+    const step = kernel.exportModel({ features, format: 'step', bodies: [puckBody] });
+    const again = build([{ id: 'again', type: 'import', operation: 'add', file: 'puck.step', hash: 'x', data: new TextDecoder().decode(step) }]);
+    expect(volume(again)).toBeCloseTo(PUCK, 2);
+    expect(() => kernel.bodyProperties({ features, bodies: [7] })).toThrow();
+  });
+
   it('tells when no body is picked or the axis is missing', () => {
     expect(build([plate, puck, move({ bodies: [] })]).features[2]?.error?.code).toBe('move-bodies');
     expect(build([plate, puck, move({ method: 'rotate', references: [] })]).features[2]?.error?.code).toBe('reference-missing');

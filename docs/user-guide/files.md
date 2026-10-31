@@ -57,8 +57,9 @@ The export button in the *Exchange* group exports in the format used last; its a
 | **STL** (`.stl`) | 3D printing | Binary STL in millimeters; tessellation is finer than in the 3D view and adapts to the part size |
 | **3MF** (`.3mf`) | 3D printing | 3MF core specification in millimeters with the part's name, its material and its color (see [material](evaluate.md)); the mesh is closed and oriented, which slicers check, and finer than in the 3D view |
 
-When the part has [coordinate systems](features.md#reference-geometry), exporting asks which one the file
-is in: the origin of the chosen coordinate system becomes 0, 0, 0 of the file and its axes X, Y and Z.
+When the part has [several bodies](features.md#bodies), exporting asks whether the file holds all of them
+or one body alone – for example to print a body on its own. When the part has
+[coordinate systems](features.md#reference-geometry), exporting asks which one the file is in: the origin of the chosen coordinate system becomes 0, 0, 0 of the file and its axes X, Y and Z.
 *Model origin* keeps the model's own coordinates. For 3D printing, a coordinate system on the face that
 should lie on the build plate, with Z pointing into the part, puts the part right way up in the slicer.
 The dialog remembers the last choice.

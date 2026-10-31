@@ -469,7 +469,10 @@
       "frame": "Koordinatensystem",
       "hint": "Die Datei verwendet die Koordinaten dieses Koordinatensystems: Sein Ursprung wird zu 0, 0, 0, seine Achsen werden X, Y und Z (beim 3D-Druck zeigt Z von der Druckplatte nach oben).",
       "export": "Exportieren",
-      "modelOrigin": "Modellursprung"
+      "modelOrigin": "Modellursprung",
+      "bodies": "Körper",
+      "allBodies": "Alle Körper",
+      "bodiesHint": "Ein Körper allein, zum Beispiel um ihn einzeln zu drucken."
     }
   },
   "toasts": {
@@ -986,7 +989,9 @@
     "rolledBack": "Zurückgesetzt: Die Werte gelten für das Teil über der Rollback-Leiste.",
     "editing": "Die Werte werden nach der Bearbeitung aktualisiert.",
     "relativeTo": "Bezogen auf",
-    "modelOrigin": "Modellursprung"
+    "modelOrigin": "Modellursprung",
+    "body": "Körper",
+    "allBodies": "Alle Körper"
   },
   "measure": {
     "title": "Messen",

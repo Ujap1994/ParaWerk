@@ -12,8 +12,9 @@ follows every change of the part.
 
 1. Click **Mass properties**. The panel opens at the bottom right of the 3D view.
 2. Without a material, click *Choose material…* for mass and inertia.
-3. With [coordinate systems](coordinate-system.md) in the part, choose one under *Relative to*.
-4. Click **Mass properties** again or **✕** to close the panel.
+3. With several [bodies](combine.md) in the part, choose one under *Body* for its values alone.
+4. With [coordinate systems](coordinate-system.md) in the part, choose one under *Relative to*.
+5. Click **Mass properties** again or **✕** to close the panel.
 
 ## Values
 
@@ -31,7 +32,7 @@ follows every change of the part.
 
 - While the part is rolled back, the values are for the features above the rollback bar.
 - While a feature or sketch is edited, the panel keeps the last values until the edit is finished.
-- On a part of several bodies, the values cover all bodies.
+- On a part of several bodies, the values cover all bodies unless *Body* names one.
 
 ## See also
 

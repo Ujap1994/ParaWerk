@@ -15,6 +15,8 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 - **Move body** (next to it) moves the bodies you click a face of – shifted along X, Y and Z or turned
   about an axis – or adds moved copies of them as bodies of their own. Moved bodies keep the names of
   their faces, so the features after them follow them.
+- Mass properties and exports of one body: the mass properties panel and the export dialog let you
+  choose one body of a part of several – to weigh it or to print it on its own.
 - A feature showcase: one large example part with 86 features of all 33 kinds, built on each other –
   patterns of patterns, a shelled and drafted housing joined to the plate, a spring, a loft, a thread,
   surfaces, curves and two configurations ([docs/examples/feature-showcase.pwpart](docs/examples/feature-showcase.pwpart),

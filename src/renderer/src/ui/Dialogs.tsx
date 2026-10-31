@@ -2,12 +2,14 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { REPOSITORY_URL } from '../../../shared/app-info.ts';
 import type { LanguageSetting, NavigationPreset, Projection, ThemeSetting } from '../../../shared/settings.ts';
+import type { BodyInfo } from '../bodies.ts';
 import * as commands from '../commands.ts';
 import { coordinateSystems } from '../references.ts';
 import { featureName } from '../state/document.ts';
 import { discardRecovery, restoreRecovery } from '../state/recovery.ts';
 import { dismissToast, partProperties, setState, showToast, useAppState } from '../state/store.ts';
 import { configurationValue } from '../../../shared/model/configurations.ts';
+import { useBodyName } from './FeatureTree.tsx';
 import { CloseIcon, TrashIcon } from './icons.tsx';
 
 function Modal({ open, title, onClose, children, testId, wide = false }: { open: boolean; title: string; onClose(): void; children: ReactNode; testId: string; wide?: boolean }) {
@@ -289,25 +291,50 @@ function ExportFrameChoice() {
   const systems = useMemo(() => JSON.parse(systemsText) as { id: string; index: number }[], [systemsText]);
   // The last choice again, while it still exists.
   const [choice, setChoice] = useState(() => (last && systems.some((system) => system.id === last) ? last : ''));
+  // Several bodies: all of them, or one alone.
+  const bodiesText = useAppState((state) => JSON.stringify(commands.partBodies(state).map(({ index, feature, faces }) => ({ index, feature, faces: faces.slice(0, 1) }))));
+  const bodies = useMemo(() => JSON.parse(bodiesText) as BodyInfo[], [bodiesText]);
+  const bodyName = useBodyName();
+  const [body, setBody] = useState('');
   return (
     <>
-      <label className="field">
-        <span className="field-label">{t('dialogs.exportFrame.frame')}</span>
-        <select className="field-select" value={choice} data-testid="export-frame" onChange={(event) => setChoice(event.target.value)}>
-          <option value="">{t('dialogs.exportFrame.modelOrigin')}</option>
-          {systems.map((system) => (
-            <option key={system.id} value={system.id}>
-              {featureName(features, system.index, t)}
-            </option>
-          ))}
-        </select>
-      </label>
-      <p className="setting-help">{t('dialogs.exportFrame.hint')}</p>
+      {systems.length > 0 ? (
+        <>
+          <label className="field">
+            <span className="field-label">{t('dialogs.exportFrame.frame')}</span>
+            <select className="field-select" value={choice} data-testid="export-frame" onChange={(event) => setChoice(event.target.value)}>
+              <option value="">{t('dialogs.exportFrame.modelOrigin')}</option>
+              {systems.map((system) => (
+                <option key={system.id} value={system.id}>
+                  {featureName(features, system.index, t)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <p className="setting-help">{t('dialogs.exportFrame.hint')}</p>
+        </>
+      ) : null}
+      {bodies.length > 0 ? (
+        <>
+          <label className="field">
+            <span className="field-label">{t('dialogs.exportFrame.bodies')}</span>
+            <select className="field-select" value={body} data-testid="export-body" onChange={(event) => setBody(event.target.value)}>
+              <option value="">{t('dialogs.exportFrame.allBodies')}</option>
+              {bodies.map((candidate) => (
+                <option key={candidate.index} value={String(candidate.index)}>
+                  {bodyName(candidate)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <p className="setting-help">{t('dialogs.exportFrame.bodiesHint')}</p>
+        </>
+      ) : null}
       <div className="modal-actions">
         <button type="button" className="button" onClick={() => void commands.confirmExport('cancel')}>
           {t('dialogs.cancel')}
         </button>
-        <button type="button" className="button is-primary" data-testid="export-frame-ok" onClick={() => void commands.confirmExport(choice || null)}>
+        <button type="button" className="button is-primary" data-testid="export-frame-ok" onClick={() => void commands.confirmExport(choice || null, body === '' ? null : Number(body))}>
           {t('dialogs.exportFrame.export')}
         </button>
       </div>

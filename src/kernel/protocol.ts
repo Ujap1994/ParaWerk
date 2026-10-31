@@ -248,6 +248,14 @@ export interface ExportRequest {
   material?: { name: string; color: string };
   /** Export in a coordinate system: the transformation from model coordinates into it (12 values, rows of a 3 × 4 matrix). */
   transform?: number[];
+  /** Only these bodies (solid indices, as BodyNaming.faceBodies counts them); all without. */
+  bodies?: number[];
+}
+
+/** Mass properties of some bodies of the part after `features` (solid indices, as BodyNaming.faceBodies counts them). */
+export interface PropertiesRequest {
+  features: Feature[];
+  bodies: number[];
 }
 
 export interface MemoryStats {
@@ -265,6 +273,7 @@ export type KernelRequest =
   | { type: 'rebuild'; payload: RebuildRequest }
   | { type: 'export'; payload: ExportRequest }
   | { type: 'measure'; payload: MeasureRequest }
+  | { type: 'properties'; payload: PropertiesRequest }
   | { type: 'memory' };
 
 export type KernelRequestMessage = KernelRequest & { id: number };

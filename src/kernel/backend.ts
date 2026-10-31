@@ -222,6 +222,8 @@ export interface GeometryBackend {
   exportStep(shape: ShapeHandle): Uint8Array;
   /** A copy of the shape moved by a transformation (12 values, rows of a 3 × 4 matrix); the caller releases it. */
   transformed?(shape: ShapeHandle, transform: readonly number[]): ShapeHandle;
+  /** Only some bodies of the shape (solid indices, as BodyNaming.faceBodies counts them); the caller releases it. */
+  bodies?(shape: ShapeHandle, solids: readonly number[]): ShapeHandle;
   importStep(bytes: Uint8Array): ShapeHandle;
   /** Builds a projected or composite curve (a shape that is not a body); throws FeatureError. The caller owns it. */
   curve?(body: ShapeHandle | null, curve: ResolvedCurve): ShapeHandle;

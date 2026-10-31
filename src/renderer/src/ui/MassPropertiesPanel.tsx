@@ -1,4 +1,5 @@
-import { Fragment, useMemo } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
+import type { MassProperties } from '../../../kernel/protocol.ts';
 import { useTranslation } from 'react-i18next';
 import { pointIn, tensorIn } from '../../../shared/model/frame.ts';
 import { massOf, principalMoments } from '../../../shared/model/material.ts';
@@ -7,6 +8,7 @@ import { formatMass, formatNumber, formatQuantity, formatSignificant } from '../
 import { coordinateSystems } from '../references.ts';
 import { featureName, rollbackIndex } from '../state/document.ts';
 import { partProperties, useAppState } from '../state/store.ts';
+import { useBodyName } from './FeatureTree.tsx';
 import { CloseIcon } from './icons.tsx';
 import { materialName } from './MaterialDialog.tsx';
 
@@ -22,7 +24,27 @@ export function MassPropertiesPanel() {
   const { t } = useTranslation();
   const open = useAppState((state) => state.showMassProperties);
   const language = useAppState((state) => state.language);
-  const properties = useAppState((state) => state.rebuild?.properties ?? null);
+  const wholePart = useAppState((state) => state.rebuild?.properties ?? null);
+  // One body of several: its own values, asked from the kernel whenever the part changes.
+  const bodiesText = useAppState((state) => JSON.stringify(commands.partBodies(state).map(({ index, feature }) => ({ index, feature, faces: [] }))));
+  const bodies = useMemo(() => JSON.parse(bodiesText) as { index: number; feature: string; faces: number[] }[], [bodiesText]);
+  const bodyName = useBodyName();
+  const massBody = useAppState((state) => state.massBody);
+  const body = massBody !== null && bodies.some((candidate) => candidate.index === massBody) ? massBody : null;
+  const shapeKey = useAppState((state) => state.display.body?.key ?? '');
+  const [bodyValues, setBodyValues] = useState<{ key: string; properties: MassProperties | null } | null>(null);
+  const valuesKey = `${shapeKey}#${body ?? ''}`;
+  useEffect(() => {
+    if (body === null) return;
+    let current = true;
+    void commands.bodyProperties(body).then((found) => {
+      if (current) setBodyValues({ key: valuesKey, properties: found });
+    });
+    return () => {
+      current = false;
+    };
+  }, [body, valuesKey]);
+  const properties = body === null ? wholePart : bodyValues?.key === valuesKey ? bodyValues.properties : null;
   const material = useAppState((state) => partProperties(state.history).material);
   const editing = useAppState((state) => state.activeEdit !== null || state.sketch !== null);
   const rolledBack = useAppState((state) => rollbackIndex(state.history.features, state.rollback) < state.history.features.length);
@@ -55,6 +77,19 @@ export function MassPropertiesPanel() {
         </button>
       </header>
       <div className="mass-panel-body">
+        {bodies.length > 0 ? (
+          <label className="field mass-frame">
+            <span className="field-label">{t('massProperties.body')}</span>
+            <select className="field-select" value={body === null ? '' : String(body)} data-testid="mass-body" onChange={(event) => commands.setMassBody(event.target.value === '' ? null : Number(event.target.value))}>
+              <option value="">{t('massProperties.allBodies')}</option>
+              {bodies.map((candidate) => (
+                <option key={candidate.index} value={String(candidate.index)}>
+                  {bodyName(candidate)}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
         {systems.length > 0 ? (
           <label className="field mass-frame">
             <span className="field-label">{t('massProperties.relativeTo')}</span>

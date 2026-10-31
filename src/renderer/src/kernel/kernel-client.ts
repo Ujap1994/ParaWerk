@@ -3,9 +3,11 @@ import type {
   KernelRequest,
   KernelRequestMessage,
   KernelResponseMessage,
+  MassProperties,
   MeasureRequest,
   MemoryStats,
   MeshPayload,
+  PropertiesRequest,
   RebuildRequest,
   RebuildResult,
 } from '../../../kernel/protocol.ts';
@@ -88,6 +90,10 @@ export class KernelClient {
 
   async measure(request: MeasureRequest): Promise<MeasureResult> {
     return (await this.send({ type: 'measure', payload: request })) as MeasureResult;
+  }
+
+  async bodyProperties(request: PropertiesRequest): Promise<MassProperties> {
+    return (await this.send({ type: 'properties', payload: request })) as MassProperties;
   }
 
   async memory(): Promise<MemoryStats> {
