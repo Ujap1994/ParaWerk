@@ -1,4 +1,4 @@
-import { CHAMFER_METHODS, type ChamferMethod, EXPRESSION_FIELDS, FILLET_METHODS, THICKEN_SIDES, type ThickenSide, COMBINE_OPERATIONS, type CombineOperation, MAX_HELIX_TURNS, MAX_TWIST, PROJECTION_METHODS, PROJECTION_SIDES, type ProjectionMethod, type ProjectionSide, RIB_DIRECTIONS, EXTRUDE_DIRECTIONS, MAX_DRAFT_ANGLE, REVOLVE_DIRECTIONS, type RevolveDirection, EXTRUDE_ENDS, HOLE_ENDS, type Axis, type BooleanOperation, type EdgeRef, type ExtrudeDirection, type ExtrudeEnd, type Feature, type FeatureType, type HoleEnd, type Variable, type Vec3 } from './feature.ts';
+import { CHAMFER_METHODS, type ChamferMethod, EXPRESSION_FIELDS, FILLET_METHODS, THICKEN_SIDES, type ThickenSide, COMBINE_OPERATIONS, type CombineOperation, SPLIT_KEEPS, type SplitKeep, MAX_HELIX_TURNS, MAX_TWIST, PROJECTION_METHODS, PROJECTION_SIDES, type ProjectionMethod, type ProjectionSide, RIB_DIRECTIONS, EXTRUDE_DIRECTIONS, MAX_DRAFT_ANGLE, REVOLVE_DIRECTIONS, type RevolveDirection, EXTRUDE_ENDS, HOLE_ENDS, type Axis, type BooleanOperation, type EdgeRef, type ExtrudeDirection, type ExtrudeEnd, type Feature, type FeatureType, type HoleEnd, type Variable, type Vec3 } from './feature.ts';
 import { HOLE_FITS, HOLE_KINDS } from './hole.ts';
 import { CUSTOM_MATERIAL, materialInfo, MAX_DENSITY, MIN_DENSITY, NO_PROPERTIES, type PartProperties } from './material.ts';
 import { MAX_PATTERN_COUNT } from './pattern.ts';
@@ -482,6 +482,18 @@ function parseFeatureFields(raw: Json, path: string): Feature {
       return { ...common, type: 'combine', operation: raw.operation as CombineOperation, bodies: faceRefs(raw.bodies, `${path}.bodies`) };
     case 'deleteBody':
       return { ...common, type: 'deleteBody', bodies: faceRefs(raw.bodies, `${path}.bodies`) };
+    case 'split': {
+      if (!SPLIT_KEEPS.includes(raw.keep as SplitKeep)) throw new ValidationError('expected both, normal or reverse', `${path}.keep`);
+      if (raw.surface !== undefined && typeof raw.surface !== 'string') throw new ValidationError('expected a surface id', `${path}.surface`);
+      return {
+        ...common,
+        type: 'split',
+        method: method(raw.method, ['plane', 'surface'] as const, `${path}.method`),
+        references: geometryRefs(raw.references, `${path}.references`),
+        ...(typeof raw.surface === 'string' ? { surface: sketchId(raw.surface, `${path}.surface`) } : {}),
+        keep: raw.keep as SplitKeep,
+      };
+    }
     case 'offsetSurface':
       return { ...common, type: 'offsetSurface', faces: faceRefs(raw.faces, `${path}.faces`), distance: finiteNumber(raw.distance, `${path}.distance`) };
     case 'knit': {

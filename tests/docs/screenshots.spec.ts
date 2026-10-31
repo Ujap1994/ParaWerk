@@ -1543,6 +1543,13 @@ test('function reference screenshots', async () => {
     { id: 'cube', type: 'box', name: 'Cube', operation: 'add', merge: false, width: 40, depth: 40, height: 40, position: [50, 0, 20] },
     { id: 'remove', type: 'deleteBody', name: 'Delete cube', bodies: [{ kind: 'face', name: 'cube:top', at: [50, 0, 60] }] },
   ], 'remove');
+  // A plate with a boss split along the front plane: two bodies, the cut shown in the preview.
+  await shot('split.png', 'Split', [
+    plate,
+    { id: 'boss', type: 'cylinder', name: 'Boss', operation: 'add', radius: 20, height: 30, axis: 'z', position: [10, 0, 10] },
+    { id: 'bore', type: 'cylinder', name: 'Bore', operation: 'cut', radius: 8, height: 60, axis: 'z', position: [10, 0, -10] },
+    { id: 'halves', type: 'split', name: 'Halves', method: 'plane', references: [{ kind: 'standard-plane', plane: 'front' }], keep: 'both' },
+  ], 'halves');
   // A coordinate system on the top of the block, turned 30° around Z.
   const csys = { id: 'frame', type: 'csys', name: 'Print frame', method: 'position', references: [], x: 20, y: 0, z: 40, angle: 30, flipX: false, flipY: false };
   await shot('csys.png', 'Coordinate system', [block, csys], 'frame');

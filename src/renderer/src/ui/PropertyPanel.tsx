@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { formatQuantity } from '../format.ts';
-import { CHAMFER_METHODS, type DraftFeature, type KnitFeature, type ThickenFeature, type ThickenSide, THICKEN_SIDES, isSurfaceFeature, type CombineFeature, type DeleteBodyFeature, COMBINE_OPERATIONS, type CombineOperation, type SweepFeature, MAX_TWIST, type HelixFeature, type ProjectedCurveFeature, type CompositeCurveFeature, isCurveFeature, PROJECTION_METHODS, type ProjectionMethod, PROJECTION_SIDES, type ProjectionSide, MAX_HELIX_TURNS, type LoftFeature, RIB_DIRECTIONS, type RibDirection, type ThreadFeature, FILLET_METHODS, roundFaceCount, type FilletFeature, type FilletMethod, EXTRUDE_ENDS, extrudesOneWay, MAX_DRAFT_ANGLE, type RevolveDirection, hasReferenceSlots, isCopyFeature, type Axis, type BooleanOperation, type ChamferFeature, type ChamferMethod, type EdgeFeature, type ExtrudeDirection, type ExtrudeEnd, type ExtrudeFeature, type Feature, type RevolveFeature, type Vec3 } from '../../../shared/model/feature.ts';
+import { CHAMFER_METHODS, SPLIT_KEEPS, type SplitFeature, type SplitKeep, type DraftFeature, type KnitFeature, type ThickenFeature, type ThickenSide, THICKEN_SIDES, isSurfaceFeature, type CombineFeature, type DeleteBodyFeature, COMBINE_OPERATIONS, type CombineOperation, type SweepFeature, MAX_TWIST, type HelixFeature, type ProjectedCurveFeature, type CompositeCurveFeature, isCurveFeature, PROJECTION_METHODS, type ProjectionMethod, PROJECTION_SIDES, type ProjectionSide, MAX_HELIX_TURNS, type LoftFeature, RIB_DIRECTIONS, type RibDirection, type ThreadFeature, FILLET_METHODS, roundFaceCount, type FilletFeature, type FilletMethod, EXTRUDE_ENDS, extrudesOneWay, MAX_DRAFT_ANGLE, type RevolveDirection, hasReferenceSlots, isCopyFeature, type Axis, type BooleanOperation, type ChamferFeature, type ChamferMethod, type EdgeFeature, type ExtrudeDirection, type ExtrudeEnd, type ExtrudeFeature, type Feature, type RevolveFeature, type Vec3 } from '../../../shared/model/feature.ts';
 import { DEFAULT_THIN_THICKNESS, THIN_SIDES, type ThinSide } from '../../../shared/model/thin.ts';
 import { METRIC_SIZES } from '../../../shared/model/hole.ts';
 import type { GeometryRef } from '../../../shared/model/reference.ts';
@@ -399,6 +399,8 @@ function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
     case 'combine':
     case 'deleteBody':
       return <BodiesFields draft={draft} />;
+    case 'split':
+      return <SplitFields draft={draft} index={index} />;
     case 'offsetSurface':
       return (
         <Section title={t('panel.parameters')}>
@@ -616,6 +618,47 @@ function KnitFields({ draft, index }: { draft: KnitFeature; index: number }) {
       <SurfaceSummary id={draft.id} />
       <p className="panel-hint">{t('surface.knitHint')}</p>
     </Section>
+  );
+}
+
+/** A split: the plane (a reference field) or the surface that splits the bodies, and which pieces stay. */
+function SplitFields({ draft, index }: { draft: SplitFeature; index: number }) {
+  const { t } = useTranslation();
+  const surfaces = useSurfaces(index);
+  return (
+    <>
+      <Section title={t('references.definition')}>
+        <ReferenceSlots draft={draft} />
+        {draft.method === 'surface' ? (
+          <label className="field">
+            <span className="field-label">{t('split.surface')}</span>
+            <select className="field-select" value={draft.surface ?? ''} data-testid="split-surface" onChange={(event) => commands.updateDraft({ surface: event.target.value || undefined })}>
+              {draft.surface && surfaces.some((surface) => surface.id === draft.surface) ? null : <option value={draft.surface ?? ''}>{draft.surface ? t('references.lost') : t('split.chooseSurface')}</option>}
+              {surfaces.map((surface) => (
+                <option key={surface.id} value={surface.id}>
+                  {surface.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
+      </Section>
+      <Section title={t('panel.parameters')}>
+        {draft.method === 'plane' ? (
+          <label className="field">
+            <span className="field-label">{t('split.keep')}</span>
+            <select className="field-select" value={draft.keep} data-testid="split-keep" onChange={(event) => commands.updateDraft({ keep: event.target.value as SplitKeep })}>
+              {SPLIT_KEEPS.map((keep) => (
+                <option key={keep} value={keep}>
+                  {t(`split.keeps.${keep}`)}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
+        <p className="panel-hint">{t('split.hint')}</p>
+      </Section>
+    </>
   );
 }
 
@@ -1112,9 +1155,11 @@ export function PropertyPanel() {
   const title = edit.mode === 'create' ? t('panel.creating', { feature: featureLabel }) : t('panel.editing', { feature: featureLabel });
   // Reference geometry needs all its references; until they are chosen, the missing ones are no error yet.
   const draft = edit.draft;
-  const incomplete = hasReferenceSlots(draft) && (draft.references.length < referenceRoles(draft).length || (isCopyFeature(draft) && draft.features.length === 0));
+  const incomplete =
+    hasReferenceSlots(draft) &&
+    (draft.references.length < referenceRoles(draft).length || (isCopyFeature(draft) && draft.features.length === 0) || (draft.type === 'split' && draft.method === 'surface' && !draft.surface));
   const failure = result?.id === draft.id && result.status === 'error' ? result.error : undefined;
-  const error = incomplete && (failure?.code === 'reference-missing' || failure?.code === 'pattern-empty') ? undefined : failure;
+  const error = incomplete && (failure?.code === 'reference-missing' || failure?.code === 'pattern-empty' || failure?.code === 'surface-missing') ? undefined : failure;
   // Lost fillet edges have their own notice in the edges section.
   const warning = result?.id === draft.id && result.status === 'ok' && result.warning?.code !== 'edge-missing' ? result.warning : undefined;
   // Variables are applied only when every one has a valid name and a value.

@@ -135,6 +135,7 @@ function applyResult(
     activeEdit.draft.type === 'thread' ||
     activeEdit.draft.type === 'combine' ||
     activeEdit.draft.type === 'deleteBody' ||
+    activeEdit.draft.type === 'split' ||
     extrudesUpTo(activeEdit.draft)
   ) {
     // Edges and faces are picked on the body before the feature; its result is shown as a preview.

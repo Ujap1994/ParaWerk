@@ -130,7 +130,8 @@
       "deleteBody": "Remove bodies from the part",
       "offsetSurface": "Make a surface from faces of the part, offset along their normals (0 for a copy)",
       "knit": "Join surfaces into one where their edges meet",
-      "thicken": "Turn a surface into a solid: give it a thickness, or fill it when it encloses a volume"
+      "thicken": "Turn a surface into a solid: give it a thickness, or fill it when it encloses a volume",
+      "split": "Split bodies with a plane or a surface into bodies of their own"
     },
     "tabs": {
       "label": "Command tabs",
@@ -232,7 +233,8 @@
     "knit": "Knit",
     "thicken": "Thicken",
     "primitives": "Box and cylinder",
-    "edgeFeatures": "Fillet and chamfer"
+    "edgeFeatures": "Fillet and chamfer",
+    "split": "Split"
   },
   "features": {
     "plane": "Plane",
@@ -265,7 +267,8 @@
     "deleteBody": "Delete body",
     "offsetSurface": "Offset surface",
     "knit": "Knit",
-    "thicken": "Thicken"
+    "thicken": "Thicken",
+    "split": "Split"
   },
   "tree": {
     "title": "Feature tree",
@@ -560,7 +563,8 @@
     "surface-open": "Only a surface that encloses a volume can be filled. Knit its faces together first, or give it a thickness instead.",
     "offset-failed": "The faces cannot be offset by this distance: a curved face may be smaller than the distance inwards.",
     "thicken-failed": "The surface cannot be thickened like this; try a smaller thickness or the other side.",
-    "faces-bodies": "The picked faces belong to different bodies. Pick faces of one body, or combine the bodies first."
+    "faces-bodies": "The picked faces belong to different bodies. Pick faces of one body, or combine the bodies first.",
+    "split-nothing": "The plane or surface does not cross any body. Move it, or choose another one."
   },
   "warnings": {
     "edge-missing_one": "{{count}} selected edge no longer exists and is left out. Edit the feature to remove it or pick another edge.",
@@ -812,6 +816,10 @@
       },
       "draft": {
         "neutralPlane": "Neutral plane"
+      },
+      "split": {
+        "plane": "With a plane",
+        "surface": "With a surface"
       }
     },
     "roles": {
@@ -1201,5 +1209,17 @@
       "both": "Half each way"
     },
     "thickenHint": "The surface becomes a solid of the thickness, on the side you choose, and is added to the part like other features that add material."
+  },
+  "split": {
+    "plane": "Splitting plane",
+    "surface": "Surface",
+    "chooseSurface": "(choose a surface)",
+    "keep": "Keep",
+    "keeps": {
+      "both": "All pieces, as bodies of their own",
+      "normal": "The pieces on the side of the normal",
+      "reverse": "The pieces on the other side"
+    },
+    "hint": "Every body the plane or surface crosses is split into bodies of their own; the others stay as they are. Combine the pieces again later, delete the ones you do not need, or keep only one side of the plane here."
   }
 }

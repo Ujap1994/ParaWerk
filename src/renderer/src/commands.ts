@@ -364,6 +364,14 @@ export function startFeature(type: FeatureType): void {
       return;
     }
     draft = draft.type === 'knit' ? { ...draft, surfaces: unused.map((surface) => surface.id) } : { ...draft, surface: (unused.at(-1) ?? surfaces.at(-1))?.id ?? '' };
+  } else if (draft.type === 'split') {
+    // A plane or planar face selected before starting is the splitting plane (select first, then act).
+    const state = getState();
+    const plane = state.selection.flatMap((pick) => {
+      const ref = referenceOfPick(pick, state);
+      return ref && referenceFits(ref, 'plane', state, pick) ? [ref] : [];
+    })[0];
+    if (plane) draft = { ...draft, references: [plane] };
   } else if (draft.type === 'combine' || draft.type === 'deleteBody') {
     // Faces selected before starting pick their bodies, one face each.
     const naming = getState().display.body?.naming;
@@ -1843,7 +1851,7 @@ export function handlePick(pick: Pick | null, additive: boolean): void {
     if (pick) pickExtrudeEnd(pick);
     return;
   }
-  if (edit && isReferenceFeature(edit.draft)) {
+  if (edit && (isReferenceFeature(edit.draft) || edit.draft.type === 'split')) {
     if (pick) assignReference(pick);
     return;
   }

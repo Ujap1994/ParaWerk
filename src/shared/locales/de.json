@@ -130,7 +130,8 @@
       "deleteBody": "Körper aus dem Teil entfernen",
       "offsetSurface": "Eine Fläche aus Flächen des Teils erzeugen, entlang ihrer Normalen versetzt (0 für eine Kopie)",
       "knit": "Flächen dort zu einer verbinden, wo ihre Kanten aufeinandertreffen",
-      "thicken": "Eine Fläche zu einem Volumen machen: ihr eine Dicke geben oder sie füllen, wenn sie ein Volumen umschließt"
+      "thicken": "Eine Fläche zu einem Volumen machen: ihr eine Dicke geben oder sie füllen, wenn sie ein Volumen umschließt",
+      "split": "Körper mit einer Ebene oder Fläche in eigene Körper teilen"
     },
     "tabs": {
       "label": "Befehlsregister",
@@ -232,7 +233,8 @@
     "knit": "Zusammenfügen",
     "thicken": "Verdicken",
     "primitives": "Quader und Zylinder",
-    "edgeFeatures": "Verrundung und Fase"
+    "edgeFeatures": "Verrundung und Fase",
+    "split": "Teilen"
   },
   "features": {
     "plane": "Ebene",
@@ -265,7 +267,8 @@
     "deleteBody": "Körper löschen",
     "offsetSurface": "Versetzte Fläche",
     "knit": "Zusammengefügte Fläche",
-    "thicken": "Verdickung"
+    "thicken": "Verdickung",
+    "split": "Teilen"
   },
   "tree": {
     "title": "Featurebaum",
@@ -560,7 +563,8 @@
     "surface-open": "Nur eine Fläche, die ein Volumen umschließt, kann gefüllt werden. Füge ihre Flächen zuerst zusammen oder gib ihr stattdessen eine Dicke.",
     "offset-failed": "Die Flächen lassen sich nicht um diesen Abstand versetzen: Eine gekrümmte Fläche ist vielleicht kleiner als der Abstand nach innen.",
     "thicken-failed": "Die Fläche lässt sich so nicht verdicken; versuche eine kleinere Dicke oder die andere Seite.",
-    "faces-bodies": "Die gewählten Flächen gehören zu verschiedenen Körpern. Wähle Flächen eines Körpers oder kombiniere die Körper zuerst."
+    "faces-bodies": "Die gewählten Flächen gehören zu verschiedenen Körpern. Wähle Flächen eines Körpers oder kombiniere die Körper zuerst.",
+    "split-nothing": "Die Ebene oder Fläche schneidet keinen Körper. Verschiebe sie oder wähle eine andere."
   },
   "warnings": {
     "edge-missing_one": "{{count}} ausgewählte Kante existiert nicht mehr und wird ausgelassen. Bearbeite das Feature, um sie zu entfernen oder eine andere Kante zu wählen.",
@@ -812,6 +816,10 @@
       },
       "draft": {
         "neutralPlane": "Neutrale Ebene"
+      },
+      "split": {
+        "plane": "Mit einer Ebene",
+        "surface": "Mit einer Fläche"
       }
     },
     "roles": {
@@ -1201,5 +1209,17 @@
       "both": "Je zur Hälfte"
     },
     "thickenHint": "Die Fläche wird zu einem Volumen der Dicke, auf der gewählten Seite, und wird dem Teil hinzugefügt wie andere Features, die Material hinzufügen."
+  },
+  "split": {
+    "plane": "Trennebene",
+    "surface": "Fläche",
+    "chooseSurface": "(Fläche wählen)",
+    "keep": "Behalten",
+    "keeps": {
+      "both": "Alle Teile, als eigene Körper",
+      "normal": "Die Teile auf der Seite der Normalen",
+      "reverse": "Die Teile auf der anderen Seite"
+    },
+    "hint": "Jeder Körper, den die Ebene oder Fläche schneidet, wird in eigene Körper geteilt; die übrigen bleiben, wie sie sind. Die Teile lassen sich später wieder kombinieren oder nicht benötigte löschen – oder hier nur eine Seite der Ebene behalten."
   }
 }

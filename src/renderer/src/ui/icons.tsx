@@ -622,6 +622,14 @@ export const CombineIcon = (p: P) => (
   </Icon>
 );
 
+/** Split: a block in two pieces, the plane between them dashed. */
+export const SplitIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="M3.5 7.5h6.5v12H3.5zM14 7.5h6.5v12H14z" />
+    <path d="M12 3.5v17" strokeDasharray="2 1.6" opacity="0.6" />
+  </Icon>
+);
+
 /** Delete body: a block with a minus sign beside it. */
 export const DeleteBodyIcon = (p: P) => (
   <Icon {...p}>
@@ -792,6 +800,7 @@ export const FEATURE_ICONS = {
   compositeCurve: CompositeCurveIcon,
   combine: CombineIcon,
   deleteBody: DeleteBodyIcon,
+  split: SplitIcon,
   offsetSurface: OffsetSurfaceIcon,
   knit: KnitIcon,
   thicken: ThickenIcon,

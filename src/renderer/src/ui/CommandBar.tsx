@@ -69,7 +69,7 @@ import {
   OffsetSurfaceIcon,
   KnitIcon,
   ThickenIcon,
-  DeleteBodyIcon,
+  DeleteBodyIcon, SplitIcon,
   SketchIcon,
   ThreePointArcIcon,
   TrashIcon,
@@ -194,10 +194,10 @@ const SURFACE_ENTRIES: readonly SplitEntry[] = (['offsetSurface', 'knit', 'thick
   active: (state: AppState) => state.activeEdit?.mode === 'create' && state.activeEdit.draft.type === type,
 }));
 
-/** Bodies of the part: combine and delete them. */
-const BODY_ENTRIES: readonly SplitEntry[] = (['combine', 'deleteBody'] as const).map((type) => ({
+/** Bodies of the part: split, combine and delete them. */
+const BODY_ENTRIES: readonly SplitEntry[] = (['split', 'combine', 'deleteBody'] as const).map((type) => ({
   id: type,
-  icon: { combine: CombineIcon, deleteBody: DeleteBodyIcon }[type],
+  icon: { split: SplitIcon, combine: CombineIcon, deleteBody: DeleteBodyIcon }[type],
   label: type,
   start: () => commands.startFeature(type),
   active: (state: AppState) => state.activeEdit?.mode === 'create' && state.activeEdit.draft.type === type,

@@ -315,6 +315,11 @@ them under *Solid bodies*; click one to select all its faces.
 - **Combine** (in the *Surfaces* tab, group *Bodies*) joins bodies: click a face of each, the main body first.
   **Add** fuses them, **Subtract** removes the others from the main body, **Common** keeps only what they
   all share. Bodies you do not pick stay as they are.
+- **Split** (in the same group) splits every body a plane or a surface crosses into bodies of their own –
+  the two halves of a mold, a part cut in two to fit a print bed. Pick the splitting plane (a standard
+  plane, a planar face or a reference plane), or choose *With a surface* and a surface such as an offset
+  surface. *Keep* can keep only the pieces on the side of the plane's normal or on the other side. The
+  cut faces are named after their side, so fillets and sketches on them stay put when the part changes.
 - **Delete body** (next to it) removes the bodies you click a face of.
 
 Bodies are picked by one of their faces, which are remembered by name like the edges of a fillet, so the

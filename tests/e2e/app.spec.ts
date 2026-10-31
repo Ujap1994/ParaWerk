@@ -1165,6 +1165,35 @@ test('opens the feature showcase and builds all of its features, in both configu
   expect(await volume(page)).toBeCloseTo(full, 1);
 });
 
+test('splits a block at the right plane into two bodies, then keeps one side', async () => {
+  launched = await launchApp({ width: 1000, height: 640 });
+  const { page } = launched;
+  await page.evaluate(() => {
+    const features = [{ id: 'block', type: 'box', operation: 'add', width: 100, depth: 60, height: 40, position: [0, 0, 0] }];
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features, past: [], future: [] }, savedFeatures: features, dirty: false });
+  });
+  await idle(page);
+  await page.click('[data-tab="surfaces"]');
+  await page.click('[data-command="split"]');
+  await expect(page.locator('[data-testid="reference-slot-0"]')).toHaveClass(/is-active/);
+  await page.click('.tree-item[data-plane="right"]');
+  await expect(page.locator('[data-testid="reference-slot-0"]')).toContainText('Right plane');
+  await idle(page);
+  await expect(page.locator('.property-panel .panel-error')).toHaveCount(0);
+  await page.click('[data-testid="panel-ok"]');
+  expect(await volume(page)).toBeCloseTo(240_000, 2);
+  await expect(page.locator('[data-testid="tree-body"]')).toHaveCount(2);
+  expect((await state(page)).history.features[1]).toMatchObject({ type: 'split', method: 'plane', keep: 'both', references: [{ kind: 'standard-plane', plane: 'right' }] });
+
+  // Keeping only the side of the normal leaves one half.
+  const split = (await state(page)).history.features[1]?.id;
+  await page.locator(`.feature-tree .tree-item[data-feature-id="${split}"]`).dblclick();
+  await page.locator('[data-testid="split-keep"]').selectOption('normal');
+  await page.click('[data-testid="panel-ok"]');
+  expect(await volume(page)).toBeCloseTo(120_000, 2);
+  await expect(page.locator('[data-testid="tree-body"]')).toHaveCount(0);
+});
+
 test('adds a box as a body of its own and combines the bodies', async () => {
   launched = await launchApp({ width: 1000, height: 640 });
   const { page } = launched;

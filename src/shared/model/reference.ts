@@ -59,6 +59,7 @@ export const REFERENCE_ROLES = {
   pattern: { linear: ['direction'], circular: ['axis'] },
   mirror: { plane: ['plane'] },
   draft: { neutralPlane: ['plane'] },
+  split: { plane: ['plane'], surface: [] },
 } as const satisfies {
   plane: Record<PlaneMethod, readonly ReferenceRole[]>;
   axis: Record<AxisMethod, readonly ReferenceRole[]>;
@@ -67,6 +68,7 @@ export const REFERENCE_ROLES = {
   pattern: Record<'linear' | 'circular', readonly ReferenceRole[]>;
   mirror: Record<'plane', readonly ReferenceRole[]>;
   draft: Record<'neutralPlane', readonly ReferenceRole[]>;
+  split: Record<'plane' | 'surface', readonly ReferenceRole[]>;
 };
 
 /** Where a reference feature lies, as the last rebuild computed it. */

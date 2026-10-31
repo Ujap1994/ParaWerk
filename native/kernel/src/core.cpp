@@ -2220,6 +2220,75 @@ int deleteBodies(int bodyId, const std::vector<int>& faceIndices) {
   return store().add(result.shape, std::move(result.names));
 }
 
+int splitBody(int bodyId, const std::vector<double>& plane, int surfaceId, int keep, const std::string& name) {
+  const StoredShape& body = store().entry(bodyId);
+  const bool byPlane = plane.size() == 6;
+  TopoDS_Shape tool;
+  gp_Pnt origin;
+  gp_Dir normal(0, 0, 1);
+  if (byPlane) {
+    origin = gp_Pnt(plane[0], plane[1], plane[2]);
+    normal = gp_Dir(plane[3], plane[4], plane[5]);
+    // A square of the plane larger than the body, around the body's middle.
+    Bnd_Box box;
+    BRepBndLib::Add(body.shape, box);
+    if (box.IsVoid()) throw KernelError("no-body", "there is no body to split");
+    const double size = std::sqrt(box.SquareExtent()) + 10;
+    double x0, y0, z0, x1, y1, z1;
+    box.Get(x0, y0, z0, x1, y1, z1);
+    const gp_Vec middle(origin, gp_Pnt((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2));
+    const gp_Pnt center = origin.Translated(middle - gp_Vec(normal) * middle.Dot(gp_Vec(normal)));
+    BRepBuilderAPI_MakeFace face(gp_Pln(center, normal), -size, size, -size, size);
+    if (!face.IsDone()) throw KernelError("operation-failed", "the splitting plane could not be made");
+    tool = face.Face();
+  } else {
+    tool = store().get(surfaceId);
+  }
+  const std::string cut = faceName(name, "cut");
+  std::vector<StoredShape> parts;
+  bool split = false;
+  for (StoredShape& solid : solidsOf(body)) {
+    BRepAlgoAPI_Splitter splitter;
+    NCollection_List<TopoDS_Shape> arguments, tools;
+    arguments.Append(solid.shape);
+    tools.Append(tool);
+    splitter.SetArguments(arguments);
+    splitter.SetTools(tools);
+    splitter.SetRunParallel(parallel);
+    splitter.Build();
+    if (splitter.HasErrors()) throw KernelError("operation-failed", "the body could not be split");
+    FaceNamer namer(splitter.Shape());
+    namer.inherit(splitter, solid.shape, solid.names);
+    namer.rest(cut);
+    std::vector<StoredShape> pieces = solidsOf(StoredShape{splitter.Shape(), namer.take()});
+    if (pieces.size() < 2) {
+      parts.push_back(std::move(solid));
+      continue;
+    }
+    split = true;
+    for (StoredShape& piece : pieces) {
+      // The pieces share the cut faces; each body gets faces of its own (the copy keeps the face order).
+      piece.shape = BRepBuilderAPI_Copy(piece.shape).Shape();
+      if (!byPlane) {
+        parts.push_back(std::move(piece));
+        continue;
+      }
+      // Which side of the plane the piece is on: where its volume lies.
+      GProp_GProps props;
+      BRepGProp::VolumeProperties(piece.shape, props);
+      const bool along = gp_Vec(origin, props.CentreOfMass()).Dot(gp_Vec(normal)) > 0;
+      if ((keep == 1 && !along) || (keep == 2 && along)) continue;
+      for (std::string& label : piece.names)
+        if (label == cut) label += along ? ":normal" : ":reverse";
+      parts.push_back(std::move(piece));
+    }
+  }
+  if (!split) throw KernelError("split-nothing", byPlane ? "the plane does not cross any body" : "the surface does not cross any body");
+  if (parts.empty()) throw KernelError("empty-result", "no piece is left");
+  StoredShape result = bodyOf(parts);
+  return store().add(result.shape, std::move(result.names));
+}
+
 int fillet(int bodyId, const std::vector<int>& edgeIndices, double radius, const std::vector<std::string>& edgeNames, const std::string& name) {
   const TopoDS_Shape& body = store().get(bodyId);
   BRepFilletAPI_MakeFillet maker(body, ChFi3d_Rational);

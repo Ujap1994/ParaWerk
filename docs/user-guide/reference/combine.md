@@ -46,5 +46,5 @@ Bodies you do not pick stay as they are.
 
 ## See also
 
-- [Delete body](delete-body.md) · [Extrude](extrude.md) (Merge result)
+- [Split](split.md) · [Delete body](delete-body.md) · [Extrude](extrude.md) (Merge result)
 - [User guide: Bodies](../features.md#bodies)

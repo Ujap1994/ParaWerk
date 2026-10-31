@@ -1,4 +1,4 @@
-import { COPYABLE_TYPES, type SurfaceFeature, type CombineFeature, type DeleteBodyFeature, type CurveFeature, isCopyFeature, isEdgeFeature, type CopyFeature, type DraftFeature, type LoftFeature, type RibFeature, type SweepFeature, type ThreadFeature, type EdgeFeature, type EdgeRef, type ExtrudeFeature, type Feature, type FilletFeature, roundFaceCount, type HoleFeature, type ShellFeature, type SketchFeature, type SolidModelingFeature, type Vec3 } from '../shared/model/feature.ts';
+import { COPYABLE_TYPES, type SplitFeature, type SurfaceFeature, type CombineFeature, type DeleteBodyFeature, type CurveFeature, isCopyFeature, isEdgeFeature, type CopyFeature, type DraftFeature, type LoftFeature, type RibFeature, type SweepFeature, type ThreadFeature, type EdgeFeature, type EdgeRef, type ExtrudeFeature, type Feature, type FilletFeature, roundFaceCount, type HoleFeature, type ShellFeature, type SketchFeature, type SolidModelingFeature, type Vec3 } from '../shared/model/feature.ts';
 import { circularTransforms, composeTransforms, IDENTITY, linearTransforms, mirrorTransform, sameTransform, type Transform } from '../shared/model/pattern.ts';
 import { holePositions, holeProblem } from '../shared/model/hole.ts';
 import { edgeFaceNames, edgeRefOf, faceRefOf, resolveEdgeRefs, resolveFaceRef, resolveFacePlane, type BodyNaming } from '../shared/model/naming.ts';
@@ -9,7 +9,7 @@ import type { GeometryRef, ReferenceGeometry } from '../shared/model/reference.t
 import { frameOf, frameOnPlane, ORIGIN_ID, toModel, toSketch, type SketchFrame, type SketchPlaneRef } from '../shared/model/sketch.ts';
 import type { Point2 } from '../shared/model/spline.ts';
 import { hashString } from '../shared/hash.ts';
-import type { KernelFeature, ResolvedSurface, ResolvedBodies, ResolvedCurve, ShapeHandle, SketchCurves, ResolvedCopy, ResolvedDraft, ResolvedLoft, ResolvedRib, ResolvedSweep, ResolvedThread, ResolvedEdgeFeature, ResolvedExtrude, ResolvedHole, ResolvedShell } from './backend.ts';
+import type { KernelFeature, ResolvedSplit, ResolvedSurface, ResolvedBodies, ResolvedCurve, ShapeHandle, SketchCurves, ResolvedCopy, ResolvedDraft, ResolvedLoft, ResolvedRib, ResolvedSweep, ResolvedThread, ResolvedEdgeFeature, ResolvedExtrude, ResolvedHole, ResolvedShell } from './backend.ts';
 import { FeatureError } from './feature-error.ts';
 import { axisOfReference, curvedFaceOfReference, referenceValue, type BodyQuery, type ReferenceContext } from './reference.ts';
 
@@ -503,6 +503,18 @@ function resolveBodies(feature: CombineFeature | DeleteBodyFeature, context: Res
   return { ...feature, faceIndices };
 }
 
+/** What splits the bodies: the plane of its reference, or the surface. */
+function resolveSplit(feature: SplitFeature, context: ResolveContext): ResolvedSplit {
+  if (!context.body) throw new FeatureError('no-body');
+  if (feature.method === 'surface') {
+    const surfaceShape = feature.surface ? context.surfaces?.get(feature.surface) : undefined;
+    if (!surfaceShape) throw new FeatureError('surface-missing');
+    return { ...feature, surfaceShape };
+  }
+  const plane = referenceValue(feature.references[0], 'plane', 0, context);
+  return { ...feature, plane: [...plane.point, ...plane.normal] };
+}
+
 /** The face of a thread in the body it is cut into; found by name, or by position with the reference brought up to date. */
 function resolveThread(feature: ThreadFeature, context: ResolveContext): ResolvedThread {
   if (feature.faces.length === 0) throw new FeatureError('thread-face');
@@ -598,6 +610,7 @@ export function resolveFeature(feature: SolidModelingFeature, before: readonly F
   if (feature.type === 'rib') return resolveRib(feature, before, context);
   if (feature.type === 'thread') return resolveThread(feature, context);
   if (feature.type === 'combine' || feature.type === 'deleteBody') return resolveBodies(feature, context);
+  if (feature.type === 'split') return resolveSplit(feature, context);
   if (feature.type === 'thicken') {
     const surfaceShape = context.surfaces?.get(feature.surface);
     if (!surfaceShape) throw new FeatureError('surface-missing');

@@ -31,4 +31,4 @@ after it was used.
 
 ## See also
 
-- [Combine](combine.md)
+- [Combine](combine.md) · [Split](split.md)

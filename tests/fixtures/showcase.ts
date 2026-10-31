@@ -157,6 +157,21 @@ export class ShowcaseBuilder {
     return best;
   }
 
+  /** The planar face through `point` whose outward normal is `normal` (to pick a body by a face of it). */
+  faceAt(point: Vec3, normal: Vec3): FaceNameRef {
+    const naming = this.naming();
+    const index = naming.faces.findIndex((_, i) => {
+      const plane = Array.from(naming.facePlanes.slice(6 * i, 6 * i + 6));
+      if (!plane.every(Number.isFinite)) return false;
+      const along = (point[0] - (plane[0] as number)) * (plane[3] as number) + (point[1] - (plane[1] as number)) * (plane[4] as number) + (point[2] - (plane[2] as number)) * (plane[5] as number);
+      const facing = (plane[3] as number) * normal[0] + (plane[4] as number) * normal[1] + (plane[5] as number) * normal[2];
+      return Math.abs(along) < 1e-6 && facing > 0.999;
+    });
+    const ref = index >= 0 ? faceRefOf(naming, index, point) : null;
+    if (!ref) throw new Error(`no face through ${point.join(', ')} facing ${normal.join(', ')}`);
+    return ref;
+  }
+
   /** The first face whose name starts with `prefix`. */
   faceStarting(prefix: string): FaceNameRef {
     const name = this.naming().faces.find((candidate) => candidate.startsWith(prefix));
@@ -318,7 +333,10 @@ export function buildShowcase(kernel: Kernel, step: string): Feature[] {
   b.add({ ...(defaultFeature('offsetSurface') as Feature & { type: 'offsetSurface' }), id: 'tabCopyTop', name: 'Tab top copy', distance: 0, faces: [b.faceRef('tab:top')] });
   b.add({ ...(defaultFeature('offsetSurface') as Feature & { type: 'offsetSurface' }), id: 'tabCopyFront', name: 'Tab front copy', distance: 0, faces: [b.faceRef('tab:front')] });
   b.add({ ...(defaultFeature('knit') as Feature & { type: 'knit' }), id: 'tabSkin', name: 'Tab skin', surfaces: ['tabCopyTop', 'tabCopyFront'] });
-  b.add({ ...(defaultFeature('deleteBody') as Feature & { type: 'deleteBody' }), id: 'removeLid', name: 'Delete lid', bodies: [b.faceStarting('lid:')] });
+  // The lid split in two slabs along a surface in its middle, then both slabs deleted.
+  b.add({ ...(defaultFeature('offsetSurface') as Feature & { type: 'offsetSurface' }), id: 'midSurface', name: 'Lid middle', distance: 11.5, faces: [b.faceRef('boss:end', [40, 15, 42])] });
+  b.add({ ...(defaultFeature('split') as Feature & { type: 'split' }), id: 'lidSplit', name: 'Split lid', method: 'surface', surface: 'midSurface' });
+  b.add({ ...(defaultFeature('deleteBody') as Feature & { type: 'deleteBody' }), id: 'removeLid', name: 'Delete lid', bodies: [b.faceAt([40, 15, 55], [0, 0, 1]), b.faceAt([40, 15, 52], [0, 0, -1])] });
 
   // Curves: a line projected onto the top face, and the front, corner and right top edges joined into one.
   b.add(sketch('markSketch', 'Mark line', TOP, [P('m1', -20, -45), P('m2', 20, -45), L('m', 'm1', 'm2')]));

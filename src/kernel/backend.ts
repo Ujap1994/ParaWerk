@@ -1,4 +1,4 @@
-import type { ThickenFeature, CombineFeature, DeleteBodyFeature, ProjectionSide, CopyFeature, DraftFeature, EdgeFeature, LoftFeature, RibFeature, SweepFeature, ThreadFeature, EdgeRef, ExtrudeFeature, HoleFeature, RevolveFeature, ShellFeature, SolidModelingFeature, Vec3 } from '../shared/model/feature.ts';
+import type { SplitFeature, ThickenFeature, CombineFeature, DeleteBodyFeature, ProjectionSide, CopyFeature, DraftFeature, EdgeFeature, LoftFeature, RibFeature, SweepFeature, ThreadFeature, EdgeRef, ExtrudeFeature, HoleFeature, RevolveFeature, ShellFeature, SolidModelingFeature, Vec3 } from '../shared/model/feature.ts';
 import type { FaceNameRef, ReferenceGeometry } from '../shared/model/reference.ts';
 import type { BodyNaming } from '../shared/model/naming.ts';
 import type { Profile, ProfileEdge, ProfileLoop } from '../shared/model/profile.ts';
@@ -125,8 +125,9 @@ export type ResolvedEdgeFeature = EdgeFeature & {
 
 /** A feature as a backend builds it, with its references to earlier features resolved. */
 export type KernelFeature =
-  | Exclude<SolidModelingFeature, ExtrudeFeature | RevolveFeature | EdgeFeature | HoleFeature | CopyFeature | ShellFeature | DraftFeature | SweepFeature | LoftFeature | RibFeature | ThreadFeature | CombineFeature | DeleteBodyFeature | ThickenFeature>
+  | Exclude<SolidModelingFeature, ExtrudeFeature | RevolveFeature | EdgeFeature | HoleFeature | CopyFeature | ShellFeature | DraftFeature | SweepFeature | LoftFeature | RibFeature | ThreadFeature | CombineFeature | DeleteBodyFeature | ThickenFeature | SplitFeature>
   | ResolvedBodies
+  | ResolvedSplit
   | ResolvedThicken
   | ResolvedExtrude
   | ResolvedRevolve
@@ -173,6 +174,9 @@ export interface SurfaceGeometry {
 
 /** A thickened surface, with the surface it thickens. */
 export type ResolvedThicken = ThickenFeature & { surfaceShape: ShapeHandle };
+
+/** A split by a plane (point and normal, 6 values) or by a surface. */
+export type ResolvedSplit = SplitFeature & ({ plane: number[] } | { surfaceShape: ShapeHandle });
 
 /** A curve as drawn: points along its edges, its length, how many chains it has and whether it closes. */
 export interface CurveGeometry {

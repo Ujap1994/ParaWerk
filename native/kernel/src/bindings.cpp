@@ -367,6 +367,10 @@ val deleteBodies(int bodyId, val faces) {
   return guarded([&] { return idResult(parawerk::deleteBodies(bodyId, toIntVector(faces))); });
 }
 
+val splitBody(int bodyId, val plane, int surfaceId, int keep, std::string name) {
+  return guarded([&] { return idResult(parawerk::splitBody(bodyId, emscripten::convertJSArrayToNumberVector<double>(plane), surfaceId, keep, name)); });
+}
+
 val loftProfiles(val sections, bool ruled, val edgeNames, std::string name) {
   return guarded([&] { return idResult(parawerk::loftProfiles(emscripten::convertJSArrayToNumberVector<double>(sections), ruled, toStringVector(edgeNames), name)); });
 }
@@ -404,7 +408,7 @@ val importStepText(const std::string& text, const std::string& name) {
   return guarded([&] { return idResult(parawerk::importStep(text, name)); });
 }
 
-std::string version() { return "parawerk-kernel 0.23 / OCCT " PARAWERK_OCCT_VERSION; }
+std::string version() { return "parawerk-kernel 0.24 / OCCT " PARAWERK_OCCT_VERSION; }
 
 }  // namespace
 
@@ -455,6 +459,7 @@ EMSCRIPTEN_BINDINGS(parawerk_kernel) {
   emscripten::function("thickenSurface", &thickenSurface);
   emscripten::function("surfaceInfo", &surfaceInfo);
   emscripten::function("deleteBodies", &deleteBodies);
+  emscripten::function("splitBody", &splitBody);
   emscripten::function("sketchWire", &sketchWire);
   emscripten::function("projectCurve", &projectCurve);
   emscripten::function("intersectCurves", &intersectCurves);

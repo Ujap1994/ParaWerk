@@ -41,7 +41,7 @@ const SURFACE_KINDS: SurfaceKind[] = ['plane', 'cylinder', 'cone', 'sphere', 'to
 const CURVE_KINDS: CurveKind[] = ['line', 'circle', 'ellipse', 'bspline', 'other'];
 
 const FEATURE_ERROR_CODES = new Set<FeatureErrorCode>([
-  'no-body', 'no-edges', 'edge-missing', 'face-missing', 'plane-missing', 'reference-missing', 'reference-kind', 'reference-parallel', 'reference-not-parallel', 'reference-collinear', 'empty-result', 'first-must-add', 'sketch-missing', 'profile-empty', 'profile-crossing', 'axis-missing', 'axis-not-in-plane', 'hole-no-points', 'hole-invalid', 'pattern-empty', 'pattern-seed-missing', 'pattern-unsupported', 'shell-face-missing', 'end-behind', 'end-parallel', 'end-missed', 'thin-empty', 'thin-unsupported', 'thin-branching', 'thin-too-thick', 'round-faces', 'round-face-missing', 'round-sides', 'round-center', 'round-planes', 'round-radius', 'draft-faces', 'draft-face', 'draft-face-missing', 'path-empty', 'path-branching', 'path-gaps', 'sweep-failed', 'loft-sections', 'loft-profile', 'loft-failed', 'rib-curves', 'thread-face', 'thread-size', 'helix-circle', 'sweep-holes', 'curve-empty', 'pattern-too-many', 'pattern-seed-failed', 'guide-missing', 'guide-gaps', 'centerline-missing', 'centerline-gaps', 'combine-bodies', 'body-missing', 'faces-bodies', 'surface-faces', 'surface-missing', 'surface-open', 'offset-failed', 'thicken-failed', 'curve-missed', 'curve-faces', 'curve-edge-missing', 'import-no-solid', 'profile-crosses-axis',
+  'no-body', 'no-edges', 'edge-missing', 'face-missing', 'plane-missing', 'reference-missing', 'reference-kind', 'reference-parallel', 'reference-not-parallel', 'reference-collinear', 'empty-result', 'first-must-add', 'sketch-missing', 'profile-empty', 'profile-crossing', 'axis-missing', 'axis-not-in-plane', 'hole-no-points', 'hole-invalid', 'pattern-empty', 'pattern-seed-missing', 'pattern-unsupported', 'shell-face-missing', 'end-behind', 'end-parallel', 'end-missed', 'thin-empty', 'thin-unsupported', 'thin-branching', 'thin-too-thick', 'round-faces', 'round-face-missing', 'round-sides', 'round-center', 'round-planes', 'round-radius', 'draft-faces', 'draft-face', 'draft-face-missing', 'path-empty', 'path-branching', 'path-gaps', 'sweep-failed', 'loft-sections', 'loft-profile', 'loft-failed', 'rib-curves', 'thread-face', 'thread-size', 'helix-circle', 'sweep-holes', 'curve-empty', 'pattern-too-many', 'pattern-seed-failed', 'guide-missing', 'guide-gaps', 'centerline-missing', 'centerline-gaps', 'combine-bodies', 'body-missing', 'split-nothing', 'faces-bodies', 'surface-faces', 'surface-missing', 'surface-open', 'offset-failed', 'thicken-failed', 'curve-missed', 'curve-faces', 'curve-edge-missing', 'import-no-solid', 'profile-crosses-axis',
   'operation-failed', 'unknown',
 ]);
 
@@ -325,6 +325,13 @@ export class ParaWerkBackend implements GeometryBackend {
       case 'deleteBody':
         if (body === null) throw new FeatureError('no-body');
         return this.handle(k.deleteBodies(this.id(body), feature.faceIndices));
+      case 'split': {
+        if (body === null) throw new FeatureError('no-body');
+        const keep = { both: 0, normal: 1, reverse: 2 }[feature.keep];
+        return 'plane' in feature
+          ? this.handle(k.splitBody(this.id(body), feature.plane, -1, keep, feature.id))
+          : this.handle(k.splitBody(this.id(body), [], this.id(feature.surfaceShape), 0, feature.id));
+      }
       case 'hole':
         if (body === null) throw new FeatureError('no-body');
         return this.holes(body, feature, feature.placements, feature.id);

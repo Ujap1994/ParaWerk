@@ -130,6 +130,15 @@ int combineBodies(int bodyId, const std::vector<int>& faceIndices, int op, const
 int deleteBodies(int bodyId, const std::vector<int>& faceIndices);
 
 /**
+ * Splits every body that a plane (`plane`: point and normal, 6 values) or a surface (`surfaceId`, when
+ * `plane` is empty) crosses into bodies of their own. The cut faces are named "<name>:cut", with ":normal"
+ * or ":reverse" for the side of the plane their piece is on. With a plane, `keep` 1 keeps only the pieces
+ * on the side of its normal, 2 only those on the other side (0: all). Fails with "split-nothing" when the
+ * plane or surface crosses no body.
+ */
+int splitBody(int bodyId, const std::vector<double>& plane, int surfaceId, int keep, const std::string& name = "");
+
+/**
  * The solid swept by planar regions along the normal of their plane, from `from` to `to`.
  *
  * `profile` holds the regions in plane coordinates: the region count, then per region its loop count
