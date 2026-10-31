@@ -224,7 +224,8 @@ if (backendName === 'parawerk') {
     }
     return features;
   };
-  for (const bosses of [33, 100]) {
+  // 33, 100 and 167 bosses: 100, 301 and 502 features (Phase 3 asks for parts with 500 features).
+  for (const bosses of [33, 100, 167]) {
     const features = bossPart(bosses);
     const label = `bosses.${features.length}features`;
     cases[`${label}.fullRebuild`] = {
@@ -239,6 +240,30 @@ if (backendName === 'parawerk') {
       kernel.rebuild(request(edited));
     }, { iterations: 5 });
   }
+}
+
+// The feature showcase (tests/fixtures/showcase.ts): 86 features of every kind built on each other. A new
+// value of an early variable rebuilds all of them; switching the configuration changes values and
+// suppresses features.
+if (backendName === 'parawerk') {
+  const { strFromU8 } = await import('fflate');
+  const { buildShowcase, SHOWCASE_CONFIGURATIONS, showcaseStep } = await import('../../tests/fixtures/showcase.ts');
+  const { regenerate } = await import('../../src/renderer/src/variables.ts');
+  const { applyConfiguration } = await import('../../src/shared/model/configurations.ts');
+  const showcase = buildShowcase(kernel, strFromU8(showcaseStep(kernel)));
+  const withThickness = async (value: number) =>
+    (await regenerate(showcase.map((feature) => (feature.type === 'variables' ? { ...feature, variables: feature.variables.map((v) => (v.name === 'thickness' ? { ...v, expression: String(value) } : v)) } : feature)), async (sketch) => sketch)).features;
+  const thicker = [await withThickness(12.001), await withThickness(12.002), await withThickness(12.003)];
+  cases['showcase.editEarlyVariable'] = { ...measure((i) => kernel.rebuild(request(thicker[i % 3] ?? showcase, true)), { iterations: 3, warmup: 0 }), info: { features: showcase.length } };
+  const configured = await Promise.all(SHOWCASE_CONFIGURATIONS.list.map(async (configuration) => (await regenerate(applyConfiguration(showcase, configuration), async (sketch) => sketch)).features));
+  cases['showcase.switchConfiguration'] = measure((i) => kernel.rebuild(request(configured[(i + 1) % configured.length] ?? showcase, true)), { iterations: 4, warmup: 0 });
+}
+
+// A fillet on every edge of a face with 100 holes: the face's rim and the rims of all holes.
+{
+  const holes = plate(100);
+  const features: Feature[] = [...holes, { id: 'rims', type: 'fillet', radius: 0.8, edges: [], faces: [{ kind: 'face', name: 'plate:top', at: [195, 195, 12] }] }];
+  cases['fillet.plate100holes.topFaceRims'] = measure((i) => kernel.rebuild(request(features.map((feature) => (feature.id === 'rims' ? { ...feature, radius: 0.8 + (i + 1) * 1e-3 } : feature)))), { iterations: 3, warmup: 1 });
 }
 
 cases['plate.100holes.exportStep'] = measure(() => kernel.exportModel({ features: big, format: 'step' }), { iterations: 5, warmup: 1 });

@@ -126,6 +126,22 @@ point on the curve. Median solve per drag step (`npm run bench:solver`):
 The Phase 2 budgets – a full rebuild of 300 features within 10 s and editing the last feature within
 1 s, both in the kernel worker, so the interface never waits – are met with a wide margin.
 
+## Reference results – Phase 3 (Apple M3)
+
+| Case | Time |
+|---|---|
+| Part of 502 features (167 bosses: sketch, extrusion, rim fillet each): full rebuild / edit last feature | 6.9 s / 151 ms |
+| [Feature showcase](../user-guide/showcase.md) (86 features of every kind): a new value of the first variable, everything rebuilt with mass properties | 2.07 s |
+| Feature showcase: switching between its two configurations | 2.03 s |
+| A fillet on every edge of a face with 100 holes (101 rims, 0.8 mm) | 0.84 s |
+
+Phase 3 asks for parts of 500 features. Editing the last feature stays interactive at 151 ms. A full
+rebuild grows faster than the number of features (100: 0.5 s, 301: 2.8 s, 502: 6.9 s): every Boolean
+operation and every fillet works on the whole body, which grows with each feature – 3.1 s of the 502-feature
+rebuild go to the extrusions and 2.4 s to the fillets, 0.2 s to persistent naming. Rebuilds run in the
+kernel worker, so the interface stays responsive; making early edits of very large parts faster (local
+Booleans, cached tools) is noted for Phase 8.
+
 ## CI runners – Phase 0 baselines
 
 | Case | Linux (AMD EPYC 7763) | Windows (Intel Xeon 8573C) | macOS (Apple M1, virtual) |

@@ -211,13 +211,16 @@ into the part; both 2026-10-27).
 | Modeled threads (ISO metric, external and internal, on cylindrical faces) | ✅ done |
 | Helix (pitch, turns, start angle, hand) as the path of sweeps: springs, coils, helical grooves | ✅ done |
 | Curves: projected (onto faces, sketch on sketch) and composite, as sweep paths | ✅ done |
-| Multi-body parts: separate bodies, combine (add, subtract, common), delete body | ✅ done |
+| Multi-body parts: separate bodies, combine (add, subtract, common), delete body, split by a plane or surface, move and copy bodies, mass properties and exports of single bodies | ✅ done |
 | Configurations and design tables (variables and suppression per configuration) | ✅ done |
 | Full equation support (functions of several values, conditions, pattern counts from equations) | ✅ done |
 | Surface tools (offset, knit, thicken) | ✅ done |
 
 The reference suite covers the Phase 3 features too: 47 parts, 115 edits at early features, all
-rebuilding without lost references.
+rebuilding without lost references. The feature showcase (86 features of every kind) is built, edited,
+fully suppressed feature by feature, saved and exported in every CI run. Performance: a part of 502
+features edits its last feature in 151 ms and rebuilds fully in 6.9 s; a fillet on all 101 rims of a face
+with 100 holes takes 0.84 s (Apple M3, see [benchmarks](docs/benchmarks/README.md)).
 
 ## 2. Guiding principles
 
