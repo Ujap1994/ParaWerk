@@ -11,7 +11,7 @@ import type { ThinSide } from './thin.ts';
 
 export type Vec3 = [number, number, number];
 
-export type FeatureType = 'variables' | 'sketch' | 'plane' | 'axis' | 'point' | 'csys' | 'extrude' | 'revolve' | 'hole' | 'pattern' | 'mirror' | 'box' | 'cylinder' | 'import' | 'fillet' | 'chamfer' | 'shell' | 'draft' | 'sweep' | 'loft' | 'rib' | 'thread' | 'helix' | 'projectedCurve' | 'compositeCurve' | 'combine' | 'deleteBody' | 'split' | 'offsetSurface' | 'knit' | 'thicken';
+export type FeatureType = 'variables' | 'sketch' | 'plane' | 'axis' | 'point' | 'csys' | 'extrude' | 'revolve' | 'hole' | 'pattern' | 'mirror' | 'box' | 'cylinder' | 'import' | 'fillet' | 'chamfer' | 'shell' | 'draft' | 'sweep' | 'loft' | 'rib' | 'thread' | 'helix' | 'projectedCurve' | 'compositeCurve' | 'combine' | 'deleteBody' | 'split' | 'moveBody' | 'offsetSurface' | 'knit' | 'thicken';
 
 /** How a solid-creating feature combines with the existing body. */
 export type BooleanOperation = 'add' | 'cut';
@@ -86,6 +86,7 @@ export const EXPRESSION_FIELDS: Readonly<Record<FeatureType, readonly string[]>>
   combine: [],
   deleteBody: [],
   split: [],
+  moveBody: ['dx', 'dy', 'dz', 'angle'],
   offsetSurface: ['distance'],
   knit: [],
   thicken: ['thickness'],
@@ -482,10 +483,10 @@ export function isCopyFeature(feature: Feature): feature is CopyFeature {
 }
 
 /** Features whose references are chosen in fields of the side panel (reference geometry, patterns, mirror, draft). */
-export type SlotFeature = ReferenceFeature | CopyFeature | DraftFeature | SplitFeature;
+export type SlotFeature = ReferenceFeature | CopyFeature | DraftFeature | SplitFeature | MoveBodyFeature;
 
 export function hasReferenceSlots(feature: Feature): feature is SlotFeature {
-  return isReferenceFeature(feature) || isCopyFeature(feature) || feature.type === 'draft' || feature.type === 'split';
+  return isReferenceFeature(feature) || isCopyFeature(feature) || feature.type === 'draft' || feature.type === 'split' || feature.type === 'moveBody';
 }
 
 /** The feature types a pattern or mirror can copy: those that add or cut material with a tool of their own. */
@@ -694,6 +695,27 @@ export interface SplitFeature extends FeatureBase {
   keep: SplitKeep;
 }
 
+/** How bodies are moved: shifted along X, Y and Z, or turned about an axis. */
+export type MoveBodyMethod = 'translate' | 'rotate';
+
+/**
+ * Moves bodies of the part, each picked by one of its faces, or copies them (docs/adr/0011-multi-body-parts.md):
+ * shifted by `dx`, `dy`, `dz` (method `translate`) or turned by `angle` degrees about an axis (method
+ * `rotate`, its reference in `references`). A moved body keeps the names of its faces; a copy is a body of
+ * its own, its faces named after this feature.
+ */
+export interface MoveBodyFeature extends FeatureBase {
+  type: 'moveBody';
+  method: MoveBodyMethod;
+  references: GeometryRef[];
+  bodies: FaceNameRef[];
+  dx: number;
+  dy: number;
+  dz: number;
+  angle: number;
+  copy: boolean;
+}
+
 export function isCurveFeature(feature: Feature): feature is CurveFeature {
   return feature.type === 'projectedCurve' || feature.type === 'compositeCurve';
 }
@@ -740,6 +762,7 @@ export type Feature =
   | CombineFeature
   | DeleteBodyFeature
   | SplitFeature
+  | MoveBodyFeature
   | OffsetSurfaceFeature
   | KnitFeature
   | ThickenFeature;
@@ -757,7 +780,7 @@ export function isSolidFeature(feature: Feature): feature is BoxFeature | Cylind
   return feature.type === 'box' || feature.type === 'cylinder';
 }
 
-export const FEATURE_TYPES: readonly FeatureType[] = ['variables', 'sketch', 'plane', 'axis', 'point', 'csys', 'extrude', 'revolve', 'hole', 'pattern', 'mirror', 'box', 'cylinder', 'import', 'fillet', 'chamfer', 'shell', 'draft', 'sweep', 'loft', 'rib', 'thread', 'helix', 'projectedCurve', 'compositeCurve', 'combine', 'deleteBody', 'split', 'offsetSurface', 'knit', 'thicken'];
+export const FEATURE_TYPES: readonly FeatureType[] = ['variables', 'sketch', 'plane', 'axis', 'point', 'csys', 'extrude', 'revolve', 'hole', 'pattern', 'mirror', 'box', 'cylinder', 'import', 'fillet', 'chamfer', 'shell', 'draft', 'sweep', 'loft', 'rib', 'thread', 'helix', 'projectedCurve', 'compositeCurve', 'combine', 'deleteBody', 'split', 'moveBody', 'offsetSurface', 'knit', 'thicken'];
 
 /** Features that make a body from nothing (the first feature with material must be one of them, adding). */
 export const BODY_TYPES: ReadonlySet<FeatureType> = new Set(['box', 'cylinder', 'extrude', 'revolve', 'import', 'sweep', 'loft']);
@@ -845,6 +868,8 @@ export function defaultFeature(type: FeatureType, id: string = createFeatureId()
       return { id, type, bodies: [] };
     case 'split':
       return { id, type, method: 'plane', references: [], keep: 'both' };
+    case 'moveBody':
+      return { id, type, method: 'translate', references: [], bodies: [], dx: 20, dy: 0, dz: 0, angle: 90, copy: false };
     case 'offsetSurface':
       return { id, type, faces: [], distance: 5 };
     case 'knit':

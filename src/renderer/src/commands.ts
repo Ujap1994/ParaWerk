@@ -372,7 +372,7 @@ export function startFeature(type: FeatureType): void {
       return ref && referenceFits(ref, 'plane', state, pick) ? [ref] : [];
     })[0];
     if (plane) draft = { ...draft, references: [plane] };
-  } else if (draft.type === 'combine' || draft.type === 'deleteBody') {
+  } else if (draft.type === 'combine' || draft.type === 'deleteBody' || draft.type === 'moveBody') {
     // Faces selected before starting pick their bodies, one face each.
     const naming = getState().display.body?.naming;
     const seen = new Set<number>();
@@ -556,6 +556,8 @@ function firstEmptySlot(feature: SlotFeature): number {
   if (isCopyFeature(feature) && feature.features.length === 0) return FEATURES_SLOT;
   // A draft takes its neutral plane first, then any number of faces.
   if (feature.type === 'draft') return feature.references.length === 0 ? 0 : FEATURES_SLOT;
+  // Moving bodies takes the bodies first, then the axis to turn them about.
+  if (feature.type === 'moveBody') return feature.bodies.length > 0 && referenceRoles(feature).length > feature.references.length ? 0 : FEATURES_SLOT;
   const roles = referenceRoles(feature);
   const empty = roles.findIndex((_, slot) => feature.references[slot] === undefined);
   return empty >= 0 ? empty : Math.max(0, roles.length - 1);
@@ -932,7 +934,7 @@ export function toggleBody(pick: Pick): void {
   const state = getState();
   const edit = state.activeEdit;
   const naming = state.display.body?.naming;
-  if ((edit?.draft.type !== 'combine' && edit?.draft.type !== 'deleteBody') || !naming || pick.kind !== 'face' || !pick.at) return;
+  if ((edit?.draft.type !== 'combine' && edit?.draft.type !== 'deleteBody' && edit?.draft.type !== 'moveBody') || !naming || pick.kind !== 'face' || !pick.at) return;
   const body = bodyOfFace(naming, pick.index);
   const at = bodiesOfRefs(edit.draft.bodies, state).indexOf(body);
   if (at >= 0) {
@@ -1827,6 +1829,16 @@ export function handlePick(pick: Pick | null, additive: boolean): void {
   }
   if (edit?.draft.type === 'projectedCurve') {
     if (pick?.kind === 'face' && edit.draft.method === 'faces') toggleShellFace(pick);
+    return;
+  }
+  // Moving bodies: faces pick the bodies while their list is the active field; the axis field takes the rest.
+  if (edit?.draft.type === 'moveBody') {
+    if (!pick) return;
+    if (pick.kind === 'face' && (state.referenceSlot === FEATURES_SLOT || edit.draft.method === 'translate')) toggleBody(pick);
+    else if (edit.draft.method === 'rotate') {
+      if (state.referenceSlot === FEATURES_SLOT) setState({ referenceSlot: 0 });
+      assignReference(pick);
+    }
     return;
   }
   if (edit?.draft.type === 'combine' || edit?.draft.type === 'deleteBody') {

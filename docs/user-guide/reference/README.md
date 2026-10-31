@@ -54,6 +54,7 @@ the [Composite curve](composite-curve.md), which are described with the *Surface
 | [Projected curve](projected-curve.md) | Curves | Sketch curves projected onto faces, or a 3D curve from two sketches |
 | [Composite curve](composite-curve.md) | Curves | Edges, sketches and curves joined into one path |
 | [Split](split.md) | Bodies | Splits bodies with a plane or a surface into bodies of their own |
+| [Move body](move-body.md) | Bodies | Moves or copies bodies: shifted, or turned about an axis |
 | [Combine](combine.md) | Bodies | Fuses bodies, subtracts them from a main body or keeps what they share |
 | [Delete body](delete-body.md) | Bodies | Removes bodies from the part |
 

@@ -320,6 +320,10 @@ them under *Solid bodies*; click one to select all its faces.
   plane, a planar face or a reference plane), or choose *With a surface* and a surface such as an offset
   surface. *Keep* can keep only the pieces on the side of the plane's normal or on the other side. The
   cut faces are named after their side, so fillets and sketches on them stay put when the part changes.
+- **Move body** moves the bodies you click a face of – shifted along X, Y and Z, or turned about an axis
+  (an edge, a reference axis or a cylindrical face) – or, with *Keep the original (copy)*, adds moved
+  copies as bodies of their own. A moved body keeps the names of its faces, so the features after it
+  follow it.
 - **Delete body** (next to it) removes the bodies you click a face of.
 
 Bodies are picked by one of their faces, which are remembered by name like the edges of a fillet, so the

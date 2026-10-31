@@ -482,6 +482,20 @@ function parseFeatureFields(raw: Json, path: string): Feature {
       return { ...common, type: 'combine', operation: raw.operation as CombineOperation, bodies: faceRefs(raw.bodies, `${path}.bodies`) };
     case 'deleteBody':
       return { ...common, type: 'deleteBody', bodies: faceRefs(raw.bodies, `${path}.bodies`) };
+    case 'moveBody':
+      if (typeof raw.copy !== 'boolean') throw new ValidationError('expected true or false', `${path}.copy`);
+      return {
+        ...common,
+        type: 'moveBody',
+        method: method(raw.method, ['translate', 'rotate'] as const, `${path}.method`),
+        references: geometryRefs(raw.references, `${path}.references`),
+        bodies: faceRefs(raw.bodies, `${path}.bodies`),
+        dx: finiteNumber(raw.dx, `${path}.dx`),
+        dy: finiteNumber(raw.dy, `${path}.dy`),
+        dz: finiteNumber(raw.dz, `${path}.dz`),
+        angle: finiteNumber(raw.angle, `${path}.angle`, 36_000),
+        copy: raw.copy,
+      };
     case 'split': {
       if (!SPLIT_KEEPS.includes(raw.keep as SplitKeep)) throw new ValidationError('expected both, normal or reverse', `${path}.keep`);
       if (raw.surface !== undefined && typeof raw.surface !== 'string') throw new ValidationError('expected a surface id', `${path}.surface`);

@@ -367,6 +367,10 @@ val deleteBodies(int bodyId, val faces) {
   return guarded([&] { return idResult(parawerk::deleteBodies(bodyId, toIntVector(faces))); });
 }
 
+val moveBodies(int bodyId, val faces, val transform, bool copy, std::string name) {
+  return guarded([&] { return idResult(parawerk::moveBodies(bodyId, toIntVector(faces), emscripten::convertJSArrayToNumberVector<double>(transform), copy, name)); });
+}
+
 val splitBody(int bodyId, val plane, int surfaceId, int keep, std::string name) {
   return guarded([&] { return idResult(parawerk::splitBody(bodyId, emscripten::convertJSArrayToNumberVector<double>(plane), surfaceId, keep, name)); });
 }
@@ -460,6 +464,7 @@ EMSCRIPTEN_BINDINGS(parawerk_kernel) {
   emscripten::function("surfaceInfo", &surfaceInfo);
   emscripten::function("deleteBodies", &deleteBodies);
   emscripten::function("splitBody", &splitBody);
+  emscripten::function("moveBodies", &moveBodies);
   emscripten::function("sketchWire", &sketchWire);
   emscripten::function("projectCurve", &projectCurve);
   emscripten::function("intersectCurves", &intersectCurves);

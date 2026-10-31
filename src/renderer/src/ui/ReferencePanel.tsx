@@ -8,7 +8,7 @@ import { useFeatureName } from './FeatureTree.tsx';
 import { CloseIcon } from './icons.tsx';
 import { NumberField } from './NumberField.tsx';
 
-const METHODS = { plane: PLANE_METHODS, axis: AXIS_METHODS, point: POINT_METHODS, csys: CSYS_METHODS, pattern: ['linear', 'circular'], mirror: ['plane'], draft: ['neutralPlane'], split: ['plane', 'surface'] } as const;
+const METHODS = { plane: PLANE_METHODS, axis: AXIS_METHODS, point: POINT_METHODS, csys: CSYS_METHODS, pattern: ['linear', 'circular'], mirror: ['plane'], draft: ['neutralPlane'], split: ['plane', 'surface'], moveBody: ['translate', 'rotate'] } as const;
 
 /** What the fields of a coordinate system stand for. */
 const CSYS_SLOTS = ['origin', 'xAxis', 'yAxis'] as const;

@@ -630,6 +630,15 @@ export const SplitIcon = (p: P) => (
   </Icon>
 );
 
+/** Move or copy body: a block with an arrow. */
+export const MoveBodyIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="M3 11.5 7.5 9l4.5 2.5v6L7.5 20 3 17.5z" />
+    <path d="M3 11.5l4.5 2.5 4.5-2.5M7.5 14v6" opacity="0.6" />
+    <path d="M12.5 7h8.5M18 4l3 3-3 3" />
+  </Icon>
+);
+
 /** Delete body: a block with a minus sign beside it. */
 export const DeleteBodyIcon = (p: P) => (
   <Icon {...p}>
@@ -801,6 +810,7 @@ export const FEATURE_ICONS = {
   combine: CombineIcon,
   deleteBody: DeleteBodyIcon,
   split: SplitIcon,
+  moveBody: MoveBodyIcon,
   offsetSurface: OffsetSurfaceIcon,
   knit: KnitIcon,
   thicken: ThickenIcon,

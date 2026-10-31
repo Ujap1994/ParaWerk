@@ -2289,6 +2289,47 @@ int splitBody(int bodyId, const std::vector<double>& plane, int surfaceId, int k
   return store().add(result.shape, std::move(result.names));
 }
 
+int moveBodies(int bodyId, const std::vector<int>& faceIndices, const std::vector<double>& transform, bool copy, const std::string& name) {
+  if (transform.size() != 12) throw KernelError("operation-failed", "a move needs a transformation (12 values)");
+  const StoredShape& body = store().entry(bodyId);
+  std::vector<StoredShape> solids = solidsOf(body);
+  const std::vector<int32_t> owners = faceSolids(body.shape);
+  std::vector<bool> chosen(solids.size(), false);
+  bool any = false;
+  for (int face : faceIndices) {
+    if (face < 0 || face >= static_cast<int>(owners.size())) throw KernelError("operation-failed", "no such face");
+    const int solid = owners[static_cast<size_t>(face)];
+    if (solid < 0) continue;
+    chosen[static_cast<size_t>(solid)] = true;
+    any = true;
+  }
+  // A body of one solid has no owners (faceSolids maps faces of solids only when there are several).
+  if (!any && solids.size() == 1 && !faceIndices.empty()) {
+    chosen[0] = true;
+    any = true;
+  }
+  if (!any) throw KernelError("move-bodies", "pick the bodies to move");
+  gp_Trsf motion;
+  motion.SetValues(transform[0], transform[1], transform[2], transform[3], transform[4], transform[5], transform[6], transform[7], transform[8], transform[9], transform[10], transform[11]);
+  const TopLoc_Location location(motion);
+  std::vector<StoredShape> parts;
+  for (size_t s = 0; s < solids.size(); ++s) {
+    if (!chosen[s]) {
+      parts.push_back(solids[s]);
+      continue;
+    }
+    // Moved shapes share the geometry; their faces come in the same order, so the names stay in place.
+    StoredShape moved{solids[s].shape.Moved(location), solids[s].names};
+    if (copy) {
+      parts.push_back(solids[s]);
+      for (std::string& label : moved.names) label = name.empty() || label.empty() ? std::string() : name + ":" + label;
+    }
+    parts.push_back(std::move(moved));
+  }
+  StoredShape result = bodyOf(parts);
+  return store().add(result.shape, std::move(result.names));
+}
+
 int fillet(int bodyId, const std::vector<int>& edgeIndices, double radius, const std::vector<std::string>& edgeNames, const std::string& name) {
   const TopoDS_Shape& body = store().get(bodyId);
   BRepFilletAPI_MakeFillet maker(body, ChFi3d_Rational);

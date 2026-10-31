@@ -1,5 +1,5 @@
-import { COPYABLE_TYPES, type SplitFeature, type SurfaceFeature, type CombineFeature, type DeleteBodyFeature, type CurveFeature, isCopyFeature, isEdgeFeature, type CopyFeature, type DraftFeature, type LoftFeature, type RibFeature, type SweepFeature, type ThreadFeature, type EdgeFeature, type EdgeRef, type ExtrudeFeature, type Feature, type FilletFeature, roundFaceCount, type HoleFeature, type ShellFeature, type SketchFeature, type SolidModelingFeature, type Vec3 } from '../shared/model/feature.ts';
-import { circularTransforms, composeTransforms, IDENTITY, linearTransforms, mirrorTransform, sameTransform, type Transform } from '../shared/model/pattern.ts';
+import { COPYABLE_TYPES, type MoveBodyFeature, type SplitFeature, type SurfaceFeature, type CombineFeature, type DeleteBodyFeature, type CurveFeature, isCopyFeature, isEdgeFeature, type CopyFeature, type DraftFeature, type LoftFeature, type RibFeature, type SweepFeature, type ThreadFeature, type EdgeFeature, type EdgeRef, type ExtrudeFeature, type Feature, type FilletFeature, roundFaceCount, type HoleFeature, type ShellFeature, type SketchFeature, type SolidModelingFeature, type Vec3 } from '../shared/model/feature.ts';
+import { circularTransforms, composeTransforms, IDENTITY, linearTransforms, mirrorTransform, rotation, sameTransform, type Transform } from '../shared/model/pattern.ts';
 import { holePositions, holeProblem } from '../shared/model/hole.ts';
 import { edgeFaceNames, edgeRefOf, faceRefOf, resolveEdgeRefs, resolveFaceRef, resolveFacePlane, type BodyNaming } from '../shared/model/naming.ts';
 import { sketchProfile, type Profile, type ProfileEdge } from '../shared/model/profile.ts';
@@ -9,7 +9,7 @@ import type { GeometryRef, ReferenceGeometry } from '../shared/model/reference.t
 import { frameOf, frameOnPlane, ORIGIN_ID, toModel, toSketch, type SketchFrame, type SketchPlaneRef } from '../shared/model/sketch.ts';
 import type { Point2 } from '../shared/model/spline.ts';
 import { hashString } from '../shared/hash.ts';
-import type { KernelFeature, ResolvedSplit, ResolvedSurface, ResolvedBodies, ResolvedCurve, ShapeHandle, SketchCurves, ResolvedCopy, ResolvedDraft, ResolvedLoft, ResolvedRib, ResolvedSweep, ResolvedThread, ResolvedEdgeFeature, ResolvedExtrude, ResolvedHole, ResolvedShell } from './backend.ts';
+import type { KernelFeature, ResolvedMoveBody, ResolvedSplit, ResolvedSurface, ResolvedBodies, ResolvedCurve, ShapeHandle, SketchCurves, ResolvedCopy, ResolvedDraft, ResolvedLoft, ResolvedRib, ResolvedSweep, ResolvedThread, ResolvedEdgeFeature, ResolvedExtrude, ResolvedHole, ResolvedShell } from './backend.ts';
 import { FeatureError } from './feature-error.ts';
 import { axisOfReference, curvedFaceOfReference, referenceValue, type BodyQuery, type ReferenceContext } from './reference.ts';
 
@@ -503,6 +503,20 @@ function resolveBodies(feature: CombineFeature | DeleteBodyFeature, context: Res
   return { ...feature, faceIndices };
 }
 
+/** The bodies to move or copy, by one face each, and the motion: a shift, or a turn about the axis. */
+function resolveMoveBody(feature: MoveBodyFeature, context: ResolveContext): ResolvedMoveBody {
+  const body = context.body;
+  if (!body) throw new FeatureError('no-body');
+  if (feature.bodies.length === 0) throw new FeatureError('move-bodies');
+  const naming = body.naming();
+  const faceIndices = feature.bodies.map((ref) => resolveFaceRef(ref, naming, (face, point) => Math.hypot(...minus(body.face(face).center, point)))?.index ?? -1);
+  const missing = faceIndices.filter((index) => index < 0).length;
+  if (missing > 0) throw new FeatureError('body-missing', String(missing));
+  if (feature.method === 'translate') return { ...feature, faceIndices, transform: [1, 0, 0, feature.dx, 0, 1, 0, feature.dy, 0, 0, 1, feature.dz] };
+  const axis = referenceValue(feature.references[0], 'axis', 0, context);
+  return { ...feature, faceIndices, transform: [...rotation(axis.point, axis.direction, (feature.angle * Math.PI) / 180)] };
+}
+
 /** What splits the bodies: the plane of its reference, or the surface. */
 function resolveSplit(feature: SplitFeature, context: ResolveContext): ResolvedSplit {
   if (!context.body) throw new FeatureError('no-body');
@@ -611,6 +625,7 @@ export function resolveFeature(feature: SolidModelingFeature, before: readonly F
   if (feature.type === 'thread') return resolveThread(feature, context);
   if (feature.type === 'combine' || feature.type === 'deleteBody') return resolveBodies(feature, context);
   if (feature.type === 'split') return resolveSplit(feature, context);
+  if (feature.type === 'moveBody') return resolveMoveBody(feature, context);
   if (feature.type === 'thicken') {
     const surfaceShape = context.surfaces?.get(feature.surface);
     if (!surfaceShape) throw new FeatureError('surface-missing');

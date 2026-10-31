@@ -318,6 +318,10 @@ export function buildShowcase(kernel: Kernel, step: string): Feature[] {
   b.add(extrude('fence', 'Fence', 'fenceSketch', 10, { thin: 'one', thickness: 2 }));
   // A block imported from a STEP file.
   b.add({ id: 'block', name: 'Imported block', type: 'import', operation: 'add', file: 'block.step', hash: hashString(step), data: step });
+  // A puck kept as a body of its own, copied 45 mm to the front, both joined to the plate.
+  b.add({ id: 'puck', name: 'Puck', type: 'cylinder', operation: 'add', merge: false, radius: 4, height: 5, axis: 'z', position: [20, 25, 12] } satisfies CylinderFeature);
+  b.add({ ...(defaultFeature('moveBody') as Feature & { type: 'moveBody' }), id: 'puckCopy', name: 'Puck copy', method: 'translate', dx: 0, dy: -45, dz: 0, copy: true, bodies: [b.faceRef('puck:top')] });
+  b.add({ ...(defaultFeature('combine') as Feature & { type: 'combine' }), id: 'joinPucks', name: 'Join pucks', operation: 'add', bodies: [b.faceRef('plate:start'), b.faceRef('puck:top'), b.faceRef('puckCopy:puck:top')] });
 
   // Edges: a chamfer of two distances on the boss rim, an equal one on the column top, a variable fillet
   // along the fence and a face fillet in the corner between the housing and the plate.

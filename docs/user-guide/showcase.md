@@ -12,7 +12,7 @@ what ParaWerk can do, to try out editing, or as a starting point for your own te
 
 ## What is in it
 
-83 features of all 32 kinds, in aluminium EN AW-6061:
+86 features of all 33 kinds, in aluminium EN AW-6061:
 
 | Area | Features |
 |---|---|
@@ -29,6 +29,7 @@ what ParaWerk can do, to try out editing, or as a starting point for your own te
 | Fence | A thin feature from an open line, with a variable fillet along its top |
 | Tab and pin | A box with a full round at its end; a cylinder with a chamfer (distance and angle) and a modeled M10 thread |
 | Import | A block imported from a STEP file |
+| Bodies | A puck kept as a body of its own, copied 45 mm to the front (*Move body* with *Keep the original*), both joined to the plate (*Combine*) |
 | Surfaces and bodies | The boss top offset 10 mm up and thickened into a lid of its own, the lid split in two slabs along a surface in its middle (*Split*), both slabs deleted with *Delete body*; copies of two tab faces knit into one surface |
 | Curves and frames | A sketch line projected onto the plate, a composite curve of three top edges, a coordinate system at the plate's corner |
 | Configurations | *Standard*, and *Compact* (thinner plate, lower boss, without spring, column and fence) |

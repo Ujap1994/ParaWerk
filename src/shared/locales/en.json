@@ -131,7 +131,8 @@
       "offsetSurface": "Make a surface from faces of the part, offset along their normals (0 for a copy)",
       "knit": "Join surfaces into one where their edges meet",
       "thicken": "Turn a surface into a solid: give it a thickness, or fill it when it encloses a volume",
-      "split": "Split bodies with a plane or a surface into bodies of their own"
+      "split": "Split bodies with a plane or a surface into bodies of their own",
+      "moveBody": "Move or copy bodies: shift them, or turn them about an axis"
     },
     "tabs": {
       "label": "Command tabs",
@@ -234,7 +235,8 @@
     "thicken": "Thicken",
     "primitives": "Box and cylinder",
     "edgeFeatures": "Fillet and chamfer",
-    "split": "Split"
+    "split": "Split",
+    "moveBody": "Move body"
   },
   "features": {
     "plane": "Plane",
@@ -268,7 +270,8 @@
     "offsetSurface": "Offset surface",
     "knit": "Knit",
     "thicken": "Thicken",
-    "split": "Split"
+    "split": "Split",
+    "moveBody": "Move/copy body"
   },
   "tree": {
     "title": "Feature tree",
@@ -564,7 +567,8 @@
     "offset-failed": "The faces cannot be offset by this distance: a curved face may be smaller than the distance inwards.",
     "thicken-failed": "The surface cannot be thickened like this; try a smaller thickness or the other side.",
     "faces-bodies": "The picked faces belong to different bodies. Pick faces of one body, or combine the bodies first.",
-    "split-nothing": "The plane or surface does not cross any body. Move it, or choose another one."
+    "split-nothing": "The plane or surface does not cross any body. Move it, or choose another one.",
+    "move-bodies": "Pick the bodies to move: click a face of each in the 3D view."
   },
   "warnings": {
     "edge-missing_one": "{{count}} selected edge no longer exists and is left out. Edit the feature to remove it or pick another edge.",
@@ -820,6 +824,10 @@
       "split": {
         "plane": "With a plane",
         "surface": "With a surface"
+      },
+      "moveBody": {
+        "translate": "Shift",
+        "rotate": "Turn about an axis"
       }
     },
     "roles": {
@@ -1221,5 +1229,13 @@
       "reverse": "The pieces on the other side"
     },
     "hint": "Every body the plane or surface crosses is split into bodies of their own; the others stay as they are. Combine the pieces again later, delete the ones you do not need, or keep only one side of the plane here."
+  },
+  "moveBody": {
+    "dx": "Shift X",
+    "dy": "Shift Y",
+    "dz": "Shift Z",
+    "angle": "Angle",
+    "copy": "Keep the original (copy)",
+    "hint": "Click a face of each body to move. A moved body keeps the names of its faces, so the features after it follow it; a copy is a body of its own."
   }
 }

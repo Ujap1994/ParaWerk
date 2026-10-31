@@ -109,6 +109,7 @@ export function applyFeature(oc: OC, body: TopoDS_Shape | null, feature: KernelF
       case 'combine':
       case 'deleteBody':
       case 'split':
+      case 'moveBody':
       case 'thicken':
         throw new FeatureError('operation-failed', 'this feature needs the ParaWerk kernel');
     }

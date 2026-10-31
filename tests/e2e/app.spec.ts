@@ -1194,6 +1194,40 @@ test('splits a block at the right plane into two bodies, then keeps one side', a
   await expect(page.locator('[data-testid="tree-body"]')).toHaveCount(0);
 });
 
+test('moves a body by a face picked in the view, then keeps a copy in place', async () => {
+  launched = await launchApp({ width: 1000, height: 640 });
+  const { page } = launched;
+  // A plate and a puck of its own on it at x 30.
+  await page.evaluate(() => {
+    const features = [
+      { id: 'plate', type: 'box', operation: 'add', width: 100, depth: 60, height: 10, position: [0, 0, 0] },
+      { id: 'puck', type: 'cylinder', operation: 'add', merge: false, radius: 5, height: 8, axis: 'z', position: [30, 0, 10] },
+    ];
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features, past: [], future: [] }, savedFeatures: features, dirty: false });
+  });
+  const volumeBefore = await volume(page);
+  await page.click('[data-tab="surfaces"]');
+  await page.click('[data-command="moveBody"]');
+  await expect(page.locator('[data-testid="move-bodies"]')).toHaveClass(/is-active/);
+  await expect(page.locator('.property-panel .panel-error')).toHaveCount(0);
+  await clickWorldPoint(page, [30, 0, 18]);
+  await expect(page.locator('[data-testid="move-bodies"] .seed-chip')).toHaveCount(1);
+  await page.locator('[data-testid="move-dx"]').fill('-60');
+  await page.locator('[data-testid="move-dx"]').press('Tab');
+  await page.click('[data-testid="panel-ok"]');
+  expect(await volume(page)).toBeCloseTo(volumeBefore, 2);
+  await expect(page.locator('[data-testid="tree-body"]')).toHaveCount(2);
+  expect((await state(page)).history.features[2]).toMatchObject({ type: 'moveBody', method: 'translate', dx: -60, copy: false, bodies: [{ kind: 'face', name: 'puck:top' }] });
+
+  // Keeping the original as well: a third body.
+  const moved = (await state(page)).history.features[2]?.id;
+  await page.locator(`.feature-tree .tree-item[data-feature-id="${moved}"]`).dblclick();
+  await page.click('[data-testid="move-copy"]');
+  await page.click('[data-testid="panel-ok"]');
+  await expect(page.locator('[data-testid="tree-body"]')).toHaveCount(3);
+  expect(await volume(page)).toBeCloseTo(volumeBefore + Math.PI * 25 * 8, 2);
+});
+
 test('adds a box as a body of its own and combines the bodies', async () => {
   launched = await launchApp({ width: 1000, height: 640 });
   const { page } = launched;

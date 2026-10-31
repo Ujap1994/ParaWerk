@@ -55,6 +55,7 @@ interface EmbindModule {
   surfaceInfo(_0: number): any;
   deleteBodies(_0: number, _1: any): any;
   splitBody(_0: number, _1: any, _2: number, _3: number, _4: EmbindString): any;
+  moveBodies(_0: number, _1: any, _2: any, _3: boolean, _4: EmbindString): any;
   sketchWire(_0: any, _1: any): any;
   projectCurve(_0: number, _1: number, _2: any, _3: any, _4: any, _5: number): any;
   intersectCurves(_0: number, _1: any, _2: number, _3: any): any;

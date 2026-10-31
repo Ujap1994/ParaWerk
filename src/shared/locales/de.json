@@ -131,7 +131,8 @@
       "offsetSurface": "Eine Fläche aus Flächen des Teils erzeugen, entlang ihrer Normalen versetzt (0 für eine Kopie)",
       "knit": "Flächen dort zu einer verbinden, wo ihre Kanten aufeinandertreffen",
       "thicken": "Eine Fläche zu einem Volumen machen: ihr eine Dicke geben oder sie füllen, wenn sie ein Volumen umschließt",
-      "split": "Körper mit einer Ebene oder Fläche in eigene Körper teilen"
+      "split": "Körper mit einer Ebene oder Fläche in eigene Körper teilen",
+      "moveBody": "Körper verschieben oder kopieren: entlang X, Y, Z versetzen oder um eine Achse drehen"
     },
     "tabs": {
       "label": "Befehlsregister",
@@ -234,7 +235,8 @@
     "thicken": "Verdicken",
     "primitives": "Quader und Zylinder",
     "edgeFeatures": "Verrundung und Fase",
-    "split": "Teilen"
+    "split": "Teilen",
+    "moveBody": "Körper verschieben"
   },
   "features": {
     "plane": "Ebene",
@@ -268,7 +270,8 @@
     "offsetSurface": "Versetzte Fläche",
     "knit": "Zusammengefügte Fläche",
     "thicken": "Verdickung",
-    "split": "Teilen"
+    "split": "Teilen",
+    "moveBody": "Körper verschieben/kopieren"
   },
   "tree": {
     "title": "Featurebaum",
@@ -564,7 +567,8 @@
     "offset-failed": "Die Flächen lassen sich nicht um diesen Abstand versetzen: Eine gekrümmte Fläche ist vielleicht kleiner als der Abstand nach innen.",
     "thicken-failed": "Die Fläche lässt sich so nicht verdicken; versuche eine kleinere Dicke oder die andere Seite.",
     "faces-bodies": "Die gewählten Flächen gehören zu verschiedenen Körpern. Wähle Flächen eines Körpers oder kombiniere die Körper zuerst.",
-    "split-nothing": "Die Ebene oder Fläche schneidet keinen Körper. Verschiebe sie oder wähle eine andere."
+    "split-nothing": "Die Ebene oder Fläche schneidet keinen Körper. Verschiebe sie oder wähle eine andere.",
+    "move-bodies": "Wähle die zu verschiebenden Körper: Klicke in der 3D-Ansicht eine Fläche jedes Körpers an."
   },
   "warnings": {
     "edge-missing_one": "{{count}} ausgewählte Kante existiert nicht mehr und wird ausgelassen. Bearbeite das Feature, um sie zu entfernen oder eine andere Kante zu wählen.",
@@ -820,6 +824,10 @@
       "split": {
         "plane": "Mit einer Ebene",
         "surface": "Mit einer Fläche"
+      },
+      "moveBody": {
+        "translate": "Versetzen",
+        "rotate": "Um eine Achse drehen"
       }
     },
     "roles": {
@@ -1221,5 +1229,13 @@
       "reverse": "Die Teile auf der anderen Seite"
     },
     "hint": "Jeder Körper, den die Ebene oder Fläche schneidet, wird in eigene Körper geteilt; die übrigen bleiben, wie sie sind. Die Teile lassen sich später wieder kombinieren oder nicht benötigte löschen – oder hier nur eine Seite der Ebene behalten."
+  },
+  "moveBody": {
+    "dx": "Versatz X",
+    "dy": "Versatz Y",
+    "dz": "Versatz Z",
+    "angle": "Winkel",
+    "copy": "Original behalten (kopieren)",
+    "hint": "Klicke eine Fläche jedes Körpers an, der sich bewegen soll. Ein verschobener Körper behält die Namen seiner Flächen, die Features danach folgen ihm; eine Kopie ist ein eigener Körper."
   }
 }

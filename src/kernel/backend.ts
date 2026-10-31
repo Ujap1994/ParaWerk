@@ -1,4 +1,4 @@
-import type { SplitFeature, ThickenFeature, CombineFeature, DeleteBodyFeature, ProjectionSide, CopyFeature, DraftFeature, EdgeFeature, LoftFeature, RibFeature, SweepFeature, ThreadFeature, EdgeRef, ExtrudeFeature, HoleFeature, RevolveFeature, ShellFeature, SolidModelingFeature, Vec3 } from '../shared/model/feature.ts';
+import type { MoveBodyFeature, SplitFeature, ThickenFeature, CombineFeature, DeleteBodyFeature, ProjectionSide, CopyFeature, DraftFeature, EdgeFeature, LoftFeature, RibFeature, SweepFeature, ThreadFeature, EdgeRef, ExtrudeFeature, HoleFeature, RevolveFeature, ShellFeature, SolidModelingFeature, Vec3 } from '../shared/model/feature.ts';
 import type { FaceNameRef, ReferenceGeometry } from '../shared/model/reference.ts';
 import type { BodyNaming } from '../shared/model/naming.ts';
 import type { Profile, ProfileEdge, ProfileLoop } from '../shared/model/profile.ts';
@@ -125,9 +125,10 @@ export type ResolvedEdgeFeature = EdgeFeature & {
 
 /** A feature as a backend builds it, with its references to earlier features resolved. */
 export type KernelFeature =
-  | Exclude<SolidModelingFeature, ExtrudeFeature | RevolveFeature | EdgeFeature | HoleFeature | CopyFeature | ShellFeature | DraftFeature | SweepFeature | LoftFeature | RibFeature | ThreadFeature | CombineFeature | DeleteBodyFeature | ThickenFeature | SplitFeature>
+  | Exclude<SolidModelingFeature, ExtrudeFeature | RevolveFeature | EdgeFeature | HoleFeature | CopyFeature | ShellFeature | DraftFeature | SweepFeature | LoftFeature | RibFeature | ThreadFeature | CombineFeature | DeleteBodyFeature | ThickenFeature | SplitFeature | MoveBodyFeature>
   | ResolvedBodies
   | ResolvedSplit
+  | ResolvedMoveBody
   | ResolvedThicken
   | ResolvedExtrude
   | ResolvedRevolve
@@ -174,6 +175,9 @@ export interface SurfaceGeometry {
 
 /** A thickened surface, with the surface it thickens. */
 export type ResolvedThicken = ThickenFeature & { surfaceShape: ShapeHandle };
+
+/** Bodies moved or copied: the faces that pick them (topological indices) and the motion (12 values). */
+export type ResolvedMoveBody = MoveBodyFeature & { faceIndices: number[]; transform: number[] };
 
 /** A split by a plane (point and normal, 6 values) or by a surface. */
 export type ResolvedSplit = SplitFeature & ({ plane: number[] } | { surfaceShape: ShapeHandle });

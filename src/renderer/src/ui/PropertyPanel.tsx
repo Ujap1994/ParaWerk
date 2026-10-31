@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import { formatQuantity } from '../format.ts';
-import { CHAMFER_METHODS, SPLIT_KEEPS, type SplitFeature, type SplitKeep, type DraftFeature, type KnitFeature, type ThickenFeature, type ThickenSide, THICKEN_SIDES, isSurfaceFeature, type CombineFeature, type DeleteBodyFeature, COMBINE_OPERATIONS, type CombineOperation, type SweepFeature, MAX_TWIST, type HelixFeature, type ProjectedCurveFeature, type CompositeCurveFeature, isCurveFeature, PROJECTION_METHODS, type ProjectionMethod, PROJECTION_SIDES, type ProjectionSide, MAX_HELIX_TURNS, type LoftFeature, RIB_DIRECTIONS, type RibDirection, type ThreadFeature, FILLET_METHODS, roundFaceCount, type FilletFeature, type FilletMethod, EXTRUDE_ENDS, extrudesOneWay, MAX_DRAFT_ANGLE, type RevolveDirection, hasReferenceSlots, isCopyFeature, type Axis, type BooleanOperation, type ChamferFeature, type ChamferMethod, type EdgeFeature, type ExtrudeDirection, type ExtrudeEnd, type ExtrudeFeature, type Feature, type RevolveFeature, type Vec3 } from '../../../shared/model/feature.ts';
+import { CHAMFER_METHODS, type MoveBodyFeature, SPLIT_KEEPS, type SplitFeature, type SplitKeep, type DraftFeature, type KnitFeature, type ThickenFeature, type ThickenSide, THICKEN_SIDES, isSurfaceFeature, type CombineFeature, type DeleteBodyFeature, COMBINE_OPERATIONS, type CombineOperation, type SweepFeature, MAX_TWIST, type HelixFeature, type ProjectedCurveFeature, type CompositeCurveFeature, isCurveFeature, PROJECTION_METHODS, type ProjectionMethod, PROJECTION_SIDES, type ProjectionSide, MAX_HELIX_TURNS, type LoftFeature, RIB_DIRECTIONS, type RibDirection, type ThreadFeature, FILLET_METHODS, roundFaceCount, type FilletFeature, type FilletMethod, EXTRUDE_ENDS, extrudesOneWay, MAX_DRAFT_ANGLE, type RevolveDirection, hasReferenceSlots, isCopyFeature, type Axis, type BooleanOperation, type ChamferFeature, type ChamferMethod, type EdgeFeature, type ExtrudeDirection, type ExtrudeEnd, type ExtrudeFeature, type Feature, type RevolveFeature, type Vec3 } from '../../../shared/model/feature.ts';
 import { DEFAULT_THIN_THICKNESS, THIN_SIDES, type ThinSide } from '../../../shared/model/thin.ts';
 import { METRIC_SIZES } from '../../../shared/model/hole.ts';
-import type { GeometryRef } from '../../../shared/model/reference.ts';
+import type { FaceNameRef, GeometryRef } from '../../../shared/model/reference.ts';
 import { referenceRoles } from '../references.ts';
 import { bodiesOf, bodiesOfRefs } from '../bodies.ts';
 import { resolveEdgeRefs } from '../../../shared/model/naming.ts';
@@ -75,20 +75,27 @@ function OperationField({ value, firstFeature }: { value: BooleanOperation; firs
   );
 }
 
-/** The bodies a combine or delete-body feature picks (the main body first), and for combine how. */
-function BodiesFields({ draft }: { draft: CombineFeature | DeleteBodyFeature }) {
+/** The bodies that face references pick in the shown part (null: gone), each with its name in the tree. */
+function useChosenBodies(refs: readonly FaceNameRef[]): { body: number | null; label: string }[] {
   const { t } = useTranslation();
   const features = useAppState((state) => state.history.features);
   const display = useAppState((state) => state.display);
   const history = useAppState((state) => state.history);
-  const chosen = bodiesOfRefs(draft.bodies, { display, history });
   const nameOf = useFeatureName();
   const bodies = display.body ? bodiesOf(display.body.naming) : [];
-  const label = (body: number | null) => {
+  return bodiesOfRefs(refs, { display, history }).map((body) => {
     const info = bodies.find((candidate) => candidate.index === body);
     const index = info ? features.findIndex((feature) => feature.id === info.feature) : -1;
-    return body === null ? t('references.lost') : index >= 0 ? nameOf(features, index) : t('bodies.body', { n: body + 1 });
-  };
+    return { body, label: body === null ? t('references.lost') : index >= 0 ? nameOf(features, index) : t('bodies.body', { n: body + 1 }) };
+  });
+}
+
+/** The bodies a combine or delete-body feature picks (the main body first), and for combine how. */
+function BodiesFields({ draft }: { draft: CombineFeature | DeleteBodyFeature }) {
+  const { t } = useTranslation();
+  const picked = useChosenBodies(draft.bodies);
+  const chosen = picked.map((entry) => entry.body);
+  const label = (body: number | null) => picked.find((entry) => entry.body === body)?.label ?? t('references.lost');
   return (
     <Section title={t('panel.parameters')}>
       {draft.type === 'combine' ? (
@@ -401,6 +408,8 @@ function FeatureFields({ draft, index }: { draft: Feature; index: number }) {
       return <BodiesFields draft={draft} />;
     case 'split':
       return <SplitFields draft={draft} index={index} />;
+    case 'moveBody':
+      return <MoveBodyFields draft={draft} />;
     case 'offsetSurface':
       return (
         <Section title={t('panel.parameters')}>
@@ -618,6 +627,54 @@ function KnitFields({ draft, index }: { draft: KnitFeature; index: number }) {
       <SurfaceSummary id={draft.id} />
       <p className="panel-hint">{t('surface.knitHint')}</p>
     </Section>
+  );
+}
+
+/** Moving or copying bodies: the bodies (a face each, while their list is the active field), the motion, and whether the originals stay. */
+function MoveBodyFields({ draft }: { draft: MoveBodyFeature }) {
+  const { t } = useTranslation();
+  const active = useAppState((state) => state.referenceSlot === commands.FEATURES_SLOT);
+  const picked = useChosenBodies(draft.bodies);
+  return (
+    <>
+      <Section title={t('references.definition')}>
+        <div className={`reference-slot seed-list${active ? ' is-active' : ''}${draft.bodies.length > 0 ? ' is-filled' : ''}`} data-testid="move-bodies">
+          <button type="button" className="reference-slot-button" onClick={() => commands.setReferenceSlot(commands.FEATURES_SLOT)}>
+            <span className="reference-slot-role">{t('bodies.chosen')}</span>
+            {draft.bodies.length === 0 ? <span className="reference-slot-value">{active ? t('bodies.pick') : t('references.empty')}</span> : null}
+          </button>
+          {draft.bodies.length > 0 ? (
+            <ul className="seed-chips">
+              {picked.map((entry, i) => (
+                <li key={i} className="seed-chip">
+                  <span>{entry.label}</span>
+                  <button type="button" className="icon-button" title={t('references.clear')} aria-label={t('references.clear')} onClick={() => commands.updateDraft({ bodies: draft.bodies.filter((_, j) => j !== i) })}>
+                    <CloseIcon />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+        <ReferenceSlots draft={draft} />
+      </Section>
+      <Section title={t('panel.parameters')}>
+        {draft.method === 'translate' ? (
+          <div className="field-row">
+            {(['dx', 'dy', 'dz'] as const).map((field) => (
+              <NumberField key={field} label={t(`moveBody.${field}`)} signed value={draft[field]} testId={`move-${field}`} {...equation(draft, field)} onChange={(value) => commands.updateDraft({ [field]: value })} />
+            ))}
+          </div>
+        ) : (
+          <NumberField label={t('moveBody.angle')} unit="°" step={15} signed value={draft.angle} testId="move-angle" {...equation(draft, 'angle')} onChange={(angle) => commands.updateDraft({ angle })} />
+        )}
+        <label className="checkbox-field">
+          <input type="checkbox" checked={draft.copy} data-testid="move-copy" onChange={(event) => commands.updateDraft({ copy: event.target.checked })} />
+          {t('moveBody.copy')}
+        </label>
+        <p className="panel-hint">{t('moveBody.hint')}</p>
+      </Section>
+    </>
   );
 }
 
@@ -1157,9 +1214,9 @@ export function PropertyPanel() {
   const draft = edit.draft;
   const incomplete =
     hasReferenceSlots(draft) &&
-    (draft.references.length < referenceRoles(draft).length || (isCopyFeature(draft) && draft.features.length === 0) || (draft.type === 'split' && draft.method === 'surface' && !draft.surface));
+    (draft.references.length < referenceRoles(draft).length || (isCopyFeature(draft) && draft.features.length === 0) || (draft.type === 'split' && draft.method === 'surface' && !draft.surface) || (draft.type === 'moveBody' && draft.bodies.length === 0));
   const failure = result?.id === draft.id && result.status === 'error' ? result.error : undefined;
-  const error = incomplete && (failure?.code === 'reference-missing' || failure?.code === 'pattern-empty' || failure?.code === 'surface-missing') ? undefined : failure;
+  const error = incomplete && (failure?.code === 'reference-missing' || failure?.code === 'pattern-empty' || failure?.code === 'surface-missing' || failure?.code === 'move-bodies') ? undefined : failure;
   // Lost fillet edges have their own notice in the edges section.
   const warning = result?.id === draft.id && result.status === 'ok' && result.warning?.code !== 'edge-missing' ? result.warning : undefined;
   // Variables are applied only when every one has a valid name and a value.

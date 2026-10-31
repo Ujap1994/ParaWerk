@@ -12,7 +12,10 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
   into bodies of their own – mold halves, a part cut in two for printing. With a plane it can keep only
   the pieces on one side. The cut faces are named after their side, so features on them stay put when the
   part changes. Parts with a split need format version 11.
-- A feature showcase: one large example part with 83 features of all 32 kinds, built on each other –
+- **Move body** (next to it) moves the bodies you click a face of – shifted along X, Y and Z or turned
+  about an axis – or adds moved copies of them as bodies of their own. Moved bodies keep the names of
+  their faces, so the features after them follow them.
+- A feature showcase: one large example part with 86 features of all 33 kinds, built on each other –
   patterns of patterns, a shelled and drafted housing joined to the plate, a spring, a loft, a thread,
   surfaces, curves and two configurations ([docs/examples/feature-showcase.pwpart](docs/examples/feature-showcase.pwpart),
   described in the user guide). A test builds it in every CI run, edits its variables and its first

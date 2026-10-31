@@ -41,8 +41,8 @@ function visibleSelection(state: AppState): Pick[] {
   if (edit && extrudesUpTo(edit.draft)) return referencePicks(builtOn(edit.draft), state).filter((pick) => pick.kind === 'face' || pick.kind === 'edge' || pick.kind === 'vertex');
   if (edit?.draft.type === 'projectedCurve') return edit.draft.method === 'faces' ? referencePicks(edit.draft.faces, state) : [];
   if (edit?.draft.type === 'offsetSurface') return referencePicks(edit.draft.faces, state);
-  // The bodies a combine or delete-body feature picks, all their faces (until the preview shows the result).
-  if (edit?.draft.type === 'combine' || edit?.draft.type === 'deleteBody') {
+  // The bodies a combine, delete-body or move feature picks, all their faces (until the preview shows the result).
+  if (edit?.draft.type === 'combine' || edit?.draft.type === 'deleteBody' || edit?.draft.type === 'moveBody') {
     const naming = state.display.body?.naming;
     if (!naming || state.display.preview) return [];
     const chosen = new Set(bodiesOfRefs(edit.draft.bodies, state));

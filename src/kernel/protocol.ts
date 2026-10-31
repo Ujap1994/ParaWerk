@@ -146,6 +146,7 @@ export type FeatureErrorCode =
   | 'combine-bodies'
   | 'body-missing'
   | 'split-nothing'
+  | 'move-bodies'
   | 'faces-bodies'
   | 'surface-faces'
   | 'surface-missing'

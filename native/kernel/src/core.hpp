@@ -139,6 +139,13 @@ int deleteBodies(int bodyId, const std::vector<int>& faceIndices);
 int splitBody(int bodyId, const std::vector<double>& plane, int surfaceId, int keep, const std::string& name = "");
 
 /**
+ * Moves the bodies holding the faces `faceIndices` by a rigid motion (`transform`: 12 values, the rows of a
+ * 3 × 4 matrix), or – with `copy` – adds moved copies of them as bodies of their own, their faces named
+ * "<name>:<original name>". Moved bodies keep their face names. Fails with "move-bodies" without bodies.
+ */
+int moveBodies(int bodyId, const std::vector<int>& faceIndices, const std::vector<double>& transform, bool copy, const std::string& name = "");
+
+/**
  * The solid swept by planar regions along the normal of their plane, from `from` to `to`.
  *
  * `profile` holds the regions in plane coordinates: the region count, then per region its loop count
