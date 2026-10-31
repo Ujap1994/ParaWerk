@@ -316,6 +316,8 @@ npm run package        # build installers for the current platform into release/
   `npm run docs:screenshots`, so they always match the current version)
 - [Function reference](docs/user-guide/reference/README.md): one page per function – where to find it,
   step-by-step instructions, every option with its default, tips, messages and what to do about them
+- [Feature showcase](docs/user-guide/showcase.md): one large example part with nearly every feature
+  ([`.pwpart`](docs/examples/feature-showcase.pwpart)), built and edited in every CI run
 - [Roadmap](ROADMAP.md) with effort estimates, phases, risks and decision gates
 - [Architecture decision records](docs/adr/README.md)
 - [Benchmarks](docs/benchmarks/README.md)

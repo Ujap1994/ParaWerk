@@ -287,7 +287,13 @@ function resolveCopy(feature: CopyFeature, before: readonly Feature[], context: 
   });
   const total = copies.reduce((sum, list) => sum + list.length, 0);
   if (total > MAX_COPIES) throw new FeatureError('pattern-too-many', String(total));
-  return { ...feature, seeds: seeds.map(({ seed }) => seed), transforms: copies.map((list) => list.flat()), ...(along ? { direction: along } : {}) };
+  return {
+    ...feature,
+    seeds: seeds.map(({ seed }) => seed),
+    transforms: copies.map((list) => list.flat()),
+    places: seeds.map(({ placed }, i) => [...placed, ...(copies[i] ?? [])].flat()),
+    ...(along ? { direction: along } : {}),
+  };
 }
 
 /**
@@ -300,7 +306,8 @@ function placesOfCopy(copy: CopyFeature, before: readonly Feature[], index: numb
   return built.seeds.map((inner, i) => {
     const at = before.findIndex((candidate) => candidate.id === inner.id);
     const seed = at >= 0 ? (resolveFeature(before[at] as SolidModelingFeature, before.slice(0, at), context) as Exclude<KernelFeature, ResolvedCopy>) : inner;
-    return { seed, placed: [IDENTITY, ...chunks(built.transforms[i] ?? [])] };
+    // All places of the feature: also those of patterns inside the copied one (a pattern of a pattern of a pattern).
+    return { seed, placed: built.places ? chunks(built.places[i] ?? []) : [IDENTITY, ...chunks(built.transforms[i] ?? [])] };
   });
 }
 

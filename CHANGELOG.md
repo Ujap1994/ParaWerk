@@ -7,6 +7,18 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### Added
+- A feature showcase: one large example part with 81 features of all 31 kinds, built on each other –
+  patterns of patterns, a shelled and drafted housing joined to the plate, a spring, a loft, a thread,
+  surfaces, curves and two configurations ([docs/examples/feature-showcase.pwpart](docs/examples/feature-showcase.pwpart),
+  described in the user guide). A test builds it in every CI run, edits its variables and its first
+  sketch, suppresses every feature once, saves, opens and exports it; an end-to-end test opens it in
+  ParaWerk and switches its configurations.
+
+### Fixed
+- A pattern or mirror of a pattern of a pattern copies all places of the features inside: mirroring a grid
+  made from a row copied only the grid's own copies, not the row's (10 instead of 12 holes).
+
 ## [0.4.0-alpha.5] - 2026-10-27
 
 Linear patterns go into the part, with an arrow for their direction, on top of 0.4.0-alpha.4. Still an

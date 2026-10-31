@@ -80,6 +80,11 @@ export type ResolvedCopy = CopyFeature & {
   seeds: Exclude<KernelFeature, ResolvedCopy>[];
   /** For each seed: 12 numbers per copy (see src/shared/model/pattern.ts). */
   transforms: number[][];
+  /**
+   * For each seed: 12 numbers per place it is at after this feature – where it was built, the copies of the
+   * patterns this one copies, and this one's copies. A pattern of this one copies all of them.
+   */
+  places?: number[][];
   /** Linear patterns: the unit direction the copies go in (Other direction applied). */
   direction?: Vec3;
 };

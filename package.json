@@ -28,6 +28,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test --project=e2e",
     "docs:screenshots": "playwright test --project=docs",
+    "docs:showcase": "node --experimental-strip-types scripts/write-showcase.ts",
     "bench:kernel": "node --experimental-strip-types bench/kernel/run.ts",
     "bench:solver": "node --experimental-strip-types bench/solver/run.ts",
     "bench:render": "playwright test --project=bench",

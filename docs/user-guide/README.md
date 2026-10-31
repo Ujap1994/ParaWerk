@@ -25,6 +25,8 @@
 9. [Troubleshooting](troubleshooting.md): self-test, logs and known limitations
 10. [Function reference](reference/README.md): one page per function, from **Sketch** to **Export** –
     where to find it, step by step, every option, tips and messages
+11. [Feature showcase](showcase.md): one large example part with nearly every feature, to open and
+    try out
 
 ## What the alpha can do
 

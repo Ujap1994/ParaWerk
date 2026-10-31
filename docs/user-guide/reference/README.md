@@ -4,7 +4,8 @@ One page for every function of ParaWerk: where to find it, what it needs, how to
 every option with its default, tips, the messages it can show and what to do about them.
 
 The [user guide](../README.md) explains the concepts and walks through whole workflows; this reference
-is the place to look up one function. The pages follow the command bar from left to right.
+is the place to look up one function. The pages follow the command bar from left to right. The
+[feature showcase](../showcase.md) is an example part that uses nearly all of them.
 
 > [!TIP]
 > Most functions follow the same pattern: **select first, then act** (what you select before clicking

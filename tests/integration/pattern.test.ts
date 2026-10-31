@@ -174,6 +174,16 @@ describe('patterns of patterns as they were built', () => {
     expect(result.captures[0]?.mesh?.naming.faces).toEqual(expect.arrayContaining(['grid:boss:0:boss:side', 'grid:boss:2:boss:side']));
   });
 
+  it('copies a pattern of a pattern with all its places', () => {
+    // A row of three bosses, the row twice along y (a grid of six), the grid mirrored: twelve bosses.
+    const row = pattern({ id: 'row', references: [right], features: ['boss'], count: 3, spacing: 20 });
+    const grid = pattern({ id: 'grid', references: [front], features: ['row'], count: 2, spacing: 30 });
+    const twice = mirror({ id: 'twice', references: [right], features: ['grid'] });
+    const result = build([plate, boss, row, grid, twice]);
+    expect(result.features.map((feature) => feature.status)).toEqual(['ok', 'ok', 'ok', 'ok', 'ok']);
+    expect(result.captures[0]?.properties?.volume).toBeCloseTo(PLATE + 12 * BOSS, 4);
+  });
+
   it('tells when a pattern it copies has failed', () => {
     const row = pattern({ id: 'row', references: [{ kind: 'feature', feature: 'gone' }], features: ['boss'], count: 3, spacing: 30 });
     const grid = pattern({ id: 'grid', references: [front], features: ['row'], count: 2, spacing: 30 });

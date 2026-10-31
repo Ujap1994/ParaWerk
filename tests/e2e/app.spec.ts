@@ -1142,6 +1142,29 @@ test('turns a pattern along an edge towards the part, whichever parallel edge is
   expect(topFlip).not.toBe(bottomFlip);
 });
 
+test('opens the feature showcase and builds all of its features, in both configurations', async () => {
+  launched = await launchApp({ width: 1440, height: 900 });
+  const { page } = launched;
+  const file = [...(await readFile(path.join(repoRoot, 'docs/examples/feature-showcase.pwpart')))];
+  await page.evaluate((bytes) => (window as unknown as { __parawerk: { commands: { loadDocument(path: string, data: Uint8Array): void } } }).__parawerk.commands.loadDocument('feature-showcase.pwpart', new Uint8Array(bytes)), file);
+  await idle(page);
+  const results = async () => ((await state(page)).rebuild?.results ?? []) as { status: string; error?: { code: string }; warning?: { code: string } }[];
+  await expect.poll(async () => (await results()).length).toBeGreaterThan(80);
+  expect((await results()).filter((result) => result.status === 'error' || result.warning)).toEqual([]);
+  expect(await volume(page)).toBeGreaterThan(240_000);
+  await expect(page.locator('.feature-tree .tree-status.is-error')).toHaveCount(0);
+
+  // The compact configuration: thinner plate, lower boss, without spring, column and fence.
+  const full = await volume(page);
+  await page.locator('[data-testid="configuration-switch"]').selectOption('compact');
+  await idle(page);
+  expect((await results()).filter((result) => result.status === 'error' || result.warning)).toEqual([]);
+  expect(await volume(page)).toBeLessThan(full - 20_000);
+  await page.locator('[data-testid="configuration-switch"]').selectOption('standard');
+  await idle(page);
+  expect(await volume(page)).toBeCloseTo(full, 1);
+});
+
 test('adds a box as a body of its own and combines the bodies', async () => {
   launched = await launchApp({ width: 1000, height: 640 });
   const { page } = launched;
