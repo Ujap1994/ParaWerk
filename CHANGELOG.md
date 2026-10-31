@@ -7,6 +7,15 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-31
+
+**Phase 3 complete**: the advanced features of the roadmap – sweeps (twisted, guided, along helices and
+curves), lofts (along a centerline or a guide curve), drafts, ribs, threads, variable fillets, curves,
+parts of several bodies (combine, split, move, copy, delete, feature scope), surfaces, configurations and
+equations – with a function reference for every tool and a large feature showcase. The changes since
+0.4.0-alpha.5 are listed here; the alphas before list the rest. ParaWerk is still under active
+development: check every result before you manufacture anything (see the disclaimer in the README).
+
 ### Added
 - **Split** (in the *Surfaces* tab, group *Bodies*) splits every body that a plane or a surface crosses
   into bodies of their own – mold halves, a part cut in two for printing. With a plane it can keep only
@@ -498,7 +507,8 @@ First technical preview (Phase 0). Not ready for productive use; see the disclai
 ### Removed
 - DWG from the planned formats, because it is a closed, proprietary format. DXF covers 2D exchange.
 
-[Unreleased]: https://github.com/Ujap1994/ParaWerk/compare/v0.4.0-alpha.5...HEAD
+[Unreleased]: https://github.com/Ujap1994/ParaWerk/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/Ujap1994/ParaWerk/compare/v0.4.0-alpha.5...v0.4.0
 [0.4.0-alpha.5]: https://github.com/Ujap1994/ParaWerk/compare/v0.4.0-alpha.4...v0.4.0-alpha.5
 [0.4.0-alpha.4]: https://github.com/Ujap1994/ParaWerk/compare/v0.4.0-alpha.3...v0.4.0-alpha.4
 [0.4.0-alpha.3]: https://github.com/Ujap1994/ParaWerk/compare/v0.4.0-alpha.2...v0.4.0-alpha.3

@@ -102,7 +102,7 @@ surfaces, multi-body parts, configurations – to part modeling (Phase 2) and th
   all, up to the next face, up to a planar or curved surface or a vertex, in one or two directions, with
   a draft angle, also as **thin features** (walls along open or closed curves); **sweep** along a path, a
   **helix** (springs, coils) or a curve, also **twisted** or along a **guide curve**, and **loft** through
-  several outlines, also along a **centerline**; **rib**; **draft** on picked faces;
+  several outlines, also along a **centerline** or a **guide curve**; **rib**; **draft** on picked faces;
   **holes** for ISO metric screws (clearance, counterbore, countersink, tapped with cosmetic threads) and
   **modeled ISO threads** for 3D printing; **linear and circular patterns** and **mirror** images, also of
   other patterns;
@@ -111,10 +111,12 @@ surfaces, multi-body parts, configurations – to part modeling (Phase 2) and th
   **STEP import** as a body.
 - **Stable edits:** faces are named after the feature that made them, so fillets, chamfers, sketches on
   faces and other references stay in place when earlier features change; lost edges are marked instead
-  of breaking the part. A reference suite of 47 parts checks this in every CI run.
+  of breaking the part. A reference suite of 47 parts and a [feature showcase](docs/user-guide/showcase.md)
+  of 86 features of every kind check this in every CI run.
 - **Multi-body parts and surfaces:** features that add material can keep it as a body of its own; cuts
-  act body by body; **combine** (add, subtract, common) and **delete** bodies. **Offset**, **knit** and
-  **thicken** surfaces.
+  act body by body, or only on the bodies of their **feature scope**; **combine** (add, subtract, common),
+  **split** (by a plane or a surface), **move**, **copy** and **delete** bodies; mass properties and
+  exports of single bodies. **Offset**, **knit** and **thicken** surfaces.
 - **Reference geometry and curves:** planes, axes, points, coordinate systems, helices, projected and
   composite curves built on the part or on each other; they carry sketches, guide sweeps and follow the
   part.
