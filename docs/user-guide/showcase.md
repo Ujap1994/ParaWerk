@@ -43,6 +43,7 @@ what ParaWerk can do, to try out editing, or as a starting point for your own te
   their edges.
 - **Roll back:** drag the rollback bar up to see how the part was built, step by step.
 - **Suppress:** suppress the *Housing shell* or the *Hole row* and watch what follows.
+- **Fewer planes:** the plane button in the view toolbar hides the reference planes, axes and points.
 - **Section view, measure, mass properties:** look inside the housing and the boss, measure the hole
   spacing, check the mass (about 685 g).
 - **Export** STEP, STL or 3MF in the *Corner frame* coordinate system.

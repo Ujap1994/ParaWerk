@@ -412,7 +412,8 @@
     "projection": "Perspektive umschalten",
     "relations": "Beziehungssymbole anzeigen",
     "isometric": "Isometrisch",
-    "section": "Schnittansicht"
+    "section": "Schnittansicht",
+    "references": "Referenzebenen, -achsen und -punkte anzeigen"
   },
   "settings": {
     "title": "Einstellungen",

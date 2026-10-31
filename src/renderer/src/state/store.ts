@@ -123,6 +123,8 @@ export interface AppState {
   massFrame: string | null;
   /** The body (solid index) the mass properties are for; null: the whole part. */
   massBody: number | null;
+  /** Reference planes, axes, points and coordinate systems are drawn (they are shown anyway where they can be picked). */
+  showReferences: boolean;
   /** The export waiting for the choice of a coordinate system (asked only when the part has any). */
   exporting: ExportFormat | null;
   /** The coordinate system (feature id) the last export used; null: the model's own axes. */
@@ -175,6 +177,7 @@ export const initialState: AppState = {
   showMassProperties: false,
   massFrame: null,
   massBody: null,
+  showReferences: true,
   exporting: null,
   exportFrame: null,
   recovery: [],

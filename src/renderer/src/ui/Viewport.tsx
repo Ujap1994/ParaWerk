@@ -219,7 +219,9 @@ export function Viewport() {
         state.sketch?.index !== previous.sketch?.index ||
         state.hover !== previous.hover ||
         state.selection !== previous.selection ||
-        state.display !== previous.display
+        state.display !== previous.display ||
+        state.showReferences !== previous.showReferences ||
+        state.choosingSketchPlane !== previous.choosingSketchPlane
       ) {
         engine.setReferences(referenceItems(state));
         engine.setThreads(visibleThreads(state));

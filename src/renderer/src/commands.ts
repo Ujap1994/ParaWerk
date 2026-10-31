@@ -1303,6 +1303,11 @@ export function setMassFrame(id: string | null): void {
   setState({ massFrame: id });
 }
 
+/** Shows or hides reference planes, axes, points and coordinate systems in the 3D view. */
+export function toggleReferences(show = !getState().showReferences): void {
+  setState({ showReferences: show });
+}
+
 /** Gives the mass properties of one body of the part (solid index), or (null) of the whole part. */
 export function setMassBody(index: number | null): void {
   setState({ massBody: index });

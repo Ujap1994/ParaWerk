@@ -3,7 +3,9 @@ import { useTranslation } from 'react-i18next';
 import * as commands from '../commands.ts';
 import { useAppState } from '../state/store.ts';
 import { STANDARD_VIEWS } from '../viewport/views.ts';
-import { ProjectionIcon, RelationsIcon, SectionIcon, ViewsIcon, ZoomFitIcon } from './icons.tsx';
+import { FEATURE_ICONS, ProjectionIcon, RelationsIcon, SectionIcon, ViewsIcon, ZoomFitIcon } from './icons.tsx';
+
+const ReferencesIcon = FEATURE_ICONS.plane;
 
 const SHORTCUTS: Record<string, string> = {
   front: '1',
@@ -21,6 +23,7 @@ export function ViewToolbar() {
   const showRelations = useAppState((state) => state.settings.showSketchRelations);
   const sketching = useAppState((state) => state.sketch !== null);
   const section = useAppState((state) => state.section !== null);
+  const references = useAppState((state) => state.showReferences);
   const platform = useAppState((state) => state.appInfo?.platform);
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -92,6 +95,17 @@ export function ViewToolbar() {
         onClick={() => commands.toggleSection()}
       >
         <SectionIcon />
+      </button>
+      <button
+        type="button"
+        className={`icon-button${references ? ' is-active' : ''}`}
+        title={t('viewbar.references')}
+        aria-label={t('viewbar.references')}
+        aria-pressed={references}
+        data-testid="toggle-references"
+        onClick={() => commands.toggleReferences()}
+      >
+        <ReferencesIcon />
       </button>
       {sketching ? (
         <button

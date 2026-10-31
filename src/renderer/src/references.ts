@@ -153,6 +153,9 @@ export function visibleThreads(state: AppState): CosmeticThread[] {
  * The reference planes, axes and points shown in the 3D view: those before the feature or sketch being
  * edited, and the one being edited (as a preview, highlighted), with hovered and selected ones marked.
  */
+/** The reference geometry that only helps to build the part (curves and surfaces are shapes of it). */
+const HELPER_KINDS: ReadonlySet<ReferenceGeometry['kind']> = new Set(['plane', 'axis', 'point', 'csys']);
+
 export function referenceItems(state: AppState): ReferenceItem[] {
   const features = state.history.features;
   const edit = state.activeEdit;
@@ -164,11 +167,14 @@ export function referenceItems(state: AppState): ReferenceItem[] {
   const selected = new Set(state.selection.filter((pick) => pick.kind === 'reference').map((pick) => pick.index));
   const hovered = state.hover?.kind === 'reference' ? state.hover.index : null;
   const items: ReferenceItem[] = [];
+  // Hidden planes, axes, points and coordinate systems still show where they can be picked, and when marked.
+  const hideHelpers = !state.showReferences && !state.choosingSketchPlane && !(edit && picksReferences(edit.draft));
   const add = (feature: Feature, index: number, preview: boolean) => {
     if (!hasReferenceGeometry(feature) || feature.suppressed) return;
     const geometry = results.get(feature.id)?.reference;
     if (!geometry) return;
     const style = preview ? 'preview' : hovered === index ? 'hovered' : selected.has(index) || referenced.has(index) ? 'selected' : 'normal';
+    if (hideHelpers && style === 'normal' && HELPER_KINDS.has(geometry.kind)) return;
     items.push({ index, geometry, style });
   };
   features.slice(0, end).forEach((feature, index) => add(feature, index, false));

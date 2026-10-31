@@ -540,6 +540,9 @@ Selecting the references first and then clicking **Plane**, **Axis** or **Point*
 away and chooses the type that fits – a planar face gives an offset plane, two vertices an axis through
 them.
 
+The plane button in the view toolbar (*Show reference planes, axes and points*) hides them when a part has
+many; they still show while a feature picks references, and when you select one in the tree.
+
 Reference geometry follows the part: it remembers faces, edges and vertices by name (see
 [How features remember their edges](#how-features-remember-their-edges)), so a plane offset from the top
 face moves up when the part gets taller. If something it is built on is gone, it is marked in red in the

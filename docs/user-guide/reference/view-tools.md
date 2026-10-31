@@ -10,6 +10,7 @@
 | *Standard views* | Front, back, left, right, top, bottom, isometric | Ctrl/⌘ + 1 … 7 |
 | *Toggle perspective* | Orthographic (default) or perspective projection | |
 | *Section view* | Cuts the part open: see [Section view](section-view.md) | |
+| *Show reference planes, axes and points* | Hides or shows reference planes, axes, points and coordinate systems; they still show while you pick references, and when selected | |
 | *Show relation symbols* | In sketch mode: relation symbols on or off | |
 
 The views follow ISO naming: *front* looks along +Y, *top* down along −Z, *right* along −X; Z points up.

@@ -1581,10 +1581,11 @@ test('feature showcase screenshot', async () => {
   const file = [...(await readFile(path.join(repoRoot, 'docs/examples/feature-showcase.pwpart')))];
   await page.evaluate((bytes) => (window as unknown as { __parawerk: { commands: { loadDocument(path: string, data: Uint8Array): void } } }).__parawerk.commands.loadDocument('feature-showcase.pwpart', new Uint8Array(bytes)), file);
   await idle(page);
+  // Without the reference planes, axes and points, fitted to the part; the toast about the opened file fades out first.
+  await page.click('[data-testid="toggle-references"]');
   await page.evaluate(() => (window as unknown as { __parawerk: { viewport: { zoomToFit(): void } } }).__parawerk.viewport.zoomToFit());
   const canvas = await page.locator('.viewport-canvas').boundingBox();
   if (canvas) await page.mouse.move(canvas.x + canvas.width - 30, canvas.y + canvas.height - 30);
-  // The toast about the opened file fades out first.
   await page.waitForTimeout(4500);
   await page.screenshot({ path: out('showcase.png') });
   await app.close();

@@ -17,6 +17,8 @@ and this project will adhere to [Semantic Versioning](https://semver.org/spec/v2
   their faces, so the features after them follow them.
 - Mass properties and exports of one body: the mass properties panel and the export dialog let you
   choose one body of a part of several – to weigh it or to print it on its own.
+- A button in the view toolbar hides reference planes, axes, points and coordinate systems; they still
+  show while a feature picks references, and when selected.
 - A feature showcase: one large example part with 86 features of all 33 kinds, built on each other –
   patterns of patterns, a shelled and drafted housing joined to the plate, a spring, a loft, a thread,
   surfaces, curves and two configurations ([docs/examples/feature-showcase.pwpart](docs/examples/feature-showcase.pwpart),

@@ -1261,6 +1261,35 @@ test('gives the mass properties of one body and exports it alone', async () => {
   await expect(page.locator('[data-testid="export-frame-dialog"]')).toBeHidden();
 });
 
+test('hides reference planes, axes and points, but shows them where they are picked', async () => {
+  launched = await launchApp({ width: 1000, height: 640 });
+  const { page } = launched;
+  await page.evaluate(() => {
+    const features = [
+      { id: 'block', type: 'box', operation: 'add', width: 100, depth: 60, height: 40, position: [0, 0, 0] },
+      { id: 'mid', type: 'plane', method: 'offset', references: [{ kind: 'standard-plane', plane: 'top' }], distance: 20, angle: 45, flip: false },
+      { id: 'z', type: 'axis', method: 'twoPlanes', references: [{ kind: 'standard-plane', plane: 'front' }, { kind: 'standard-plane', plane: 'right' }] },
+    ];
+    (window as unknown as { __parawerk: { setState(s: unknown): void } }).__parawerk.setState({ history: { features, past: [], future: [] }, savedFeatures: features, dirty: false });
+  });
+  await idle(page);
+  const drawn = () => page.evaluate(() => (window as unknown as { __parawerk: { viewport: { references(): number } } }).__parawerk.viewport.references());
+  await expect.poll(drawn).toBe(2);
+  await page.click('[data-testid="toggle-references"]');
+  await expect(page.locator('[data-testid="toggle-references"]')).toHaveAttribute('aria-pressed', 'false');
+  await expect.poll(drawn).toBe(0);
+  // Selected in the tree, a plane shows; while a new plane picks its references, all show.
+  await page.click('.feature-tree .tree-item[data-feature-id="mid"]');
+  await expect.poll(drawn).toBe(1);
+  await page.keyboard.press('Escape');
+  await page.click('[data-command="plane"]');
+  await expect.poll(drawn).toBeGreaterThanOrEqual(2);
+  await page.click('[data-testid="panel-cancel"]');
+  await expect.poll(drawn).toBe(0);
+  await page.click('[data-testid="toggle-references"]');
+  await expect.poll(drawn).toBe(2);
+});
+
 test('adds a box as a body of its own and combines the bodies', async () => {
   launched = await launchApp({ width: 1000, height: 640 });
   const { page } = launched;

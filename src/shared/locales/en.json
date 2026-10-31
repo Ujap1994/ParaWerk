@@ -412,7 +412,8 @@
     "projection": "Toggle perspective",
     "relations": "Show relation symbols",
     "isometric": "Isometric",
-    "section": "Section view"
+    "section": "Section view",
+    "references": "Show reference planes, axes and points"
   },
   "settings": {
     "title": "Settings",
